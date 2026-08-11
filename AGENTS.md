@@ -29,7 +29,7 @@ This file is **short and actionable**. Rationale and history live in
 | **Inbox** | Unclarified tasks (`inbox = true`) — only special placement flag |
 | **Open tasks** | Default engage stream: `state = to_do`, `inbox = false` (not deferred when dates exist) |
 | **Project** | Outcome needing more than one action; **not** nestable under other projects |
-| **Project folder** | Nestable project container; **share unit** (subtree) later — ADR 0003, 0009 |
+| **Project folder** | Nestable container for projects; **name** only + **Active/Dropped**; **share unit** later — ADR 0003, 0009 |
 | **Tag** | Nested label on tasks/projects; project tags **inherit** to tasks (ADR 0005) |
 | **Waiting / Someday** | User **tag** conventions (not schema lists) — Phase 2+ |
 | **Series / occurrence** | Recurrence rule vs single instance (regular or on-completion mode) |
@@ -98,7 +98,8 @@ Project folders (nested) → Project (flat) → Tasks (nested outliner)
 
 - **Tasks:** parent/child tree; outliner UX (indent, collapse, sibling order).
 - **Projects:** never nested under projects.
-- **Project folders:** nested; projects optionally filed in one folder.
+- **Project folders:** nested; **name** + **Active | Dropped** only (no Done/dates).
+  Projects optionally filed in one folder; drop folder does not resolve projects.
 - **Sharing (later):** share a **folder** → that folder + subfolders + projects (+ tasks).
 - Subtasks are full tasks; parent Done/Dropped does not auto-resolve children by default.
 

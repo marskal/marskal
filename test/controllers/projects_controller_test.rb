@@ -6,14 +6,17 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     sign_in_as(@user)
   end
 
-  test "index lists open projects only for current user" do
+  test "index lists folders and unfiled projects only for current user" do
     get projects_path
 
     assert_response :success
     assert_select "h1", "Projects"
-    assert_match "Launch website", response.body
+    assert_match "Work", response.body
+    assert_match "Plan vacation", response.body
+    assert_no_match "Launch website", response.body # filed under folder, not unfiled
     assert_no_match "Finish onboarding", response.body
     assert_no_match "Secret project", response.body
+    assert_no_match "Old stuff", response.body # dropped folder hidden
   end
 
   test "show lists project tasks" do
@@ -36,6 +39,27 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Tax return", project.title
     assert project.to_do?
     assert_redirected_to project_path(project)
+  end
+
+  test "create project in folder" do
+    folder = project_folders(:client_a)
+
+    assert_difference -> { @user.projects.count }, 1 do
+      post projects_path, params: { project: { title: "Retainer", project_folder_id: folder.id } }
+    end
+
+    project = @user.projects.order(:id).last
+    assert_equal folder, project.project_folder
+  end
+
+  test "cannot file project in another users folder" do
+    assert_no_difference -> { @user.projects.count } do
+      post projects_path, params: {
+        project: { title: "Nope", project_folder_id: project_folders(:other_user_folder).id }
+      }
+    end
+
+    assert_response :unprocessable_entity
   end
 
   test "create requires title" do

@@ -45,8 +45,14 @@ projects (areas of life, clients, etc.) without forcing project-to-project nesti
 - A project may belong to **at most one** folder (or none = unfiled). Optional folder
   is fine.
 - Folder hierarchy is for navigation/filing, not GTD “project” semantics.
-- Folders do **not** get Done/Dropped/Defer as first-class product requirements in this
-  ADR (keep them as organizational nodes). Revisit if “archive folder” becomes needed.
+- **Folder fields stay minimal:** **name** (required), **parent** (optional), and
+  **state**: **Active** | **Dropped** only.
+  - No Done (folders are not outcomes).
+  - No Defer / Planned / Due on folders.
+  - **Dropped** = archived/hidden from default folder chrome; projects inside are not
+    auto-resolved (they keep their own states). Activate restores the folder.
+- Storage sketch: `parent_id` + `parent_path text[]` (ancestor names root→parent), same
+  spirit as tags (ADR 0005), for breadcrumbs and rename/reparent cascade.
 - **Sharing (ADR 0003):** folders are the **primary sharing mechanism**. Share a folder
   ⇒ access to that folder, **all descendant subfolders**, and **all projects** in that
   subtree (and their tasks). Design folder ownership and tree moves with that in mind.
@@ -68,8 +74,7 @@ Tags (ADR 0005) remain orthogonal: project tags inherit to tasks; folders are no
 - Schema sketch:
   - `tasks.parent_id` → tasks (nullable FK), sibling position/order column
   - `projects` — no parent project FK
-  - `project_folders.parent_id` → project_folders (nullable), optional
-    `parent_path`/ordering similar to tags if useful
+  - `project_folders`: `name`, `parent_id`, `parent_path text[]`, `state` active|dropped
   - `projects.project_folder_id` → project_folders (nullable FK)
 - Real foreign keys and identity columns per ADR 0002.
 - UI investment in outliner interactions is Phase 2-ish alongside projects (or thin

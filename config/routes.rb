@@ -3,6 +3,13 @@ Rails.application.routes.draw do
   resource :registration, only: %i[ new create ]
   resources :passwords, param: :token
 
+  resources :project_folders, only: %i[ show create update ], path: "folders" do
+    member do
+      patch :drop
+      patch :activate
+    end
+  end
+
   resources :projects, only: %i[ index show create update ] do
     member do
       patch :complete
@@ -10,6 +17,7 @@ Rails.application.routes.draw do
       patch :reopen
     end
   end
+
 
   resources :tasks, only: %i[ create update ] do
     member do

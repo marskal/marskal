@@ -1,0 +1,87 @@
+<% content_for :title, "#{@folder.name} — Marskal" %>
+
+<section class="page">
+  <header class="page__header">
+    <p class="page__crumb">
+      <%= link_to "Projects", projects_path %>
+      <% @folder.parent_path.each_with_index do |segment, i| %>
+        <span class="page__crumb-sep">/</span>
+        <span><%= segment %></span>
+      <% end %>
+    </p>
+    <h1><%= @folder.name %></h1>
+    <% unless @folder.active? %>
+      <p class="page__lede">This folder is dropped.</p>
+    <% end %>
+
+    <div class="task__actions" style="margin-top: 0.75rem">
+      <% if @folder.active? %>
+        <%= button_to "Drop folder", drop_project_folder_path(@folder), method: :patch, class: "btn btn--ghost" %>
+      <% else %>
+        <%= button_to "Activate folder", activate_project_folder_path(@folder), method: :patch, class: "btn" %>
+      <% end %>
+    </div>
+  </header>
+
+  <h2 class="section-heading">Projects in this folder</h2>
+
+  <%= form_with model: @project, url: projects_path, class: "add-form" do |form| %>
+    <%= form.hidden_field :project_folder_id, value: @folder.id %>
+    <div class="add-form__row">
+      <%= form.text_field :title,
+            required: true,
+            autofocus: true,
+            placeholder: "Add a project here…",
+            class: "add-form__title",
+            autocomplete: "off" %>
+      <%= form.submit "Add", class: "btn btn--primary" %>
+    </div>
+    <details class="add-form__notes">
+      <summary>Notes (optional)</summary>
+      <%= form.text_area :notes, rows: 3, placeholder: "What does done look like?", class: "add-form__notes-field" %>
+    </details>
+  <% end %>
+
+  <% if @projects.any? %>
+    <ul class="project-list">
+      <% @projects.each do |project| %>
+        <li class="project-list__item" id="<%= dom_id(project) %>">
+          <%= link_to project, class: "project-card" do %>
+            <span class="project-card__title"><%= project.title %></span>
+            <% if project.notes.present? %>
+              <span class="project-card__notes"><%= truncate(project.notes, length: 120) %></span>
+            <% end %>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="empty-state">No open projects in this folder yet.</p>
+  <% end %>
+
+  <h2 class="section-heading">Subfolders</h2>
+
+  <%= form_with model: @child_folder, url: project_folders_path, class: "add-form add-form--secondary" do |form| %>
+    <%= form.hidden_field :parent_id, value: @folder.id %>
+    <div class="add-form__row">
+      <%= form.text_field :name,
+            required: true,
+            placeholder: "Add a subfolder…",
+            class: "add-form__title",
+            autocomplete: "off" %>
+      <%= form.submit "Add folder", class: "btn" %>
+    </div>
+  <% end %>
+
+  <% if @child_folders.any? %>
+    <ul class="folder-tree">
+      <% @child_folders.each do |child| %>
+        <li class="folder-tree__item">
+          <%= link_to child.name, project_folder_path(child), class: "folder-tree__link" %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="empty-state">No subfolders.</p>
+  <% end %>
+</section>

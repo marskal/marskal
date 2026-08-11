@@ -1,0 +1,27 @@
+work:
+  user: one
+  name: Work
+  parent:
+  parent_path: []
+  state: active
+
+client_a:
+  user: one
+  name: Client A
+  parent: work
+  parent_path: ["Work"]
+  state: active
+
+dropped_folder:
+  user: one
+  name: Old stuff
+  parent:
+  parent_path: []
+  state: dropped
+
+other_user_folder:
+  user: two
+  name: Their Work
+  parent:
+  parent_path: []
+  state: active

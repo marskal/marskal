@@ -2,10 +2,25 @@
 
 <section class="page">
   <header class="page__header">
-    <p class="page__crumb"><%= link_to "Projects", projects_path %></p>
+    <p class="page__crumb">
+      <%= link_to "Projects", projects_path %>
+      <% if @project.project_folder %>
+        <span class="page__crumb-sep">/</span>
+        <%= link_to @project.project_folder.breadcrumb_label, project_folder_path(@project.project_folder) %>
+      <% end %>
+    </p>
     <h1><%= @project.title %></h1>
     <% if @project.notes.present? %>
       <div class="page__lede project-notes"><%= simple_format(@project.notes) %></div>
+    <% end %>
+
+    <%= form_with model: @project, class: "folder-assign" do |form| %>
+      <%= form.label :project_folder_id, "Folder" %>
+      <%= form.select :project_folder_id,
+            options_for_select([["Unfiled", ""]] + @folder_options, @project.project_folder_id),
+            {},
+            class: "add-form__select",
+            onchange: "this.form.requestSubmit()" %>
     <% end %>
 
     <div class="task__actions" style="margin-top: 0.75rem">

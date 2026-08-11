@@ -154,10 +154,79 @@ a {
   font: inherit;
 }
 
+.add-form--secondary {
+  opacity: 0.95;
+}
+
+.add-form__field {
+  margin-top: 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.add-form__select {
+  max-width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
 .add-form__notes {
   margin-top: 0.65rem;
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.folder-tree {
+  list-style: none;
+  margin: 0 0 1.25rem;
+  padding: 0;
+}
+
+.folder-tree__item {
+  margin: 0.25rem 0;
+  padding-left: calc(var(--depth, 0) * 0.85rem);
+}
+
+.folder-tree .folder-tree {
+  margin: 0.15rem 0 0.15rem 0.75rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--border);
+}
+
+.folder-tree__link {
+  display: inline-block;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  text-decoration: none;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.folder-tree__link:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+.folder-assign {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.page__crumb-sep {
+  margin: 0 0.25rem;
+  color: var(--muted);
 }
 
 .add-form__notes-field {

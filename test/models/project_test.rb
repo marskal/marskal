@@ -46,4 +46,22 @@ class ProjectTest < ActiveSupport::TestCase
     project.drop!
     assert project.reload.dropped?
   end
+
+  test "can file in own folder" do
+    project = projects(:unfiled_project)
+    folder = project_folders(:work)
+
+    project.update!(project_folder: folder)
+
+    assert_equal folder, project.reload.project_folder
+  end
+
+  test "rejects folder owned by another user" do
+    project = projects(:unfiled_project)
+    project.project_folder = project_folders(:other_user_folder)
+
+    assert_not project.valid?
+    assert project.errors[:project_folder].any?
+  end
 end
+

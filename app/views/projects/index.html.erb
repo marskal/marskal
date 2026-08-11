@@ -3,7 +3,7 @@
 <section class="page">
   <header class="page__header">
     <h1>Projects</h1>
-    <p class="page__lede">Outcomes that need more than one action.</p>
+    <p class="page__lede">Outcomes, filed in folders when you want structure.</p>
   </header>
 
   <%= form_with model: @project, url: projects_path, class: "add-form" do |form| %>
@@ -16,15 +16,55 @@
             autocomplete: "off" %>
       <%= form.submit "Add", class: "btn btn--primary" %>
     </div>
+    <% if @folder_options.any? %>
+      <div class="add-form__field">
+        <%= form.label :project_folder_id, "Folder (optional)" %>
+        <%= form.select :project_folder_id,
+              options_for_select([["Unfiled", ""]] + @folder_options),
+              {},
+              class: "add-form__select" %>
+      </div>
+    <% end %>
     <details class="add-form__notes">
       <summary>Notes (optional)</summary>
       <%= form.text_area :notes, rows: 3, placeholder: "What does done look like?", class: "add-form__notes-field" %>
     </details>
   <% end %>
 
-  <% if @projects.any? %>
+  <%= form_with model: @folder, url: project_folders_path, class: "add-form add-form--secondary" do |form| %>
+    <div class="add-form__row">
+      <%= form.text_field :name,
+            required: true,
+            placeholder: "Add a folder…",
+            class: "add-form__title",
+            autocomplete: "off" %>
+      <%= form.submit "Add folder", class: "btn" %>
+    </div>
+    <% if @folder_options.any? %>
+      <div class="add-form__field">
+        <%= form.label :parent_id, "Inside (optional)" %>
+        <%= form.select :parent_id,
+              options_for_select([["Top level", ""]] + @folder_options),
+              {},
+              class: "add-form__select" %>
+      </div>
+    <% end %>
+  <% end %>
+
+  <% if @root_folders.any? %>
+    <h2 class="section-heading">Folders</h2>
+    <ul class="folder-tree">
+      <% @root_folders.each do |folder| %>
+        <%= render "project_folders/tree_node", folder: folder, folders_by_parent: @folders_by_parent, depth: 0 %>
+      <% end %>
+    </ul>
+  <% end %>
+
+
+  <h2 class="section-heading">Unfiled projects</h2>
+  <% if @unfiled_projects.any? %>
     <ul class="project-list">
-      <% @projects.each do |project| %>
+      <% @unfiled_projects.each do |project| %>
         <li class="project-list__item" id="<%= dom_id(project) %>">
           <%= link_to project, class: "project-card" do %>
             <span class="project-card__title"><%= project.title %></span>
@@ -36,6 +76,6 @@
       <% end %>
     </ul>
   <% else %>
-    <p class="empty-state">No open projects yet. Add one above.</p>
+    <p class="empty-state">No unfiled open projects. File new ones in a folder, or leave them here.</p>
   <% end %>
 </section>

@@ -1,0 +1,13 @@
+<li class="folder-tree__item" style="--depth: <%= depth %>">
+  <%= link_to project_folder_path(folder), class: "folder-tree__link" do %>
+    <span class="folder-tree__name"><%= folder.name %></span>
+  <% end %>
+  <% children = folders_by_parent[folder.id] || [] %>
+  <% if children.any? %>
+    <ul class="folder-tree">
+      <% children.each do |child| %>
+        <%= render "project_folders/tree_node", folder: child, folders_by_parent: folders_by_parent, depth: depth + 1 %>
+      <% end %>
+    </ul>
+  <% end %>
+</li>
