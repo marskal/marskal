@@ -1,0 +1,22 @@
+<% content_for :title, "Open tasks — Marskal" %>
+
+<section class="page">
+  <header class="page__header">
+    <h1>Open tasks</h1>
+    <p class="page__lede">Work that’s out of the inbox and still to-do.</p>
+  </header>
+
+  <%= render "tasks/add_form" %>
+
+  <% if @tasks.any? %>
+    <ul class="task-list">
+      <% @tasks.each do |task| %>
+        <li class="task-list__item" id="<%= dom_id(task) %>">
+          <%= render "tasks/task", task: task, context: :open %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="empty-state">No open tasks. Add something in <%= link_to "Inbox", inbox_path %>, then move it here.</p>
+  <% end %>
+</section>

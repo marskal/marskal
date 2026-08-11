@@ -24,6 +24,31 @@
   </head>
 
   <body>
-    <%= yield %>
+    <% if authenticated? %>
+      <header class="app-header">
+        <div class="app-header__brand">
+          <%= link_to "Marskal", root_path %>
+        </div>
+        <nav class="app-header__nav" aria-label="Main">
+          <%= link_to "Open", root_path, class: current_page?(root_path) && !current_page?(inbox_path) ? "is-active" : nil %>
+          <%= link_to "Inbox", inbox_path, class: current_page?(inbox_path) ? "is-active" : nil %>
+        </nav>
+        <div class="app-header__user">
+          <span class="app-header__email"><%= Current.user.email_address %></span>
+          <%= button_to "Sign out", session_path, method: :delete, class: "btn btn--ghost" %>
+        </div>
+      </header>
+    <% end %>
+
+    <main class="app-main">
+      <% if flash[:notice].present? %>
+        <p class="flash flash--notice" role="status"><%= flash[:notice] %></p>
+      <% end %>
+      <% if flash[:alert].present? %>
+        <p class="flash flash--alert" role="alert"><%= flash[:alert] %></p>
+      <% end %>
+
+      <%= yield %>
+    </main>
   </body>
 </html>

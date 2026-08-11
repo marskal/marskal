@@ -1,0 +1,27 @@
+inbox_one:
+  user: one
+  title: Buy milk
+  notes: From the corner shop
+  state: to_do
+  inbox: true
+
+open_one:
+  user: one
+  title: Write Phase 1 tests
+  notes:
+  state: to_do
+  inbox: false
+
+done_one:
+  user: one
+  title: Finish auth
+  notes:
+  state: done
+  inbox: false
+
+other_user_task:
+  user: two
+  title: Secret task
+  notes:
+  state: to_do
+  inbox: false
