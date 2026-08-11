@@ -1,0 +1,78 @@
+# 0006. Defer, Planned, and Due (tasks and projects)
+
+## Status
+
+Accepted
+
+## Context
+
+Work items need more than a single “date” field. Soft-GTD and planning distinguish:
+
+- “Don’t bother me about this until …” (or “until I say otherwise”)
+- “I intend to work on this on …”
+- “This really must be finished by …”
+
+A single due date collapses those meanings. The same three fields apply to **tasks**
+and **projects**. Open-ended pause was considered as a separate **On Hold** state;
+that is rejected in favor of **Defer** with an **indefinite** option (ADR 0008).
+
+## Decision
+
+Each **task** and each **project** may set **Defer**, **Planned**, and/or **Due**.
+Store instants as timestamptz (UTC); display in the user’s zone.
+
+| Field | Intent | Surfacing |
+|--------|--------|-----------|
+| **Defer** | Quiet until a condition clears | **Hidden by default** while deferred. Reveal with **“Show deferred …”**. Does not by itself put the item on an agenda. |
+| **Planned** | Intentional focus for a calendar day | On the **agenda for that day**; normal in other lists (subject to Defer). |
+| **Due** | Hard commitment by this instant | Highlight / urgency when approaching or past due and still open; notifications when not done (mechanism later). |
+
+### Defer shapes
+
+Defer is optional and is either:
+
+| Shape | Behavior |
+|--------|----------|
+| **Until** | A specific date/time. Still deferred while `now < defer_until`. After that, not deferred. |
+| **Indefinite** | No end time. Stays deferred until the user **clears** defer (or changes to an until-time). Same hide/show rules as until-defer. |
+
+- **Indefinite** replaces a separate On Hold state for both tasks and projects.
+- UI: pick “defer until …” or “defer indefinitely” (wording flexible).
+- Schema sketch (illustrative): e.g. `defer_until timestamptz NULL` plus
+  `deferred_indefinitely boolean NOT NULL DEFAULT false`, with a check constraint that
+  indefinite ⇒ `defer_until` IS NULL (or equivalent single discriminated representation).
+  Exact columns are implementation detail; semantics are not.
+- “Still deferred” predicate: `deferred_indefinitely OR (defer_until IS NOT NULL AND now < defer_until)`.
+
+### Rules of thumb
+
+- Same field semantics on **tasks** and **projects**.
+- Fields are **independent**: any combination (including none).
+- **Inbox** capture should not require any of them.
+- **Planned** drives agenda membership (not a plan join table for MVP).
+- **Due** ≠ Planned; **Defer** ≠ Due.
+- Task and project dates are **independent** by default (no auto-cascade of project
+  dates onto child task columns). List logic may optionally hide tasks whose **project**
+  is still deferred — define clearly in implementation.
+- Recurring occurrences use these fields per occurrence where relevant (ADR 0007).
+
+### Deferred visibility (decided)
+
+- **Default:** exclude still-deferred tasks from normal task lists (until **or** indefinite).
+- **Opt-in:** **“Show deferred tasks”** (and the same idea for projects).
+- Prefer per-view/session toggles.
+
+### Non-goals (this ADR)
+
+- On Hold lifecycle state (ADR 0008).
+- Full calendar / time-blocking product.
+- Exact notification channels for Due.
+- Automatic cascade of project dates onto task date columns.
+
+## Consequences
+
+- Schema: Planned and Due as nullable timestamptz on tasks and projects; Defer as
+  until and/or indefinite as above — not one overloaded `due_on`.
+- List queries use the “still deferred” predicate; honor show-deferred.
+- Agenda keys off **Planned**.
+- UI teaches three dates; indefinite is a Defer option, not a fourth status chip.
