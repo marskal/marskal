@@ -28,8 +28,9 @@ Every **task** and every **project** has exactly one of three states:
 - **No On Hold** on tasks or projects.
 - To pause without a resume date: **Defer → Indefinite** (ADR 0006). To pause until a
   time: **Defer → until datetime**. Clear defer (or let a until-time pass) to surface again.
-- List defaults: open **To-Do**, respecting Defer. Done/Dropped in history-style views
-  unless filtered in.
+- Default open views: **To-Do**, not inbox (ADR 0010), respecting Defer when dates
+  exist. Done/Dropped retained on the task row; detailed audit history is separate
+  (ADR 0010). Optional UI may filter done/dropped in when wanted.
 - No separate “Skipped” state — **Dropped** covers skip (recurring and one-off tasks).
 - Project state is independent of task states on its actions (a To-Do project can have
   Done tasks).

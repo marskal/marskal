@@ -6,10 +6,10 @@ Accepted
 
 ## Context
 
-Recurrence is where Marskal Tasks should **shine**. Soft-GTD lists are table stakes;
-honest, flexible recurring work is not. Recurrence must compose with the three
-surfacing timestamps from ADR 0006 (**Defer**, **Planned**, **Due**) rather than
-assuming a single “due date” model.
+Recurrence is where Marskal Tasks should **shine**. Soft-GTD capture/clarify and
+project/tag organization are table stakes; honest, flexible recurring work is not.
+Recurrence must compose with the three surfacing timestamps from ADR 0006
+(**Defer**, **Planned**, **Due**) rather than assuming a single “due date” model.
 
 We prefer a **structured rule model** that matches the product UI (interval + unit +
 optional weekly/monthly limiters). Full RRULE strings may be derived later for

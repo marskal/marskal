@@ -12,8 +12,8 @@ Options considered for Marskal Tasks data:
 - PostgreSQL, one app database
 - Central account DB + per-workspace/tenant databases (Basecamp-style multi-DB lore)
 
-The product is a multi-user web app with personal GTD lists and later **shared projects**
-(owner + membership), not workspace-first tenancy or local-only single-user.
+The product is a multi-user web app with personal tasks (soft-GTD) and later **shared
+projects** (owner + membership), not workspace-first tenancy or local-only single-user.
 
 ## Decision
 

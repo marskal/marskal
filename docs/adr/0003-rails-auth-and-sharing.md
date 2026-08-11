@@ -6,11 +6,11 @@ Accepted
 
 ## Context
 
-The app will be multi-user. Personal GTD lists stay private. Collaboration is optional
-and should not imply shared inboxes or full team PM. We considered per-project
-memberships, org tenancy, and no-login shortcuts. With **project folders** as the
-filing tree (ADR 0009), the natural share unit is the **folder**: grant access once
-and cover a whole subtree of folders and projects.
+The app will be multi-user. Personal tasks (inbox, open stream, tags) stay private.
+Collaboration is optional and should not imply shared inboxes or full team PM. We
+considered per-project memberships, org tenancy, and no-login shortcuts. With
+**project folders** as the filing tree (ADR 0009), the natural share unit is the
+**folder**: grant access once and cover a whole subtree of folders and projects.
 
 ## Decision
 
@@ -23,8 +23,8 @@ and cover a whole subtree of folders and projects.
 ### Multi-user data
 
 - Personal resources `belongs_to :user` (`null: false`, indexed FK) from the first models.
-- Always scope personal lists by `current_user`.
-- Never assume a global inbox or next-actions table without `user_id` / access rules.
+- Always scope personal tasks and related data by `current_user`.
+- Never assume a global inbox or open-tasks query without `user_id` / access rules.
 
 ### Sharing unit: project folders (later feature, design now)
 
@@ -59,8 +59,8 @@ and cover a whole subtree of folders and projects.
 
 ### Open product detail (when implementing sharing)
 
-- Whether shared-project next actions appear on each member’s personal Next list or
-  only under shared folder/project views (still open).
+- Whether open tasks from shared projects appear on each member’s personal open stream
+  or only under shared folder/project views (still open).
 - Exact roles and who may re-share or invite.
 
 ## Consequences

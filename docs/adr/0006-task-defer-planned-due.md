@@ -24,7 +24,7 @@ Store instants as timestamptz (UTC); display in the user’s zone.
 | Field | Intent | Surfacing |
 |--------|--------|-----------|
 | **Defer** | Quiet until a condition clears | **Hidden by default** while deferred. Reveal with **“Show deferred …”**. Does not by itself put the item on an agenda. |
-| **Planned** | Intentional focus for a calendar day | On the **agenda for that day**; normal in other lists (subject to Defer). |
+| **Planned** | Intentional focus for a calendar day | On the **agenda for that day**; still visible in the open stream and other filters (subject to Defer). |
 | **Due** | Hard commitment by this instant | Highlight / urgency when approaching or past due and still open; notifications when not done (mechanism later). |
 
 ### Defer shapes
@@ -52,13 +52,14 @@ Defer is optional and is either:
 - **Planned** drives agenda membership (not a plan join table for MVP).
 - **Due** ≠ Planned; **Defer** ≠ Due.
 - Task and project dates are **independent** by default (no auto-cascade of project
-  dates onto child task columns). List logic may optionally hide tasks whose **project**
-  is still deferred — define clearly in implementation.
+  dates onto child task columns). Open-stream / filter logic may optionally hide tasks
+  whose **project** is still deferred — define clearly in implementation.
 - Recurring occurrences use these fields per occurrence where relevant (ADR 0007).
 
 ### Deferred visibility (decided)
 
-- **Default:** exclude still-deferred tasks from normal task lists (until **or** indefinite).
+- **Default:** exclude still-deferred tasks from the open stream and normal filters
+  (until **or** indefinite).
 - **Opt-in:** **“Show deferred tasks”** (and the same idea for projects).
 - Prefer per-view/session toggles.
 
@@ -73,6 +74,7 @@ Defer is optional and is either:
 
 - Schema: Planned and Due as nullable timestamptz on tasks and projects; Defer as
   until and/or indefinite as above — not one overloaded `due_on`.
-- List queries use the “still deferred” predicate; honor show-deferred.
+- Open stream and other task queries use the “still deferred” predicate; honor
+  show-deferred.
 - Agenda keys off **Planned**.
 - UI teaches three dates; indefinite is a Defer option, not a fourth status chip.

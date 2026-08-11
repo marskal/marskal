@@ -1,4 +1,4 @@
-# 0010. Task lists and Phase 1 defaults
+# 0010. Task model, inbox, and Phase 1 defaults
 
 ## Status
 
@@ -6,8 +6,14 @@ Accepted
 
 ## Context
 
-Before implementation we need a clear model for soft-GTD list placement (orthogonal to
-lifecycle **state**), a canonical model name, and a default timezone for date boundaries.
+Before implementation we need a clear model for capture/clarify, a canonical model
+name, and a default timezone for date boundaries.
+
+Earlier drafts treated soft-GTD **lists** (inbox / next / waiting / someday / reference)
+as a first-class enum orthogonal to **state**. That overloads the task with a second
+classification axis that largely duplicates **projects**, **tags**, and **dates**
+(Defer / Planned / Due). Waiting and Someday are better as user tags; “next” is a
+view of open work, not a bucket you file into.
 
 ## Decision
 
@@ -17,32 +23,58 @@ lifecycle **state**), a canonical model name, and a default timezone for date bo
   items). Prefer this over `Item` in code and schema (`tasks` table).
 - Product copy may still say “item” informally; code uses Task.
 
-### State vs list (orthogonal)
+### No multi-list placement
 
-**State** (ADR 0008): `to_do` | `done` | `dropped`
+- **Do not** store a `list` enum (`next` / `waiting` / `someday` / `reference`).
+- Perspectives on tasks come from:
+  - **Inbox** (boolean — see below)
+  - **State** (ADR 0008)
+  - **Projects** and **project folders** (ADR 0009; Phase 2)
+  - **Tags** (ADR 0005; Phase 2) — including user conventions such as Waiting, Someday
+  - **Defer / Planned / Due** (ADR 0006; Phase 2)
 
-**List** (placement after clarify):
+### Inbox (boolean)
 
-| List | Meaning |
-|------|---------|
-| `inbox` | Unclarified capture |
-| `next` | Next action (actionable now) |
-| `waiting` | Waiting for someone/something |
-| `someday` | Someday/maybe |
-| `reference` | Not actionable; keep for lookup (lightweight; not a full notes app) |
+- Tasks have **`inbox: boolean NOT NULL DEFAULT true`**.
+- **Inbox** means unclarified capture — the only special placement field.
+- New captures: `inbox = true`, `state = to_do`.
+- **Clarify** sets `inbox = false` (and may later set project, tags, dates). Clarify does
+  not invent extra states or list values.
+- Inbox is **orthogonal to state**: a task can theoretically be done while still marked
+  inbox, but normal UX clarifies before or as part of finishing; open views should not
+  depend on that edge case.
 
-- New captures default: `list = inbox`, `state = to_do`.
-- Clarify changes **list** (and may set project, dates later); does not invent extra states.
-- Tasks in a **project** still have a list value (often `next` or `waiting`); project
-  membership is `project_id`, not a list enum value.
-- Done/Dropped are **state**; list may remain for history filters but primary open lists
-  show `state = to_do` (and not deferred).
+### Default home and open stream
+
+- **Default home (Phase 1+):** **Open tasks** — `state = to_do` and `inbox = false`
+  (and, when dates exist, not still-deferred per ADR 0006).
+- **Inbox** is a separate view for unclarified items (`inbox = true`, typically open).
+- There is no first-class “Next” list; the open stream is the engage view.
+- **Waiting** / **Someday** (and similar): **tags** when tags ship — not schema enums.
+  Indefinite **Defer** remains the visibility pause (hide until cleared), distinct from
+  a Someday *filter* via tag.
+
+### State (unchanged; ADR 0008)
+
+**State:** `to_do` | `done` | `dropped`
+
+- Done/Dropped are lifecycle, not lists.
+- Primary open views show `state = to_do` (and not deferred when dates exist).
+- Done/Dropped rows are retained by default (not hard-deleted as the product concept).
+
+### History
+
+- **Detailed task history** (audit log of field changes, who/when clarified, etc.) is
+  **out of scope** for this model and for Phase 1. If needed later, it is a **separate**
+  concern (e.g. event/audit table), not list placement or overloaded state.
+- Retaining Done/Dropped task rows is enough for basic “what did I finish?” — not a
+  full history product.
 
 ### Phase 1 minimum fields (tasks)
 
-- `user_id`, `title`, `state`, `list`, timestamps
+- `user_id`, `title`, `state`, `inbox` (boolean), timestamps
 - Optional `notes` (text) — include from the start (cheap, useful)
-- `parent_id` / outliner, dates, tags, recurrence: later phases per roadmap
+- `parent_id` / outliner, projects, dates, tags, recurrence: later phases per roadmap
 
 ### Time zone
 
@@ -52,6 +84,11 @@ lifecycle **state**), a canonical model name, and a default timezone for date bo
 
 ## Consequences
 
-- Schema: `tasks.list` and `tasks.state` as Postgres enums or check-constrained text.
-- Phase 1 UI: Inbox + list views + state transitions; no tags/outliner required yet.
-- Vocabulary “Item” in AGENTS maps to **Task** in code.
+- Schema: `tasks.inbox boolean NOT NULL DEFAULT true`; `tasks.state` as Postgres enum or
+  check-constrained text. **No** `tasks.list`.
+- Phase 1 UI: capture → Inbox; clarify → leave inbox; default home = Open tasks stream;
+  complete / drop. No multi-list nav.
+- Phase 2+ filters (project, tag, agenda) replace classic GTD list chrome.
+- Update product copy and AGENTS vocabulary: drop Next/Waiting/Someday/Reference as
+  list enums; Waiting/Someday = tag conventions.
+- Supersedes the earlier “state vs list orthogonal enums” decision in drafts of this ADR.

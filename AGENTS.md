@@ -17,7 +17,7 @@ This file is **short and actionable**. Rationale and history live in
 | Recurrence | [0007](docs/adr/0007-recurrence.md) |
 | Task & project states | [0008](docs/adr/0008-task-states.md) |
 | Structure (outliner / folders) | [0009](docs/adr/0009-structure-outliner-and-folders.md) |
-| Task lists & Phase 1 defaults | [0010](docs/adr/0010-task-lists-and-phase1-defaults.md) |
+| Task model, inbox, Phase 1 | [0010](docs/adr/0010-task-lists-and-phase1-defaults.md) |
 
 ---
 
@@ -26,40 +26,42 @@ This file is **short and actionable**. Rationale and history live in
 | Term | Meaning |
 |------|---------|
 | **Task** | Code/model name for captured work (`tasks` table) — ADR 0010 |
-| **Inbox** | Unclarified tasks (`list = inbox`) |
-| **Next** | Next action list (`list = next`) |
+| **Inbox** | Unclarified tasks (`inbox = true`) — only special placement flag |
+| **Open tasks** | Default engage stream: `state = to_do`, `inbox = false` (not deferred when dates exist) |
 | **Project** | Outcome needing more than one action; **not** nestable under other projects |
 | **Project folder** | Nestable project container; **share unit** (subtree) later — ADR 0003, 0009 |
 | **Tag** | Nested label on tasks/projects; project tags **inherit** to tasks (ADR 0005) |
-| **Waiting** | `list = waiting` — blocked on someone/something |
-| **Someday** | `list = someday` |
-| **Reference** | `list = reference` — not actionable (not a full notes app) |
+| **Waiting / Someday** | User **tag** conventions (not schema lists) — Phase 2+ |
 | **Series / occurrence** | Recurrence rule vs single instance (regular or on-completion mode) |
 | **To-Do** | Open (default for tasks and projects) |
 | **Done** | Terminal: finished / outcome achieved |
 | **Dropped** | Terminal: will not do / abandoned (task “skip”; also one-off cancel) |
 | **Defer** | On tasks & projects: **until** a datetime **or indefinite**; hidden by default; show-deferred toggle |
-| **Planned** | On tasks & projects; agenda for that day; normal elsewhere |
+| **Planned** | On tasks & projects; agenda for that day; normal in open stream / other filters |
 | **Due** | On tasks & projects; hard deadline; highlight/notify if open past due |
 
 ### Soft-GTD flow
 
-1. Capture → Inbox  
-2. Clarify → trash / reference / someday / next / project (+ first next action)  
-3. Organize → lists, projects, dates, tags (tags from Phase 2)  
+1. Capture → Inbox (`inbox = true`)  
+2. Clarify → leave inbox (`inbox = false`); drop, tag, project, dates as needed (later phases)  
+3. Organize → projects, dates, tags (tags/projects from Phase 2)  
 4. Reflect → weekly review support  
-5. Engage → plan + filters + dues  
+5. Engage → open stream + plan + tag/project filters + dues  
 
-Do not collapse inbox and next actions. Do not treat every item as a calendar event.
-Do not implement a first-class **Context** model — use **tags** (ADR 0005).
+Do not reintroduce a multi-list enum (next/waiting/someday/reference). Do not treat
+every item as a calendar event. Do not implement a first-class **Context** model —
+use **tags** (ADR 0005). Detailed task audit history is a separate future concern
+(ADR 0010), not list placement.
 
 ### Task & project states (ADR 0008)
 
 **Tasks and projects** share three states: **To-Do** | **Done** | **Dropped**.  
 No On Hold, no Skip (**Dropped**). Pause with **Defer** (until or **indefinite**).
 
-**Task list** (ADR 0010, orthogonal to state): `inbox` | `next` | `waiting` | `someday` | `reference`.  
-New captures: `list=inbox`, `state=to_do`. Default timezone until per-user settings: **Europe/Copenhagen**.
+**Inbox** (ADR 0010): boolean on tasks, orthogonal to state. New captures:
+`inbox=true`, `state=to_do`. Clarify → `inbox=false`. **No** `list` column.
+Default home: **Open tasks** stream. Default timezone until per-user settings:
+**Europe/Copenhagen**.
 
 ### Recurrence (ADR 0007 — product differentiator)
 
@@ -81,7 +83,7 @@ New captures: `list=inbox`, `state=to_do`. Default timezone until per-user setti
 | Field | Surfacing |
 |--------|-----------|
 | **Defer** | **Until** datetime **or indefinite**; hidden while deferred; show-deferred reveals |
-| **Planned** | On that day’s **agenda**; still normal in other lists |
+| **Planned** | On that day’s **agenda**; still normal in open stream / other filters |
 | **Due** | Must-do-by; highlight + notifications if not done |
 
 - Agenda driven by **Planned**. Inbox needs none of the three.
@@ -115,12 +117,13 @@ Build in order; keep each shippable.
 | Phase | Deliver |
 |-------|---------|
 | **0 Foundation** | Rails + devenv Postgres; layout; **Rails auth** (`generate authentication`); `user_id` on personal models |
-| **1 Capture & clarify** | Inbox; clarify → lists; **task states** (To-Do / Done / Dropped) |
-| **2 Projects, planning, tags** | Projects + **folders**; **task outliner**; dates/tags/inheritance; agenda |
+| **1 Capture & clarify** | Task model; **inbox** boolean; **open tasks** stream; states (To-Do / Done / Dropped) |
+| **2 Projects, planning, tags** | Projects + **folders**; **task outliner**; dates/tags/inheritance; agenda; Waiting/Someday as tags |
 | **3 Recurrence** | ADR 0007: mode, anchor, interval, limits, end date/count; Done/Dropped spawn rules |
 | **4 Review & polish** | Weekly review; tag UX polish; empty states; keyboard-friendly capture |
 
-Do not jump to Phase 3 chrome before Phases 1–2 lists are solid. Recurrence schema may be designed early.
+Do not jump to Phase 3 chrome before Phases 1–2 capture/projects/tags are solid.
+Recurrence schema may be designed early.
 
 **Later (not Phases 1–3):** **folder sharing** (membership on folder; cascade to subtree) — ADR 0003.
 
@@ -181,7 +184,8 @@ Do not jump to Phase 3 chrome before Phases 1–2 lists are solid. Recurrence sc
 - Update `devenv.nix` when tooling changes.
 - Prefer vertical slices; ask before large scope expansions.
 - Significant architecture choices → new/updated **ADR**, not a novel in this file.
-- Default: **devenv + Bundler + soft-GTD lists + recurrence + planning**; tags from Phase 2.
+- Default: **devenv + Bundler + soft-GTD (inbox + open stream) + recurrence + planning**;
+  tags from Phase 2.
 
 ---
 
@@ -190,5 +194,6 @@ Do not jump to Phase 3 chrome before Phases 1–2 lists are solid. Recurrence sc
 Resolve with the user when blocking; then prefer an ADR (or a short note here).
 
 - [ ] VPS provider / NixOS vs Nix-on-distro (when deploy starts)
-- [ ] Shared work: next actions on personal Next vs only under shared folder/project views
+- [ ] Shared work: open tasks from shared projects on personal open stream vs only under
+      shared folder/project views
 - [ ] Sharing roles (viewer/editor) and re-share rules
