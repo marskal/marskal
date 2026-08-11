@@ -20,6 +20,11 @@
     initialDatabases = [ { name = "marskal_development"; } { name = "marskal_test"; } ];
   };
 
+  enterShell = ''
+    # App binstubs (bin/rails from Bundler). No nix/global rails package.
+    export PATH="$PWD/bin:$PATH"
+  '';
+
   # See full reference at https://devenv.sh/reference/options/
 }
 

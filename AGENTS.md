@@ -130,13 +130,17 @@ Do not jump to Phase 3 chrome before Phases 1–2 lists are solid. Recurrence sc
 
 ### Environment
 
-- **devenv** for Ruby, Bundler, Rails tooling, Postgres. No host system Ruby/gems.
+- **devenv** for Ruby, Bundler, libpq, Postgres service. No host system Ruby/gems.
 - `devenv shell` before Ruby/Rails work. Prefer editing `devenv.nix` over global installs.
 
 ### Rails
 
-- No host `gem install rails`. Bootstrap with devenv `rails` if needed; then **Gemfile + Bundler**.
-- Prefer `bin/rails` / `bundle exec`.
+- **Rails only via Bundler** (`Gemfile` / `Gemfile.lock`). Currently **~> 8.1**.
+- Do **not** add `pkgs.rubyPackages.rails` (or similar) to `devenv.nix` — nix Rails is
+  older and fights the Gemfile on `GEM_PATH`.
+- Do **not** use host or ad-hoc `gem install rails` for project work.
+- Always **`bundle install`**, then **`bin/rails`** / **`bundle exec`**.
+- devenv supplies Ruby + Bundler + Postgres tooling; the **app** supplies Rails.
 - **PostgreSQL only**, single app DB (ADR 0002). Bundler owns `pg`.
 - **Lean into Postgres** (ADR 0002): `IDENTITY` not `serial`; real **foreign keys**; DB
   constraints for real invariants; extensions OK if in **nixpkgs** (enable in migrations +
