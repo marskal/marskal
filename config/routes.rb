@@ -3,6 +3,14 @@ Rails.application.routes.draw do
   resource :registration, only: %i[ new create ]
   resources :passwords, param: :token
 
+  resources :projects, only: %i[ index show create update ] do
+    member do
+      patch :complete
+      patch :drop
+      patch :reopen
+    end
+  end
+
   resources :tasks, only: %i[ create update ] do
     member do
       patch :move_to_open

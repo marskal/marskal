@@ -1,15 +1,11 @@
 class Task < ApplicationRecord
+  include LifecycleState
+
   belongs_to :user
-
-  STATES = %w[to_do done dropped].freeze
-
-  enum :state, {
-    to_do: "to_do",
-    done: "done",
-    dropped: "dropped"
-  }, validate: true
+  belongs_to :project, optional: true
 
   validates :title, presence: true
+  validate :project_must_belong_to_same_user
 
   scope :inbox, -> { where(inbox: true) }
   scope :not_inbox, -> { where(inbox: false) }
@@ -20,15 +16,11 @@ class Task < ApplicationRecord
     update!(inbox: false)
   end
 
-  def complete!
-    update!(state: :done)
-  end
+  private
+    def project_must_belong_to_same_user
+      return if project_id.blank?
+      return if project&.user_id == user_id
 
-  def drop!
-    update!(state: :dropped)
-  end
-
-  def reopen!
-    update!(state: :to_do)
-  end
+      errors.add(:project, "must belong to the same user")
+    end
 end

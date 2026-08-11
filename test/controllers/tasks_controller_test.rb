@@ -12,6 +12,8 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "h1", "Open tasks"
     assert_match "Write Phase 1 tests", response.body
+    assert_match "Draft homepage copy", response.body
+    assert_match "Launch website", response.body
     assert_no_match "Buy milk", response.body
     assert_no_match "Secret task", response.body
   end
@@ -47,6 +49,30 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     assert_response :redirect
     follow_redirect!
     assert_match(/could not add|blank/i, flash[:alert].to_s + response.body)
+  end
+
+  test "add under project skips inbox" do
+    project = projects(:website)
+
+    assert_difference -> { @user.tasks.count }, 1 do
+      post tasks_path, params: { task: { title: "Pick hosting", project_id: project.id } }
+    end
+
+    task = @user.tasks.order(:id).last
+    assert_equal project, task.project
+    assert_not task.inbox?
+    assert task.to_do?
+    assert_redirected_to project_path(project)
+  end
+
+  test "cannot assign task to another users project" do
+    other_project = projects(:other_user_project)
+
+    assert_no_difference -> { @user.tasks.count } do
+      post tasks_path, params: { task: { title: "Nope", project_id: other_project.id } }
+    end
+
+    assert_response :redirect
   end
 
   test "move_to_open leaves inbox" do

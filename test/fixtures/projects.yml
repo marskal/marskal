@@ -1,0 +1,17 @@
+website:
+  user: one
+  title: Launch website
+  notes: Public marketing site
+  state: to_do
+
+done_project:
+  user: one
+  title: Finish onboarding
+  notes:
+  state: done
+
+other_user_project:
+  user: two
+  title: Secret project
+  notes:
+  state: to_do

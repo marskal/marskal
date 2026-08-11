@@ -30,8 +30,9 @@
           <%= link_to "Marskal", root_path %>
         </div>
         <nav class="app-header__nav" aria-label="Main">
-          <%= link_to "Open", root_path, class: current_page?(root_path) && !current_page?(inbox_path) ? "is-active" : nil %>
+          <%= link_to "Open", root_path, class: current_page?(root_path) && !request.path.start_with?("/inbox", "/projects") ? "is-active" : nil %>
           <%= link_to "Inbox", inbox_path, class: current_page?(inbox_path) ? "is-active" : nil %>
+          <%= link_to "Projects", projects_path, class: request.path.start_with?("/projects") ? "is-active" : nil %>
         </nav>
         <div class="app-header__user">
           <span class="app-header__email"><%= Current.user.email_address %></span>

@@ -55,4 +55,26 @@ class TaskTest < ActiveSupport::TestCase
     task.drop!
     assert task.reload.dropped?
   end
+
+  test "can belong to own project" do
+    task = tasks(:open_one)
+    project = projects(:website)
+
+    task.update!(project: project)
+
+    assert_equal project, task.reload.project
+  end
+
+  test "rejects project owned by another user" do
+    task = tasks(:open_one)
+    task.project = projects(:other_user_project)
+
+    assert_not task.valid?
+    assert task.errors[:project].any?
+  end
+
+  test "project task appears on open stream" do
+    assert_includes Task.open_stream.pluck(:id), tasks(:project_task).id
+  end
 end
+

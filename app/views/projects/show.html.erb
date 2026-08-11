@@ -1,0 +1,52 @@
+<% content_for :title, "#{@project.title} — Marskal" %>
+
+<section class="page">
+  <header class="page__header">
+    <p class="page__crumb"><%= link_to "Projects", projects_path %></p>
+    <h1><%= @project.title %></h1>
+    <% if @project.notes.present? %>
+      <div class="page__lede project-notes"><%= simple_format(@project.notes) %></div>
+    <% end %>
+
+    <div class="task__actions" style="margin-top: 0.75rem">
+      <% if @project.to_do? %>
+        <%= button_to "Done", complete_project_path(@project), method: :patch, class: "btn" %>
+        <%= button_to "Drop", drop_project_path(@project), method: :patch, class: "btn btn--ghost" %>
+      <% else %>
+        <span class="task__state"><%= @project.state.humanize %></span>
+        <%= button_to "Reopen", reopen_project_path(@project), method: :patch, class: "btn btn--ghost" %>
+      <% end %>
+    </div>
+  </header>
+
+  <h2 class="section-heading">Open tasks</h2>
+
+  <%= form_with model: @task, url: tasks_path, class: "add-form" do |form| %>
+    <%= form.hidden_field :project_id, value: @project.id %>
+    <div class="add-form__row">
+      <%= form.text_field :title,
+            required: true,
+            autofocus: true,
+            placeholder: "Add a task to this project…",
+            class: "add-form__title",
+            autocomplete: "off" %>
+      <%= form.submit "Add", class: "btn btn--primary" %>
+    </div>
+    <details class="add-form__notes">
+      <summary>Notes (optional)</summary>
+      <%= form.text_area :notes, rows: 3, placeholder: "Extra detail…", class: "add-form__notes-field" %>
+    </details>
+  <% end %>
+
+  <% if @tasks.any? %>
+    <ul class="task-list">
+      <% @tasks.each do |task| %>
+        <li class="task-list__item" id="<%= dom_id(task) %>">
+          <%= render "tasks/task", task: task, context: :project %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="empty-state">No open tasks in this project yet.</p>
+  <% end %>
+</section>

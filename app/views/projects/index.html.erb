@@ -1,0 +1,41 @@
+<% content_for :title, "Projects — Marskal" %>
+
+<section class="page">
+  <header class="page__header">
+    <h1>Projects</h1>
+    <p class="page__lede">Outcomes that need more than one action.</p>
+  </header>
+
+  <%= form_with model: @project, url: projects_path, class: "add-form" do |form| %>
+    <div class="add-form__row">
+      <%= form.text_field :title,
+            required: true,
+            autofocus: true,
+            placeholder: "Add a project…",
+            class: "add-form__title",
+            autocomplete: "off" %>
+      <%= form.submit "Add", class: "btn btn--primary" %>
+    </div>
+    <details class="add-form__notes">
+      <summary>Notes (optional)</summary>
+      <%= form.text_area :notes, rows: 3, placeholder: "What does done look like?", class: "add-form__notes-field" %>
+    </details>
+  <% end %>
+
+  <% if @projects.any? %>
+    <ul class="project-list">
+      <% @projects.each do |project| %>
+        <li class="project-list__item" id="<%= dom_id(project) %>">
+          <%= link_to project, class: "project-card" do %>
+            <span class="project-card__title"><%= project.title %></span>
+            <% if project.notes.present? %>
+              <span class="project-card__notes"><%= truncate(project.notes, length: 120) %></span>
+            <% end %>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="empty-state">No open projects yet. Add one above.</p>
+  <% end %>
+</section>

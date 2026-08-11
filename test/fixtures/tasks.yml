@@ -4,6 +4,7 @@ inbox_one:
   notes: From the corner shop
   state: to_do
   inbox: true
+  project:
 
 open_one:
   user: one
@@ -11,6 +12,15 @@ open_one:
   notes:
   state: to_do
   inbox: false
+  project:
+
+project_task:
+  user: one
+  title: Draft homepage copy
+  notes:
+  state: to_do
+  inbox: false
+  project: website
 
 done_one:
   user: one
@@ -18,6 +28,7 @@ done_one:
   notes:
   state: done
   inbox: false
+  project:
 
 other_user_task:
   user: two
@@ -25,3 +36,4 @@ other_user_task:
   notes:
   state: to_do
   inbox: false
+  project: other_user_project
