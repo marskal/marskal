@@ -150,6 +150,8 @@ Recurrence schema may be designed early.
 - **Lean into Postgres** (ADR 0002): `IDENTITY` not `serial`; real **foreign keys**; DB
   constraints for real invariants; extensions OK if in **nixpkgs** (enable in migrations +
   devenv as needed).
+- **Schema dump:** `config.active_record.schema_format = :sql` → commit **`db/structure.sql`**
+  (not `schema.rb`). Preserves enums, IDENTITY, and other Postgres-native DDL.
 - Hotwire (Turbo/Stimulus) / server-rendered HTML unless SPA is justified.
 - Domain names match the vocabulary table. Schema via migrations only.
 

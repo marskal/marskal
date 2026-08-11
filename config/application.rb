@@ -23,6 +23,9 @@ module Marskal
     #
     # Default until per-user timezones exist (ADR 0010).
     config.time_zone = "Europe/Copenhagen"
+
+    # Postgres enums + IDENTITY PKs need structure.sql (schema.rb loses them).
+    config.active_record.schema_format = :sql
     # config.eager_load_paths << Rails.root.join("extras")
   end
 end
