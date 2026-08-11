@@ -18,19 +18,18 @@ devenv shell
 # Install/update app gems (includes Rails — not from nixpkgs)
 bundle install
 
-# Postgres (if not already up)
-devenv up -d   # or: devenv processes up
-
-# DB
+# First time / after schema changes
 bin/rails db:prepare
 
-# App (http://marskal.localhost:8275 — port 8275 ≈ TASK on a phone keypad)
-bin/dev
-# or: bin/rails server
+# Start Postgres + Rails together
+devenv up          # foreground (logs)
+# or: devenv up -d # background; devenv down to stop
+
+# Rails only (Postgres already running): bin/dev
 ```
 
 Open **http://marskal.localhost:8275** — sign up at `/registration/new`.  
-`*.localhost` resolves to loopback on modern OSes; no `/etc/hosts` entry needed.
+Port **8275** ≈ TASK on a phone keypad. `*.localhost` → loopback (no `/etc/hosts`).
 
 **Rails comes only from the Gemfile** (`bundle install` → `bin/rails`).  
 devenv does **not** install `rubyPackages.rails`.

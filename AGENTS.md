@@ -132,7 +132,8 @@ Do not jump to Phase 3 chrome before Phases 1–2 lists are solid. Recurrence sc
 
 - **devenv** for Ruby, Bundler, libpq, Postgres service. No host system Ruby/gems.
 - `devenv shell` before Ruby/Rails work. Prefer editing `devenv.nix` over global installs.
-- Dev URL: **http://marskal.localhost:8275** (`bin/dev`; port **8275** ≈ TASK on phone keypad).
+- Dev URL: **http://marskal.localhost:8275** (port **8275** ≈ TASK on phone keypad).
+- **`devenv up`** starts Postgres + Rails (`processes.rails`). `bin/dev` if you only need Rails.
 
 ### Rails
 

@@ -20,6 +20,26 @@
     initialDatabases = [ { name = "marskal_development"; } { name = "marskal_test"; } ];
   };
 
+  # https://devenv.sh/processes/
+  # `devenv up` starts Postgres (service) + Rails. Visit http://marskal.localhost:8275
+  processes = {
+    rails = {
+      exec = "bundle exec rails server -b 127.0.0.1 -p 8275";
+      after = [ "devenv:processes:postgres" ];
+      ready = {
+        http.get = {
+          host = "127.0.0.1";
+          port = 8275;
+          path = "/up";
+        };
+        initial_delay = 1;
+        period = 2;
+        probe_timeout = 2;
+      };
+      # Rails has its own reloader; no need to restart the process on every save.
+    };
+  };
+
   enterShell = ''
     # App binstubs (bin/rails from Bundler). No nix/global rails package.
     export PATH="$PWD/bin:$PATH"
