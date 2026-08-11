@@ -2,7 +2,6 @@
 {
   # https://devenv.sh/packages/
   packages = [
-    pkgs.rubyPackages.rails
   ];
 
   # https://devenv.sh/languages/
