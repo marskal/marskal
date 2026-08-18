@@ -18,7 +18,7 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "create for an unknown user redirects but sends no mail" do
-    post passwords_path, params: { email_address: "missing-user@example.com" }
+    post passwords_path, params: { email_address: "missing-user@marskal.example" }
     assert_enqueued_emails 0
     assert_redirected_to new_session_path
 

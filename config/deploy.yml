@@ -22,7 +22,7 @@ servers:
 #
 # proxy:
 #   ssl: true
-#   host: app.example.com
+#   host: app.marskal.example
 
 # Where you keep your container images.
 registry:
