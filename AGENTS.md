@@ -18,6 +18,7 @@ This file is **short and actionable**. Rationale and history live in
 | Task & project states | [0008](docs/adr/0008-task-states.md) |
 | Structure (outliner / folders) | [0009](docs/adr/0009-structure-outliner-and-folders.md) |
 | Task model, inbox, Phase 1 | [0010](docs/adr/0010-task-lists-and-phase1-defaults.md) |
+| UUIDv7 primary keys | [0011](docs/adr/0011-uuidv7-primary-keys.md) |
 
 ---
 
@@ -148,11 +149,12 @@ Recurrence schema may be designed early.
 - Always **`bundle install`**, then **`bin/rails`** / **`bundle exec`**.
 - devenv supplies Ruby + Bundler + Postgres tooling; the **app** supplies Rails.
 - **PostgreSQL only**, single app DB (ADR 0002). Bundler owns `pg`.
-- **Lean into Postgres** (ADR 0002): `IDENTITY` not `serial`; real **foreign keys**; DB
-  constraints for real invariants; extensions OK if in **nixpkgs** (enable in migrations +
-  devenv as needed).
+- **Lean into Postgres** (ADR 0002, **0011**): **UUIDv7** PKs (`uuid` + `DEFAULT uuidv7()`),
+  not identity/`serial`; real **foreign keys**; DB constraints for real invariants;
+  extensions OK if in **nixpkgs** (enable in migrations + devenv as needed).
+  Recency is `created_at`, not `id` (fixtures and clients may mint non-v7 UUIDs).
 - **Schema dump:** `config.active_record.schema_format = :sql` → commit **`db/structure.sql`**
-  (not `schema.rb`). Preserves enums, IDENTITY, and other Postgres-native DDL.
+  (not `schema.rb`). Preserves enums, `uuidv7()` defaults, and other Postgres-native DDL.
 - Hotwire (Turbo/Stimulus) / server-rendered HTML unless SPA is justified.
 - Domain names match the vocabulary table. Schema via migrations only.
 

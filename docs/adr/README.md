@@ -19,6 +19,7 @@ This directory holds **ADRs** — durable decisions and their context.
 | [0008](0008-task-states.md) | Task & project states (To-Do, Done, Dropped) | Accepted |
 | [0009](0009-structure-outliner-and-folders.md) | Nested tasks, flat projects, project folders | Accepted |
 | [0010](0010-task-lists-and-phase1-defaults.md) | Task model, inbox boolean, Phase 1 defaults | Accepted |
+| [0011](0011-uuidv7-primary-keys.md) | UUIDv7 primary keys | Accepted |
 
 ## When to add an ADR
 

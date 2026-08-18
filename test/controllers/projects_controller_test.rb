@@ -35,8 +35,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       post projects_path, params: { project: { title: "Tax return", notes: "2025" } }
     end
 
-    project = @user.projects.order(:id).last
-    assert_equal "Tax return", project.title
+    project = @user.projects.find_by!(title: "Tax return")
     assert project.to_do?
     assert_redirected_to project_path(project)
   end
@@ -48,7 +47,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       post projects_path, params: { project: { title: "Retainer", project_folder_id: folder.id } }
     end
 
-    project = @user.projects.order(:id).last
+    project = @user.projects.find_by!(title: "Retainer")
     assert_equal folder, project.project_folder
   end
 

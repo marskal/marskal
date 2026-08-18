@@ -33,10 +33,9 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
       post tasks_path, params: { task: { title: "Call dentist", notes: "Morning" } }
     end
 
-    task = @user.tasks.order(:id).last
+    task = @user.tasks.find_by!(title: "Call dentist")
     assert task.inbox?
     assert task.to_do?
-    assert_equal "Call dentist", task.title
     assert_equal "Morning", task.notes
     assert_redirected_to inbox_path
   end
@@ -58,7 +57,7 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
       post tasks_path, params: { task: { title: "Pick hosting", project_id: project.id } }
     end
 
-    task = @user.tasks.order(:id).last
+    task = @user.tasks.find_by!(title: "Pick hosting")
     assert_equal project, task.project
     assert_not task.inbox?
     assert task.to_do?

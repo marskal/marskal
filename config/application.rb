@@ -24,8 +24,13 @@ module Marskal
     # Default until per-user timezones exist (ADR 0010).
     config.time_zone = "Europe/Copenhagen"
 
-    # Postgres enums + IDENTITY PKs need structure.sql (schema.rb loses them).
+    # Postgres enums + uuidv7() defaults need structure.sql (schema.rb loses them).
     config.active_record.schema_format = :sql
+
+    # Domain tables use UUIDv7 PKs (ADR 0011). Pair with uuidv7() DEFAULT in migrations.
+    config.generators do |g|
+      g.orm :active_record, primary_key_type: :uuid
+    end
     # config.eager_load_paths << Rails.root.join("extras")
   end
 end

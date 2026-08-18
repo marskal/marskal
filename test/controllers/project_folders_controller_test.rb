@@ -26,8 +26,7 @@ class ProjectFoldersControllerTest < ActionDispatch::IntegrationTest
       post project_folders_path, params: { project_folder: { name: "Personal" } }
     end
 
-    folder = @user.project_folders.order(:id).last
-    assert_equal "Personal", folder.name
+    folder = @user.project_folders.find_by!(name: "Personal")
     assert folder.active?
     assert_nil folder.parent_id
     assert_redirected_to project_folder_path(folder)
@@ -40,7 +39,7 @@ class ProjectFoldersControllerTest < ActionDispatch::IntegrationTest
       post project_folders_path, params: { project_folder: { name: "Client B", parent_id: parent.id } }
     end
 
-    folder = @user.project_folders.order(:id).last
+    folder = @user.project_folders.find_by!(name: "Client B")
     assert_equal parent, folder.parent
     assert_equal [ "Work" ], folder.parent_path
   end

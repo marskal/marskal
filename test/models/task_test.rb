@@ -12,6 +12,22 @@ class TaskTest < ActiveSupport::TestCase
     assert task.to_do?
   end
 
+  test "database assigns a uuidv7 primary key" do
+    task = @user.tasks.create!(title: "New capture")
+
+    assert_match(
+      /\A[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z/i,
+      task.id
+    )
+  end
+
+  test "accepts a client-supplied uuid" do
+    id = SecureRandom.uuid_v7
+    task = @user.tasks.create!(id: id, title: "Offline capture")
+
+    assert_equal id, task.reload.id
+  end
+
   test "requires title" do
     task = @user.tasks.new(title: "")
 

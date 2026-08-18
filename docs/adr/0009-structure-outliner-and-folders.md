@@ -76,7 +76,7 @@ Tags (ADR 0005) remain orthogonal: project tags inherit to tasks; folders are no
   - `projects` — no parent project FK
   - `project_folders`: `name`, `parent_id`, `parent_path text[]`, `state` active|dropped
   - `projects.project_folder_id` → project_folders (nullable FK)
-- Real foreign keys and identity columns per ADR 0002.
+- Real foreign keys per ADR 0002; UUIDv7 keys per ADR 0011.
 - UI investment in outliner interactions is Phase 2-ish alongside projects (or thin
   nesting in Phase 1 if capture needs subtasks early — prefer not blocking Phase 1
   inbox; **nesting + folders in Phase 2** with projects).
