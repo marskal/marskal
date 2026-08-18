@@ -28,7 +28,17 @@ devenv up          # foreground (logs)
 # Rails only (Postgres already running): bin/dev
 ```
 
-Open **http://marskal.localhost:8275** — sign up at `/registration/new`.  
+Open **http://marskal.localhost:8275** — sign up at `/registration/new`, or use the
+sample accounts created by `db:seed` / `db:prepare` / `db:reset`:
+
+| Email | Password | What’s there |
+|-------|----------|----------------|
+| `mts@marskal.example` | `H3mm3l1gh3d` | Inbox, open tasks, nested folders, projects |
+| `kvp@marskal.example` | `H3mm3l1gh3d` | Isolated second user |
+
+`bin/rails db:seed` is idempotent (won’t duplicate if those accounts already have data).  
+`bin/rails db:reset` (or `bin/setup --reset`) wipes the DB and reseeds.
+
 Port **8275** ≈ TASK on a phone keypad. `*.localhost` → loopback (no `/etc/hosts`).
 
 **Rails comes only from the Gemfile** (`bundle install` → `bin/rails`).  
