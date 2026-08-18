@@ -23,6 +23,9 @@ default: &default
   port: <%= ENV.fetch("PGPORT", "5432") %>
   username: <%= ENV.fetch("PGUSER", ENV["USER"]) %>
   password: <%= ENV["PGPASSWORD"] %>
+  # Precompiled macOS pg ships libpq linked to Kerberos.framework. After fork
+  # (Rails parallel tests), gssencmode=prefer segfaults in connect_start.
+  gssencmode: disable
 
 
 development:
