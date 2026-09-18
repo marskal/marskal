@@ -14,7 +14,7 @@
             placeholder: "Add a project…",
             class: "add-form__title",
             autocomplete: "off" %>
-      <%= form.submit "Add", class: "btn btn--primary" %>
+      <%= form.submit "Add", class: btn(:primary) %>
     </div>
     <% if @folder_options.any? %>
       <div class="add-form__field">
@@ -38,7 +38,7 @@
             placeholder: "Add a folder…",
             class: "add-form__title",
             autocomplete: "off" %>
-      <%= form.submit "Add folder", class: "btn" %>
+      <%= form.submit "Add folder", class: btn %>
     </div>
     <% if @folder_options.any? %>
       <div class="add-form__field">
@@ -66,16 +66,13 @@
     <ul class="project-list">
       <% @unfiled_projects.each do |project| %>
         <li class="project-list__item" id="<%= dom_id(project) %>">
-          <%= link_to project, class: "project-card" do %>
-            <span class="project-card__title"><%= project.title %></span>
-            <% if project.notes.present? %>
-              <span class="project-card__notes"><%= truncate(project.notes, length: 120) %></span>
-            <% end %>
-          <% end %>
+          <%= render ProjectCardComponent.new(project: project) %>
         </li>
       <% end %>
     </ul>
   <% else %>
-    <p class="empty-state">No unfiled open projects. File new ones in a folder, or leave them here.</p>
+    <%= render EmptyStateComponent.new do %>
+      No unfiled open projects. File new ones in a folder, or leave them here.
+    <% end %>
   <% end %>
 </section>

@@ -31,6 +31,9 @@ module Marskal
     config.generators do |g|
       g.orm :active_record, primary_key_type: :uuid
     end
+
+    # Widgets: Ruby + ERB sidecar; CSS lives under assets/stylesheets/components (ADR 0012).
+    config.view_component.generate.sidecar = false
     # config.eager_load_paths << Rails.root.join("extras")
   end
 end

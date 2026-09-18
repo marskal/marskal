@@ -17,6 +17,8 @@ gem "stimulus-rails"
 # Icon helper; Lucide SVGs are synced into vendor/icons by `rails icons:sync`
 # (bin/setup, CI, Docker) — not committed [https://github.com/Rails-Designer/rails_icons]
 gem "rails_icons"
+# Reusable widgets: Ruby class + ERB + scoped CSS (ADR 0012)
+gem "view_component", "~> 4.15"
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 gem "bcrypt", "~> 3.1.7"

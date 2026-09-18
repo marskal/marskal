@@ -19,6 +19,7 @@ This file is **short and actionable**. Rationale and history live in
 | Structure (outliner / folders) | [0009](docs/adr/0009-structure-outliner-and-folders.md) |
 | Task model, inbox, Phase 1 | [0010](docs/adr/0010-task-lists-and-phase1-defaults.md) |
 | UUIDv7 primary keys | [0011](docs/adr/0011-uuidv7-primary-keys.md) |
+| ViewComponent + `@scope` CSS | [0012](docs/adr/0012-viewcomponent-scoped-css.md) |
 
 ---
 
@@ -157,6 +158,10 @@ Recurrence schema may be designed early.
   (not `schema.rb`). Preserves enums, `uuidv7()` defaults, and other Postgres-native DDL.
 - Hotwire (Turbo/Stimulus) / server-rendered HTML unless SPA is justified.
 - Domain names match the vocabulary table. Schema via migrations only.
+- **UI (ADR 0012):** pages stay ERB. Reusable widgets are **ViewComponent**
+  (`ApplicationComponent`) plus plain CSS `@scope` in
+  `app/assets/stylesheets/components/<scope-class>.css`. No Tailwind, no UI kit.
+  Tokens stay on `:root` in `application.css` (app shell lives there too).
 - **Icons:** Lucide via `rails_icons` (`icon "name"`). Do not inline ad-hoc SVG
   paths. The pack is **not** in git — `bin/rails icons:sync` clones it into
   gitignored `vendor/icons` (also run from `bin/setup`, CI, Docker). Re-download

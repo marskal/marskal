@@ -1,0 +1,6 @@
+@scope (.empty-state) {
+  :scope {
+    color: var(--muted);
+    padding: 1rem 0;
+  }
+}

@@ -41,7 +41,7 @@
           </div>
           <div class="app-header__user">
             <span class="app-header__email"><%= Current.user.email_address %></span>
-            <%= button_to "Sign out", session_path, method: :delete, class: "btn btn--ghost" %>
+            <%= button_to "Sign out", session_path, method: :delete, class: btn(:ghost) %>
           </div>
         </header>
 
@@ -49,26 +49,14 @@
           <%= render "sidebar" %>
 
           <main class="app-main">
-            <% if flash[:notice].present? %>
-              <p class="flash flash--notice" role="status"><%= flash[:notice] %></p>
-            <% end %>
-            <% if flash[:alert].present? %>
-              <p class="flash flash--alert" role="alert"><%= flash[:alert] %></p>
-            <% end %>
-
+            <%= render FlashComponent.new(notice: flash[:notice], alert: flash[:alert]) %>
             <%= yield %>
           </main>
         </div>
       </div>
     <% else %>
       <main class="app-main app-main--narrow">
-        <% if flash[:notice].present? %>
-          <p class="flash flash--notice" role="status"><%= flash[:notice] %></p>
-        <% end %>
-        <% if flash[:alert].present? %>
-          <p class="flash flash--alert" role="alert"><%= flash[:alert] %></p>
-        <% end %>
-
+        <%= render FlashComponent.new(notice: flash[:notice], alert: flash[:alert]) %>
         <%= yield %>
       </main>
     <% end %>

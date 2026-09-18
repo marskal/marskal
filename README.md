@@ -8,6 +8,7 @@ See **[AGENTS.md](AGENTS.md)** and **[docs/adr/](docs/adr/)** for product rules.
 - Ruby on Rails **8.1** (Gemfile)
 - PostgreSQL (devenv service locally)
 - Hotwire (Turbo / Stimulus)
+- ViewComponent widgets with CSS `@scope` (no Tailwind)
 
 ## Local development
 

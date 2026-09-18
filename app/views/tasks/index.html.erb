@@ -12,11 +12,13 @@
     <ul class="task-list">
       <% @tasks.each do |task| %>
         <li class="task-list__item" id="<%= dom_id(task) %>">
-          <%= render "tasks/task", task: task, context: :open %>
+          <%= render TaskRowComponent.new(task: task, context: :open) %>
         </li>
       <% end %>
     </ul>
   <% else %>
-    <p class="empty-state">No open tasks. Add something in <%= link_to "Inbox", inbox_path %>, then move it here.</p>
+    <%= render EmptyStateComponent.new do %>
+      No open tasks. Add something in <%= link_to "Inbox", inbox_path %>, then move it here.
+    <% end %>
   <% end %>
 </section>

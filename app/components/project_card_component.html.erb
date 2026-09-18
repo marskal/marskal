@@ -1,0 +1,6 @@
+<%= link_to @project, class: root_class do %>
+  <span class="title"><%= @project.title %></span>
+  <% if @project.notes.present? %>
+    <span class="notes"><%= truncate(@project.notes, length: 120) %></span>
+  <% end %>
+<% end %>

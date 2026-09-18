@@ -1,5 +1,6 @@
 /*
- * Marskal Tasks — app layout
+ * Tokens, reset, and app shell. Widget styles live under
+ * app/assets/stylesheets/components/ with CSS @scope (ADR 0012).
  */
 
 :root {
@@ -317,20 +318,6 @@ a {
   }
 }
 
-.flash {
-  padding: 0.65rem 0.85rem;
-  border-radius: var(--radius);
-  margin: 0 0 1rem;
-}
-
-.flash--notice {
-  background: var(--notice-bg);
-}
-
-.flash--alert {
-  background: var(--danger-bg);
-}
-
 .page__header {
   margin-bottom: 1.25rem;
 }
@@ -343,6 +330,20 @@ a {
 .page__lede {
   margin: 0;
   color: var(--muted);
+}
+
+.page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+
+.page__state {
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-transform: capitalize;
 }
 
 .add-form {
@@ -456,35 +457,6 @@ a {
   resize: vertical;
 }
 
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.4rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
-  font-size: 0.9rem;
-  cursor: pointer;
-  text-decoration: none;
-}
-
-.btn--primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-contrast);
-}
-
-.btn--ghost {
-  background: transparent;
-}
-
-.btn:hover {
-  filter: brightness(1.05);
-}
-
 .task-list {
   list-style: none;
   margin: 0;
@@ -496,45 +468,6 @@ a {
 
 .task-list__item {
   margin: 0;
-}
-
-.task {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem 1rem;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 0.85rem 1rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-
-.task__title {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.task__project {
-  margin: 0.2rem 0 0;
-  font-size: 0.85rem;
-}
-
-.task__project a {
-  color: var(--muted);
-  text-decoration: none;
-}
-
-.task__project a:hover {
-  color: var(--accent);
-  text-decoration: underline;
-}
-
-.task__notes {
-  margin: 0.35rem 0 0;
-  color: var(--muted);
-  font-size: 0.9rem;
 }
 
 .page__crumb {
@@ -569,62 +502,10 @@ a {
   margin: 0;
 }
 
-.project-card {
-  display: block;
-  padding: 0.85rem 1rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  text-decoration: none;
-  color: inherit;
-}
-
-.project-card:hover {
-  border-color: var(--accent);
-}
-
-.project-card__title {
-  display: block;
-  font-weight: 600;
-}
-
-.project-card__notes {
-  display: block;
-  margin-top: 0.25rem;
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
 .project-notes p {
   margin: 0 0 0.35rem;
 }
 
 .project-notes p:last-child {
   margin-bottom: 0;
-}
-
-.task__notes p {
-  margin: 0 0 0.35rem;
-}
-
-.task__notes p:last-child {
-  margin-bottom: 0;
-}
-
-.task__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  align-items: center;
-}
-
-.task__state {
-  font-size: 0.85rem;
-  color: var(--muted);
-  text-transform: capitalize;
-}
-
-.empty-state {
-  color: var(--muted);
-  padding: 1rem 0;
 }

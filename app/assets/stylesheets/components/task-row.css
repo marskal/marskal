@@ -1,0 +1,61 @@
+@scope (.task-row) {
+  :scope {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 0.85rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
+  .title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .project {
+    margin: 0.2rem 0 0;
+    font-size: 0.85rem;
+  }
+
+  .project a {
+    color: var(--muted);
+    text-decoration: none;
+  }
+
+  .project a:hover {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+
+  .notes {
+    margin: 0.35rem 0 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  .notes p {
+    margin: 0 0 0.35rem;
+  }
+
+  .notes p:last-child {
+    margin-bottom: 0;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+  }
+
+  .state {
+    font-size: 0.85rem;
+    color: var(--muted);
+    text-transform: capitalize;
+  }
+}

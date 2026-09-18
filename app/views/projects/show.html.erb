@@ -23,13 +23,13 @@
             onchange: "this.form.requestSubmit()" %>
     <% end %>
 
-    <div class="task__actions" style="margin-top: 0.75rem">
+    <div class="page__actions">
       <% if @project.to_do? %>
-        <%= button_to "Done", complete_project_path(@project), method: :patch, class: "btn" %>
-        <%= button_to "Drop", drop_project_path(@project), method: :patch, class: "btn btn--ghost" %>
+        <%= button_to "Done", complete_project_path(@project), method: :patch, class: btn %>
+        <%= button_to "Drop", drop_project_path(@project), method: :patch, class: btn(:ghost) %>
       <% else %>
-        <span class="task__state"><%= @project.state.humanize %></span>
-        <%= button_to "Reopen", reopen_project_path(@project), method: :patch, class: "btn btn--ghost" %>
+        <span class="page__state"><%= @project.state.humanize %></span>
+        <%= button_to "Reopen", reopen_project_path(@project), method: :patch, class: btn(:ghost) %>
       <% end %>
     </div>
   </header>
@@ -45,7 +45,7 @@
             placeholder: "Add a task to this project…",
             class: "add-form__title",
             autocomplete: "off" %>
-      <%= form.submit "Add", class: "btn btn--primary" %>
+      <%= form.submit "Add", class: btn(:primary) %>
     </div>
     <details class="add-form__notes">
       <summary>Notes (optional)</summary>
@@ -57,11 +57,13 @@
     <ul class="task-list">
       <% @tasks.each do |task| %>
         <li class="task-list__item" id="<%= dom_id(task) %>">
-          <%= render "tasks/task", task: task, context: :project %>
+          <%= render TaskRowComponent.new(task: task, context: :project) %>
         </li>
       <% end %>
     </ul>
   <% else %>
-    <p class="empty-state">No open tasks in this project yet.</p>
+    <%= render EmptyStateComponent.new do %>
+      No open tasks in this project yet.
+    <% end %>
   <% end %>
 </section>

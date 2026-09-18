@@ -12,11 +12,13 @@
     <ul class="task-list">
       <% @tasks.each do |task| %>
         <li class="task-list__item" id="<%= dom_id(task) %>">
-          <%= render "tasks/task", task: task, context: :inbox %>
+          <%= render TaskRowComponent.new(task: task, context: :inbox) %>
         </li>
       <% end %>
     </ul>
   <% else %>
-    <p class="empty-state">Inbox is empty. Add a task above.</p>
+    <%= render EmptyStateComponent.new do %>
+      Inbox is empty. Add a task above.
+    <% end %>
   <% end %>
 </section>
