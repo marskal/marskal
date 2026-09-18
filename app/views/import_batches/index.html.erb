@@ -1,0 +1,29 @@
+<% content_for :title, "Import — Marskal" %>
+
+<section class="page">
+  <header class="page__header">
+    <h1>Import</h1>
+    <p class="page__lede">Bring a backup from another app into this account.</p>
+  </header>
+
+  <p><%= link_to "Upload an OmniFocus backup", new_import_batch_path, class: btn(:primary) %></p>
+
+  <% if @batches.any? %>
+    <h2 class="section-heading">Recent imports</h2>
+    <ul class="import-list">
+      <% @batches.each do |batch| %>
+        <li class="import-list__item">
+          <%= link_to batch, class: "import-card" do %>
+            <span class="source"><%= batch.source.humanize %></span>
+            <span class="status"><%= batch.status.humanize %></span>
+            <span class="when"><%= batch.created_at.to_fs(:short) %></span>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <%= render EmptyStateComponent.new do %>
+      No imports yet. Start with an OmniFocus Backup Document.
+    <% end %>
+  <% end %>
+</section>

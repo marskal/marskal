@@ -19,6 +19,8 @@ gem "stimulus-rails"
 gem "rails_icons"
 # Reusable widgets: Ruby class + ERB + scoped CSS (ADR 0012)
 gem "view_component", "~> 4.15"
+# Zip packages for OmniFocus (and later Todoist) backups (ADR 0013)
+gem "rubyzip"
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 gem "bcrypt", "~> 3.1.7"

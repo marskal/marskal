@@ -20,6 +20,12 @@
       <%= icon "layout-grid" %>
       <span>Projects</span>
     <% end %>
+    <%= link_to import_batches_path,
+          class: [ "app-sidebar__link", ("is-current" if current_page?(import_batches_path) || request.path.start_with?("/imports")) ],
+          aria: { current: (current_page?(import_batches_path) ? "page" : nil) } do %>
+      <%= icon "download" %>
+      <span>Import</span>
+    <% end %>
   </nav>
 
   <nav class="app-sidebar__tree" aria-label="Project folders">

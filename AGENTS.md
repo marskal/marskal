@@ -20,6 +20,7 @@ This file is **short and actionable**. Rationale and history live in
 | Task model, inbox, Phase 1 | [0010](docs/adr/0010-task-lists-and-phase1-defaults.md) |
 | UUIDv7 primary keys | [0011](docs/adr/0011-uuidv7-primary-keys.md) |
 | ViewComponent + `@scope` CSS | [0012](docs/adr/0012-viewcomponent-scoped-css.md) |
+| Import framework | [0013](docs/adr/0013-import-framework.md) |
 
 ---
 
@@ -140,6 +141,8 @@ Recurrence schema may be designed early.
 - `devenv shell` before Ruby/Rails work. Prefer editing `devenv.nix` over global installs.
 - Dev URL: **http://marskal.localhost:8275** (port **8275** ≈ TASK on phone keypad).
 - **`devenv up`** starts Postgres + Rails (`processes.rails`). `bin/dev` if you only need Rails.
+  Postgres is that managed `services.postgres` process — never `pg_ctl start` /
+  `start-postgres` against `.devenv/state/postgres` (it orphans a second cluster).
 
 ### Rails
 
@@ -158,6 +161,10 @@ Recurrence schema may be designed early.
   (not `schema.rb`). Preserves enums, `uuidv7()` defaults, and other Postgres-native DDL.
 - Hotwire (Turbo/Stimulus) / server-rendered HTML unless SPA is justified.
 - Domain names match the vocabulary table. Schema via migrations only.
+- **Import (ADR 0013):** adapters parse to `Imports::Graph`; file upload now,
+  OAuth is a future fetcher. First source: OmniFocus backup. Park unmapped
+  fields on `import_items.extras`. Skip existing `(user, source, source_id)`
+  on re-import. Do not add competing-app gems.
 - **UI (ADR 0012):** pages stay ERB. Reusable widgets are **ViewComponent**
   (`ApplicationComponent`) plus plain CSS `@scope` in
   `app/assets/stylesheets/components/<scope-class>.css`. No Tailwind, no UI kit.

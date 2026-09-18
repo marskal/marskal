@@ -4,6 +4,8 @@ class User < ApplicationRecord
   has_many :tasks, dependent: :destroy
   has_many :projects, dependent: :destroy
   has_many :project_folders, dependent: :destroy
+  has_many :import_batches, dependent: :destroy
+  has_many :import_items, dependent: :destroy
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }
 end

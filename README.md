@@ -9,6 +9,7 @@ See **[AGENTS.md](AGENTS.md)** and **[docs/adr/](docs/adr/)** for product rules.
 - PostgreSQL (devenv service locally)
 - Hotwire (Turbo / Stimulus)
 - ViewComponent widgets with CSS `@scope` (no Tailwind)
+- Import from OmniFocus backups (Todoist file/OAuth later)
 
 ## Local development
 

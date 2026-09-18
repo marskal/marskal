@@ -21,6 +21,7 @@ This directory holds **ADRs** — durable decisions and their context.
 | [0010](0010-task-lists-and-phase1-defaults.md) | Task model, inbox boolean, Phase 1 defaults | Accepted |
 | [0011](0011-uuidv7-primary-keys.md) | UUIDv7 primary keys | Accepted |
 | [0012](0012-viewcomponent-scoped-css.md) | ViewComponent widgets with CSS `@scope` | Accepted |
+| [0013](0013-import-framework.md) | Import framework (file now, OAuth later) | Accepted |
 
 ## When to add an ADR
 
