@@ -43,6 +43,9 @@
   enterShell = ''
     # App binstubs (bin/rails from Bundler). No nix/global rails package.
     export PATH="$PWD/bin:$PATH"
+    if [ ! -d vendor/icons/lucide ]; then
+      echo "Lucide icons not synced yet. Run: bin/setup  or  bin/rails icons:sync"
+    fi
   '';
 
   # See full reference at https://devenv.sh/reference/options/

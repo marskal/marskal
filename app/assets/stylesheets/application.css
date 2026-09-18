@@ -171,8 +171,11 @@ a {
   color: var(--accent);
 }
 
-.sidebar-icon {
+.icon {
   flex-shrink: 0;
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
 }
 
 .nav-tree {
@@ -221,11 +224,11 @@ a {
   color: var(--accent);
 }
 
-.nav-tree__toggle .sidebar-icon {
+.nav-tree__toggle .icon {
   transition: transform 0.15s ease;
 }
 
-.nav-tree__node[data-expanded="true"] > .nav-tree__row .nav-tree__toggle .sidebar-icon {
+.nav-tree__node[data-expanded="true"] > .nav-tree__row .nav-tree__toggle .icon {
   transform: rotate(90deg);
 }
 

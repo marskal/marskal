@@ -1,0 +1,40 @@
+<div class="app-sidebar__backdrop" data-action="click->sidebar#close" aria-hidden="true"></div>
+
+<aside id="app-sidebar" class="app-sidebar">
+  <nav class="app-sidebar__streams" aria-label="Main">
+    <%= link_to root_path,
+          class: [ "app-sidebar__link", ("is-current" if current_page?(root_path)) ],
+          aria: { current: (current_page?(root_path) ? "page" : nil) } do %>
+      <%= icon "list" %>
+      <span>Open</span>
+    <% end %>
+    <%= link_to inbox_path,
+          class: [ "app-sidebar__link", ("is-current" if current_page?(inbox_path)) ],
+          aria: { current: (current_page?(inbox_path) ? "page" : nil) } do %>
+      <%= icon "inbox" %>
+      <span>Inbox</span>
+    <% end %>
+    <%= link_to projects_path,
+          class: [ "app-sidebar__link", ("is-current" if current_page?(projects_path)) ],
+          aria: { current: (current_page?(projects_path) ? "page" : nil) } do %>
+      <%= icon "layout-grid" %>
+      <span>Projects</span>
+    <% end %>
+  </nav>
+
+  <nav class="app-sidebar__tree" aria-label="Project folders">
+    <% tree = project_nav_tree %>
+    <% if tree.empty? %>
+      <p class="app-sidebar__empty">No projects yet. <%= link_to "Add one", projects_path %>.</p>
+    <% else %>
+      <ul class="nav-tree">
+        <% tree.root_folders.each do |folder| %>
+          <%= render "application/nav_folder", folder: folder, tree: tree %>
+        <% end %>
+        <% tree.unfiled_projects.each do |project| %>
+          <%= render "application/nav_project", project: project %>
+        <% end %>
+      </ul>
+    <% end %>
+  </nav>
+</aside>

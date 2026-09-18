@@ -47,6 +47,9 @@ RUN bundle install && \
 # Copy application code
 COPY . .
 
+# Lucide SVGs are gitignored; clone them for runtime `icon` helpers.
+RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails icons:sync
+
 # Precompile bootsnap code for faster boot times.
 # -j 1 disable parallel compilation to avoid a QEMU bug: https://github.com/rails/bootsnap/issues/495
 RUN bundle exec bootsnap precompile -j 1 app/ lib/

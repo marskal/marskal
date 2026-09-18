@@ -25,31 +25,52 @@
 
   <body>
     <% if authenticated? %>
-      <header class="app-header">
-        <div class="app-header__brand">
-          <%= link_to "Marskal", root_path %>
+      <div class="app" data-controller="sidebar" data-action="click->sidebar#closeOnNavigate">
+        <header class="app-header">
+          <button type="button"
+                  class="app-header__menu"
+                  data-action="sidebar#toggle"
+                  data-sidebar-target="menuButton"
+                  aria-controls="app-sidebar"
+                  aria-expanded="false">
+            <%= icon "menu" %>
+            <span>Menu</span>
+          </button>
+          <div class="app-header__brand">
+            <%= link_to "Marskal", root_path %>
+          </div>
+          <div class="app-header__user">
+            <span class="app-header__email"><%= Current.user.email_address %></span>
+            <%= button_to "Sign out", session_path, method: :delete, class: "btn btn--ghost" %>
+          </div>
+        </header>
+
+        <div class="app-shell">
+          <%= render "sidebar" %>
+
+          <main class="app-main">
+            <% if flash[:notice].present? %>
+              <p class="flash flash--notice" role="status"><%= flash[:notice] %></p>
+            <% end %>
+            <% if flash[:alert].present? %>
+              <p class="flash flash--alert" role="alert"><%= flash[:alert] %></p>
+            <% end %>
+
+            <%= yield %>
+          </main>
         </div>
-        <nav class="app-header__nav" aria-label="Main">
-          <%= link_to "Open", root_path, class: current_page?(root_path) && !request.path.start_with?("/inbox", "/projects") ? "is-active" : nil %>
-          <%= link_to "Inbox", inbox_path, class: current_page?(inbox_path) ? "is-active" : nil %>
-          <%= link_to "Projects", projects_path, class: request.path.start_with?("/projects") ? "is-active" : nil %>
-        </nav>
-        <div class="app-header__user">
-          <span class="app-header__email"><%= Current.user.email_address %></span>
-          <%= button_to "Sign out", session_path, method: :delete, class: "btn btn--ghost" %>
-        </div>
-      </header>
+      </div>
+    <% else %>
+      <main class="app-main app-main--narrow">
+        <% if flash[:notice].present? %>
+          <p class="flash flash--notice" role="status"><%= flash[:notice] %></p>
+        <% end %>
+        <% if flash[:alert].present? %>
+          <p class="flash flash--alert" role="alert"><%= flash[:alert] %></p>
+        <% end %>
+
+        <%= yield %>
+      </main>
     <% end %>
-
-    <main class="app-main">
-      <% if flash[:notice].present? %>
-        <p class="flash flash--notice" role="status"><%= flash[:notice] %></p>
-      <% end %>
-      <% if flash[:alert].present? %>
-        <p class="flash flash--alert" role="alert"><%= flash[:alert] %></p>
-      <% end %>
-
-      <%= yield %>
-    </main>
   </body>
 </html>

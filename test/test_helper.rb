@@ -14,3 +14,7 @@ module ActiveSupport
     # Add more helper methods to be used by all tests here...
   end
 end
+
+unless Rails.root.join("vendor/icons/lucide").exist?
+  warn "Lucide icons missing — run: bin/rails icons:sync"
+end

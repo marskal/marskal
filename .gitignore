@@ -46,3 +46,6 @@ devenv.local.nix
 !/app/assets/builds/.keep
 
 /node_modules
+
+# Lucide SVGs from `bin/rails icons:sync`
+/vendor/icons

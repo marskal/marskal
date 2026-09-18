@@ -1,4 +1,6 @@
 Rails.application.routes.draw do
+  mount RailsIcons::Engine, at: "/rails_icons" if Rails.env.development?
+
   resource :session
   resource :registration, only: %i[ new create ]
   resources :passwords, param: :token

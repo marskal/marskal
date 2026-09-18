@@ -157,6 +157,10 @@ Recurrence schema may be designed early.
   (not `schema.rb`). Preserves enums, `uuidv7()` defaults, and other Postgres-native DDL.
 - Hotwire (Turbo/Stimulus) / server-rendered HTML unless SPA is justified.
 - Domain names match the vocabulary table. Schema via migrations only.
+- **Icons:** Lucide via `rails_icons` (`icon "name"`). Do not inline ad-hoc SVG
+  paths. The pack is **not** in git — `bin/rails icons:sync` clones it into
+  gitignored `vendor/icons` (also run from `bin/setup`, CI, Docker). Re-download
+  with `FORCE=1`. Preview at `/rails_icons` in development.
 
 ### Auth & tenancy
 

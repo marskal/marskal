@@ -14,6 +14,9 @@ gem "importmap-rails"
 gem "turbo-rails"
 # Hotwire's modest JavaScript framework [https://stimulus.hotwired.dev]
 gem "stimulus-rails"
+# Icon helper; Lucide SVGs are synced into vendor/icons by `rails icons:sync`
+# (bin/setup, CI, Docker) — not committed [https://github.com/Rails-Designer/rails_icons]
+gem "rails_icons"
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 gem "bcrypt", "~> 3.1.7"

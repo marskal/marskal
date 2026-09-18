@@ -12,8 +12,8 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "h1", "Projects"
     assert_match "Work", response.body
-    assert_match "Plan vacation", response.body
-    assert_no_match "Launch website", response.body # filed under folder, not unfiled
+    assert_select ".project-list", text: /Plan vacation/
+    assert_select ".project-list .project-card", text: /Launch website/, count: 0
     assert_no_match "Finish onboarding", response.body
     assert_no_match "Secret project", response.body
     assert_no_match "Old stuff", response.body # dropped folder hidden
