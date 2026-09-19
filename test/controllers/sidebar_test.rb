@@ -6,6 +6,18 @@ class SidebarTest < ActionDispatch::IntegrationTest
     sign_in_as(@user)
   end
 
+  test "header brand shows the app icon and name" do
+    get root_path
+
+    assert_response :success
+    assert_select ".app-header__brand a[href=?]", root_path do
+      assert_select "img.app-header__logo[src='/icon.svg']"
+      assert_select "span", text: "Marskal"
+    end
+    assert_select "link[rel=icon][href='/icon.svg']"
+    assert_select "link[rel=apple-touch-icon][href='/icon.png']"
+  end
+
   test "authenticated pages show the project folder tree" do
     get root_path
 

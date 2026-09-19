@@ -71,9 +71,20 @@ a {
 }
 
 .app-header__brand a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   font-weight: 700;
   text-decoration: none;
   color: var(--text);
+}
+
+.app-header__logo {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 6px;
+  display: block;
+  flex-shrink: 0;
 }
 
 .app-header__menu {
