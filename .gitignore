@@ -45,6 +45,8 @@ devenv.local.nix
 /app/assets/builds/*
 !/app/assets/builds/.keep
 
+# Ignore node.js module and MCP artefacts.
+/.playwright-mcp
 /node_modules
 
 # Lucide SVGs from `bin/rails icons:sync`
