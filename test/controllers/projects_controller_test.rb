@@ -94,4 +94,57 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     get projects_path
     assert_redirected_to new_session_path
   end
+
+  test "index and show render the inspector" do
+    get projects_path
+
+    assert_select "aside.app-inspector"
+    assert_select "a.select[data-turbo-frame=inspector]", text: "Plan vacation"
+    assert_select "a.select[data-turbo-frame=inspector]", text: "Work"
+    assert_select "a.open", text: "Open"
+
+    get project_path(projects(:website))
+    assert_select "aside.app-inspector"
+    assert_select "turbo-frame#inspector[src*='#{projects(:website).id}']"
+  end
+
+  test "show in inspector frame renders project fields" do
+    project = projects(:website)
+
+    get project_path(project), headers: { "Turbo-Frame" => "inspector" }
+
+    assert_response :success
+    assert_select "turbo-frame#inspector"
+    assert_select ".project-inspector"
+    assert_select "input[name='project[title]'][value=?]", project.title
+    assert_select "select[name='project[project_folder_id]']"
+    assert_select "select[name='project[state]']"
+  end
+
+  test "update writes project fields" do
+    project = projects(:unfiled_project)
+    folder = project_folders(:work)
+
+    patch project_path(project), params: {
+      project: { title: "Trip", notes: "Pack", project_folder_id: folder.id, state: "dropped" }
+    }
+
+    project.reload
+    assert_equal "Trip", project.title
+    assert_equal "Pack", project.notes
+    assert_equal folder.id, project.project_folder_id
+    assert project.dropped?
+    assert_redirected_to project_path(project)
+  end
+
+  test "update via turbo stream removes a card that left the list" do
+    project = projects(:unfiled_project)
+
+    patch project_path(project),
+          params: { project: { state: "done" }, list_context: "projects_index" },
+          as: :turbo_stream
+
+    assert project.reload.done?
+    assert_match(/turbo-stream[^>]*action="remove"/, response.body)
+  end
 end

@@ -9,7 +9,7 @@ class TaskRowComponentTest < ViewComponent::TestCase
     render_inline(TaskRowComponent.new(task: task, context: :open))
 
     assert_selector "article.task-row h2.title", text: task.title
-    assert_selector "a.select[data-turbo-frame=task_inspector]", text: task.title
+    assert_selector "a.select[data-turbo-frame=inspector]", text: task.title
     assert_selector ".project a", text: task.project.title
     assert_selector "form.check-form button.check[aria-label='Mark as done']"
     assert_selector "button.check .check__idle"

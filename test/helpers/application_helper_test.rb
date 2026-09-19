@@ -23,6 +23,17 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_not_includes html, "<script"
   end
 
+  test "inspect_link_data targets the inspector frame" do
+    task = tasks(:open_one)
+    data = inspect_link_data(task)
+
+    assert_equal "inspector", data[:turbo_frame]
+    assert_equal task.id, data[:inspector_id_param]
+    assert_equal "task", data[:inspector_type_param]
+    assert_equal "project", inspect_type_for(projects(:website))
+    assert_equal "folder", inspect_type_for(project_folders(:work))
+  end
+
   test "formatted_notes renders GFM strikethrough and autolinks" do
     html = formatted_notes("Gone ~~later~~ https://example.com")
 

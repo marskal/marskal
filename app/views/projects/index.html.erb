@@ -65,9 +65,10 @@
   <% if @unfiled_projects.any? %>
     <ul class="project-list">
       <% @unfiled_projects.each do |project| %>
-        <li class="project-list__item" id="<%= dom_id(project) %>">
-          <%= render ProjectCardComponent.new(project: project) %>
-        </li>
+        <%= render "projects/item",
+              project: project,
+              selected: params[:project].to_s == project.id.to_s,
+              list_context: "projects_index" %>
       <% end %>
     </ul>
   <% else %>

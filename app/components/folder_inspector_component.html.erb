@@ -1,0 +1,58 @@
+<section class="<%= root_class(extra: "inspector-form") %>"
+        data-inspect-type="folder"
+        data-inspect-id="<%= @folder.id %>">
+  <% if @folder.errors.any? %>
+    <p class="errors" role="alert"><%= @folder.errors.full_messages.to_sentence %></p>
+  <% end %>
+
+  <%= form_with model: @folder,
+        class: "form",
+        data: {
+          controller: "autosubmit",
+          action: "change->autosubmit#submit",
+          turbo_stream: true,
+          turbo_frame: "_top"
+        } do |form| %>
+    <% if @list_context.present? %>
+      <%= hidden_field_tag :list_context, @list_context %>
+    <% end %>
+
+    <div class="field">
+      <%= form.label :name %>
+      <%= form.text_field :name,
+            required: true,
+            class: "input",
+            autocomplete: "off",
+            data: { action: "keydown->autosubmit#submitOnEnter" } %>
+    </div>
+
+    <div class="field">
+      <%= form.label :parent_id, "Inside" %>
+      <%= form.select :parent_id,
+            options_for_select(@parent_options, @folder.parent_id),
+            { include_blank: "Top level" },
+            class: "input" %>
+    </div>
+
+    <div class="field">
+      <%= form.label :state %>
+      <%= form.select :state, options_for_select(state_options, @folder.state), {}, class: "input" %>
+    </div>
+
+    <div class="actions">
+      <%= link_to "Open folder", @folder, class: "open", data: { turbo_frame: "_top" } %>
+      <%= form.submit "Save", class: btn(:primary) %>
+    </div>
+  <% end %>
+
+  <dl class="meta">
+    <div>
+      <dt>Created</dt>
+      <dd><%= inspector_timestamp(@folder.created_at) %></dd>
+    </div>
+    <div>
+      <dt>Updated</dt>
+      <dd><%= inspector_timestamp(@folder.updated_at) %></dd>
+    </div>
+  </dl>
+</section>

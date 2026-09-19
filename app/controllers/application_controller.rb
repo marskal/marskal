@@ -6,23 +6,33 @@ class ApplicationController < ActionController::Base
   # Changes to the importmap will invalidate the etag for HTML responses
   stale_when_importmap_changes
 
-  helper_method :project_nav_tree, :show_task_inspector?, :inspector_frame_src
+  helper_method :project_nav_tree, :show_inspector?, :inspector_frame_src
 
   private
     def project_nav_tree
       @project_nav_tree ||= ProjectNavTree.new(Current.user)
     end
 
-    def show_task_inspector?
+    def show_inspector?
       (controller_name == "tasks" && action_name.in?(%w[index inbox])) ||
-        (controller_name == "projects" && action_name == "show")
+        (controller_name == "projects" && action_name.in?(%w[index show])) ||
+        (controller_name == "project_folders" && action_name == "show")
     end
 
     def inspector_frame_src
-      id = params[:task]
-      return unless id.is_a?(String) && id.present?
+      task_id = params[:task]
+      return task_path(task_id, inspector_list_params) if task_id.is_a?(String) && task_id.present?
 
-      task_path(id, inspector_list_params)
+      project_id = params[:project]
+      return project_path(project_id) if project_id.is_a?(String) && project_id.present?
+
+      folder_id = params[:folder]
+      return project_folder_path(folder_id) if folder_id.is_a?(String) && folder_id.present?
+
+      return project_path(@project) if controller_name == "projects" && action_name == "show" && @project
+      return project_folder_path(@folder) if controller_name == "project_folders" && action_name == "show" && @folder
+
+      nil
     end
 
     def inspector_list_params

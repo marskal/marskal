@@ -1,0 +1,15 @@
+<%= turbo_stream.update "inspector" do %>
+  <%= render "inspector" %>
+<% end %>
+
+<% unless @project.errors.any? %>
+  <%= turbo_stream.update "page-heading", @project.title if @list_context.blank? %>
+
+  <% if inspector_card_visible? %>
+    <%= turbo_stream.replace @project do %>
+      <%= render "projects/item", project: @project, selected: true, list_context: @list_context, list_folder_id: @list_folder_id %>
+    <% end %>
+  <% else %>
+    <%= turbo_stream.remove @project %>
+  <% end %>
+<% end %>

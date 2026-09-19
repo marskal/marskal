@@ -43,6 +43,10 @@ class ProjectFolder < ApplicationRecord
     projects.open_stream.recent_first
   end
 
+  def subtree_ids
+    [ id ] + children.flat_map(&:subtree_ids)
+  end
+
   def refresh_descendant_paths!
     children.find_each do |child|
       child.update_columns(

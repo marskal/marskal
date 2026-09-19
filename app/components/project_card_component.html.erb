@@ -1,6 +1,15 @@
-<%= link_to @project, class: root_class do %>
-  <span class="title"><%= @project.title %></span>
-  <% if @project.notes.present? %>
-    <span class="notes"><%= truncate(@project.notes, length: 120) %></span>
-  <% end %>
-<% end %>
+<article class="<%= root_class(extra: ("is-selected" if @selected)) %>"
+        data-inspect-type="project"
+        data-inspect-id="<%= @project.id %>"
+        data-action="click->inspector#selectRow"
+        <% if @selected %>aria-current="true"<% end %>>
+  <div class="body">
+    <span class="title">
+      <%= link_to @project.title, inspect_url, class: "select", data: inspect_link_data(@project) %>
+    </span>
+    <% if @project.notes.present? %>
+      <span class="notes"><%= truncate(@project.notes, length: 120) %></span>
+    <% end %>
+  </div>
+  <%= link_to "Open", @project, class: "open", data: { turbo_frame: "_top" } %>
+</article>

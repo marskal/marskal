@@ -9,7 +9,11 @@
         <span><%= segment %></span>
       <% end %>
     </p>
-    <h1><%= @folder.name %></h1>
+    <h1 data-inspect-type="folder" data-inspect-id="<%= @folder.id %>">
+      <%= link_to @folder, class: "page__inspect select", data: inspect_link_data(@folder) do %>
+        <span id="page-heading"><%= @folder.name %></span>
+      <% end %>
+    </h1>
     <% unless @folder.active? %>
       <p class="page__lede">This folder is dropped.</p>
     <% end %>
@@ -45,9 +49,11 @@
   <% if @projects.any? %>
     <ul class="project-list">
       <% @projects.each do |project| %>
-        <li class="project-list__item" id="<%= dom_id(project) %>">
-          <%= render ProjectCardComponent.new(project: project) %>
-        </li>
+        <%= render "projects/item",
+              project: project,
+              selected: params[:project].to_s == project.id.to_s,
+              list_context: "folder",
+              list_folder_id: @folder.id %>
       <% end %>
     </ul>
   <% else %>
@@ -74,7 +80,10 @@
     <ul class="folder-tree">
       <% @child_folders.each do |child| %>
         <li class="folder-tree__item">
-          <%= link_to child.name, project_folder_path(child), class: "folder-tree__link" %>
+          <%= render "project_folders/row",
+                folder: child,
+                selected: params[:folder].to_s == child.id.to_s,
+                list_context: "folder" %>
         </li>
       <% end %>
     </ul>

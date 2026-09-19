@@ -1,4 +1,7 @@
-<section class="<%= root_class %>" data-task-id="<%= @task.id %>">
+<section class="<%= root_class(extra: "inspector-form") %>"
+        data-inspect-type="task"
+        data-inspect-id="<%= @task.id %>"
+        data-task-id="<%= @task.id %>">
   <% if @task.errors.any? %>
     <p class="errors" role="alert"><%= @task.errors.full_messages.to_sentence %></p>
   <% end %>
@@ -59,11 +62,11 @@
   <dl class="meta">
     <div>
       <dt>Created</dt>
-      <dd><%= timestamp(@task.created_at) %></dd>
+      <dd><%= inspector_timestamp(@task.created_at) %></dd>
     </div>
     <div>
       <dt>Updated</dt>
-      <dd><%= timestamp(@task.updated_at) %></dd>
+      <dd><%= inspector_timestamp(@task.updated_at) %></dd>
     </div>
   </dl>
 </section>

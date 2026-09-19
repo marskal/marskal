@@ -132,9 +132,9 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     get root_path
 
     assert_select "aside.app-inspector"
-    assert_select "turbo-frame#task_inspector"
-    assert_select "a.select[data-turbo-frame=task_inspector]", text: "Write Phase 1 tests"
-    assert_select ".app-inspector__empty", text: /Select a task/
+    assert_select "turbo-frame#inspector"
+    assert_select "a.select[data-turbo-frame=inspector]", text: "Write Phase 1 tests"
+    assert_select ".app-inspector__empty", text: /Select a task, project, or folder/
   end
 
   test "inbox and project pages render the inspector" do
@@ -143,13 +143,7 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
 
     get project_path(projects(:website))
     assert_select "aside.app-inspector"
-    assert_select "a.select[data-turbo-frame=task_inspector]", text: "Draft homepage copy"
-  end
-
-  test "projects index does not render the inspector" do
-    get projects_path
-
-    assert_select "aside.app-inspector", count: 0
+    assert_select "a.select[data-turbo-frame=inspector]", text: "Draft homepage copy"
   end
 
   test "task query param sets inspector frame src" do
@@ -157,17 +151,17 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
 
     get root_path(task: task.id)
 
-    assert_select "turbo-frame#task_inspector[src*='#{task.id}']"
+    assert_select "turbo-frame#inspector[src*='#{task.id}']"
     assert_select "article.task-row.is-selected", text: /Write Phase 1 tests/
   end
 
   test "show in inspector frame renders all editable fields" do
     task = tasks(:open_one)
 
-    get task_path(task, list_context: "open"), headers: { "Turbo-Frame" => "task_inspector" }
+    get task_path(task, list_context: "open"), headers: { "Turbo-Frame" => "inspector" }
 
     assert_response :success
-    assert_select "turbo-frame#task_inspector"
+    assert_select "turbo-frame#inspector"
     assert_select ".task-inspector"
     assert_select "input[name='task[title]'][value=?]", task.title
     assert_select "textarea[name='task[notes]']"
@@ -193,7 +187,7 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "cannot show another users task" do
-    get task_path(tasks(:other_user_task)), headers: { "Turbo-Frame" => "task_inspector" }
+    get task_path(tasks(:other_user_task)), headers: { "Turbo-Frame" => "inspector" }
 
     assert_response :not_found
   end
@@ -239,7 +233,7 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_equal "Renamed open task", task.reload.title
-    assert_match "task_inspector", response.body
+    assert_match "inspector", response.body
     assert_match "Renamed open task", response.body
     assert_match "replace", response.body
   end

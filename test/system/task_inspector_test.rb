@@ -9,7 +9,7 @@ class TaskInspectorTest < ApplicationSystemTestCase
   test "clicking a task opens the inspector and saves edits" do
     visit root_path
 
-    assert_selector ".app-inspector__empty", text: /Select a task/
+    assert_selector ".app-inspector__empty", text: /Select a task, project, or folder/
 
     click_link "Write Phase 1 tests"
 
@@ -52,6 +52,45 @@ class TaskInspectorTest < ApplicationSystemTestCase
 
     assert_no_selector ".app.is-inspector-open"
     assert_no_selector ".task-row.is-selected"
-    assert_selector "aside.app-inspector", text: "Select a task to edit its details."
+    assert_selector "aside.app-inspector", text: /Select a task, project, or folder/
+  end
+
+  test "clicking a project opens the inspector and saves edits" do
+    visit projects_path
+
+    within ".project-list" do
+      click_link "Plan vacation"
+    end
+
+    assert_selector ".project-inspector"
+    within ".project-inspector" do
+      assert_field "Title", with: "Plan vacation"
+      fill_in "Title", with: "Summer trip"
+      click_button "Save"
+    end
+
+    assert_selector ".project-card.is-selected", text: "Summer trip"
+    assert_equal "Summer trip", projects(:unfiled_project).reload.title
+  end
+
+  test "opening a project auto-loads it in the inspector" do
+    visit project_path(projects(:website))
+
+    assert_selector ".project-inspector"
+    within ".project-inspector" do
+      assert_field "Title", with: "Launch website"
+      assert_selector "select[name='project[project_folder_id]']"
+    end
+  end
+
+  test "clicking a folder opens the inspector" do
+    visit projects_path
+
+    click_link "Work", href: /list_context=projects_index/
+
+    assert_selector ".folder-inspector"
+    within ".folder-inspector" do
+      assert_field "Name", with: "Work"
+    end
   end
 end

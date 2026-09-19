@@ -56,13 +56,13 @@
             <%= yield %>
           </main>
 
-          <% if show_task_inspector? %>
+          <% if show_inspector? %>
             <div class="app-inspector__backdrop" data-action="click->inspector#close"></div>
-            <aside id="task-inspector-pane"
+            <aside id="inspector-pane"
                    class="app-inspector"
                    data-inspector-target="panel"
                    tabindex="-1"
-                   aria-label="Task inspector">
+                   aria-label="Inspector">
               <div class="app-inspector__chrome">
                 <h2 class="app-inspector__title">Inspector</h2>
                 <button type="button"
@@ -75,13 +75,13 @@
 
               <template data-inspector-target="empty">
                 <div class="app-inspector__empty">
-                  <p>Select a task to edit its details.</p>
+                  <p>Select a task, project, or folder to edit.</p>
                 </div>
               </template>
 
-              <%= turbo_frame_tag "task_inspector", **{ src: inspector_frame_src }.compact do %>
+              <%= turbo_frame_tag "inspector", **{ src: inspector_frame_src }.compact do %>
                 <div class="app-inspector__empty">
-                  <p>Select a task to edit its details.</p>
+                  <p>Select a task, project, or folder to edit.</p>
                 </div>
               <% end %>
             </aside>

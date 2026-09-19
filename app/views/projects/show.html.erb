@@ -9,7 +9,11 @@
         <%= link_to @project.project_folder.breadcrumb_label, project_folder_path(@project.project_folder) %>
       <% end %>
     </p>
-    <h1><%= @project.title %></h1>
+    <h1 data-inspect-type="project" data-inspect-id="<%= @project.id %>">
+      <%= link_to @project, class: "page__inspect select", data: inspect_link_data(@project) do %>
+        <span id="page-heading"><%= @project.title %></span>
+      <% end %>
+    </h1>
     <% if @project.notes.present? %>
       <div class="page__lede project-notes"><%= formatted_notes(@project.notes) %></div>
     <% end %>

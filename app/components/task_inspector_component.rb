@@ -21,8 +21,4 @@ class TaskInspectorComponent < ApplicationComponent
   def state_options
     STATE_OPTIONS
   end
-
-  def timestamp(time)
-    time.in_time_zone.strftime("%-d %b %Y, %H:%M")
-  end
 end

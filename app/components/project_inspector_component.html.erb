@@ -1,0 +1,66 @@
+<section class="<%= root_class(extra: "inspector-form") %>"
+        data-inspect-type="project"
+        data-inspect-id="<%= @project.id %>">
+  <% if @project.errors.any? %>
+    <p class="errors" role="alert"><%= @project.errors.full_messages.to_sentence %></p>
+  <% end %>
+
+  <%= form_with model: @project,
+        class: "form",
+        data: {
+          controller: "autosubmit",
+          action: "change->autosubmit#submit",
+          turbo_stream: true,
+          turbo_frame: "_top"
+        } do |form| %>
+    <% if @list_context.present? %>
+      <%= hidden_field_tag :list_context, @list_context %>
+    <% end %>
+    <% if @list_folder_id.present? %>
+      <%= hidden_field_tag :list_folder_id, @list_folder_id %>
+    <% end %>
+
+    <div class="field">
+      <%= form.label :title %>
+      <%= form.text_field :title,
+            required: true,
+            class: "input",
+            autocomplete: "off",
+            data: { action: "keydown->autosubmit#submitOnEnter" } %>
+    </div>
+
+    <div class="field">
+      <%= form.label :notes %>
+      <%= form.text_area :notes, rows: 8, class: "input input--notes", placeholder: "What does done look like? Markdown is fine." %>
+    </div>
+
+    <div class="field">
+      <%= form.label :project_folder_id, "Folder" %>
+      <%= form.select :project_folder_id,
+            options_for_select(@folder_options, @project.project_folder_id),
+            { include_blank: "Unfiled" },
+            class: "input" %>
+    </div>
+
+    <div class="field">
+      <%= form.label :state %>
+      <%= form.select :state, options_for_select(state_options, @project.state), {}, class: "input" %>
+    </div>
+
+    <div class="actions">
+      <%= link_to "Open project", @project, class: "open", data: { turbo_frame: "_top" } %>
+      <%= form.submit "Save", class: btn(:primary) %>
+    </div>
+  <% end %>
+
+  <dl class="meta">
+    <div>
+      <dt>Created</dt>
+      <dd><%= inspector_timestamp(@project.created_at) %></dd>
+    </div>
+    <div>
+      <dt>Updated</dt>
+      <dd><%= inspector_timestamp(@project.updated_at) %></dd>
+    </div>
+  </dl>
+</section>

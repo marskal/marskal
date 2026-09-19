@@ -1,7 +1,8 @@
 <li class="folder-tree__item" style="--depth: <%= depth %>">
-  <%= link_to project_folder_path(folder), class: "folder-tree__link" do %>
-    <span class="folder-tree__name"><%= folder.name %></span>
-  <% end %>
+  <%= render "project_folders/row",
+        folder: folder,
+        selected: params[:folder].to_s == folder.id.to_s,
+        list_context: "projects_index" %>
   <% children = folders_by_parent[folder.id] || [] %>
   <% if children.any? %>
     <ul class="folder-tree">

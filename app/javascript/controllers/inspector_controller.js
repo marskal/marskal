@@ -1,6 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Right-hand task inspector: desktop sidebar, slide-over on narrow screens.
+const QUERY_KEYS = [ "task", "project", "folder" ]
+
+// Right-hand inspector: desktop sidebar, slide-over on narrow screens.
 export default class extends Controller {
   static targets = [ "panel", "empty" ]
 
@@ -16,10 +18,10 @@ export default class extends Controller {
     this.element.addEventListener("turbo:submit-end", this.boundSubmitEnd)
     this.element.addEventListener("turbo:frame-load", this.boundFrameLoad)
 
-    const selectedId = this.queryTaskId()
-    if (selectedId) {
+    const selected = this.querySelection()
+    if (selected) {
       this.setOpen(true)
-      this.markSelected(selectedId)
+      this.markSelected(selected.type, selected.id)
     } else {
       this.setOpen(false)
     }
@@ -36,9 +38,10 @@ export default class extends Controller {
 
   select(event) {
     const id = event.params.id
-    this.markSelected(id)
+    const type = event.params.type || "task"
+    this.markSelected(type, id)
     this.setOpen(true)
-    this.setQuery(id)
+    this.setQuery(type, id)
   }
 
   selectRow(event) {
@@ -50,25 +53,25 @@ export default class extends Controller {
 
   close() {
     this.setOpen(false)
-    this.markSelected(null)
-    this.setQuery(null)
+    this.markSelected(null, null)
+    this.setQuery(null, null)
     this.resetFrame()
   }
 
   onFrameLoad(event) {
-    if (event.target.id !== "task_inspector") return
+    if (event.target.id !== "inspector") return
 
-    const id = this.currentTaskId()
-    if (!id) return
+    const selected = this.currentSelection()
+    if (!selected) return
 
-    this.markSelected(id)
+    this.markSelected(selected.type, selected.id)
     this.setOpen(true)
-    this.setQuery(id)
+    this.setQuery(selected.type, selected.id)
   }
 
   onSubmitEnd() {
-    const id = this.currentTaskId()
-    if (id) this.markSelected(id)
+    const selected = this.currentSelection()
+    if (selected) this.markSelected(selected.type, selected.id)
   }
 
   onKeydown(event) {
@@ -97,37 +100,42 @@ export default class extends Controller {
     }
   }
 
-  markSelected(id) {
-    this.element.querySelectorAll(".task-row.is-selected").forEach((row) => {
+  markSelected(type, id) {
+    this.element.querySelectorAll(".is-selected[data-inspect-id]").forEach((row) => {
       row.classList.remove("is-selected")
       row.removeAttribute("aria-current")
     })
 
-    if (!id) return
+    if (!type || !id) return
 
-    const row = this.element.querySelector(`.task-row[data-task-id="${CSS.escape(id)}"]`)
+    const row = this.element.querySelector(`[data-inspect-type="${CSS.escape(type)}"][data-inspect-id="${CSS.escape(id)}"]`)
     if (!row) return
 
     row.classList.add("is-selected")
     row.setAttribute("aria-current", "true")
   }
 
-  setQuery(id) {
+  setQuery(type, id) {
     const url = new URL(window.location.href)
-    if (id) {
-      url.searchParams.set("task", id)
-    } else {
-      url.searchParams.delete("task")
-    }
+    QUERY_KEYS.forEach((key) => url.searchParams.delete(key))
+    if (type && id) url.searchParams.set(type, id)
     window.history.replaceState(window.history.state, "", url)
   }
 
-  queryTaskId() {
-    return new URL(window.location.href).searchParams.get("task")
+  querySelection() {
+    const url = new URL(window.location.href)
+    for (const type of QUERY_KEYS) {
+      const id = url.searchParams.get(type)
+      if (id) return { type, id }
+    }
+    return null
   }
 
-  currentTaskId() {
-    return this.frame?.querySelector(".task-inspector")?.dataset.taskId || null
+  currentSelection() {
+    const el = this.frame?.querySelector("[data-inspect-type][data-inspect-id]")
+    if (!el) return null
+
+    return { type: el.dataset.inspectType, id: el.dataset.inspectId }
   }
 
   resetFrame() {
@@ -141,6 +149,6 @@ export default class extends Controller {
   }
 
   get frame() {
-    return this.element.querySelector("#task_inspector")
+    return this.element.querySelector("#inspector")
   }
 }

@@ -14,7 +14,7 @@ class TaskInspectorComponentTest < ViewComponent::TestCase
       )
     )
 
-    assert_selector "section.task-inspector[data-task-id='#{task.id}']"
+    assert_selector "section.task-inspector.inspector-form[data-inspect-type=task][data-inspect-id='#{task.id}']"
     assert_field "task[title]", with: task.title
     assert_selector "textarea[name='task[notes]']"
     assert_select_project_options

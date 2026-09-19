@@ -1,0 +1,12 @@
+<div class="folder-tree__row<%= " is-selected" if local_assigns[:selected] %>"
+     id="<%= dom_id(folder) %>"
+     data-inspect-type="folder"
+     data-inspect-id="<%= folder.id %>"
+     data-action="click->inspector#selectRow"
+     <% if local_assigns[:selected] %>aria-current="true"<% end %>>
+  <%= link_to folder.name,
+        project_folder_path(folder, { list_context: local_assigns[:list_context] }.compact),
+        class: "folder-tree__link select",
+        data: inspect_link_data(folder) %>
+  <%= link_to "Open", folder, class: "folder-tree__open", data: { turbo_frame: "_top" } %>
+</div>

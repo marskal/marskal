@@ -33,6 +33,14 @@ class ProjectFolderTest < ActiveSupport::TestCase
     assert folder.errors[:parent].any?
   end
 
+  test "subtree_ids includes self and descendants" do
+    work = project_folders(:work)
+    client = project_folders(:client_a)
+
+    assert_equal [ work.id, client.id ].sort, work.subtree_ids.sort
+    assert_equal [ client.id ], client.subtree_ids
+  end
+
   test "rejects cyclic parent" do
     work = project_folders(:work)
     client = project_folders(:client_a)
