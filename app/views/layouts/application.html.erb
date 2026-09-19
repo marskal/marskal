@@ -25,7 +25,7 @@
 
   <body>
     <% if authenticated? %>
-      <div class="app" data-controller="sidebar" data-action="click->sidebar#closeOnNavigate">
+      <div class="app" data-controller="sidebar inspector" data-action="click->sidebar#closeOnNavigate">
         <header class="app-header">
           <button type="button"
                   class="app-header__menu"
@@ -55,6 +55,37 @@
             <%= render FlashComponent.new(notice: flash[:notice], alert: flash[:alert]) %>
             <%= yield %>
           </main>
+
+          <% if show_task_inspector? %>
+            <div class="app-inspector__backdrop" data-action="click->inspector#close"></div>
+            <aside id="task-inspector-pane"
+                   class="app-inspector"
+                   data-inspector-target="panel"
+                   tabindex="-1"
+                   aria-label="Task inspector">
+              <div class="app-inspector__chrome">
+                <h2 class="app-inspector__title">Inspector</h2>
+                <button type="button"
+                        class="app-inspector__close"
+                        data-action="inspector#close"
+                        aria-label="Close inspector">
+                  <%= icon "x" %>
+                </button>
+              </div>
+
+              <template data-inspector-target="empty">
+                <div class="app-inspector__empty">
+                  <p>Select a task to edit its details.</p>
+                </div>
+              </template>
+
+              <%= turbo_frame_tag "task_inspector", **{ src: inspector_frame_src }.compact do %>
+                <div class="app-inspector__empty">
+                  <p>Select a task to edit its details.</p>
+                </div>
+              <% end %>
+            </aside>
+          <% end %>
         </div>
       </div>
     <% else %>

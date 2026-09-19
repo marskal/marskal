@@ -1,12 +1,22 @@
 class TasksController < ApplicationController
-  before_action :set_task, only: %i[ update move_to_open complete drop reopen ]
+  before_action :set_task, only: %i[ show update move_to_open complete drop reopen ]
 
   def index
     @tasks = current_user_tasks.open_stream.includes(:project).recent_first
   end
 
   def inbox
-    @tasks = current_user_tasks.inbox.to_do.recent_first
+    @tasks = current_user_tasks.inbox.to_do.includes(:project).recent_first
+  end
+
+  def show
+    unless turbo_frame_request?
+      redirect_to task_return_path(task: @task.id)
+      return
+    end
+
+    load_inspector_extras
+    render layout: false
   end
 
   def create
@@ -22,10 +32,20 @@ class TasksController < ApplicationController
   end
 
   def update
-    if @task.update(task_update_params)
-      redirect_back_or_to task_return_path, notice: "Updated."
+    updated = @task.update(task_update_params)
+    @task.reload if updated
+    load_inspector_extras
+
+    if updated
+      respond_to do |format|
+        format.turbo_stream
+        format.html { redirect_to task_return_path(task: @task.id), notice: "Updated." }
+      end
     else
-      redirect_back_or_to task_return_path, alert: @task.errors.full_messages.to_sentence.presence || "Could not update task."
+      respond_to do |format|
+        format.turbo_stream { render :update, status: :unprocessable_entity }
+        format.html { redirect_to task_return_path(task: @task.id), alert: @task.errors.full_messages.to_sentence.presence || "Could not update task." }
+      end
     end
   end
 
@@ -63,8 +83,44 @@ class TasksController < ApplicationController
     end
 
     def task_update_params
-      params.require(:task).permit(:title, :notes, :project_id)
+      attrs = params.require(:task).permit(:title, :notes, :project_id, :inbox, :state)
+      attrs[:project_id] = nil if attrs.key?(:project_id) && attrs[:project_id].blank?
+      attrs
     end
+
+    def load_inspector_extras
+      @projects = inspector_project_options(@task)
+      @list_context = params[:list_context].presence_in(%w[open inbox project]) || "open"
+      @list_project_id = params[:list_project_id].presence
+    end
+
+    def inspector_project_options(task)
+      projects = Current.user.projects.open_stream.order(:title).to_a
+      current = task.project
+      if current && current.user_id == Current.user.id && projects.none? { |project| project.id == current.id }
+        projects.unshift(current)
+      end
+      projects
+    end
+
+    def inspector_row_visible?
+      case @list_context
+      when "inbox"
+        @task.inbox? && @task.to_do?
+      when "project"
+        @task.to_do? && !@task.inbox? && @task.project_id.to_s == @list_project_id.to_s
+      when "open"
+        @task.to_do? && !@task.inbox?
+      else
+        true
+      end
+    end
+    helper_method :inspector_row_visible?
+
+    def inspector_row_context
+      (@list_context.presence || "open").to_sym
+    end
+    helper_method :inspector_row_context
 
     # Global add → inbox. Add under a project → already organized (not inbox).
     def apply_create_placement!(task)
@@ -91,10 +147,13 @@ class TasksController < ApplicationController
       inbox_path
     end
 
-    def task_return_path
-      return inbox_path if @task.inbox?
-      return project_path(@task.project_id) if @task.project_id.present?
-
-      root_path
+    def task_return_path(**extra)
+      if @task.inbox?
+        inbox_path(extra)
+      elsif @task.project_id.present?
+        project_path(@task.project_id, extra)
+      else
+        root_path(extra)
+      end
     end
 end

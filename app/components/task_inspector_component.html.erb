@@ -1,0 +1,69 @@
+<section class="<%= root_class %>" data-task-id="<%= @task.id %>">
+  <% if @task.errors.any? %>
+    <p class="errors" role="alert"><%= @task.errors.full_messages.to_sentence %></p>
+  <% end %>
+
+  <%= form_with model: @task,
+        class: "form",
+        data: {
+          controller: "autosubmit",
+          action: "change->autosubmit#submit",
+          turbo_stream: true,
+          turbo_frame: "_top"
+        } do |form| %>
+    <%= hidden_field_tag :list_context, @list_context %>
+    <% if @list_project_id.present? %>
+      <%= hidden_field_tag :list_project_id, @list_project_id %>
+    <% end %>
+
+    <div class="field">
+      <%= form.label :title %>
+      <%= form.text_field :title,
+            required: true,
+            class: "input",
+            autocomplete: "off",
+            data: { action: "keydown->autosubmit#submitOnEnter" } %>
+    </div>
+
+    <div class="field">
+      <%= form.label :notes %>
+      <%= form.text_area :notes, rows: 8, class: "input input--notes", placeholder: "Markdown is fine…" %>
+    </div>
+
+    <div class="field">
+      <%= form.label :project_id, "Project" %>
+      <%= form.select :project_id,
+            options_for_select(project_options, @task.project_id),
+            { include_blank: "No project" },
+            class: "input" %>
+    </div>
+
+    <div class="field field--check">
+      <%= form.check_box :inbox, class: "checkbox" %>
+      <div class="check-copy">
+        <%= form.label :inbox, "Inbox" %>
+        <p class="hint">Unclarified capture. Uncheck to move it to open tasks.</p>
+      </div>
+    </div>
+
+    <div class="field">
+      <%= form.label :state %>
+      <%= form.select :state, options_for_select(state_options, @task.state), {}, class: "input" %>
+    </div>
+
+    <div class="actions">
+      <%= form.submit "Save", class: btn(:primary) %>
+    </div>
+  <% end %>
+
+  <dl class="meta">
+    <div>
+      <dt>Created</dt>
+      <dd><%= timestamp(@task.created_at) %></dd>
+    </div>
+    <div>
+      <dt>Updated</dt>
+      <dd><%= timestamp(@task.updated_at) %></dd>
+    </div>
+  </dl>
+</section>

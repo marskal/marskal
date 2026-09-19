@@ -1,9 +1,16 @@
 # frozen_string_literal: true
 
 class TaskRowComponent < ApplicationComponent
-  def initialize(task:, context: :open)
+  def initialize(task:, context: :open, selected: false)
     @task = task
     @context = context
+    @selected = selected
+  end
+
+  def inspect_url
+    extra = { list_context: @context }
+    extra[:list_project_id] = @task.project_id if @context == :project
+    task_path(@task, extra)
   end
 
   def show_project?

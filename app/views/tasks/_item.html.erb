@@ -1,0 +1,3 @@
+<li class="task-list__item" id="<%= dom_id(task) %>">
+  <%= render TaskRowComponent.new(task: task, context: context, selected: selected) %>
+</li>

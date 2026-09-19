@@ -1,4 +1,7 @@
-<article class="<%= root_class %>">
+<article class="<%= root_class(extra: ("is-selected" if @selected)) %>"
+        data-task-id="<%= @task.id %>"
+        data-action="click->inspector#selectRow"
+        <% if @selected %>aria-current="true"<% end %>>
   <%= button_to check_url, method: :patch, class: check_class, form_class: "check-form", title: check_label, aria: { label: check_label } do %>
     <% if @task.dropped? %>
       <span class="check__dropped" aria-hidden="true"><%= icon "square-off" %></span>
@@ -11,7 +14,15 @@
   <% end %>
 
   <div class="body">
-    <h2 class="title"><%= @task.title %></h2>
+    <h2 class="title">
+      <%= link_to @task.title, inspect_url,
+            class: "select",
+            data: {
+              turbo_frame: "task_inspector",
+              action: "click->inspector#select",
+              inspector_id_param: @task.id
+            } %>
+    </h2>
     <% if show_project? %>
       <p class="project">
         <%= link_to @task.project.title, @task.project %>

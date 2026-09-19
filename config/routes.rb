@@ -21,7 +21,7 @@ Rails.application.routes.draw do
   end
 
 
-  resources :tasks, only: %i[ create update ] do
+  resources :tasks, only: %i[ show create update ] do
     member do
       patch :move_to_open
       patch :complete

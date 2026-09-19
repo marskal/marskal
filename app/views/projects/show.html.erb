@@ -54,13 +54,7 @@
   <% end %>
 
   <% if @tasks.any? %>
-    <ul class="task-list">
-      <% @tasks.each do |task| %>
-        <li class="task-list__item" id="<%= dom_id(task) %>">
-          <%= render TaskRowComponent.new(task: task, context: :project) %>
-        </li>
-      <% end %>
-    </ul>
+    <%= render "tasks/list", tasks: @tasks, context: :project %>
   <% else %>
     <%= render EmptyStateComponent.new do %>
       No open tasks in this project yet.

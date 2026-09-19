@@ -9,13 +9,7 @@
   <%= render "tasks/add_form" %>
 
   <% if @tasks.any? %>
-    <ul class="task-list">
-      <% @tasks.each do |task| %>
-        <li class="task-list__item" id="<%= dom_id(task) %>">
-          <%= render TaskRowComponent.new(task: task, context: :open) %>
-        </li>
-      <% end %>
-    </ul>
+    <%= render "tasks/list", tasks: @tasks, context: :open %>
   <% else %>
     <%= render EmptyStateComponent.new do %>
       No open tasks. Add something in <%= link_to "Inbox", inbox_path %>, then move it here.

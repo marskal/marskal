@@ -42,7 +42,9 @@ export default class extends Controller {
   }
 
   onKeydown(event) {
-    if (event.key === "Escape") this.close()
+    if (event.key !== "Escape") return
+    if (document.body.classList.contains("inspector-open")) return
+    this.close()
   }
 
   setOpen(open) {

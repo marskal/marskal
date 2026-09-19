@@ -1,0 +1,8 @@
+<ul class="task-list">
+  <% tasks.each do |task| %>
+    <%= render "tasks/item",
+          task: task,
+          context: context,
+          selected: params[:task].to_s == task.id.to_s %>
+  <% end %>
+</ul>

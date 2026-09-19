@@ -9,6 +9,7 @@ class TaskRowComponentTest < ViewComponent::TestCase
     render_inline(TaskRowComponent.new(task: task, context: :open))
 
     assert_selector "article.task-row h2.title", text: task.title
+    assert_selector "a.select[data-turbo-frame=task_inspector]", text: task.title
     assert_selector ".project a", text: task.project.title
     assert_selector "form.check-form button.check[aria-label='Mark as done']"
     assert_selector "button.check .check__idle"
@@ -53,5 +54,13 @@ class TaskRowComponentTest < ViewComponent::TestCase
     assert_selector "form.check-form button.check.check--dropped[aria-label='Reopen']"
     assert_selector "button.check .check__dropped"
     assert_no_selector "button.check .check__idle"
+  end
+
+  test "selected row is marked current" do
+    task = tasks(:open_one)
+
+    render_inline(TaskRowComponent.new(task: task, context: :open, selected: true))
+
+    assert_selector "article.task-row.is-selected[aria-current=true]"
   end
 end
