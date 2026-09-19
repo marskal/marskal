@@ -35,4 +35,42 @@ class Imports::OmnifocusNoteTest < ActiveSupport::TestCase
     assert_not_includes markdown, "AppleSystemUIFont"
     assert_not_includes markdown, "<a href"
   end
+
+  test "maps bold italic and strikethrough to markdown" do
+    xml = <<~XML
+      <note>
+        <text>
+          <p>
+            <run>
+              <style><value key="font-weight">8</value></style>
+              <lit>bold</lit>
+            </run>
+            <run><lit> and </lit></run>
+            <run>
+              <style><value key="font-italic">true</value></style>
+              <lit>italic</lit>
+            </run>
+            <run><lit> and </lit></run>
+            <run>
+              <style><value key="strikethrough-style">single</value></style>
+              <lit>gone</lit>
+            </run>
+            <run>
+              <style>
+                <value key="font-weight">9</value>
+                <value key="link">https://example.com</value>
+              </style>
+              <lit>docs</lit>
+            </run>
+          </p>
+        </text>
+      </note>
+    XML
+    markdown = Imports::OmnifocusNote.to_markdown(Nokogiri::XML(xml).root)
+
+    assert_includes markdown, "**bold**"
+    assert_includes markdown, "*italic*"
+    assert_includes markdown, "~~gone~~"
+    assert_includes markdown, "[**docs**](https://example.com)"
+  end
 end
