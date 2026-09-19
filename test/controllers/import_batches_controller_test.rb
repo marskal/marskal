@@ -40,6 +40,41 @@ class ImportBatchesControllerTest < ActionDispatch::IntegrationTest
     file.close!
   end
 
+  test "upload ofocus-backup package members as a bundle" do
+    files = []
+    paths = []
+    tempfiles = []
+
+    Zip::File.open_buffer(OmnifocusBackup.tutorial_backup) do |zip|
+      zip.each do |entry|
+        next if entry.directory?
+
+        tmp = Tempfile.new([ "of-", File.basename(entry.name) ])
+        tmp.binmode
+        tmp.write(entry.get_input_stream.read)
+        tmp.rewind
+        tempfiles << tmp
+        files << Rack::Test::UploadedFile.new(tmp.path, "application/octet-stream", true)
+        paths << entry.name
+      end
+    end
+
+    assert_difference -> { @user.import_batches.count }, 1 do
+      post import_batches_path, params: {
+        import_batch: { bundle_files: files, bundle_paths: paths }
+      }
+    end
+
+    batch = @user.import_batches.order(:created_at).last
+    assert_redirected_to import_batch_path(batch)
+    perform_enqueued_jobs
+    batch.reload
+    assert batch.previewed?
+    assert_equal 2, batch.stats["projects"]
+  ensure
+    tempfiles&.each { |tmp| tmp.close! }
+  end
+
   test "apply writes records" do
     batch = @user.import_batches.new(source: "omnifocus", channel: :file, status: :pending)
     batch.payload.attach(

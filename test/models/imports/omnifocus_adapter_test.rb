@@ -44,6 +44,38 @@ class Imports::OmnifocusAdapterTest < ActiveSupport::TestCase
     assert_equal "done", done.state
   end
 
+  test "parses an OmniFocus 4.9 tutorial package zip" do
+    graph = Imports::OmnifocusAdapter.parse(
+      StringIO.new(OmnifocusBackup.tutorial_backup),
+      filename: "omnifocus-tutorial.ofocus-backup.zip"
+    )
+
+    assert_equal "omnifocus", graph.source
+    assert_empty graph.folders
+    titles = graph.projects.map(&:title)
+    assert_includes titles, "Get to know OmniFocus 4 for Mac"
+    assert_includes titles, "Brokkassen"
+    assert_equal 2, graph.projects.size
+
+    task_titles = graph.tasks.map(&:title)
+    assert_includes task_titles, "Click this action"
+    assert_includes task_titles, "Gør noget"
+    assert_includes task_titles, "Create a project"
+    assert_not graph.tasks.any?(&:inbox)
+
+    click = graph.tasks.find { |t| t.title == "Click this action" }
+    tutorial = graph.projects.find { |p| p.title == "Get to know OmniFocus 4 for Mac" }
+    assert_equal tutorial.source_id, click.project_source_id
+    assert_equal "to_do", click.state
+
+    done = graph.tasks.find { |t| t.title == "Create a project" }
+    assert_equal "done", done.state
+
+    brokka = graph.projects.find { |p| p.title == "Brokkassen" }
+    noget = graph.tasks.find { |t| t.title == "Gør noget" }
+    assert_equal brokka.source_id, noget.project_source_id
+  end
+
   test "rejects zip-slip entries" do
     assert_raises(ArgumentError) do
       Imports::OmnifocusAdapter.parse(StringIO.new(OmnifocusBackup.zip_slip_archive), filename: "x.ofocus-backup")

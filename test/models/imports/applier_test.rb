@@ -65,6 +65,34 @@ class Imports::ApplierTest < ActiveSupport::TestCase
     assert_operator batch2.stats.dig("skipped", "tasks"), :>, 0
   end
 
+  test "applies an OmniFocus 4.9 tutorial backup" do
+    batch = @user.import_batches.new(source: "omnifocus", channel: :file, status: :pending)
+    batch.payload.attach(
+      io: StringIO.new(OmnifocusBackup.tutorial_backup),
+      filename: "omnifocus-tutorial.ofocus-backup.zip",
+      content_type: "application/zip"
+    )
+    batch.save!
+
+    Imports::Parser.call(batch)
+    assert batch.reload.previewed?
+    assert_equal 2, batch.stats["projects"]
+    assert_operator batch.stats["tasks"], :>=, 20
+
+    Imports::Applier.call(batch)
+    assert batch.reload.applied?
+
+    tutorial = @user.projects.find_by(title: "Get to know OmniFocus 4 for Mac")
+    assert tutorial
+    assert_includes tutorial.open_tasks.map(&:title), "Click this action"
+
+    brokka = @user.projects.find_by(title: "Brokkassen")
+    assert_equal [ "Gør noget", "Gør noget andet" ].sort, brokka.open_tasks.map(&:title).sort
+
+    done = @user.tasks.find_by(title: "Create a project")
+    assert done.done?
+  end
+
   test "does not import into another user" do
     Imports::Parser.call(@batch)
     Imports::Applier.call(@batch)

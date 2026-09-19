@@ -4,14 +4,37 @@
   <header class="page__header">
     <p class="page__crumb"><%= link_to "Import", import_batches_path %></p>
     <h1>OmniFocus backup</h1>
-    <p class="page__lede">In OmniFocus: File → Export → Backup Document (.ofocus-backup). Todoist sign-in comes later.</p>
+    <p class="page__lede">
+      Drop the <code>.ofocus-backup</code> here — it looks like a file in Finder.
+      You can also choose a zip, or the <code>00000000000000=….zip</code> inside
+      the package.
+    </p>
   </header>
 
-  <%= form_with model: @batch, url: import_batches_path, class: "add-form" do |form| %>
-    <div class="add-form__field">
-      <%= form.label :payload, "Backup file" %>
-      <%= form.file_field :payload, required: true, accept: ".ofocus-backup,.ofocus,.zip", class: "add-form__title" %>
+  <%= form_with model: @batch, url: import_batches_path, class: "add-form",
+        data: { controller: "backup-drop", backup_drop_target: "form" } do |form| %>
+    <div class="backup-drop"
+         data-backup-drop-target="dropzone"
+         data-action="dragover->backup-drop#dragOver dragleave->backup-drop#dragLeave drop->backup-drop#drop">
+      <p class="backup-drop__prompt">Drop your OmniFocus backup here</p>
+      <p class="backup-drop__status" data-backup-drop-target="status"></p>
+      <div class="backup-drop__actions">
+        <button type="button" class="<%= btn %>" data-action="backup-drop#pickFile">Choose zip</button>
+        <button type="button" class="<%= btn(:ghost) %>" data-action="backup-drop#pickDirectory">Choose backup package</button>
+      </div>
     </div>
+
+    <%= form.file_field :payload,
+          accept: ".ofocus-backup,.ofocus,.zip,application/zip",
+          class: "backup-drop__hidden",
+          data: { backup_drop_target: "file", action: "change->backup-drop#fileChosen" } %>
+    <input type="file"
+           class="backup-drop__hidden"
+           webkitdirectory
+           directory
+           data-backup-drop-target="directory"
+           data-action="change->backup-drop#directoryChosen">
+
     <%= form.submit "Upload and preview", class: btn(:primary) %>
   <% end %>
 </section>

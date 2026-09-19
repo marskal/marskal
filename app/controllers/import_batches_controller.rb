@@ -11,9 +11,9 @@ class ImportBatchesController < ApplicationController
 
   def create
     @batch = Current.user.import_batches.new(source: "omnifocus", channel: :file, status: :pending)
-    @batch.payload = batch_params[:payload]
+    attach_payload
 
-    if @batch.save
+    if @batch.errors.empty? && @batch.save
       ImportParseJob.perform_later(@batch)
       redirect_to @batch, notice: "Reading backup…"
     else
@@ -38,7 +38,30 @@ class ImportBatchesController < ApplicationController
   end
 
   private
+    def attach_payload
+      if batch_params[:payload].present?
+        @batch.payload = batch_params[:payload]
+      elsif bundle_files.any?
+        packed = Imports::BundlePackager.call(files: bundle_files, paths: bundle_paths)
+        @batch.payload.attach(
+          io: packed,
+          filename: "OmniFocus.ofocus-backup.zip",
+          content_type: "application/zip"
+        )
+      end
+    rescue ArgumentError => e
+      @batch.errors.add(:payload, e.message)
+    end
+
     def batch_params
       params.fetch(:import_batch, {}).permit(:payload)
+    end
+
+    def bundle_files
+      Array(params.dig(:import_batch, :bundle_files)).compact_blank
+    end
+
+    def bundle_paths
+      Array(params.dig(:import_batch, :bundle_paths))
     end
 end

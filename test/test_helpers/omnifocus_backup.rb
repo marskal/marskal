@@ -66,6 +66,10 @@ module OmnifocusBackup
     outer.read
   end
 
+  def tutorial_backup
+    Rails.root.join("test/fixtures/files/omnifocus-tutorial.ofocus-backup.zip").binread
+  end
+
   def zip_slip_archive
     zip = Zip::OutputStream.write_buffer do |zio|
       zio.put_next_entry("../evil.xml")

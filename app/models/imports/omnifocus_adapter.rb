@@ -60,6 +60,10 @@ module Imports
     end
 
     def parse
+      unless @bytes.start_with?("PK\x03\x04")
+        raise ArgumentError, "This looks like an OmniFocus package, not a zip. In Finder, compress the .ofocus-backup (it is a folder), or in the Export save panel choose File Format → Backup Document, then upload that file."
+      end
+
       documents = xml_documents
       raise ArgumentError, "No OmniFocus contents.xml found in the backup." if documents.empty?
 
@@ -164,13 +168,12 @@ module Imports
       end
 
       def parse_task(el)
-        project_el = el.at_xpath("./project")
         parent = el.at_xpath("./task[@idref]")
         {
           "id" => el["id"],
           "name" => text_at(el, "name"),
           "notes" => notes_at(el),
-          "inbox" => el.at_xpath("./inbox").present?,
+          "inbox" => inbox?(el),
           "parent_id" => parent&.[]("idref"),
           "completed" => text_at(el, "completed"),
           "start" => text_at(el, "start"),
@@ -178,11 +181,29 @@ module Imports
           "planned" => text_at(el, "planned"),
           "flagged" => text_at(el, "flagged") == "true",
           "repeat" => text_at(el, "repeat") || text_at(el, "repetition-rule"),
-          "project" => project_el && {
-            "folder_id" => project_el.at_xpath("./folder[@idref]")&.[]("idref"),
-            "status" => text_at(project_el, "status").presence || "active"
-          },
+          "project" => project_info(el),
           "tag_ids" => el.xpath("./tag[@idref]|./context[@idref]").map { |n| n["idref"] }
+        }
+      end
+
+      # OF 1: empty <inbox/>. OF 4: <inbox>true</inbox> / <inbox>false</inbox>.
+      def inbox?(el)
+        node = el.at_xpath("./inbox")
+        return false if node.nil?
+
+        text = node.text.to_s.strip
+        text.empty? || text == "true"
+      end
+
+      # OF 4 actions include an empty <project/>. A real project has child elements
+      # (status, folder, review, …).
+      def project_info(el)
+        project_el = el.at_xpath("./project")
+        return unless project_el&.element_children&.any?
+
+        {
+          "folder_id" => project_el.at_xpath("./folder[@idref]")&.[]("idref"),
+          "status" => text_at(project_el, "status").presence || "active"
         }
       end
 
