@@ -1,4 +1,15 @@
 <article class="<%= root_class %>">
+  <%= button_to check_url, method: :patch, class: check_class, form_class: "check-form", title: check_label, aria: { label: check_label } do %>
+    <% if @task.dropped? %>
+      <span class="check__dropped" aria-hidden="true"><%= icon "square-off" %></span>
+    <% elsif @task.done? %>
+      <span class="check__complete" aria-hidden="true"><%= icon "square-check-big" %></span>
+    <% else %>
+      <span class="check__idle" aria-hidden="true"><%= icon "square" %></span>
+      <span class="check__hint" aria-hidden="true"><%= icon "square-check-big" %></span>
+    <% end %>
+  <% end %>
+
   <div class="body">
     <h2 class="title"><%= @task.title %></h2>
     <% if show_project? %>
@@ -17,7 +28,6 @@
     <% end %>
 
     <% if @task.to_do? %>
-      <%= button_to "Done", complete_task_path(@task), method: :patch, class: btn %>
       <%= button_to "Drop", drop_task_path(@task), method: :patch, class: btn(:ghost) %>
     <% else %>
       <span class="state"><%= @task.state.humanize %></span>

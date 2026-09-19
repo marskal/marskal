@@ -10,8 +10,11 @@ class TaskRowComponentTest < ViewComponent::TestCase
 
     assert_selector "article.task-row h2.title", text: task.title
     assert_selector ".project a", text: task.project.title
-    assert_selector "button", text: "Done"
+    assert_selector "form.check-form button.check[aria-label='Mark as done']"
+    assert_selector "button.check .check__idle"
+    assert_selector "button.check .check__hint"
     assert_selector "button", text: "Drop"
+    assert_no_selector "button", text: "Done"
   end
 
   test "hides project link on a project page" do
@@ -29,5 +32,26 @@ class TaskRowComponentTest < ViewComponent::TestCase
     render_inline(TaskRowComponent.new(task: task, context: :inbox))
 
     assert_selector "button", text: "Move to open tasks"
+  end
+
+  test "done task shows a completed check that reopens" do
+    task = tasks(:done_one)
+
+    render_inline(TaskRowComponent.new(task: task, context: :open))
+
+    assert_selector "form.check-form button.check.check--done[aria-label='Reopen']"
+    assert_selector "button.check .check__complete"
+    assert_no_selector "button.check .check__idle"
+    assert_no_selector "button.check .check__hint"
+  end
+
+  test "dropped task shows square-off" do
+    task = tasks(:dropped_one)
+
+    render_inline(TaskRowComponent.new(task: task, context: :open))
+
+    assert_selector "form.check-form button.check.check--dropped[aria-label='Reopen']"
+    assert_selector "button.check .check__dropped"
+    assert_no_selector "button.check .check__idle"
   end
 end

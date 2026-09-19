@@ -30,6 +30,14 @@ done_one:
   inbox: false
   project:
 
+dropped_one:
+  user: one
+  title: Skip this
+  notes:
+  state: dropped
+  inbox: false
+  project:
+
 other_user_task:
   user: two
   title: Secret task

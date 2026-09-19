@@ -2,6 +2,7 @@
 
 class ApplicationComponent < ViewComponent::Base
   include ApplicationHelper
+  include RailsIcons::Helpers::IconHelper
 
   class << self
     def scope_class
