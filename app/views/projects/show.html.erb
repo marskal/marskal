@@ -11,7 +11,7 @@
     </p>
     <h1><%= @project.title %></h1>
     <% if @project.notes.present? %>
-      <div class="page__lede project-notes"><%= simple_format(@project.notes) %></div>
+      <div class="page__lede project-notes"><%= formatted_notes(@project.notes) %></div>
     <% end %>
 
     <%= form_with model: @project, class: "folder-assign" do |form| %>
@@ -49,7 +49,7 @@
     </div>
     <details class="add-form__notes">
       <summary>Notes (optional)</summary>
-      <%= form.text_area :notes, rows: 3, placeholder: "Extra detail…", class: "add-form__notes-field" %>
+      <%= form.text_area :notes, rows: 3, placeholder: "Markdown is fine…", class: "add-form__notes-field" %>
     </details>
   <% end %>
 

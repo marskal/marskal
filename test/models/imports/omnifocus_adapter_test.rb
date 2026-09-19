@@ -74,6 +74,11 @@ class Imports::OmnifocusAdapterTest < ActiveSupport::TestCase
     brokka = graph.projects.find { |p| p.title == "Brokkassen" }
     noget = graph.tasks.find { |t| t.title == "Gør noget" }
     assert_equal brokka.source_id, noget.project_source_id
+
+    inspector = graph.tasks.find { |t| t.title == "Check out the Inspector" }
+    assert_includes inspector.notes, "Click the Inspect button"
+    assert_includes inspector.notes, "](https://www.omnigroup.com/forward/of4-inspector)"
+    assert_not_includes inspector.notes, "AppleSystemUIFont"
   end
 
   test "rejects zip-slip entries" do

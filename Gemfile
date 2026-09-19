@@ -21,6 +21,8 @@ gem "rails_icons"
 gem "view_component", "~> 4.15"
 # Zip packages for OmniFocus (and later Todoist) backups (ADR 0013)
 gem "rubyzip"
+# Notes are CommonMark + GFM (import + user-authored)
+gem "commonmarker"
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 gem "bcrypt", "~> 3.1.7"

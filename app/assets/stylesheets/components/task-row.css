@@ -38,12 +38,32 @@
     font-size: 0.9rem;
   }
 
-  .notes p {
+  .notes p,
+  .notes ul,
+  .notes ol {
     margin: 0 0 0.35rem;
   }
 
-  .notes p:last-child {
+  .notes p:last-child,
+  .notes ul:last-child,
+  .notes ol:last-child {
     margin-bottom: 0;
+  }
+
+  .notes ul,
+  .notes ol {
+    padding-left: 1.25rem;
+  }
+
+  .notes table {
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  .notes th,
+  .notes td {
+    border: 1px solid var(--border);
+    padding: 0.15rem 0.4rem;
   }
 
   .actions {

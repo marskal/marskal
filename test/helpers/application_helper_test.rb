@@ -14,4 +14,19 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_equal "button", btn
     assert_equal "button button--primary", btn(:primary)
   end
+
+  test "formatted_notes renders CommonMark links" do
+    html = formatted_notes("See [the docs](https://example.com).")
+
+    assert_includes html, 'href="https://example.com"'
+    assert_includes html, "the docs"
+    assert_not_includes html, "<script"
+  end
+
+  test "formatted_notes renders GFM strikethrough and autolinks" do
+    html = formatted_notes("Gone ~~later~~ https://example.com")
+
+    assert_includes html, "<del>later</del>"
+    assert_includes html, 'href="https://example.com"'
+  end
 end

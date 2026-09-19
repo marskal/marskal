@@ -79,6 +79,7 @@ module Imports
         projects.each do |node|
           if (item = existing[node.source_id])
             skipped["projects"] += 1
+            item.project&.update!(notes: node.notes) if node.notes.present?
             ids[node.source_id] = item.project_id
             next
           end
@@ -98,8 +99,9 @@ module Imports
 
       def apply_tasks(tasks, project_ids, created, skipped)
         tasks.each do |node|
-          if existing[node.source_id]
+          if (item = existing[node.source_id])
             skipped["tasks"] += 1
+            item.task&.update!(notes: node.notes) if node.notes.present?
             next
           end
 

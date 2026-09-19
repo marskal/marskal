@@ -7,7 +7,7 @@
       </p>
     <% end %>
     <% if @task.notes.present? %>
-      <div class="notes"><%= simple_format(@task.notes) %></div>
+      <div class="notes"><%= formatted_notes(@task.notes) %></div>
     <% end %>
   </div>
 

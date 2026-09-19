@@ -255,9 +255,7 @@ module Imports
 
       def notes_at(el)
         node = el.at_xpath("./note")
-        return if node.nil?
-
-        clip(ActionView::Base.full_sanitizer.sanitize(node.text.to_s).squish.presence, Limits::NOTES_CHARS)
+        clip(OmnifocusNote.to_markdown(node), Limits::NOTES_CHARS)
       end
 
       def clip(text, max)
