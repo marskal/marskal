@@ -28,8 +28,10 @@ module Imports
         stats: graph.stats,
         error_message: nil
       )
-    rescue ArgumentError, Zip::Error => e
+    rescue ArgumentError => e
       fail_batch!(e.message)
+    rescue Zip::Error
+      fail_batch!("The backup zip could not be read.")
     rescue StandardError => e
       fail_batch!("Could not read this backup (#{e.class}).")
       raise if Rails.env.local? && ENV["IMPORT_RAISE"]

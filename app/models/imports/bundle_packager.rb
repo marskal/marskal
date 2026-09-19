@@ -4,8 +4,6 @@ require "zip"
 
 module Imports
   class BundlePackager
-    MAX_FILES = 200
-
     def self.call(files:, paths:)
       new(files: files, paths: paths).call
     end
@@ -16,8 +14,9 @@ module Imports
 
     def call
       raise ArgumentError, "No files in the OmniFocus backup." if @pairs.empty?
-      raise ArgumentError, "Too many files in the backup." if @pairs.size > MAX_FILES
+      raise ArgumentError, "Too many files in the backup." if @pairs.size > Limits::BUNDLE_FILES
 
+      total = 0
       buffer = Zip::OutputStream.write_buffer do |zip|
         @pairs.each do |file, path|
           next if file.blank?
@@ -25,8 +24,14 @@ module Imports
           name = sanitize(path.presence || file.original_filename)
           next if name.blank? || name.end_with?("/")
 
+          data = file.read
+          total += data.bytesize
+          if data.bytesize > Limits::ENTRY_BYTES || total > Limits::PAYLOAD_BYTES
+            raise ArgumentError, "Backup is too large."
+          end
+
           zip.put_next_entry(name)
-          zip.write(file.read)
+          zip.write(data)
         end
       end
       buffer.rewind

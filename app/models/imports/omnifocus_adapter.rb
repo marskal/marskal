@@ -57,6 +57,7 @@ module Imports
     def initialize(io, filename: nil)
       @bytes = self.class.read_all(io)
       @filename = filename.to_s
+      @inflated = 0
     end
 
     def parse
@@ -84,9 +85,12 @@ module Imports
     private
       def xml_documents
         entries = []
+        inner_zips = 0
         Zip::File.open_buffer(@bytes) do |zip|
+          raise ArgumentError, "Backup has too many zip entries." if zip.entries.size > Limits::ZIP_ENTRIES
+
           zip.each do |entry|
-            raise ArgumentError, "Unsafe zip entry #{entry.name}" if entry.name.include?("..") || entry.name.start_with?("/")
+            assert_safe_zip_entry!(entry)
 
             base = File.basename(entry.name)
             next if entry.directory?
@@ -94,9 +98,12 @@ module Imports
             next if base.end_with?(".client")
 
             if base == "contents.xml"
-              entries << [ sort_key(base), entry.get_input_stream.read ]
+              entries << [ sort_key(base), read_xml_entry(entry) ]
             elsif base.match?(INNER_ZIP)
-              inner = entry.get_input_stream.read
+              inner_zips += 1
+              raise ArgumentError, "Backup has too many nested zips." if inner_zips > Limits::INNER_ZIPS
+
+              inner = read_capped(entry.get_input_stream)
               xml = xml_from_inner_zip(inner)
               entries << [ sort_key(base), xml ] if xml
             end
@@ -115,22 +122,51 @@ module Imports
       def xml_from_inner_zip(bytes)
         xml = nil
         Zip::File.open_buffer(bytes) do |inner|
+          raise ArgumentError, "Backup has too many zip entries." if inner.entries.size > Limits::ZIP_ENTRIES
+
           entry = inner.entries.find { |e| File.basename(e.name) == "contents.xml" }
           next unless entry
-          raise ArgumentError, "Unsafe zip entry #{entry.name}" if entry.name.include?("..")
-
-          xml = entry.get_input_stream.read
+          assert_safe_zip_entry!(entry)
+          xml = read_xml_entry(entry)
         end
         xml
       rescue Zip::Error
         nil
       end
 
+      def assert_safe_zip_entry!(entry)
+        name = entry.name.to_s
+        raise ArgumentError, "Unsafe zip entry #{name}" if name.include?("..") || name.start_with?("/")
+        raise ArgumentError, "Encrypted zip entries are not supported." if entry.respond_to?(:encrypted?) && entry.encrypted?
+      end
+
+      def read_xml_entry(entry)
+        xml = read_capped(entry.get_input_stream, cap: Limits::XML_BYTES)
+        raise ArgumentError, "Backup XML is too large." if xml.bytesize > Limits::XML_BYTES
+
+        xml
+      end
+
+      def read_capped(stream, cap: Limits::ENTRY_BYTES)
+        buf = +""
+        while (chunk = stream.read(Limits::READ_CHUNK))
+          buf << chunk
+          @inflated += chunk.bytesize
+          if buf.bytesize > cap || @inflated > Limits::INFLATED_BYTES
+            raise ArgumentError, "Backup expands beyond the allowed size."
+          end
+        end
+        buf
+      end
+
       def apply_document(xml, folders, tasks)
-        doc = Nokogiri::XML(xml)
+        doc = Nokogiri::XML(xml, nil, nil, Nokogiri::XML::ParseOptions::DEFAULT_XML | Nokogiri::XML::ParseOptions::NONET)
+        raise ArgumentError, "Backup XML could not be parsed." if doc.errors.any? && doc.root.nil?
+
         doc.remove_namespaces!
         root = doc.root
         return unless root
+        raise ArgumentError, "Not an OmniFocus backup." unless root.name == "omnifocus"
 
         root.element_children.each do |el|
           case el.name
@@ -138,6 +174,9 @@ module Imports
             apply_record(folders, el) { parse_folder(el) }
           when "task"
             apply_record(tasks, el) { parse_task(el) }
+          end
+          if folders.size + tasks.size > Limits::RECORDS
+            raise ArgumentError, "Backup has too many items."
           end
         end
       end
@@ -161,7 +200,7 @@ module Imports
         parent = el.at_xpath("./folder[@idref]")
         {
           "id" => el["id"],
-          "name" => text_at(el, "name"),
+          "name" => clip(text_at(el, "name"), Limits::TITLE_CHARS),
           "parent_id" => parent&.[]("idref"),
           "hidden" => text_at(el, "hidden") == "true"
         }
@@ -171,7 +210,7 @@ module Imports
         parent = el.at_xpath("./task[@idref]")
         {
           "id" => el["id"],
-          "name" => text_at(el, "name"),
+          "name" => clip(text_at(el, "name"), Limits::TITLE_CHARS),
           "notes" => notes_at(el),
           "inbox" => inbox?(el),
           "parent_id" => parent&.[]("idref"),
@@ -218,7 +257,13 @@ module Imports
         node = el.at_xpath("./note")
         return if node.nil?
 
-        ActionView::Base.full_sanitizer.sanitize(node.text.to_s).squish.presence
+        clip(ActionView::Base.full_sanitizer.sanitize(node.text.to_s).squish.presence, Limits::NOTES_CHARS)
+      end
+
+      def clip(text, max)
+        return if text.blank?
+
+        text.length > max ? text.truncate(max) : text
       end
 
       def folder_nodes(folders)

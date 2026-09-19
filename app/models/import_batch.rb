@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class ImportBatch < ApplicationRecord
-  MAX_PAYLOAD_BYTES = 50.megabytes
+  MAX_PAYLOAD_BYTES = Imports::Limits::PAYLOAD_BYTES
 
   belongs_to :user
   has_many :import_items, dependent: :destroy

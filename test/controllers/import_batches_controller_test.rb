@@ -92,6 +92,25 @@ class ImportBatchesControllerTest < ActionDispatch::IntegrationTest
     assert @user.tasks.find_by(title: "Buy milk")
   end
 
+  test "rejects too many imports in an hour" do
+    Imports::Limits::IMPORTS_PER_HOUR.times do
+      @user.import_batches.new(source: "omnifocus", channel: :file, status: :failed).save!(validate: false)
+    end
+
+    file = Tempfile.new([ "OmniFocus", ".ofocus-backup" ])
+    file.binmode
+    file.write(OmnifocusBackup.compact_backup)
+    file.rewind
+    upload = Rack::Test::UploadedFile.new(file.path, "application/zip", true)
+
+    assert_no_difference -> { @user.import_batches.count } do
+      post import_batches_path, params: { import_batch: { payload: upload } }
+    end
+    assert_response :unprocessable_entity
+  ensure
+    file.close!
+  end
+
   test "cannot show another users batch" do
     batch = users(:two).import_batches.new(source: "omnifocus", channel: :file, status: :failed)
     batch.save!(validate: false)

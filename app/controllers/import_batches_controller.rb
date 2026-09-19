@@ -11,7 +11,8 @@ class ImportBatchesController < ApplicationController
 
   def create
     @batch = Current.user.import_batches.new(source: "omnifocus", channel: :file, status: :pending)
-    attach_payload
+    reject_if_rate_limited
+    attach_payload unless @batch.errors.any?
 
     if @batch.errors.empty? && @batch.save
       ImportParseJob.perform_later(@batch)
@@ -38,10 +39,23 @@ class ImportBatchesController < ApplicationController
   end
 
   private
+    def reject_if_rate_limited
+      recent = Current.user.import_batches.where("created_at > ?", 1.hour.ago).count
+      return if recent < Imports::Limits::IMPORTS_PER_HOUR
+
+      @batch.errors.add(:base, "Too many imports in the last hour. Try again later.")
+    end
+
     def attach_payload
       if batch_params[:payload].present?
         @batch.payload = batch_params[:payload]
       elsif bundle_files.any?
+        total = bundle_files.sum { |file| file.size.to_i }
+        if total > Imports::Limits::PAYLOAD_BYTES
+          @batch.errors.add(:payload, "is too large (maximum is 50 MB)")
+          return
+        end
+
         packed = Imports::BundlePackager.call(files: bundle_files, paths: bundle_paths)
         @batch.payload.attach(
           io: packed,

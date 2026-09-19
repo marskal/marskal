@@ -81,4 +81,31 @@ class Imports::OmnifocusAdapterTest < ActiveSupport::TestCase
       Imports::OmnifocusAdapter.parse(StringIO.new(OmnifocusBackup.zip_slip_archive), filename: "x.ofocus-backup")
     end
   end
+
+  test "does not expand external XML entities" do
+    xml = <<~XML
+      <?xml version="1.0"?>
+      <!DOCTYPE omnifocus [
+        <!ENTITY xxe SYSTEM "file:///etc/passwd">
+      ]>
+      <omnifocus xmlns="http://www.omnigroup.com/namespace/OmniFocus/v2">
+        <task id="taskEvil0000"><name>&xxe;</name><inbox/></task>
+      </omnifocus>
+    XML
+
+    graph = Imports::OmnifocusAdapter.parse(StringIO.new(OmnifocusBackup.zip_with_xml(xml)), filename: "x.ofocus-backup")
+    name = graph.tasks.first&.title.to_s
+    assert_no_match(/root:|passwd/, name)
+  end
+
+  test "rejects oversized inflated XML" do
+    stub_const(Imports::Limits, :XML_BYTES, 2048) do
+      stub_const(Imports::Limits, :ENTRY_BYTES, 2048) do
+        xml = "<omnifocus>#{'a' * 4096}</omnifocus>"
+        assert_raises(ArgumentError) do
+          Imports::OmnifocusAdapter.parse(StringIO.new(OmnifocusBackup.zip_with_xml(xml)), filename: "x.ofocus-backup")
+        end
+      end
+    end
+  end
 end
