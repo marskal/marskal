@@ -31,6 +31,13 @@ Rails.application.routes.draw do
   end
   get "inbox", to: "tasks#inbox", as: :inbox
 
+  if Rails.env.local?
+    namespace :developer do
+      get "/", to: "dashboard#show", as: :root
+      post :reset_work, to: "dashboard#reset_work"
+    end
+  end
+
   resources :import_batches, path: "imports", only: %i[ index new create show ] do
     member do
       post :apply

@@ -26,6 +26,14 @@
       <%= icon "download" %>
       <span>Import</span>
     <% end %>
+    <% if Rails.env.local? %>
+      <%= link_to developer_root_path,
+            class: [ "app-sidebar__link", ("is-current" if request.path.start_with?("/developer")) ],
+            aria: { current: (current_page?(developer_root_path) ? "page" : nil) } do %>
+        <%= icon "bug" %>
+        <span>Developer</span>
+      <% end %>
+    <% end %>
   </nav>
 
   <nav class="app-sidebar__tree" aria-label="Project folders">

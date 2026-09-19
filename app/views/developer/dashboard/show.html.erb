@@ -1,0 +1,16 @@
+<% content_for :title, "Developer — Marskal" %>
+
+<section class="page">
+  <header class="page__header">
+    <h1>Developer</h1>
+    <p class="page__lede">Local only. This page is not routed in production.</p>
+  </header>
+
+  <h2 class="section-heading">Reset captured work</h2>
+  <p class="page__lede">Deletes this account’s folders, projects, tasks, and import history. Leaves the user signed in.</p>
+  <%= button_to "Delete all folders, projects, and tasks",
+        developer_reset_work_path,
+        method: :post,
+        class: btn(:ghost),
+        data: { turbo_confirm: "Delete all folders, projects, tasks, and imports for this account? This cannot be undone." } %>
+</section>

@@ -15,6 +15,7 @@ class SidebarTest < ActionDispatch::IntegrationTest
     assert_select ".app-sidebar a", text: "Inbox"
     assert_select ".app-sidebar a", text: "Projects"
     assert_select ".app-sidebar a", text: "Import"
+    assert_select ".app-sidebar a", text: "Developer"
     assert_select ".app-sidebar", text: /Work/
     assert_select ".app-sidebar", text: /Client A/
     assert_select ".app-sidebar", text: /Launch website/
