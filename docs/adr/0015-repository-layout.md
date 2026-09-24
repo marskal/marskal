@@ -31,8 +31,10 @@ clients/ios/       # SwiftUI, widget, App Intents — create when that work star
 ```
 
 - **`web/`** is the online client and the host: domain, sync endpoint, and
-  LiveView (Rails until the port). Do not name this directory `server/`, and do
-  not extract the UI to `clients/web`.
+  LiveView. The tree is Rails until the port replaces it
+  ([ADR 0016](0016-elixir-phoenix-web.md)). Do not name this directory
+  `server/`, and do not extract the UI to `clients/web`. Do not add a second
+  app directory beside `web/`.
 - **`devenv.nix` and `devenv.lock` live in `web/`.** Run `devenv shell` and
   `devenv up` from there. No root `devenv.nix`, and no root file whose only job
   is to `cd web`.

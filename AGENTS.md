@@ -1,7 +1,9 @@
 # Marskal Tasks — agent rules
 
 Personal task/todo manager: **recurring tasks**, **soft-GTD**, **planning**.
-**Rails** + **PostgreSQL** (single DB), **devenv** locally, **VPS/Nix** in production.
+**PostgreSQL** (single DB), **devenv** locally, **VPS/Nix** in production.
+The web app in `web/` is **Rails until the port**. The accepted target is
+**Phoenix + LiveView** (ADR 0016). Do not mix the two in one tree.
 
 This file is **short and actionable**. Rationale and history live in
 **[docs/adr/](docs/adr/)** — follow accepted ADRs; don’t re-litigate them in code.
@@ -20,6 +22,7 @@ This file is **short and actionable**. Rationale and history live in
 | Task model, inbox, Phase 1 | [0010](docs/adr/0010-task-lists-and-phase1-defaults.md) |
 | UUIDv7 primary keys | [0011](docs/adr/0011-uuidv7-primary-keys.md) |
 | ViewComponent + `@scope` CSS | [0012](docs/adr/0012-viewcomponent-scoped-css.md) |
+| Web stack (Phoenix, at the port) | [0016](docs/adr/0016-elixir-phoenix-web.md) |
 | Import framework | [0013](docs/adr/0013-import-framework.md) |
 | Sync, offline clients | [0014](docs/adr/0014-offline-sync.md) |
 | Repository layout | [0015](docs/adr/0015-repository-layout.md) |
@@ -143,6 +146,8 @@ The repository root is the product, not the web app (ADR 0015).
 
 - **`web/`** — the web app. `devenv.nix` lives there. Run `devenv shell` and
   `devenv up` from `web/`. Paths in the Rails section below are relative to it.
+  That tree stays Rails until the port replaces it (ADR 0016). Do not scaffold
+  Phoenix beside it, and do not add Elixir to it early.
 - **`docs/`** — ADRs, at the root.
 - Do not add a root `devenv.nix`. Do not create `clients/ios/` or
   `sync/fixtures/` until that work starts.
@@ -159,6 +164,8 @@ The repository root is the product, not the web app (ADR 0015).
   `start-postgres` against `web/.devenv/state/postgres` (it orphans a second cluster).
 
 ### Rails
+
+Applies to the current `web/` tree only. The port follows ADR 0016.
 
 - **Rails only via Bundler** (`Gemfile` / `Gemfile.lock`). Currently **~> 8.1**.
 - Do **not** add `pkgs.rubyPackages.rails` (or similar) to `devenv.nix` — nix Rails is

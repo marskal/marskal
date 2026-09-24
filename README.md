@@ -8,7 +8,7 @@ Product rules: **[AGENTS.md](AGENTS.md)**. Decisions: **[docs/adr/](docs/adr/)**
 
 | Path | What |
 |------|------|
-| [`web/`](web/) | The web app, including `devenv.nix`. Rails today. |
+| [`web/`](web/) | The web app, including `devenv.nix`. Rails until the [Phoenix port](docs/adr/0016-elixir-phoenix-web.md). |
 | [`docs/adr/`](docs/adr/) | Architecture decisions. |
 
 `sync/fixtures/` and `clients/ios/` are not created until that work starts
