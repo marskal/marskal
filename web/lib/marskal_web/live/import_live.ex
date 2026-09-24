@@ -22,6 +22,8 @@ defmodule MarskalWeb.ImportLive do
     {:noreply, socket |> assign(:batch, batch) |> schedule_refresh()}
   end
 
+  def handle_info({:marskal_change, _type, _id}, socket), do: {:noreply, socket}
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -144,7 +146,8 @@ defmodule MarskalWeb.ImportLive do
       current_scope={@current_scope}
       current_nav={:import}
       inspector={assigns[:inspector]}
-      inspector_refresh={assigns[:inspector_refresh]}
+      nav={assigns[:nav]}
+      change_version={assigns[:change_version] || 0}
     >
       <%= cond do %>
         <% @live_action == :index -> %>

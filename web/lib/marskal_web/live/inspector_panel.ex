@@ -10,20 +10,33 @@ defmodule MarskalWeb.InspectorPanel do
 
   @impl true
   def update(assigns, socket) do
+    stale? =
+      socket.assigns[:loaded] != {assigns.selection, assigns[:change_version]} or
+        socket.assigns[:user] != assigns.user
+
     socket = assign(socket, assigns)
 
-    socket =
-      if Map.has_key?(socket.assigns, :loaded_selection) and
-           socket.assigns.loaded_selection == assigns.selection do
-        socket
-      else
-        socket
-        |> assign(:record, load(assigns.user, assigns.selection))
-        |> assign(:loaded_selection, assigns.selection)
-        |> assign(:error, nil)
-      end
+    if stale? do
+      {:ok, reload(socket)}
+    else
+      {:ok, socket}
+    end
+  end
 
-    {:ok, socket}
+  # Reloads on a new selection, and on every broadcast change, so an edit made
+  # elsewhere shows here too. The select options are loaded once per reload,
+  # not on every render.
+  defp reload(socket) do
+    %{user: user, selection: selection} = socket.assigns
+    record = load(user, selection)
+    error = if socket.assigns[:loaded_selection] == selection, do: socket.assigns[:error]
+
+    socket
+    |> assign(:record, record)
+    |> assign(:options, options(user, record))
+    |> assign(:error, error)
+    |> assign(:loaded_selection, selection)
+    |> assign(:loaded, {selection, socket.assigns[:change_version]})
   end
 
   @impl true
@@ -152,21 +165,21 @@ defmodule MarskalWeb.InspectorPanel do
         :if={match?(%Tasks.Task{}, @record)}
         myself={@myself}
         record={@record}
-        user={@user}
+        options={@options}
         error={@error}
       />
       <.project_form
         :if={match?(%Projects.Project{}, @record)}
         myself={@myself}
         record={@record}
-        user={@user}
+        options={@options}
         error={@error}
       />
       <.folder_form
         :if={match?(%ProjectFolders.ProjectFolder{}, @record)}
         myself={@myself}
         record={@record}
-        user={@user}
+        options={@options}
         error={@error}
       />
     </div>
@@ -175,7 +188,7 @@ defmodule MarskalWeb.InspectorPanel do
 
   attr :myself, :any, required: true
   attr :record, :any, required: true
-  attr :user, :any, required: true
+  attr :options, :list, default: []
   attr :error, :string, default: nil
 
   defp task_form(assigns) do
@@ -212,7 +225,7 @@ defmodule MarskalWeb.InspectorPanel do
           <select id="inspector-task-project" class="input" name="task[project_id]">
             <option value="">No project</option>
             <option
-              :for={project <- task_projects(@user, @record)}
+              :for={project <- @options}
               value={project.id}
               selected={project.id == @record.project_id}
             >
@@ -258,7 +271,7 @@ defmodule MarskalWeb.InspectorPanel do
 
   attr :myself, :any, required: true
   attr :record, :any, required: true
-  attr :user, :any, required: true
+  attr :options, :list, default: []
   attr :error, :string, default: nil
 
   defp project_form(assigns) do
@@ -301,7 +314,7 @@ defmodule MarskalWeb.InspectorPanel do
           <select id="inspector-project-folder" class="input" name="project[project_folder_id]">
             <option value="">Unfiled</option>
             <option
-              :for={folder <- ProjectFolders.list_all(@user)}
+              :for={folder <- @options}
               value={folder.id}
               selected={folder.id == @record.project_folder_id}
             >
@@ -332,7 +345,7 @@ defmodule MarskalWeb.InspectorPanel do
 
   attr :myself, :any, required: true
   attr :record, :any, required: true
-  attr :user, :any, required: true
+  attr :options, :list, default: []
   attr :error, :string, default: nil
 
   defp folder_form(assigns) do
@@ -364,7 +377,7 @@ defmodule MarskalWeb.InspectorPanel do
           <select id="inspector-folder-parent" class="input" name="project_folder[parent_id]">
             <option value="">Top level</option>
             <option
-              :for={folder <- parent_options(@user, @record)}
+              :for={folder <- @options}
               value={folder.id}
               selected={folder.id == @record.parent_id}
             >
@@ -412,149 +425,71 @@ defmodule MarskalWeb.InspectorPanel do
 
   @impl true
   def handle_event("save", %{"task" => params}, socket) do
-    save(socket, fn record -> save_task(socket.assigns.user, record, params) end)
+    attrs =
+      params
+      |> Map.take(["title", "notes", "project_id", "inbox", "state"])
+      |> Map.update("inbox", nil, &inbox_checked?/1)
+      |> Map.reject(fn {_key, value} -> value == nil end)
+
+    save(socket, &Tasks.update_task(&1, &2, drop_blank_title(attrs, "title"), &3))
   end
 
   def handle_event("save", %{"project" => params}, socket) do
-    save(socket, fn record -> save_project(socket.assigns.user, record, params) end)
+    attrs = Map.take(params, ["title", "notes", "project_folder_id", "state"])
+    save(socket, &Projects.update_project(&1, &2, drop_blank_title(attrs, "title"), &3))
   end
 
   def handle_event("save", %{"project_folder" => params}, socket) do
-    save(socket, fn record -> save_folder(socket.assigns.user, record, params) end)
+    attrs = Map.take(params, ["name", "parent_id", "state"])
+    save(socket, &ProjectFolders.update_folder(&1, &2, drop_blank_title(attrs, "name"), &3))
   end
 
-  defp save(socket, fun) do
-    case fun.(socket.assigns.record) do
-      {:ok, record} when record == socket.assigns.record ->
-        {:noreply, socket}
+  # Each save is one command carrying only the fields that differ. The form
+  # posts its whole state, so a resent event changes nothing and needs no
+  # client-side command id.
+  defp save(socket, update) do
+    %{user: user, record: record} = socket.assigns
 
+    case update.(user, record.id, Ecto.UUID.generate()) do
       {:ok, record} ->
-        send(self(), :inspector_saved)
         {:noreply, assign(socket, record: record, error: nil)}
 
-      {:error, message} ->
-        {:noreply, assign(socket, :error, message)}
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign(socket, :error, error_message(changeset))}
+
+      {:error, :not_found} ->
+        {:noreply, assign(socket, :error, "That item is not available.")}
+
+      {:error, _reason} ->
+        {:noreply, assign(socket, :error, "Could not save.")}
     end
   end
-
-  defp save_task(user, task, params) do
-    title = params["title"]
-    notes = blank(params["notes"])
-    project_id = blank(params["project_id"])
-    inbox = inbox_checked?(params["inbox"])
-    state = params["state"]
-
-    with {:ok, task} <-
-           maybe(task, renamed?(title, task.title), fn ->
-             Tasks.rename_task(user, task.id, title, command())
-           end),
-         {:ok, task} <-
-           maybe(task, notes != blank(task.notes), fn ->
-             Tasks.set_notes(user, task.id, notes, command())
-           end),
-         {:ok, task} <-
-           maybe(task, project_id != task.project_id, fn ->
-             Tasks.file_task(user, task.id, project_id, command())
-           end),
-         {:ok, task} <-
-           maybe(task, inbox != task.inbox, fn ->
-             Tasks.set_inbox(user, task.id, inbox, command())
-           end),
-         {:ok, task} <-
-           maybe(task, state not in [nil, Atom.to_string(task.state)], fn ->
-             set_task_state(user, task, state)
-           end) do
-      {:ok, Tasks.get_task(user, task.id)}
-    else
-      {:error, _} -> {:error, "Could not save this task."}
-    end
-  end
-
-  defp save_project(user, project, params) do
-    title = params["title"]
-    notes = blank(params["notes"])
-    folder_id = blank(params["project_folder_id"])
-    state = params["state"]
-
-    with {:ok, project} <-
-           maybe(project, renamed?(title, project.title), fn ->
-             Projects.rename_project(user, project.id, title, command())
-           end),
-         {:ok, project} <-
-           maybe(project, notes != blank(project.notes), fn ->
-             Projects.set_notes(user, project.id, notes, command())
-           end),
-         {:ok, project} <-
-           maybe(project, folder_id != project.project_folder_id, fn ->
-             Projects.file_project(user, project.id, folder_id, command())
-           end),
-         {:ok, project} <-
-           maybe(project, state not in [nil, Atom.to_string(project.state)], fn ->
-             set_project_state(user, project, state)
-           end) do
-      {:ok, Projects.get_project(user, project.id)}
-    else
-      {:error, _} -> {:error, "Could not save this project."}
-    end
-  end
-
-  defp save_folder(user, folder, params) do
-    name = params["name"]
-    parent_id = blank(params["parent_id"])
-    state = params["state"]
-
-    with {:ok, folder} <-
-           maybe(folder, renamed?(name, folder.name), fn ->
-             ProjectFolders.rename_folder(user, folder.id, name, command())
-           end),
-         {:ok, folder} <-
-           maybe(folder, parent_id != folder.parent_id, fn ->
-             ProjectFolders.reparent_folder(user, folder.id, parent_id, command())
-           end),
-         {:ok, folder} <-
-           maybe(folder, state not in [nil, Atom.to_string(folder.state)], fn ->
-             set_folder_state(user, folder, state)
-           end) do
-      {:ok, ProjectFolders.get_folder(user, folder.id)}
-    else
-      {:error, _} -> {:error, "Could not save this folder."}
-    end
-  end
-
-  defp maybe(record, false, _fun), do: {:ok, record}
-  defp maybe(_record, true, fun), do: fun.()
 
   # A cleared name is an edit in progress, not a rename to nothing.
-  defp renamed?(incoming, current), do: incoming not in [nil, "", current]
+  defp drop_blank_title(attrs, key) do
+    case attrs do
+      %{^key => value} when is_binary(value) ->
+        if String.trim(value) == "", do: Map.delete(attrs, key), else: attrs
 
-  defp set_task_state(user, task, "done"), do: Tasks.complete_task(user, task.id, command())
-  defp set_task_state(user, task, "dropped"), do: Tasks.drop_task(user, task.id, command())
-  defp set_task_state(user, task, "to_do"), do: Tasks.reopen_task(user, task.id, command())
-  defp set_task_state(_user, task, _state), do: {:ok, task}
+      _ ->
+        attrs
+    end
+  end
 
-  defp set_project_state(user, project, "done"),
-    do: Projects.complete_project(user, project.id, command())
-
-  defp set_project_state(user, project, "dropped"),
-    do: Projects.drop_project(user, project.id, command())
-
-  defp set_project_state(user, project, "to_do"),
-    do: Projects.reopen_project(user, project.id, command())
-
-  defp set_project_state(_user, project, _state), do: {:ok, project}
-
-  defp set_folder_state(user, folder, "dropped"),
-    do: ProjectFolders.drop_folder(user, folder.id, command())
-
-  defp set_folder_state(user, folder, "active"),
-    do: ProjectFolders.activate_folder(user, folder.id, command())
-
-  defp set_folder_state(_user, folder, _state), do: {:ok, folder}
+  defp error_message(changeset) do
+    {field, error} = hd(changeset.errors)
+    "#{Phoenix.Naming.humanize(field)} #{translate_error(error)}."
+  end
 
   defp load(_user, nil), do: nil
   defp load(user, %{type: :task, id: id}), do: Tasks.get_task(user, id)
   defp load(user, %{type: :project, id: id}), do: Projects.get_project(user, id)
   defp load(user, %{type: :folder, id: id}), do: ProjectFolders.get_folder(user, id)
+
+  defp options(user, %Tasks.Task{} = task), do: task_projects(user, task)
+  defp options(user, %Projects.Project{}), do: ProjectFolders.list_all(user)
+  defp options(user, %ProjectFolders.ProjectFolder{} = folder), do: parent_options(user, folder)
+  defp options(_user, nil), do: []
 
   defp task_projects(user, task) do
     projects = Projects.list_open(user)
@@ -585,12 +520,7 @@ defmodule MarskalWeb.InspectorPanel do
   defp stamp(_), do: ""
 
   # A hidden "false" is always submitted. A checked box adds "true" after it.
+  defp inbox_checked?(nil), do: nil
   defp inbox_checked?(values) when is_list(values), do: "true" in Enum.map(values, &to_string/1)
   defp inbox_checked?(value), do: value in [true, "true"]
-
-  defp blank(nil), do: nil
-  defp blank(""), do: nil
-  defp blank(value), do: value
-
-  defp command, do: Ecto.UUID.generate()
 end

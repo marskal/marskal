@@ -21,7 +21,8 @@ defmodule MarskalWeb.OpenTasksLive do
       current_scope={@current_scope}
       current_nav={:open}
       inspector={assigns[:inspector]}
-      inspector_refresh={assigns[:inspector_refresh]}
+      nav={assigns[:nav]}
+      change_version={assigns[:change_version] || 0}
     >
       <h1>Open tasks</h1>
       <p class="lede">Clarified work, still to do.</p>
@@ -35,6 +36,11 @@ defmodule MarskalWeb.OpenTasksLive do
       />
     </Layouts.app>
     """
+  end
+
+  @impl true
+  def handle_info({:marskal_change, _type, _id}, socket) do
+    {:noreply, assign(socket, :tasks, Tasks.list_open(socket.assigns.current_scope.user))}
   end
 
   @impl true

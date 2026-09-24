@@ -34,25 +34,16 @@ defmodule MarskalWeb.Layouts do
   attr :current_nav, :atom, default: nil
   attr :current_id, :string, default: nil
   attr :inspector, :any, default: nil
-  attr :inspector_refresh, :integer, default: nil
+  attr :nav, :any, default: nil, doc: "the sidebar tree, assigned by MarskalWeb.Inspector"
+  attr :change_version, :integer, default: 0
 
   slot :inner_block, required: true
 
   def app(assigns) do
-    assigns =
-      assign(
-        assigns,
-        :nav,
-        if(assigns.current_scope && assigns.current_scope.user,
-          do: Marskal.ProjectNav.build(assigns.current_scope.user)
-        )
-      )
-
     ~H"""
     <div
       id="app-shell"
       class={["app", @inspector && "is-inspector-open"]}
-      data-inspector-refresh={@inspector_refresh}
       phx-hook={inspector_hook(@current_scope)}
     >
       <header class="app-header">
@@ -115,6 +106,7 @@ defmodule MarskalWeb.Layouts do
             id="inspector"
             user={@current_scope.user}
             selection={@inspector}
+            change_version={@change_version}
           />
         </aside>
       </div>

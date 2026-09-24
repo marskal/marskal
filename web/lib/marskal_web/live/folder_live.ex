@@ -26,7 +26,8 @@ defmodule MarskalWeb.FolderLive do
       current_scope={@current_scope}
       current_id={@folder.id}
       inspector={assigns[:inspector]}
-      inspector_refresh={assigns[:inspector_refresh]}
+      nav={assigns[:nav]}
+      change_version={assigns[:change_version] || 0}
     >
       <p :if={@folder.parent_path != []} class="lede">{Enum.join(@folder.parent_path, " / ")}</p>
       <h1>{@folder.name}</h1>
@@ -103,6 +104,14 @@ defmodule MarskalWeb.FolderLive do
   end
 
   @impl true
+  def handle_info({:marskal_change, _type, _id}, socket) do
+    user = socket.assigns.current_scope.user
+    folder = ProjectFolders.get_folder(user, socket.assigns.folder.id) || socket.assigns.folder
+
+    {:noreply, assign_records(socket, user, folder)}
+  end
+
+  @impl true
   def handle_event(
         "create-folder",
         %{"project_folder" => params, "command_id" => command_id},
@@ -142,6 +151,16 @@ defmodule MarskalWeb.FolderLive do
   end
 
   defp assign_folder(socket, user, folder) do
+    socket
+    |> assign_records(user, folder)
+    |> assign(:folder_command_id, Ecto.UUID.generate())
+    |> assign(:project_command_id, Ecto.UUID.generate())
+    |> assign(:folder_form, to_form(%{"name" => ""}, as: "project_folder"))
+    |> assign(:project_form, to_form(%{"title" => ""}, as: "project"))
+  end
+
+  # Leaves the capture forms alone, so a broadcast does not clear typing.
+  defp assign_records(socket, user, folder) do
     nav = ProjectNav.build(user)
 
     socket
@@ -149,9 +168,5 @@ defmodule MarskalWeb.FolderLive do
     |> assign(:folder, folder)
     |> assign(:children, ProjectNav.child_folders(nav, folder))
     |> assign(:projects, ProjectNav.projects_in(nav, folder))
-    |> assign(:folder_command_id, Ecto.UUID.generate())
-    |> assign(:project_command_id, Ecto.UUID.generate())
-    |> assign(:folder_form, to_form(%{"name" => ""}, as: "project_folder"))
-    |> assign(:project_form, to_form(%{"title" => ""}, as: "project"))
   end
 end

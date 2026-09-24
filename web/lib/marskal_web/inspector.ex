@@ -1,20 +1,31 @@
 defmodule MarskalWeb.Inspector do
-  @moduledoc false
+  @moduledoc """
+  Shared state for the signed-in pages: the inspector selection, the sidebar
+  tree, and live updates.
+
+  Each page subscribes to the user's change broadcasts. On a change the hook
+  rebuilds the sidebar and bumps `:change_version`, which makes the inspector
+  reload its record. The message then goes on to the page's own
+  `handle_info/2`, if it has one, so the page can reload its list.
+  """
 
   import Phoenix.LiveView
   import Phoenix.Component, only: [assign: 3]
 
-  alias Marskal.ProjectFolders
+  alias Marskal.Changes
   alias Marskal.ProjectNav
-  alias Marskal.Projects
-  alias Marskal.Tasks
 
   def selected?(type, id, %{type: type, id: id}), do: true
   def selected?(_type, _id, _selection), do: false
 
   def on_mount(:default, _params, _session, socket) do
+    user = socket.assigns.current_scope.user
+    if connected?(socket), do: Changes.subscribe(user)
+
     {:cont,
      socket
+     |> assign(:nav, ProjectNav.build(user))
+     |> assign(:change_version, 0)
      |> attach_hook(:inspector_params, :handle_params, &on_params/3)
      |> attach_hook(:inspector_event, :handle_event, &on_event/3)
      |> attach_hook(:inspector_info, :handle_info, &on_info/2)}
@@ -29,11 +40,7 @@ defmodule MarskalWeb.Inspector do
     # push_patch always asks the view for handle_params/3. A view that does not
     # define one must be halted here, or the patch crashes. Views that do
     # define it, such as the import page, still run after this hook.
-    if function_exported?(socket.view, :handle_params, 3) do
-      {:cont, socket}
-    else
-      {:halt, socket}
-    end
+    continue_if_defined(socket, :handle_params, 3)
   end
 
   defp on_event("inspect", %{"type" => type, "id" => id}, socket)
@@ -47,11 +54,20 @@ defmodule MarskalWeb.Inspector do
 
   defp on_event(_event, _params, socket), do: {:cont, socket}
 
-  defp on_info(:inspector_saved, socket) do
-    {:halt, reload(socket)}
+  defp on_info({:marskal_change, _type, _id}, socket) do
+    socket
+    |> assign(:nav, ProjectNav.build(socket.assigns.current_scope.user))
+    |> assign(:change_version, socket.assigns.change_version + 1)
+    |> continue_if_defined(:handle_info, 2)
   end
 
   defp on_info(_message, socket), do: {:cont, socket}
+
+  defp continue_if_defined(socket, fun, arity) do
+    if function_exported?(socket.view, fun, arity),
+      do: {:cont, socket},
+      else: {:halt, socket}
+  end
 
   defp selection(params) do
     cond do
@@ -67,71 +83,5 @@ defmodule MarskalWeb.Inspector do
 
   defp query_path(socket, query) do
     socket.assigns.inspector_path <> "?" <> URI.encode_query(query)
-  end
-
-  defp reload(socket) do
-    # The sidebar is built while the page renders, so a save has to change an
-    # assign even when the list on this page did not.
-    socket = assign(socket, :inspector_refresh, System.unique_integer([:positive]))
-    user = socket.assigns.current_scope.user
-
-    case socket.view do
-      MarskalWeb.OpenTasksLive ->
-        assign(socket, :tasks, Tasks.list_open(user))
-
-      MarskalWeb.InboxLive ->
-        assign(socket, :tasks, Tasks.list_inbox(user))
-
-      MarskalWeb.ProjectLive ->
-        project = Projects.get_project(user, socket.assigns.project.id) || socket.assigns.project
-
-        folder =
-          if project.project_folder_id,
-            do: ProjectFolders.get_folder(user, project.project_folder_id)
-
-        socket
-        |> assign(:page_title, project.title)
-        |> assign(:project, project)
-        |> assign(:folder, folder)
-        |> assign(:tasks, Tasks.list_project_tasks(user, project.id))
-
-      MarskalWeb.FolderLive ->
-        folder =
-          ProjectFolders.get_folder(user, socket.assigns.folder.id) || socket.assigns.folder
-
-        nav = ProjectNav.build(user)
-
-        socket
-        |> assign(:page_title, folder.name)
-        |> assign(:folder, folder)
-        |> assign(:children, ProjectNav.child_folders(nav, folder))
-        |> assign(:projects, ProjectNav.projects_in(nav, folder))
-
-      MarskalWeb.TaskLive ->
-        case Tasks.get_task(user, socket.assigns.task.id) do
-          nil ->
-            socket
-
-          task ->
-            socket
-            |> assign(:page_title, task.title)
-            |> assign(:task, task)
-            |> assign(:projects, Projects.list_open(user))
-            |> assign(
-              :form,
-              Phoenix.Component.to_form(
-                %{
-                  "title" => task.title,
-                  "notes" => task.notes,
-                  "project_id" => task.project_id
-                },
-                as: "task"
-              )
-            )
-        end
-
-      _view ->
-        socket
-    end
   end
 end

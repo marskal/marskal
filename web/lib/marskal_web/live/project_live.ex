@@ -26,7 +26,8 @@ defmodule MarskalWeb.ProjectLive do
       current_scope={@current_scope}
       current_id={@project.id}
       inspector={assigns[:inspector]}
-      inspector_refresh={assigns[:inspector_refresh]}
+      nav={assigns[:nav]}
+      change_version={assigns[:change_version] || 0}
     >
       <p :if={@folder} class="lede">
         <.link navigate={~p"/folders/#{@folder.id}"}>{@folder.name}</.link>
@@ -64,6 +65,14 @@ defmodule MarskalWeb.ProjectLive do
   end
 
   @impl true
+  def handle_info({:marskal_change, _type, _id}, socket) do
+    user = socket.assigns.current_scope.user
+    project = Projects.get_project(user, socket.assigns.project.id) || socket.assigns.project
+
+    {:noreply, assign_records(socket, user, project)}
+  end
+
+  @impl true
   def handle_event("create", %{"task" => params, "command_id" => command_id}, socket) do
     user = socket.assigns.current_scope.user
     attrs = Map.merge(params, %{"project_id" => socket.assigns.project.id, "inbox" => false})
@@ -71,6 +80,9 @@ defmodule MarskalWeb.ProjectLive do
     case Tasks.create_task(user, attrs, command_id) do
       {:ok, _task} ->
         {:noreply, assign_project(socket, user, socket.assigns.project)}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign(socket, :form, to_form(changeset, as: "task"))}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Could not add task.")}
@@ -106,6 +118,14 @@ defmodule MarskalWeb.ProjectLive do
   end
 
   defp assign_project(socket, user, project) do
+    socket
+    |> assign_records(user, project)
+    |> assign(:command_id, Ecto.UUID.generate())
+    |> assign(:form, to_form(%{"title" => ""}, as: "task"))
+  end
+
+  # Leaves the capture form alone, so a broadcast does not clear typing.
+  defp assign_records(socket, user, project) do
     folder =
       if project.project_folder_id do
         Marskal.ProjectFolders.get_folder(user, project.project_folder_id)
@@ -116,7 +136,5 @@ defmodule MarskalWeb.ProjectLive do
     |> assign(:project, project)
     |> assign(:folder, folder)
     |> assign(:tasks, Tasks.list_project_tasks(user, project.id))
-    |> assign(:command_id, Ecto.UUID.generate())
-    |> assign(:form, to_form(%{"title" => ""}, as: "task"))
   end
 end

@@ -159,5 +159,44 @@ defmodule MarskalWeb.InspectorLiveTest do
     assert ProjectFolders.get_folder(user, child.id).name == "Studio"
   end
 
+  test "a save error names the field", %{conn: conn, user: user} do
+    {:ok, task} = Tasks.create_task(user, %{"title" => "Milk", "inbox" => false}, command())
+
+    {:ok, view, _html} = live(conn, "/?task=#{task.id}")
+
+    html =
+      view
+      |> form("#inspector-task", task: %{title: String.duplicate("a", 501)})
+      |> render_change()
+
+    assert html =~ "Title should be at most 500 character(s)."
+    assert Tasks.get_task(user, task.id).title == "Milk"
+  end
+
+  test "a malformed id is not available instead of a crash", %{conn: conn} do
+    {:ok, _view, html} = live(conn, "/?task=not-a-uuid")
+    assert html =~ "That item is not available."
+
+    assert {:error, {:redirect, %{to: "/"}}} = live(conn, "/tasks/not-a-uuid")
+    assert {:error, {:redirect, %{to: "/"}}} = live(conn, "/projects/not-a-uuid")
+    assert {:error, {:redirect, %{to: "/"}}} = live(conn, "/folders/not-a-uuid")
+  end
+
+  test "a change made elsewhere shows on the page and in the inspector", %{
+    conn: conn,
+    user: user
+  } do
+    {:ok, task} = Tasks.create_task(user, %{"title" => "Milk", "inbox" => false}, command())
+    {:ok, view, _html} = live(conn, "/?task=#{task.id}")
+
+    {:ok, _} = Tasks.rename_task(user, task.id, "Oat milk", command())
+    {:ok, _} = Projects.create_project(user, %{"title" => "Launch"}, command())
+
+    assert has_element?(view, "#open-tasks", "Oat milk")
+    assert has_element?(view, "#inspector-task-title[value='Oat milk']")
+    assert has_element?(view, "#sidebar", "Launch")
+    assert has_element?(view, "#inspector-task-project option", "Launch")
+  end
+
   defp command, do: Ecto.UUID.generate()
 end

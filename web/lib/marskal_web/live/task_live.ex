@@ -24,7 +24,8 @@ defmodule MarskalWeb.TaskLive do
       flash={@flash}
       current_scope={@current_scope}
       inspector={assigns[:inspector]}
-      inspector_refresh={assigns[:inspector_refresh]}
+      nav={assigns[:nav]}
+      change_version={assigns[:change_version] || 0}
     >
       <h1>Task</h1>
       <.form for={@form} id="task-form" phx-submit="save" class="capture">
@@ -36,6 +37,7 @@ defmodule MarskalWeb.TaskLive do
           value={@form[:title].value}
           required
         />
+        <p :for={error <- @form[:title].errors} class="field-error">{translate_error(error)}</p>
         <label for={@form[:notes].id}>Notes</label>
         <textarea
           name={@form[:notes].name}
@@ -67,23 +69,37 @@ defmodule MarskalWeb.TaskLive do
   end
 
   @impl true
-  def handle_event("save", %{"task" => params}, socket) do
+  def handle_info({:marskal_change, type, id}, socket) do
     user = socket.assigns.current_scope.user
     task = socket.assigns.task
 
-    with {:ok, task} <- Tasks.rename_task(user, task.id, params["title"], Ecto.UUID.generate()),
-         {:ok, task} <-
-           Tasks.set_notes(user, task.id, blank_to_nil(params["notes"]), Ecto.UUID.generate()),
-         {:ok, task} <-
-           Tasks.file_task(
-             user,
-             task.id,
-             blank_to_nil(params["project_id"]),
-             Ecto.UUID.generate()
-           ) do
-      {:noreply, assign_task(socket, user, task) |> put_flash(:info, "Saved.")}
-    else
-      {:error, _} -> {:noreply, put_flash(socket, :error, "Could not save task.")}
+    socket =
+      if type in ["task", "import_batch"] and (type != "task" or id == task.id) do
+        case Tasks.get_task(user, task.id) do
+          nil -> socket
+          task -> assign_task(socket, user, task)
+        end
+      else
+        assign(socket, :projects, Projects.list_open(user))
+      end
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("save", %{"task" => params}, socket) do
+    user = socket.assigns.current_scope.user
+    attrs = Map.take(params, ["title", "notes", "project_id"])
+
+    case Tasks.update_task(user, socket.assigns.task.id, attrs, Ecto.UUID.generate()) do
+      {:ok, task} ->
+        {:noreply, assign_task(socket, user, task) |> put_flash(:info, "Saved.")}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign(socket, :form, to_form(changeset, as: "task", action: :validate))}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Could not save task.")}
     end
   end
 
@@ -118,7 +134,4 @@ defmodule MarskalWeb.TaskLive do
       )
     )
   end
-
-  defp blank_to_nil(value) when value in [nil, ""], do: nil
-  defp blank_to_nil(value), do: value
 end

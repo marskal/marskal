@@ -12,7 +12,8 @@ defmodule MarskalWeb.UserLive.Settings do
       flash={@flash}
       current_scope={@current_scope}
       inspector={assigns[:inspector]}
-      inspector_refresh={assigns[:inspector_refresh]}
+      nav={assigns[:nav]}
+      change_version={assigns[:change_version] || 0}
     >
       <div class="text-center">
         <.header>

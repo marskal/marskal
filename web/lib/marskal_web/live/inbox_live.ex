@@ -23,7 +23,8 @@ defmodule MarskalWeb.InboxLive do
       current_scope={@current_scope}
       current_nav={:inbox}
       inspector={assigns[:inspector]}
-      inspector_refresh={assigns[:inspector_refresh]}
+      nav={assigns[:nav]}
+      change_version={assigns[:change_version] || 0}
     >
       <h1>Inbox</h1>
       <p class="lede">Unclarified tasks. Clarify one to put it on the open list.</p>
@@ -52,6 +53,11 @@ defmodule MarskalWeb.InboxLive do
       />
     </Layouts.app>
     """
+  end
+
+  @impl true
+  def handle_info({:marskal_change, _type, _id}, socket) do
+    {:noreply, assign(socket, :tasks, Tasks.list_inbox(socket.assigns.current_scope.user))}
   end
 
   @impl true
