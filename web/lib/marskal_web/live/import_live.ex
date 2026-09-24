@@ -339,7 +339,7 @@ defmodule MarskalWeb.ImportLive do
           <h1>{source_label(@batch.source)} import</h1>
           <p class="lede">{@batch.filename || "Backup"} · {status_label(@batch.status)}</p>
 
-          <div :if={@batch.status == :failed}>
+          <div :if={@batch.status in [:failed, :expired]}>
             <p class="flash flash-error" role="alert">{@batch.error_message}</p>
             <p><.link navigate={~p"/imports/new"} class="btn">Try another file</.link></p>
           </div>
@@ -447,6 +447,7 @@ defmodule MarskalWeb.ImportLive do
   defp status_label(:applying), do: "Applying"
   defp status_label(:applied), do: "Applied"
   defp status_label(:failed), do: "Failed"
+  defp status_label(:expired), do: "Expired"
   defp status_label(other), do: to_string(other)
 
   defp source_label("omnifocus"), do: "OmniFocus"

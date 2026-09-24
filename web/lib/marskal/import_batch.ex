@@ -10,7 +10,7 @@ defmodule Marskal.ImportBatch do
     field :channel, Ecto.Enum, values: [:file, :oauth], default: :file
 
     field :status, Ecto.Enum,
-      values: [:pending, :previewed, :applying, :applied, :failed],
+      values: [:pending, :previewed, :applying, :applied, :failed, :expired],
       default: :pending
 
     field :stats, :map, default: %{}
