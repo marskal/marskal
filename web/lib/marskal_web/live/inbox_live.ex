@@ -71,6 +71,7 @@ defmodule MarskalWeb.InboxLive do
   def handle_event("clarify", %{"id" => id}, socket), do: act(socket, id, &Tasks.clarify_task/3)
   def handle_event("complete", %{"id" => id}, socket), do: act(socket, id, &Tasks.complete_task/3)
   def handle_event("drop", %{"id" => id}, socket), do: act(socket, id, &Tasks.drop_task/3)
+  def handle_event("reopen", %{"id" => id}, socket), do: act(socket, id, &Tasks.reopen_task/3)
 
   defp act(socket, id, fun) do
     user = socket.assigns.current_scope.user

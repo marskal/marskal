@@ -28,7 +28,7 @@ defmodule MarskalWeb.TaskStreamTest do
     assert has_element?(open, "#open-tasks", "Milk")
 
     open
-    |> element("#open-tasks button", "Done")
+    |> element("#open-tasks button[aria-label='Mark as done']")
     |> render_click()
 
     refute has_element?(open, "#open-tasks", "Milk")

@@ -78,6 +78,7 @@ defmodule MarskalWeb.ProjectLive do
     do: task_act(socket, id, &Tasks.complete_task/3)
 
   def handle_event("drop", %{"id" => id}, socket), do: task_act(socket, id, &Tasks.drop_task/3)
+  def handle_event("reopen", %{"id" => id}, socket), do: task_act(socket, id, &Tasks.reopen_task/3)
   def handle_event("complete", _params, socket), do: act(socket, &Projects.complete_project/3)
   def handle_event("drop", _params, socket), do: act(socket, &Projects.drop_project/3)
   def handle_event("reopen", _params, socket), do: act(socket, &Projects.reopen_project/3)
