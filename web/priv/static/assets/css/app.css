@@ -106,6 +106,31 @@ h1 {
   text-decoration: none;
 }
 
+.icon {
+  flex-shrink: 0;
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  vertical-align: -0.125em;
+}
+
+.icon-spin {
+  animation: icon-spin 1s linear infinite;
+}
+
+@keyframes icon-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sidebar-links a,
+.nav-tree a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .sidebar a.is-current {
   font-weight: 650;
 }

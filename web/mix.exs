@@ -41,6 +41,7 @@ defmodule Marskal.MixProject do
   defp deps do
     [
       {:argon2_elixir, "~> 4.0"},
+      {:lucide_icons, "~> 2.4"},
       {:phoenix_live_dashboard, "~> 0.8"},
       {:phoenix, "~> 1.8.14"},
       {:phoenix_ecto, "~> 4.5"},

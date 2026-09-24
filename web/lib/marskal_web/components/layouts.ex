@@ -111,7 +111,7 @@ defmodule MarskalWeb.Layouts do
         hidden
       >
         {gettext("Attempting to reconnect")}
-        <.icon name="hero-arrow-path" class="ml-1 size-3 motion-safe:animate-spin" />
+        <Lucideicons.loader_circle class="icon icon-spin" />
       </.flash>
 
       <.flash
@@ -126,7 +126,7 @@ defmodule MarskalWeb.Layouts do
         hidden
       >
         {gettext("Attempting to reconnect")}
-        <.icon name="hero-arrow-path" class="ml-1 size-3 motion-safe:animate-spin" />
+        <Lucideicons.loader_circle class="icon icon-spin" />
       </.flash>
     </div>
     """

@@ -10,8 +10,12 @@ defmodule MarskalWeb.NavComponents do
     ~H"""
     <aside class="sidebar">
       <nav class="sidebar-links">
-        <.link navigate={~p"/inbox"} class={link_class(@current_nav, :inbox)}>Inbox</.link>
-        <.link navigate={~p"/"} class={link_class(@current_nav, :open)}>Open</.link>
+        <.link navigate={~p"/inbox"} class={link_class(@current_nav, :inbox)}>
+          <Lucideicons.inbox class="icon" /> Inbox
+        </.link>
+        <.link navigate={~p"/"} class={link_class(@current_nav, :open)}>
+          <Lucideicons.list class="icon" /> Open
+        </.link>
       </nav>
 
       <p :if={Marskal.ProjectNav.empty?(@nav)} class="empty">No projects yet.</p>
@@ -31,7 +35,7 @@ defmodule MarskalWeb.NavComponents do
             navigate={~p"/projects/#{project.id}"}
             class={id_class(@current_id, project.id)}
           >
-            {project.title}
+            <Lucideicons.circle class="icon" /> {project.title}
           </.link>
         </li>
       </ul>
@@ -49,7 +53,7 @@ defmodule MarskalWeb.NavComponents do
     ~H"""
     <li>
       <.link navigate={~p"/folders/#{@folder.id}"} class={id_class(@current_id, @folder.id)}>
-        {@folder.name}
+        <Lucideicons.folder class="icon" /> {@folder.name}
       </.link>
       <ul>
         <MarskalWeb.NavComponents.folder
@@ -63,7 +67,7 @@ defmodule MarskalWeb.NavComponents do
             navigate={~p"/projects/#{project.id}"}
             class={id_class(@current_id, project.id)}
           >
-            {project.title}
+            <Lucideicons.circle class="icon" /> {project.title}
           </.link>
         </li>
       </ul>

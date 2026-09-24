@@ -191,7 +191,8 @@ The repository root is the product, not the web app (ADR 0015).
   `(user, source, source_id)` on re-import. Do not add competing-app libraries.
 - **UI (ADR 0012, ADR 0016):** HEEx function components plus plain CSS `@scope`.
   No Tailwind, no daisyUI, no UI kit. Tokens stay on `:root`.
-- **Icons:** Lucide, when the first icon is needed. Do not inline ad-hoc SVG paths.
+- **Icons:** the `lucide_icons` package. Use `<Lucideicons.inbox class="icon" />`.
+  Do not inline SVG paths, do not clone the icon repo, and do not add Heroicons.
 
 ### Auth & tenancy
 
