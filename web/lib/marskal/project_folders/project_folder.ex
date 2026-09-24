@@ -98,7 +98,9 @@ defmodule Marskal.ProjectFolders.ProjectFolder do
 
     path =
       case folder.parent_id do
-        nil -> []
+        nil ->
+          []
+
         parent_id ->
           parent = Marskal.Repo.get!(__MODULE__, parent_id)
           parent.parent_path ++ [parent.name]

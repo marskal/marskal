@@ -63,7 +63,11 @@ defmodule MarskalWeb.FolderLive do
   end
 
   @impl true
-  def handle_event("create-folder", %{"project_folder" => params, "command_id" => command_id}, socket) do
+  def handle_event(
+        "create-folder",
+        %{"project_folder" => params, "command_id" => command_id},
+        socket
+      ) do
     user = socket.assigns.current_scope.user
     attrs = Map.put(params, "parent_id", socket.assigns.folder.id)
 
@@ -84,7 +88,9 @@ defmodule MarskalWeb.FolderLive do
   end
 
   def handle_event("drop", _params, socket), do: state(socket, &ProjectFolders.drop_folder/3)
-  def handle_event("activate", _params, socket), do: state(socket, &ProjectFolders.activate_folder/3)
+
+  def handle_event("activate", _params, socket),
+    do: state(socket, &ProjectFolders.activate_folder/3)
 
   defp state(socket, fun) do
     user = socket.assigns.current_scope.user

@@ -29,6 +29,10 @@ defmodule Marskal.Projects do
     update_project(user, id, command_id, &Project.rename_changeset(&1, %{title: title}))
   end
 
+  def set_notes(%User{} = user, id, notes, command_id) do
+    update_project(user, id, command_id, &Project.notes_changeset(&1, %{notes: notes}))
+  end
+
   def complete_project(%User{} = user, id, command_id) do
     update_project(user, id, command_id, &Project.state_changeset(&1, :done))
   end

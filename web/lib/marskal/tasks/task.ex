@@ -89,7 +89,9 @@ defmodule Marskal.Tasks.Task do
 
   defp validate_optional_uuid(changeset, field) do
     case get_change(changeset, field) do
-      nil -> changeset
+      nil ->
+        changeset
+
       id ->
         case Ecto.UUID.cast(id) do
           {:ok, _} -> changeset

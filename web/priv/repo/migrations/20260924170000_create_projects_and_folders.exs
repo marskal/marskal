@@ -18,6 +18,7 @@ defmodule Marskal.Repo.Migrations.CreateProjectsAndFolders do
     """
 
     execute "CREATE INDEX project_folders_user_id_state_index ON project_folders (user_id, state)"
+
     execute "CREATE INDEX project_folders_user_id_parent_id_index ON project_folders (user_id, parent_id)"
 
     execute """
@@ -34,6 +35,7 @@ defmodule Marskal.Repo.Migrations.CreateProjectsAndFolders do
     """
 
     execute "CREATE INDEX projects_user_id_state_index ON projects (user_id, state)"
+
     execute "CREATE INDEX projects_user_id_project_folder_id_index ON projects (user_id, project_folder_id)"
 
     execute "ALTER TABLE tasks ADD COLUMN project_id uuid REFERENCES projects(id)"

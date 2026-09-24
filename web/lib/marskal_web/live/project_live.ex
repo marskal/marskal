@@ -10,7 +10,8 @@ defmodule MarskalWeb.ProjectLive do
 
     case Projects.get_project(user, id) do
       nil ->
-        {:ok, socket |> put_flash(:error, "That project is not available.") |> redirect(to: ~p"/")}
+        {:ok,
+         socket |> put_flash(:error, "That project is not available.") |> redirect(to: ~p"/")}
 
       project ->
         {:ok, assign_project(socket, user, project)}
@@ -29,7 +30,7 @@ defmodule MarskalWeb.ProjectLive do
         <.link navigate={~p"/folders/#{@folder.id}"}>{@folder.name}</.link>
       </p>
       <h1>{@project.title}</h1>
-      <p :if={@project.notes} class="lede">{@project.notes}</p>
+      <MarskalWeb.FormattedNotes.block text={@project.notes} class="lede notes" />
       <p class="actions">
         <button type="button" phx-click="complete">Done</button>
         <button type="button" phx-click="drop">Drop</button>
@@ -39,7 +40,13 @@ defmodule MarskalWeb.ProjectLive do
       <.form for={@form} id="new-project-task" phx-submit="create" class="capture">
         <input type="hidden" name="command_id" value={@command_id} />
         <label for={@form[:title].id}>Add a task</label>
-        <input type="text" name={@form[:title].name} id={@form[:title].id} value={@form[:title].value} required />
+        <input
+          type="text"
+          name={@form[:title].name}
+          id={@form[:title].id}
+          value={@form[:title].value}
+          required
+        />
         <button type="submit">Add</button>
       </.form>
 
@@ -67,7 +74,9 @@ defmodule MarskalWeb.ProjectLive do
     end
   end
 
-  def handle_event("complete", %{"id" => id}, socket), do: task_act(socket, id, &Tasks.complete_task/3)
+  def handle_event("complete", %{"id" => id}, socket),
+    do: task_act(socket, id, &Tasks.complete_task/3)
+
   def handle_event("drop", %{"id" => id}, socket), do: task_act(socket, id, &Tasks.drop_task/3)
   def handle_event("complete", _params, socket), do: act(socket, &Projects.complete_project/3)
   def handle_event("drop", _params, socket), do: act(socket, &Projects.drop_project/3)

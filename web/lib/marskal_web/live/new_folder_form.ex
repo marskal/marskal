@@ -21,7 +21,11 @@ defmodule MarskalWeb.NewFolderForm do
   end
 
   @impl true
-  def handle_event("create", %{"project_folder" => %{"name" => name}, "command_id" => command_id}, socket) do
+  def handle_event(
+        "create",
+        %{"project_folder" => %{"name" => name}, "command_id" => command_id},
+        socket
+      ) do
     case ProjectFolders.create_folder(socket.assigns.user, %{"name" => name}, command_id) do
       {:ok, folder} ->
         {:noreply, push_navigate(socket, to: ~p"/folders/#{folder.id}")}

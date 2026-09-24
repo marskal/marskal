@@ -29,6 +29,9 @@ config :marskal, MarskalWeb.Endpoint,
 # In test we don't send emails
 config :marskal, Marskal.Mailer, adapter: Swoosh.Adapters.Test
 
+# Jobs are inserted, then a test drains them. They do not run inside the request.
+config :marskal, Oban, testing: :manual
+
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
 

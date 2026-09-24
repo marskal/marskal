@@ -24,13 +24,28 @@ defmodule MarskalWeb.TaskLive do
       <h1>Task</h1>
       <.form for={@form} id="task-form" phx-submit="save" class="capture">
         <label for={@form[:title].id}>Title</label>
-        <input type="text" name={@form[:title].name} id={@form[:title].id} value={@form[:title].value} required />
+        <input
+          type="text"
+          name={@form[:title].name}
+          id={@form[:title].id}
+          value={@form[:title].value}
+          required
+        />
         <label for={@form[:notes].id}>Notes</label>
-        <textarea name={@form[:notes].name} id={@form[:notes].id} rows="4">{@form[:notes].value}</textarea>
+        <textarea
+          name={@form[:notes].name}
+          id={@form[:notes].id}
+          rows="4"
+          placeholder="Markdown is fine…"
+        >{@form[:notes].value}</textarea>
         <label for={@form[:project_id].id}>Project</label>
         <select name={@form[:project_id].name} id={@form[:project_id].id}>
           <option value="">None</option>
-          <option :for={project <- @projects} value={project.id} selected={project.id == @task.project_id}>
+          <option
+            :for={project <- @projects}
+            value={project.id}
+            selected={project.id == @task.project_id}
+          >
             {project.title}
           </option>
         </select>
@@ -52,8 +67,15 @@ defmodule MarskalWeb.TaskLive do
     task = socket.assigns.task
 
     with {:ok, task} <- Tasks.rename_task(user, task.id, params["title"], Ecto.UUID.generate()),
-         {:ok, task} <- Tasks.set_notes(user, task.id, blank_to_nil(params["notes"]), Ecto.UUID.generate()),
-         {:ok, task} <- Tasks.file_task(user, task.id, blank_to_nil(params["project_id"]), Ecto.UUID.generate()) do
+         {:ok, task} <-
+           Tasks.set_notes(user, task.id, blank_to_nil(params["notes"]), Ecto.UUID.generate()),
+         {:ok, task} <-
+           Tasks.file_task(
+             user,
+             task.id,
+             blank_to_nil(params["project_id"]),
+             Ecto.UUID.generate()
+           ) do
       {:noreply, assign_task(socket, user, task) |> put_flash(:info, "Saved.")}
     else
       {:error, _} -> {:noreply, put_flash(socket, :error, "Could not save task.")}

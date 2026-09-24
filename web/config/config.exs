@@ -49,6 +49,11 @@ config :phoenix_live_view,
 # at the `config/runtime.exs`.
 config :marskal, Marskal.Mailer, adapter: Swoosh.Adapters.Local
 
+config :marskal, Oban,
+  repo: Marskal.Repo,
+  queues: [default: 10, imports: 2],
+  plugins: [{Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7}]
+
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.25.4",

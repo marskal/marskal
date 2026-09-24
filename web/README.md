@@ -30,8 +30,11 @@ mix run priv/repo/seeds.exs
 | `kvp@marskal.example` | `H3mm3l1gh3d` | Second user, for isolation. |
 
 The seed is idempotent. It adds the sample folders and projects when the
-account does not have any yet. OmniFocus import is not ported yet. The
-tutorial backup is at `test/fixtures/files/omnifocus-tutorial.ofocus-backup.zip`.
+account does not have any yet. OmniFocus import is at `/imports`: upload a
+Backup Document (`.ofocus-backup` or a zip of one). Parsing and applying run
+on the Oban `imports` queue; the page refreshes until the job finishes. The
+tutorial backup used by the tests is
+`test/fixtures/files/omnifocus-tutorial.ofocus-backup.zip`.
 
 `devenv shell` then `mix test` runs the suite. Postgres must already be up
 (`devenv up` or `devenv processes start postgres`).

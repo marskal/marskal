@@ -16,6 +16,9 @@ defmodule MarskalWeb.NavComponents do
         <.link navigate={~p"/"} class={link_class(@current_nav, :open)}>
           <Lucideicons.list class="icon" /> Open
         </.link>
+        <.link navigate={~p"/imports"} class={link_class(@current_nav, :import)}>
+          <Lucideicons.download class="icon" /> Import
+        </.link>
       </nav>
 
       <p :if={Marskal.ProjectNav.empty?(@nav)} class="empty">No projects yet.</p>

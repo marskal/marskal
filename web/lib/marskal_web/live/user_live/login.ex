@@ -45,8 +45,7 @@ defmodule MarskalWeb.UserLive.Login do
           />
         </div>
         <label>
-          <input type="checkbox" name="user[remember_me]" value="true" />
-          Stay logged in
+          <input type="checkbox" name="user[remember_me]" value="true" /> Stay logged in
         </label>
         <button type="submit">Log in</button>
       </.form>

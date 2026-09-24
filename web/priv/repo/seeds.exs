@@ -60,12 +60,23 @@ defmodule Marskal.DevSeed do
       Marskal.ProjectFolders.drop_folder(user, archive.id, Ecto.UUID.generate())
 
       website = project!(user, "Launch website", client_a.id, "Public marketing site.")
-      review = project!(user, "Quarterly review", work.id, "Collect numbers, write the one-pager.")
+
+      review =
+        project!(user, "Quarterly review", work.id, "Collect numbers, write the one-pager.")
+
       reno = project!(user, "Kitchen reno", home.id, "Cabinets and countertop only.")
       project!(user, "Plan vacation", nil, "Unfiled on purpose.")
       done = project!(user, "Finish onboarding", nil, "Welcome email shipped.")
       Marskal.Projects.complete_project(user, done.id, Ecto.UUID.generate())
-      abandoned = project!(user, "Abandoned blog", archive.id, "Parked. The folder is dropped; the project remains.")
+
+      abandoned =
+        project!(
+          user,
+          "Abandoned blog",
+          archive.id,
+          "Parked. The folder is dropped; the project remains."
+        )
+
       Marskal.Projects.drop_project(user, abandoned.id, Ecto.UUID.generate())
 
       task!(user, "Draft homepage copy", website.id)

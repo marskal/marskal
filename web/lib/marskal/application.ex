@@ -10,6 +10,7 @@ defmodule Marskal.Application do
     children = [
       MarskalWeb.Telemetry,
       Marskal.Repo,
+      {Oban, Application.fetch_env!(:marskal, Oban)},
       {DNSCluster, query: Application.get_env(:marskal, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Marskal.PubSub},
       # Start a worker by calling: Marskal.Worker.start_link(arg)

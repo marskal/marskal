@@ -40,7 +40,7 @@ defmodule MarskalWeb.Endpoint do
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
   plug Plug.Parsers,
-    parsers: [:urlencoded, :multipart, :json],
+    parsers: [:urlencoded, MarskalWeb.Parsers.Multipart, :json],
     pass: ["*/*"],
     json_decoder: Phoenix.json_library()
 

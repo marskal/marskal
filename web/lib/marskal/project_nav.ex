@@ -21,7 +21,10 @@ defmodule Marskal.ProjectNav do
   end
 
   def root_folders(%__MODULE__{} = nav), do: Map.get(nav.folders_by_parent, nil, [])
-  def child_folders(%__MODULE__{} = nav, folder), do: Map.get(nav.folders_by_parent, folder.id, [])
+
+  def child_folders(%__MODULE__{} = nav, folder),
+    do: Map.get(nav.folders_by_parent, folder.id, [])
+
   def projects_in(%__MODULE__{} = nav, folder), do: Map.get(nav.projects_by_folder, folder.id, [])
   def unfiled_projects(%__MODULE__{} = nav), do: Map.get(nav.projects_by_folder, nil, [])
 end

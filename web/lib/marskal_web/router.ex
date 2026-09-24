@@ -49,9 +49,15 @@ defmodule MarskalWeb.Router do
   scope "/", MarskalWeb do
     pipe_through [:browser, :require_authenticated_user]
 
+    post "/imports", ImportBatchController, :create
+    post "/imports/:id/apply", ImportBatchController, :apply
+
     live_session :require_authenticated_user,
       on_mount: [{MarskalWeb.UserAuth, :require_authenticated}] do
       live "/", OpenTasksLive, :index
+      live "/imports", ImportLive, :index
+      live "/imports/new", ImportLive, :new
+      live "/imports/:id", ImportLive, :show
       live "/inbox", InboxLive, :index
       live "/projects/:id", ProjectLive, :show
       live "/folders/:id", FolderLive, :show
