@@ -79,6 +79,59 @@ defmodule Marskal.TasksTest do
     assert Enum.map(Tasks.list_open(user), & &1.id) == [open_task.id]
   end
 
+  test "a command that changes nothing appends nothing and broadcasts nothing", %{user: user} do
+    {:ok, task} = Tasks.create_task(user, %{"title" => "Milk"}, command_id())
+    Marskal.Changes.subscribe(user)
+
+    assert {:ok, %{state: :done}} = Tasks.complete_task(user, task.id, command_id())
+    assert_receive {:marskal_change, "task", id} when id == task.id
+
+    assert {:ok, %{state: :done}} = Tasks.complete_task(user, task.id, command_id())
+    refute_receive {:marskal_change, _, _}
+
+    assert Repo.aggregate(Change, :count) == 2
+  end
+
+  test "update_task patches several fields in one change row", %{user: user} do
+    {:ok, task} = Tasks.create_task(user, %{"title" => "Milk"}, command_id())
+
+    assert {:ok, task} =
+             Tasks.update_task(
+               user,
+               task.id,
+               %{"title" => "Oat milk", "notes" => "", "inbox" => "false", "state" => "to_do"},
+               command_id()
+             )
+
+    assert task.title == "Oat milk"
+    refute task.inbox
+
+    change = Repo.one!(from c in Change, order_by: [desc: c.id], limit: 1)
+    assert change.user_id == user.id
+    assert change.patch == %{"title" => "Oat milk", "inbox" => false}
+  end
+
+  test "a task can be created already resolved in one command", %{user: user} do
+    {:ok, task} = Tasks.create_task(user, %{"title" => "Old", "state" => "done"}, command_id())
+
+    assert task.state == :done
+    assert Repo.aggregate(Change, :count) == 1
+  end
+
+  test "an id that is not a uuid finds nothing", %{user: user} do
+    assert Tasks.get_task(user, "not-a-uuid") == nil
+    assert {:error, :not_found} = Tasks.complete_task(user, "not-a-uuid", command_id())
+  end
+
+  test "the database refuses a task on someone else's project", %{user: user, other: other} do
+    {:ok, project} = Marskal.Projects.create_project(other, %{"title" => "Theirs"}, command_id())
+    {:ok, task} = Tasks.create_task(user, %{"title" => "Mine"}, command_id())
+
+    assert {:error, changeset} = Tasks.file_task(user, task.id, project.id, command_id())
+    assert "must belong to you" in errors_on(changeset).project_id
+    assert Repo.get!(Task, task.id).project_id == nil
+  end
+
   defp command_id, do: Ecto.UUID.generate()
 
   defp uuid_version(id) do

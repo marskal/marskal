@@ -12,7 +12,7 @@ defmodule Marskal.Projects do
     |> Repo.all()
   end
 
-  def get_project(%User{} = user, id), do: Repo.get_by(Project, id: id, user_id: user.id)
+  def get_project(%User{} = user, id), do: Repo.get_owned(Project, user, id)
 
   def create_project(%User{} = user, attrs, command_id) do
     Changes.apply(user, command_id, "project", fn ->
@@ -25,40 +25,15 @@ defmodule Marskal.Projects do
     end)
   end
 
-  def rename_project(%User{} = user, id, title, command_id) do
-    update_project(user, id, command_id, &Project.rename_changeset(&1, %{title: title}))
-  end
-
-  def set_notes(%User{} = user, id, notes, command_id) do
-    update_project(user, id, command_id, &Project.notes_changeset(&1, %{notes: notes}))
-  end
-
-  def file_project(%User{} = user, id, folder_id, command_id) do
-    update_project(user, id, command_id, fn project ->
-      Project.file_changeset(project, user, %{project_folder_id: folder_id})
-    end)
-  end
-
-  def complete_project(%User{} = user, id, command_id) do
-    update_project(user, id, command_id, &Project.state_changeset(&1, :done))
-  end
-
-  def drop_project(%User{} = user, id, command_id) do
-    update_project(user, id, command_id, &Project.state_changeset(&1, :dropped))
-  end
-
-  def reopen_project(%User{} = user, id, command_id) do
-    update_project(user, id, command_id, &Project.state_changeset(&1, :to_do))
-  end
-
-  defp update_project(user, id, command_id, fun) do
+  @doc "Patch any of title, notes, project_folder_id, and state in one command."
+  def update_project(%User{} = user, id, attrs, command_id) when is_map(attrs) do
     Changes.apply(user, command_id, "project", fn ->
       case get_project(user, id) do
         nil ->
           {:error, :not_found}
 
         project ->
-          changeset = fun.(project)
+          changeset = Project.update_changeset(project, attrs)
 
           case Repo.update(changeset) do
             {:ok, project} -> {:ok, project, changeset}
@@ -67,4 +42,22 @@ defmodule Marskal.Projects do
       end
     end)
   end
+
+  def rename_project(user, id, title, command_id),
+    do: update_project(user, id, %{title: title}, command_id)
+
+  def set_notes(user, id, notes, command_id),
+    do: update_project(user, id, %{notes: notes}, command_id)
+
+  def file_project(user, id, folder_id, command_id),
+    do: update_project(user, id, %{project_folder_id: folder_id}, command_id)
+
+  def complete_project(user, id, command_id),
+    do: update_project(user, id, %{state: :done}, command_id)
+
+  def drop_project(user, id, command_id),
+    do: update_project(user, id, %{state: :dropped}, command_id)
+
+  def reopen_project(user, id, command_id),
+    do: update_project(user, id, %{state: :to_do}, command_id)
 end

@@ -19,7 +19,7 @@ defmodule Marskal.ProjectFolders do
     |> Repo.all()
   end
 
-  def get_folder(%User{} = user, id), do: Repo.get_by(ProjectFolder, id: id, user_id: user.id)
+  def get_folder(%User{} = user, id), do: Repo.get_owned(ProjectFolder, user, id)
 
   def create_folder(%User{} = user, attrs, command_id) do
     Changes.apply(user, command_id, "project_folder", fn ->
@@ -32,36 +32,23 @@ defmodule Marskal.ProjectFolders do
     end)
   end
 
-  def rename_folder(%User{} = user, id, name, command_id) do
-    update_folder(user, id, command_id, &ProjectFolder.rename_changeset(&1, user, %{name: name}))
-  end
-
-  def reparent_folder(%User{} = user, id, parent_id, command_id) do
-    update_folder(user, id, command_id, fn folder ->
-      ProjectFolder.reparent_changeset(folder, user, %{parent_id: parent_id})
-    end)
-  end
-
-  def drop_folder(%User{} = user, id, command_id) do
-    update_folder(user, id, command_id, &ProjectFolder.state_changeset(&1, :dropped))
-  end
-
-  def activate_folder(%User{} = user, id, command_id) do
-    update_folder(user, id, command_id, &ProjectFolder.state_changeset(&1, :active))
-  end
-
-  defp update_folder(user, id, command_id, fun) do
+  @doc "Patch any of name, parent_id, and state in one command."
+  def update_folder(%User{} = user, id, attrs, command_id) when is_map(attrs) do
     Changes.apply(user, command_id, "project_folder", fn ->
       case get_folder(user, id) do
         nil ->
           {:error, :not_found}
 
         folder ->
-          changeset = fun.(folder)
+          changeset = ProjectFolder.update_changeset(folder, user, attrs)
 
           case Repo.update(changeset) do
             {:ok, folder} ->
-              refresh_descendants!(folder)
+              if Ecto.Changeset.changed?(changeset, :name) or
+                   Ecto.Changeset.changed?(changeset, :parent_id) do
+                refresh_descendants!(folder)
+              end
+
               {:ok, folder, changeset}
 
             {:error, changeset} ->
@@ -71,21 +58,31 @@ defmodule Marskal.ProjectFolders do
     end)
   end
 
-  def refresh_descendants!(%ProjectFolder{} = folder) do
-    children =
-      ProjectFolder
-      |> where([f], f.parent_id == ^folder.id)
-      |> Repo.all()
+  def rename_folder(user, id, name, command_id),
+    do: update_folder(user, id, %{name: name}, command_id)
 
-    Enum.each(children, fn child ->
-      path = folder.parent_path ++ [folder.name]
+  def reparent_folder(user, id, parent_id, command_id),
+    do: update_folder(user, id, %{parent_id: parent_id}, command_id)
 
+  def drop_folder(user, id, command_id),
+    do: update_folder(user, id, %{state: :dropped}, command_id)
+
+  def activate_folder(user, id, command_id),
+    do: update_folder(user, id, %{state: :active}, command_id)
+
+  # parent_path is derived and not synced (ADR 0014), so descendants are
+  # rewritten here without a change row.
+  defp refresh_descendants!(%ProjectFolder{} = folder) do
+    path = folder.parent_path ++ [folder.name]
+
+    ProjectFolder
+    |> where([f], f.parent_id == ^folder.id)
+    |> Repo.all()
+    |> Enum.each(fn child ->
       child
       |> Ecto.Changeset.change(%{parent_path: path})
       |> Repo.update!()
       |> refresh_descendants!()
     end)
-
-    folder
   end
 end

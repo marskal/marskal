@@ -224,7 +224,9 @@ The repository root is the product, not the web app (ADR 0015).
   fractional rank. Do not sync derived fields (`parent_path`, effective tags).
   Recurrence spawning is a pure function; rule-created occurrence ids are
   UUIDv5 from the series id and the anchor. The web app stays online — no
-  browser offline cache.
+  browser offline cache. Writes go through `Marskal.Changes.apply/4`; a patch
+  with no changes appends nothing. Not built yet, and due before the first
+  sync client: `discarded_at`, `resolved_at`, sibling rank, the pull endpoint.
 - Tests: state transitions; user isolation; defer/planned/due; outliner/folder structure;
   **recurrence** matrix (ADR 0007); tag inheritance in Phase 2+; sync merge,
   command replay, tombstones, and occurrence-id vectors (ADR 0014).

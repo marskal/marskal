@@ -19,45 +19,44 @@ defmodule Marskal.ProjectFolders.ProjectFolder do
 
   def create_changeset(folder, user, attrs) do
     folder
-    |> cast(attrs, [:id, :name, :parent_id])
+    |> cast(attrs, [:id, :name, :parent_id, :state])
     |> validate_required([:name])
     |> validate_length(:name, max: 200)
     |> put_change(:user_id, user.id)
-    |> put_change(:state, :active)
     |> validate_parent(user, nil)
     |> put_parent_path()
   end
 
-  def rename_changeset(folder, user, attrs) do
-    folder
-    |> cast(attrs, [:name])
-    |> validate_required([:name])
-    |> validate_length(:name, max: 200)
-    |> put_parent_path_from(user)
-  end
+  @doc """
+  Any subset of name, parent_id, and state. The folder's own path changes
+  only when it moves; `Marskal.ProjectFolders` refreshes descendants after a
+  rename or a move.
+  """
+  def update_changeset(folder, user, attrs) do
+    changeset =
+      folder
+      |> cast(attrs, [:name, :parent_id, :state])
+      |> validate_required([:name, :state])
+      |> validate_length(:name, max: 200)
 
-  def reparent_changeset(folder, user, attrs) do
-    folder
-    |> cast(attrs, [:parent_id])
-    |> validate_parent(user, folder.id)
-    |> put_parent_path()
-  end
-
-  def state_changeset(folder, state) when state in [:active, :dropped] do
-    change(folder, state: state)
+    if changed?(changeset, :parent_id) do
+      changeset
+      |> validate_parent(user, folder.id)
+      |> put_parent_path()
+    else
+      changeset
+    end
   end
 
   defp validate_parent(changeset, user, self_id) do
-    parent_id = get_field(changeset, :parent_id)
+    case get_field(changeset, :parent_id) do
+      nil ->
+        changeset
 
-    cond do
-      parent_id in [nil, ""] ->
-        put_change(changeset, :parent_id, nil)
-
-      self_id && parent_id == self_id ->
+      parent_id when parent_id == self_id ->
         add_error(changeset, :parent_id, "would create a cycle")
 
-      true ->
+      parent_id ->
         case Marskal.Repo.get_by(__MODULE__, id: parent_id, user_id: user.id) do
           nil ->
             add_error(changeset, :parent_id, "must belong to you")
@@ -71,6 +70,7 @@ defmodule Marskal.ProjectFolders.ProjectFolder do
   end
 
   defp cycle?(_parent, nil), do: false
+  defp cycle?(nil, _self_id), do: false
 
   defp cycle?(parent, self_id) do
     parent.id == self_id or cycle?(parent_of(parent), self_id)
@@ -79,25 +79,11 @@ defmodule Marskal.ProjectFolders.ProjectFolder do
   defp parent_of(%{parent_id: nil}), do: nil
   defp parent_of(%{parent_id: id}), do: Marskal.Repo.get(__MODULE__, id)
 
+  defp put_parent_path(%Ecto.Changeset{valid?: false} = changeset), do: changeset
+
   defp put_parent_path(changeset) do
     path =
       case get_field(changeset, :parent_id) do
-        nil ->
-          []
-
-        parent_id ->
-          parent = Marskal.Repo.get!(__MODULE__, parent_id)
-          parent.parent_path ++ [parent.name]
-      end
-
-    put_change(changeset, :parent_path, path)
-  end
-
-  defp put_parent_path_from(changeset, _user) do
-    folder = changeset.data
-
-    path =
-      case folder.parent_id do
         nil ->
           []
 

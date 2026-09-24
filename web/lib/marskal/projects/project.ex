@@ -20,53 +20,27 @@ defmodule Marskal.Projects.Project do
 
   def create_changeset(project, user, attrs) do
     project
-    |> cast(attrs, [:id, :title, :notes, :project_folder_id])
+    |> cast(attrs, [:id, :title, :notes, :project_folder_id, :state])
     |> validate_required([:title])
-    |> validate_length(:title, max: 200)
+    |> validate_length(:title, max: Marskal.Tasks.Task.title_max())
     |> put_change(:user_id, user.id)
-    |> put_change(:state, :to_do)
-    |> validate_folder(user)
-    |> assoc_constraint(:project_folder)
+    |> owned_folder_constraint()
   end
 
-  def rename_changeset(project, attrs) do
+  @doc "Any subset of the editable fields. Only fields that differ reach the patch."
+  def update_changeset(project, attrs) do
     project
-    |> cast(attrs, [:title])
-    |> validate_required([:title])
-    |> validate_length(:title, max: 200)
+    |> cast(attrs, [:title, :notes, :project_folder_id, :state])
+    |> validate_required([:title, :state])
+    |> validate_length(:title, max: Marskal.Tasks.Task.title_max())
+    |> owned_folder_constraint()
   end
 
-  def notes_changeset(project, attrs) do
-    cast(project, attrs, [:notes])
-  end
-
-  def file_changeset(project, user, attrs) do
-    project
-    |> cast(attrs, [:project_folder_id])
-    |> validate_folder(user)
-    |> assoc_constraint(:project_folder)
-  end
-
-  def state_changeset(project, state) when state in @states do
-    change(project, state: state)
-  end
-
-  defp validate_folder(changeset, user) do
-    case get_change(changeset, :project_folder_id) do
-      nil ->
-        changeset
-
-      "" ->
-        put_change(changeset, :project_folder_id, nil)
-
-      folder_id ->
-        case Marskal.Repo.get_by(Marskal.ProjectFolders.ProjectFolder,
-               id: folder_id,
-               user_id: user.id
-             ) do
-          nil -> add_error(changeset, :project_folder_id, "must belong to you")
-          _folder -> changeset
-        end
-    end
+  # projects_project_folder_id_fkey is (project_folder_id, user_id).
+  defp owned_folder_constraint(changeset) do
+    foreign_key_constraint(changeset, :project_folder_id,
+      name: :projects_project_folder_id_fkey,
+      message: "must belong to you"
+    )
   end
 end
