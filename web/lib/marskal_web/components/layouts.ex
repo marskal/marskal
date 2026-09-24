@@ -50,7 +50,10 @@ defmodule MarskalWeb.Layouts do
     <div class="app">
       <header class="app-header">
         <div class="app-header__brand">
-          <.link navigate={~p"/"}>Marskal</.link>
+          <.link navigate={~p"/"}>
+            <img src={~p"/icon.svg"} alt="" class="app-header__logo" />
+            <span>Marskal</span>
+          </.link>
         </div>
         <div class="app-header__account">
           <%= if @current_scope && @current_scope.user do %>
