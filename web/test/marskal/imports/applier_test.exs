@@ -2,6 +2,7 @@ defmodule Marskal.Imports.ApplierTest do
   use Marskal.DataCase, async: true
 
   alias Marskal.AccountsFixtures
+  alias Marskal.Changes.Change
   alias Marskal.ImportBatch
   alias Marskal.ImportItem
   alias Marskal.Imports.Applier
@@ -57,6 +58,36 @@ defmodule Marskal.Imports.ApplierTest do
     assert task_items(user) == created
     assert batch2.stats["created"]["tasks"] == 0
     assert batch2.stats["skipped"]["tasks"] > 0
+  end
+
+  test "a re-import leaves notes the user has edited", %{user: user} do
+    batch = preview!(user, OmnifocusBackup.compact_backup(), "OmniFocus.ofocus-backup")
+    assert {:ok, batch} = Applier.call(batch)
+    project = project!(batch, "projSite0000")
+    {:ok, _} = Marskal.Projects.set_notes(user, project.id, "My notes", Ecto.UUID.generate())
+
+    batch2 = preview!(user, OmnifocusBackup.compact_backup(), "OmniFocus.ofocus-backup")
+    assert {:ok, _} = Applier.call(batch2)
+
+    assert Repo.get!(Project, project.id).notes == "My notes"
+  end
+
+  test "each record is one change, and the payload is dropped after apply", %{user: user} do
+    batch = preview!(user, OmnifocusBackup.compact_backup(), "OmniFocus.ofocus-backup")
+    assert {:ok, batch} = Applier.call(batch)
+
+    done = task!(batch, "taskDone0000")
+    assert Repo.aggregate(from(c in Change, where: c.entity_id == ^done.id), :count) == 1
+
+    assert Repo.one!(from b in ImportBatch, where: b.id == ^batch.id, select: b.payload) == nil
+    assert [%ImportBatch{payload: nil}] = Marskal.Imports.list_batches(user)
+  end
+
+  test "the list of batches does not load payloads", %{user: user} do
+    batch = preview!(user, OmnifocusBackup.compact_backup(), "OmniFocus.ofocus-backup")
+    assert [%ImportBatch{payload: nil}] = Marskal.Imports.list_batches(user)
+    assert Marskal.Imports.load_payload(Marskal.Imports.get_batch(user, batch.id)).payload
+    assert Marskal.Imports.get_batch(user, "not-a-uuid") == nil
   end
 
   test "applies an OmniFocus 4.9 tutorial backup", %{user: user} do

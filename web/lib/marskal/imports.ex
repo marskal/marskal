@@ -23,8 +23,16 @@ defmodule Marskal.Imports do
   end
 
   def get_batch(%User{} = user, id) when is_binary(id) do
-    Repo.get_by(ImportBatch, id: id, user_id: user.id)
+    Repo.get_owned(ImportBatch, user, id)
   end
+
+  @doc "The payload is not loaded by default. The jobs read it here."
+  def load_payload(%ImportBatch{payload: nil, id: id} = batch) do
+    payload = Repo.one(from b in ImportBatch, where: b.id == ^id, select: b.payload)
+    %{batch | payload: payload}
+  end
+
+  def load_payload(%ImportBatch{} = batch), do: batch
 
   def rate_limited?(%User{} = user) do
     hour_ago = DateTime.add(DateTime.utc_now(:second), -3600, :second)

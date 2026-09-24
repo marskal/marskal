@@ -17,7 +17,8 @@ defmodule Marskal.ImportBatch do
     field :error_message, :string
     field :external_account, :string
     field :filename, :string
-    field :payload, :binary
+    # Up to 50 MB. Load it with Marskal.Imports.load_payload/1.
+    field :payload, :binary, load_in_query: false
 
     belongs_to :user, Marskal.Accounts.User
     has_many :import_items, Marskal.ImportItem

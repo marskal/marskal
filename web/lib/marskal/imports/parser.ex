@@ -5,6 +5,8 @@ defmodule Marskal.Imports.Parser do
   alias Marskal.Repo
 
   def call(batch) do
+    batch = Marskal.Imports.load_payload(batch)
+
     if OmnifocusAdapter.match?(batch.payload, batch.filename) do
       graph = OmnifocusAdapter.parse(batch.payload, filename: batch.filename)
 
@@ -33,6 +35,8 @@ defmodule Marskal.Imports.Parser do
   defp fail!(batch, message) do
     batch
     |> Ecto.Changeset.change(%{status: :failed, error_message: message})
+    # The payload may not be loaded, so force the clear.
+    |> Ecto.Changeset.force_change(:payload, nil)
     |> Repo.update!()
   end
 end

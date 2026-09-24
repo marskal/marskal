@@ -1,20 +1,32 @@
 defmodule Marskal.Imports.Applier do
-  @moduledoc false
+  @moduledoc """
+  Writes a parsed graph for the batch's user.
+
+  Each new record is one command, created in its final state. A source id
+  already imported by this user is skipped and left as the user has it now.
+  The uploaded payload is dropped once the batch is applied or has failed.
+  """
 
   import Ecto.Query
 
   alias Marskal.ImportItem
+  alias Marskal.Imports
   alias Marskal.Imports.OmnifocusAdapter
   alias Marskal.ProjectFolders
   alias Marskal.Projects
   alias Marskal.Repo
   alias Marskal.Tasks
 
+  @kinds %{"folders" => 0, "projects" => 0, "tasks" => 0}
+
   def call(batch) do
-    batch = Repo.preload(batch, :user)
+    batch = batch |> Repo.preload(:user) |> Imports.load_payload()
 
     try do
-      apply_graph(batch)
+      with {:ok, applied} <- apply_graph(batch) do
+        Marskal.Changes.broadcast(batch.user, "import_batch", batch.id)
+        {:ok, applied}
+      end
     rescue
       error ->
         {:error, mark_failed(batch, error)}
@@ -23,27 +35,31 @@ defmodule Marskal.Imports.Applier do
 
   defp apply_graph(batch) do
     graph = OmnifocusAdapter.parse(batch.payload, filename: batch.filename)
-    created = %{"folders" => 0, "projects" => 0, "tasks" => 0}
-    skipped = %{"folders" => 0, "projects" => 0, "tasks" => 0}
 
     Repo.transaction(fn ->
-      existing = existing_items(batch)
+      acc = %{
+        ids: %{},
+        created: @kinds,
+        skipped: @kinds,
+        existing: existing_items(batch)
+      }
 
-      {folder_ids, created, skipped, existing} =
-        apply_folders(batch, graph.folders, created, skipped, existing)
+      acc =
+        graph.folders
+        |> parents_first()
+        |> Enum.reduce(acc, &apply_folder(batch, &1, &2))
 
-      {project_ids, created, skipped, existing} =
-        apply_projects(batch, graph.projects, folder_ids, created, skipped, existing)
-
-      {created, skipped, _existing} =
-        apply_tasks(batch, graph.tasks, project_ids, created, skipped, existing)
+      acc = Enum.reduce(graph.projects, acc, &apply_project(batch, &1, &2))
+      acc = Enum.reduce(graph.tasks, acc, &apply_task(batch, &1, &2))
 
       batch
       |> Ecto.Changeset.change(%{
         status: :applied,
-        stats: Map.merge(batch.stats || %{}, %{"created" => created, "skipped" => skipped}),
+        stats:
+          Map.merge(batch.stats || %{}, %{"created" => acc.created, "skipped" => acc.skipped}),
         error_message: nil
       })
+      |> Ecto.Changeset.force_change(:payload, nil)
       |> Repo.update!()
     end)
   end
@@ -53,6 +69,7 @@ defmodule Marskal.Imports.Applier do
 
     batch
     |> Ecto.Changeset.change(%{status: :failed, error_message: message})
+    |> Ecto.Changeset.force_change(:payload, nil)
     |> Repo.update!()
   end
 
@@ -63,168 +80,114 @@ defmodule Marskal.Imports.Applier do
     |> Map.new(&{&1.source_id, &1})
   end
 
-  defp apply_folders(batch, folders, created, skipped, existing) do
-    remaining = Map.new(folders, &{&1.source_id, &1})
-    place(batch, remaining, %{}, created, skipped, existing, map_size(remaining) + 1)
+  # Depth-first on the parent link, so a parent is created before its
+  # children. A parent cycle in the source is cut where it closes.
+  defp parents_first(folders) do
+    by_id = Map.new(folders, &{&1.source_id, &1})
+
+    {ordered, _seen} =
+      Enum.reduce(folders, {[], MapSet.new()}, &visit(&1, by_id, &2, MapSet.new()))
+
+    Enum.reverse(ordered)
   end
 
-  defp place(batch, remaining, ids, created, skipped, existing, 0) do
-    Enum.reduce(remaining, {ids, created, skipped, existing}, fn {_sid, node},
-                                                                 {ids, created, skipped, existing} ->
-      {id, created, skipped, existing} =
-        upsert_folder(batch, node, ids, created, skipped, existing)
-
-      {Map.put(ids, node.source_id, id), created, skipped, existing}
-    end)
-  end
-
-  defp place(batch, remaining, ids, created, skipped, existing, guard) do
-    if remaining == %{} do
-      {ids, created, skipped, existing}
+  defp visit(node, by_id, {ordered, seen} = acc, path) do
+    if MapSet.member?(seen, node.source_id) or MapSet.member?(path, node.source_id) do
+      acc
     else
-      {remaining, ids, created, skipped, existing, progressed} =
-        Enum.reduce(remaining, {remaining, ids, created, skipped, existing, false}, fn {sid, node},
-                                                                                       {remaining,
-                                                                                        ids,
-                                                                                        created,
-                                                                                        skipped,
-                                                                                        existing,
-                                                                                        progressed} ->
-          waiting =
-            is_binary(node.parent_source_id) and
-              not Map.has_key?(ids, node.parent_source_id) and
-              Map.has_key?(remaining, node.parent_source_id)
+      {ordered, seen} =
+        case Map.get(by_id, node.parent_source_id) do
+          nil -> {ordered, seen}
+          parent -> visit(parent, by_id, {ordered, seen}, MapSet.put(path, node.source_id))
+        end
 
-          if waiting do
-            {remaining, ids, created, skipped, existing, progressed}
-          else
-            {id, created, skipped, existing} =
-              upsert_folder(batch, node, ids, created, skipped, existing)
-
-            {Map.delete(remaining, sid), Map.put(ids, sid, id), created, skipped, existing, true}
-          end
-        end)
-
-      if progressed do
-        place(batch, remaining, ids, created, skipped, existing, guard - 1)
-      else
-        place(batch, remaining, ids, created, skipped, existing, 0)
-      end
+      {[node | ordered], MapSet.put(seen, node.source_id)}
     end
   end
 
-  defp upsert_folder(batch, node, folder_ids, created, skipped, existing) do
-    case Map.get(existing, node.source_id) do
-      %ImportItem{} = item ->
-        {item.project_folder_id, created, Map.update!(skipped, "folders", &(&1 + 1)), existing}
+  defp apply_folder(batch, node, acc) do
+    case Map.get(acc.existing, node.source_id) do
+      %ImportItem{project_folder_id: id} ->
+        acc |> put_id(node, id) |> count(:skipped, "folders")
 
       nil ->
-        user = batch.user
-
         {:ok, folder} =
           ProjectFolders.create_folder(
-            user,
-            %{"name" => clip(node.name, 200), "parent_id" => folder_ids[node.parent_source_id]},
+            batch.user,
+            %{
+              "name" => clip(node.name, 200),
+              "parent_id" => acc.ids[node.parent_source_id],
+              "state" => if(node.dropped, do: "dropped", else: "active")
+            },
             Ecto.UUID.generate()
           )
 
-        folder =
-          if node.dropped do
-            {:ok, folder} = ProjectFolders.drop_folder(user, folder.id, Ecto.UUID.generate())
-            folder
-          else
-            folder
-          end
-
-        existing =
-          record!(
-            batch,
-            :folder,
-            node.source_id,
-            node.extras,
-            %{project_folder_id: folder.id},
-            existing
-          )
-
-        {folder.id, Map.update!(created, "folders", &(&1 + 1)), skipped, existing}
+        acc
+        |> record!(batch, :folder, node, %{project_folder_id: folder.id})
+        |> put_id(node, folder.id)
+        |> count(:created, "folders")
     end
   end
 
-  defp apply_projects(batch, projects, folder_ids, created, skipped, existing) do
-    Enum.reduce(projects, {%{}, created, skipped, existing}, fn node,
-                                                                {ids, created, skipped, existing} ->
-      case Map.get(existing, node.source_id) do
-        %ImportItem{project_id: project_id} = item ->
-          if is_binary(node.notes) and node.notes != "" and item.project_id do
-            Projects.set_notes(batch.user, project_id, node.notes, Ecto.UUID.generate())
-          end
+  defp apply_project(batch, node, acc) do
+    case Map.get(acc.existing, node.source_id) do
+      %ImportItem{project_id: id} ->
+        acc |> put_id(node, id) |> count(:skipped, "projects")
 
-          {Map.put(ids, node.source_id, project_id), created,
-           Map.update!(skipped, "projects", &(&1 + 1)), existing}
+      nil ->
+        {:ok, project} =
+          Projects.create_project(
+            batch.user,
+            %{
+              "title" => clip(node.title, Tasks.Task.title_max()),
+              "notes" => node.notes,
+              "project_folder_id" => acc.ids[node.folder_source_id],
+              "state" => state(node.state)
+            },
+            Ecto.UUID.generate()
+          )
 
-        nil ->
-          {:ok, project} =
-            Projects.create_project(
-              batch.user,
-              %{
-                "title" => clip(node.title, 200),
-                "notes" => node.notes,
-                "project_folder_id" => folder_ids[node.folder_source_id]
-              },
-              Ecto.UUID.generate()
-            )
-
-          project = set_state(project, node.state, batch.user, :project)
-
-          existing =
-            record!(
-              batch,
-              :project,
-              node.source_id,
-              node.extras,
-              %{project_id: project.id},
-              existing
-            )
-
-          {Map.put(ids, node.source_id, project.id), Map.update!(created, "projects", &(&1 + 1)),
-           skipped, existing}
-      end
-    end)
+        acc
+        |> record!(batch, :project, node, %{project_id: project.id})
+        |> put_id(node, project.id)
+        |> count(:created, "projects")
+    end
   end
 
-  defp apply_tasks(batch, tasks, project_ids, created, skipped, existing) do
-    Enum.reduce(tasks, {created, skipped, existing}, fn node, {created, skipped, existing} ->
-      case Map.get(existing, node.source_id) do
-        %ImportItem{task_id: task_id} ->
-          if is_binary(node.notes) and node.notes != "" and task_id do
-            Tasks.set_notes(batch.user, task_id, node.notes, Ecto.UUID.generate())
-          end
+  defp apply_task(batch, node, acc) do
+    case Map.get(acc.existing, node.source_id) do
+      %ImportItem{} ->
+        count(acc, :skipped, "tasks")
 
-          {created, Map.update!(skipped, "tasks", &(&1 + 1)), existing}
+      nil ->
+        inbox = node.inbox or is_nil(node.project_source_id)
 
-        nil ->
-          inbox = node.inbox or is_nil(node.project_source_id)
+        {:ok, task} =
+          Tasks.create_task(
+            batch.user,
+            %{
+              "title" => clip(node.title, Tasks.Task.title_max()),
+              "notes" => node.notes,
+              "inbox" => inbox,
+              "project_id" => if(inbox, do: nil, else: acc.ids[node.project_source_id]),
+              "state" => state(node.state)
+            },
+            Ecto.UUID.generate()
+          )
 
-          {:ok, task} =
-            Tasks.create_task(
-              batch.user,
-              %{
-                "title" => clip(node.title, 500),
-                "notes" => node.notes,
-                "inbox" => inbox,
-                "project_id" => if(inbox, do: nil, else: project_ids[node.project_source_id])
-              },
-              Ecto.UUID.generate()
-            )
+        acc
+        |> record!(batch, :task, node, %{task_id: task.id})
+        |> count(:created, "tasks")
+    end
+  end
 
-          _task = set_state(task, node.state, batch.user, :task)
+  defp state(state) when state in ["done", "dropped"], do: state
+  defp state(_state), do: "to_do"
 
-          existing =
-            record!(batch, :task, node.source_id, node.extras, %{task_id: task.id}, existing)
+  defp put_id(acc, node, id), do: %{acc | ids: Map.put(acc.ids, node.source_id, id)}
 
-          {Map.update!(created, "tasks", &(&1 + 1)), skipped, existing}
-      end
-    end)
+  defp count(acc, bucket, kind) do
+    Map.update!(acc, bucket, &Map.update!(&1, kind, fn n -> n + 1 end))
   end
 
   defp clip(nil, _max), do: "Untitled"
@@ -236,29 +199,7 @@ defmodule Marskal.Imports.Applier do
     end
   end
 
-  defp set_state(record, "done", user, :project) do
-    {:ok, project} = Projects.complete_project(user, record.id, Ecto.UUID.generate())
-    project
-  end
-
-  defp set_state(record, "dropped", user, :project) do
-    {:ok, project} = Projects.drop_project(user, record.id, Ecto.UUID.generate())
-    project
-  end
-
-  defp set_state(record, "done", user, :task) do
-    {:ok, task} = Tasks.complete_task(user, record.id, Ecto.UUID.generate())
-    task
-  end
-
-  defp set_state(record, "dropped", user, :task) do
-    {:ok, task} = Tasks.drop_task(user, record.id, Ecto.UUID.generate())
-    task
-  end
-
-  defp set_state(record, _state, _user, _kind), do: record
-
-  defp record!(batch, kind, source_id, extras, links, existing) do
+  defp record!(acc, batch, kind, node, links) do
     item =
       %ImportItem{}
       |> ImportItem.changeset(
@@ -267,12 +208,12 @@ defmodule Marskal.Imports.Applier do
           user_id: batch.user_id,
           source: batch.source,
           kind: kind,
-          source_id: source_id,
-          extras: extras || %{}
+          source_id: node.source_id,
+          extras: node.extras || %{}
         })
       )
       |> Repo.insert!()
 
-    Map.put(existing, source_id, item)
+    %{acc | existing: Map.put(acc.existing, node.source_id, item)}
   end
 end
