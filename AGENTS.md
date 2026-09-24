@@ -2,8 +2,8 @@
 
 Personal task/todo manager: **recurring tasks**, **soft-GTD**, **planning**.
 **PostgreSQL** (single DB), **devenv** locally, **VPS/Nix** in production.
-The web app in `web/` is **Rails until the port**. The accepted target is
-**Phoenix + LiveView** (ADR 0016). Do not mix the two in one tree.
+The web app in `web/` is **Phoenix + LiveView** (ADR 0016): Elixir 1.20,
+Erlang/OTP 29, Bandit, Ecto, Postgres 18.
 
 This file is **short and actionable**. Rationale and history live in
 **[docs/adr/](docs/adr/)** — follow accepted ADRs; don’t re-litigate them in code.
@@ -144,62 +144,58 @@ Recurrence schema may be designed early.
 
 The repository root is the product, not the web app (ADR 0015).
 
-- **`web/`** — the web app. `devenv.nix` lives there. Run `devenv shell` and
-  `devenv up` from `web/`. Paths in the Rails section below are relative to it.
-  That tree stays Rails until the port replaces it (ADR 0016). Do not scaffold
-  Phoenix beside it, and do not add Elixir to it early.
+- **`web/`** — the Phoenix app. `devenv.nix` lives there. Run `devenv shell`
+  and `devenv up` from `web/`. Paths in the Elixir section below are relative
+  to it. Do not add a second app directory beside `web/`.
 - **`docs/`** — ADRs, at the root.
 - Do not add a root `devenv.nix`. Do not create `clients/ios/` or
   `sync/fixtures/` until that work starts.
 
 ### Environment
 
-- **devenv** for Ruby, Bundler, libpq, Postgres service. No host system Ruby/gems.
-- From `web/`: `devenv shell` before Ruby/Rails work. Prefer editing `web/devenv.nix`
-  over global installs.
+- **devenv** for Elixir 1.20, OTP 29, libpq, and Postgres. No host Elixir.
+- From `web/`: `devenv shell` before Mix work. Prefer editing `web/devenv.nix`
+  over global installs. Do not float `pkgs.elixir`.
 - Dev URL: **http://marskal.localhost:8275** (port **8275** ≈ TASK on phone keypad).
-- **`devenv up`** (from `web/`) starts Postgres + Rails (`processes.rails`).
-  `bin/dev` if you only need Rails.
+- **`devenv up`** (from `web/`) starts Postgres + Phoenix (`processes.server`).
   Postgres is that managed `services.postgres` process — never `pg_ctl start` /
   `start-postgres` against `web/.devenv/state/postgres` (it orphans a second cluster).
 
-### Rails
+### Elixir
 
-Applies to the current `web/` tree only. The port follows ADR 0016.
-
-- **Rails only via Bundler** (`Gemfile` / `Gemfile.lock`). Currently **~> 8.1**.
-- Do **not** add `pkgs.rubyPackages.rails` (or similar) to `devenv.nix` — nix Rails is
-  older and fights the Gemfile on `GEM_PATH`.
-- Do **not** use host or ad-hoc `gem install rails` for project work.
-- Always **`bundle install`**, then **`bin/rails`** / **`bundle exec`**.
-- devenv supplies Ruby + Bundler + Postgres tooling; the **app** supplies Rails.
-- **PostgreSQL only**, single app DB (ADR 0002). Bundler owns `pg`.
+- **Phoenix via Mix** (`mix.exs` / `mix.lock`). Elixir **1.20**, OTP **29**,
+  Phoenix **1.8**, LiveView **1.2**, Bandit.
+- One app, modules `Marskal` and `MarskalWeb`. Not an umbrella.
+- Domain writes go through context functions that append the change feed
+  (ADR 0014). LiveViews do not save a whole row back.
+- Domain primary keys are `uuid` with `DEFAULT uuidv7()`. A caller may supply
+  the id. The change-feed cursor is `bigint GENERATED ALWAYS AS IDENTITY`.
+- UI is HEEx function components. No Tailwind, no daisyUI. Tokens on `:root`,
+  isolation with `@scope` (ADR 0012, ADR 0016).
+- Login that ships is email + password. Do not present magic link as the way in.
+- **PostgreSQL only**, single app DB (ADR 0002).
 - **Lean into Postgres** (ADR 0002, **0011**): domain entity PKs default to
   **UUIDv7** (`uuid` + `DEFAULT uuidv7()`), not identity/`serial`. Other types
   are fine where they fit — a server-only counter is `GENERATED … AS IDENTITY`,
   not a sequence. Real **foreign keys**. DB constraints for real invariants.
   Extensions OK if in **nixpkgs** (enable in migrations + devenv as needed).
-  Recency is `created_at`, not `id` (fixtures and clients may mint non-v7 UUIDs).
-- **Schema dump:** `config.active_record.schema_format = :sql` → commit **`db/structure.sql`**
-  (not `schema.rb`). Preserves enums, `uuidv7()` defaults, and other Postgres-native DDL.
-- Hotwire (Turbo/Stimulus) / server-rendered HTML unless SPA is justified.
-- Domain names match the vocabulary table. Schema via migrations only.
-- **Import (ADR 0013):** adapters parse to `Imports::Graph`; file upload now,
-  OAuth is a future fetcher. First source: OmniFocus backup. Park unmapped
-  fields on `import_items.extras`. Skip existing `(user, source, source_id)`
-  on re-import. Do not add competing-app gems.
-- **UI (ADR 0012):** pages stay ERB. Reusable widgets are **ViewComponent**
-  (`ApplicationComponent`) plus plain CSS `@scope` in
-  `app/assets/stylesheets/components/<scope-class>.css`. No Tailwind, no UI kit.
-  Tokens stay on `:root` in `application.css` (app shell lives there too).
-- **Icons:** Lucide via `rails_icons` (`icon "name"`). Do not inline ad-hoc SVG
-  paths. The pack is **not** in git — `bin/rails icons:sync` clones it into
-  gitignored `vendor/icons` (also run from `bin/setup`, CI, Docker). Re-download
-  with `FORCE=1`. Preview at `/rails_icons` in development.
+  Recency is `inserted_at`, not `id`.
+- **Migrations are Ecto.** Enums, `uuidv7()` defaults, and identity columns are
+  raw SQL in those migrations (ADR 0016).
+- Server-rendered HEEx / LiveView unless an SPA is justified.
+- Domain names match the vocabulary table. Schema via Ecto migrations only.
+- **Import (ADR 0013):** not ported yet. When it is, adapters parse to an
+  `Imports.Graph`; file upload now, OAuth is a future fetcher. First source:
+  OmniFocus backup. Park unmapped fields on `import_items.extras`. Skip existing
+  `(user, source, source_id)` on re-import. Do not add competing-app libraries.
+- **UI (ADR 0012, ADR 0016):** HEEx function components plus plain CSS `@scope`.
+  No Tailwind, no daisyUI, no UI kit. Tokens stay on `:root`.
+- **Icons:** Lucide, when the first icon is needed. Do not inline ad-hoc SVG paths.
 
 ### Auth & tenancy
 
-- Rails built-in auth from Phase 0 (ADR 0003). Always scope personal data by `current_user`.
+- Email + password sessions via `phx.gen.auth` (ADR 0003, ADR 0016). Always
+  scope personal data by the current user. Magic link is not the way in.
 - Owner-only until sharing; then **folder_memberships** + ancestor cascade (not
   per-project membership as primary). No personal-org multi-DB tenancy.
 

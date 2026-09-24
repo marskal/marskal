@@ -1,49 +1,25 @@
 # Marskal web app
 
-The online client. Commands below run from this directory (`web/`).
+Phoenix + LiveView. Commands below run from this directory (`web/`).
 
 Product rules: **[AGENTS.md](../AGENTS.md)**. Decisions: **[docs/adr/](../docs/adr/)**.
 
 ## Stack
 
-- Ruby on Rails **8.1** (Gemfile)
-- PostgreSQL (devenv service locally)
-- Hotwire (Turbo / Stimulus)
-- ViewComponent widgets with CSS `@scope` (no Tailwind)
-- Import from OmniFocus backups (Todoist file/OAuth later)
+- Elixir 1.20, Erlang/OTP 29 (pinned in `devenv.nix`)
+- Phoenix 1.8, LiveView 1.2, Bandit
+- PostgreSQL 18 (devenv service)
+- Ecto. Domain ids are `uuid` with `DEFAULT uuidv7()`
 
 ## Local development
 
 ```bash
-# Enter environment (Ruby, Bundler, libpq, Postgres tooling)
-devenv shell
-
-# Install/update app gems (includes Rails — not from nixpkgs)
-bundle install
-
-# First time / after schema changes
-bin/rails db:prepare
-
-# Start Postgres + Rails together
-devenv up          # foreground (logs)
-# or: devenv up -d # background; devenv down to stop
-
-# Rails only (Postgres already running): bin/dev
+devenv up
 ```
 
-Open **http://marskal.localhost:8275** — sign up at `/registration/new`, or use the
-sample accounts created by `db:seed` / `db:prepare` / `db:reset`:
+Open **http://marskal.localhost:8275**. Register at `/users/register`.
 
-| Email | Password | What’s there |
-|-------|----------|----------------|
-| `mts@marskal.example` | `H3mm3l1gh3d` | Inbox, open tasks, nested folders, projects |
-| `kvp@marskal.example` | `H3mm3l1gh3d` | Isolated second user |
+`devenv shell` then `mix test` runs the suite. Postgres must already be up
+(`devenv up` or `devenv processes start postgres`).
 
-`bin/rails db:seed` is idempotent (won’t duplicate if those accounts already have data).  
-`bin/rails db:reset` (or `bin/setup --reset`) wipes the DB and reseeds.
-
-Port **8275** ≈ TASK on a phone keypad. `*.localhost` → loopback (no `/etc/hosts`).
-
-**Rails comes only from the Gemfile** (`bundle install` → `bin/rails`).  
-devenv does **not** install `rubyPackages.rails`. There is no `devenv.nix` at the
-repository root.
+There is no `devenv.nix` at the repository root.

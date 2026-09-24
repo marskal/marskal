@@ -1,0 +1,217 @@
+/*
+ * Tokens, reset, and app shell. Widget styles use CSS @scope.
+ */
+
+:root {
+  color-scheme: light dark;
+  --bg: #f6f5f2;
+  --surface: #fff;
+  --text: #1a1a1a;
+  --muted: #5c5c5c;
+  --border: #d9d6cf;
+  --accent: #1f5c4d;
+  --accent-contrast: #fff;
+  --danger-bg: #fde8e8;
+  --notice-bg: #e5f3ec;
+  --radius: 8px;
+  --space: 1rem;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121412;
+    --surface: #1c1f1c;
+    --text: #f0efe9;
+    --muted: #a8a69c;
+    --border: #333833;
+    --accent: #6fbfa8;
+    --accent-contrast: #0d1a16;
+    --danger-bg: #3a1f1f;
+    --notice-bg: #1a2e24;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+}
+
+a {
+  color: var(--accent);
+}
+
+h1 {
+  font-size: 1.5rem;
+  margin: 0 0 0.25rem;
+}
+
+.lede {
+  margin: 0 0 1.25rem;
+  color: var(--muted);
+}
+
+.app {
+  min-height: 100vh;
+}
+
+.app-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+}
+
+.app-header__brand a {
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.app-nav,
+.app-header__account {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.app-header__account {
+  margin-left: auto;
+}
+
+.app-nav a {
+  text-decoration: none;
+  color: var(--muted);
+}
+
+.app-nav a.is-current {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.who {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.app-main {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem;
+}
+
+label {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+button,
+.btn {
+  font: inherit;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: var(--radius);
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+}
+
+button[type="submit"] {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: transparent;
+}
+
+.capture {
+  display: grid;
+  gap: 0.4rem;
+  margin-bottom: 1.5rem;
+}
+
+.field-error {
+  color: #9b2c2c;
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+@scope (.task-row) {
+  :scope {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.65rem 0.75rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
+  .title {
+    min-width: 0;
+  }
+
+  .actions {
+    display: flex;
+    gap: 0.35rem;
+    flex-shrink: 0;
+  }
+}
+
+.task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.empty {
+  color: var(--muted);
+}
+
+.auth {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 22rem;
+}
+
+.flash {
+  margin: 0 1.25rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius);
+}
+
+.flash-info {
+  background: var(--notice-bg);
+}
+
+.flash-error {
+  background: var(--danger-bg);
+}
