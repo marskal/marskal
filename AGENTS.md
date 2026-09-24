@@ -22,6 +22,7 @@ This file is **short and actionable**. Rationale and history live in
 | ViewComponent + `@scope` CSS | [0012](docs/adr/0012-viewcomponent-scoped-css.md) |
 | Import framework | [0013](docs/adr/0013-import-framework.md) |
 | Sync, offline clients | [0014](docs/adr/0014-offline-sync.md) |
+| Repository layout | [0015](docs/adr/0015-repository-layout.md) |
 
 ---
 
@@ -136,14 +137,26 @@ Recurrence schema may be designed early.
 
 ## Engineering conventions
 
+### Layout
+
+The repository root is the product, not the web app (ADR 0015).
+
+- **`web/`** — the web app. `devenv.nix` lives there. Run `devenv shell` and
+  `devenv up` from `web/`. Paths in the Rails section below are relative to it.
+- **`docs/`** — ADRs, at the root.
+- Do not add a root `devenv.nix`. Do not create `clients/ios/` or
+  `sync/fixtures/` until that work starts.
+
 ### Environment
 
 - **devenv** for Ruby, Bundler, libpq, Postgres service. No host system Ruby/gems.
-- `devenv shell` before Ruby/Rails work. Prefer editing `devenv.nix` over global installs.
+- From `web/`: `devenv shell` before Ruby/Rails work. Prefer editing `web/devenv.nix`
+  over global installs.
 - Dev URL: **http://marskal.localhost:8275** (port **8275** ≈ TASK on phone keypad).
-- **`devenv up`** starts Postgres + Rails (`processes.rails`). `bin/dev` if you only need Rails.
+- **`devenv up`** (from `web/`) starts Postgres + Rails (`processes.rails`).
+  `bin/dev` if you only need Rails.
   Postgres is that managed `services.postgres` process — never `pg_ctl start` /
-  `start-postgres` against `.devenv/state/postgres` (it orphans a second cluster).
+  `start-postgres` against `web/.devenv/state/postgres` (it orphans a second cluster).
 
 ### Rails
 

@@ -23,6 +23,7 @@ This directory holds **ADRs** — durable decisions and their context.
 | [0012](0012-viewcomponent-scoped-css.md) | ViewComponent widgets with CSS `@scope` | Accepted |
 | [0013](0013-import-framework.md) | Import framework (file now, OAuth later) | Accepted |
 | [0014](0014-offline-sync.md) | Offline sync (field patches, change feed) | Accepted |
+| [0015](0015-repository-layout.md) | Repository layout (web app, future clients) | Accepted |
 
 ## When to add an ADR
 
