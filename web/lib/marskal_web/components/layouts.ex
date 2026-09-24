@@ -49,6 +49,7 @@ defmodule MarskalWeb.Layouts do
         <div class="app-header__account">
           <%= if @current_scope && @current_scope.user do %>
             <span class="who">{@current_scope.user.email}</span>
+            <.link :if={@current_scope.user.superuser} href={~p"/dev/dashboard"}>Dashboard</.link>
             <.link href={~p"/users/settings"}>Settings</.link>
             <.link href={~p"/users/log-out"} method="delete">Log out</.link>
           <% else %>

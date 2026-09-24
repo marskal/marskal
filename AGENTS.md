@@ -172,7 +172,8 @@ The repository root is the product, not the web app (ADR 0015).
   the id. The change-feed cursor is `bigint GENERATED ALWAYS AS IDENTITY`.
 - UI is HEEx function components. No Tailwind, no daisyUI. Tokens on `:root`,
   isolation with `@scope` (ADR 0012, ADR 0016).
-- Login that ships is email + password. Do not present magic link as the way in.
+- Login that ships is email + password, hashed with Argon2id. Do not present magic link as the way in.
+- LiveDashboard is `/dev/dashboard`, and only a user with `superuser` set can open it.
 - **PostgreSQL only**, single app DB (ADR 0002).
 - **Lean into Postgres** (ADR 0002, **0011**): domain entity PKs default to
   **UUIDv7** (`uuid` + `DEFAULT uuidv7()`), not identity/`serial`. Other types

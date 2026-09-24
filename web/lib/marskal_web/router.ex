@@ -2,6 +2,7 @@ defmodule MarskalWeb.Router do
   use MarskalWeb, :router
 
   import MarskalWeb.UserAuth
+  import Phoenix.LiveDashboard.Router
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -30,12 +31,17 @@ defmodule MarskalWeb.Router do
 
   # Enable Swoosh mailbox preview in development
   if Application.compile_env(:marskal, :dev_routes) do
-
     scope "/dev" do
       pipe_through :browser
 
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
+  end
+
+  scope "/dev" do
+    pipe_through [:browser, :require_authenticated_user, :require_superuser]
+
+    live_dashboard "/dashboard", metrics: MarskalWeb.Telemetry
   end
 
   ## Authentication routes

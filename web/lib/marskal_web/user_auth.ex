@@ -261,6 +261,21 @@ defmodule MarskalWeb.UserAuth do
   # the user was already logged in, redirect to settings
   def signed_in_path(_conn_or_socket), do: ~p"/"
 
+  def require_superuser(conn, _opts) do
+    if superuser?(conn) do
+      conn
+    else
+      conn
+      |> put_flash(:error, "You must be a superuser to open the dashboard.")
+      |> redirect(to: ~p"/")
+      |> halt()
+    end
+  end
+
+  defp superuser?(conn) do
+    match?(%{user: %{superuser: true}}, conn.assigns[:current_scope])
+  end
+
   @doc """
   Plug for routes that require the user to be authenticated.
   """

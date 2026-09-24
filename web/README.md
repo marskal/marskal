@@ -17,7 +17,20 @@ Product rules: **[AGENTS.md](../AGENTS.md)**. Decisions: **[docs/adr/](../docs/a
 devenv up
 ```
 
-Open **http://marskal.localhost:8275**. Register at `/users/register`.
+Open **http://marskal.localhost:8275**. Register at `/users/register`, or load the
+sample accounts:
+
+```bash
+mix run priv/repo/seeds.exs
+```
+
+| Email | Password | |
+|-------|----------|--|
+| `mts@marskal.example` | `H3mm3l1gh3d` | Superuser. Inbox, open tasks, and `/dev/dashboard`. |
+| `kvp@marskal.example` | `H3mm3l1gh3d` | Second user, for isolation. |
+
+The seed is idempotent. It does not recreate the old folder and project graph.
+That returns when those models are ported.
 
 `devenv shell` then `mix test` runs the suite. Postgres must already be up
 (`devenv up` or `devenv processes start postgres`).
