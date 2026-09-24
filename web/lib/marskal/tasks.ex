@@ -47,6 +47,10 @@ defmodule Marskal.Tasks do
     update_task(user, task_id, command_id, &Task.clarify_changeset/1)
   end
 
+  def set_inbox(%User{} = user, task_id, inbox, command_id) when is_boolean(inbox) do
+    update_task(user, task_id, command_id, &Task.inbox_changeset(&1, inbox))
+  end
+
   def complete_task(%User{} = user, task_id, command_id) do
     update_task(user, task_id, command_id, &Task.state_changeset(&1, :done))
   end

@@ -4,7 +4,7 @@ defmodule MarskalWeb.UserLive.Login do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope}>
+    <Layouts.app flash={@flash} current_scope={@current_scope} inspector={assigns[:inspector]}>
       <h1>Log in</h1>
       <p class="lede">
         <%= if @current_scope && @current_scope.user do %>

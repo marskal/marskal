@@ -33,6 +33,8 @@ defmodule MarskalWeb.Layouts do
 
   attr :current_nav, :atom, default: nil
   attr :current_id, :string, default: nil
+  attr :inspector, :any, default: nil
+  attr :inspector_refresh, :integer, default: nil
 
   slot :inner_block, required: true
 
@@ -47,7 +49,12 @@ defmodule MarskalWeb.Layouts do
       )
 
     ~H"""
-    <div class="app">
+    <div
+      id="app-shell"
+      class={["app", @inspector && "is-inspector-open"]}
+      data-inspector-refresh={@inspector_refresh}
+      phx-hook={inspector_hook(@current_scope)}
+    >
       <header class="app-header">
         <div class="app-header__brand">
           <.link navigate={~p"/"}>
@@ -68,23 +75,101 @@ defmodule MarskalWeb.Layouts do
         </div>
       </header>
 
-      <div class="app-body">
+      <div class={["app-body", @current_scope && @current_scope.user && "has-inspector"]}>
         <MarskalWeb.NavComponents.sidebar
           :if={@nav}
           nav={@nav}
           user={@current_scope.user}
           current_nav={@current_nav}
           current_id={@current_id}
+          inspector={@inspector}
         />
         <main class="app-main">
           {render_slot(@inner_block)}
         </main>
+        <div
+          :if={@current_scope && @current_scope.user}
+          class="app-inspector__backdrop"
+          phx-click="close-inspector"
+        >
+        </div>
+        <aside
+          :if={@current_scope && @current_scope.user}
+          class="app-inspector"
+          tabindex="-1"
+          aria-label="Inspector"
+        >
+          <div class="app-inspector__chrome">
+            <h2 class="app-inspector__title">Inspector</h2>
+            <button
+              type="button"
+              class="app-inspector__close"
+              phx-click="close-inspector"
+              aria-label="Close inspector"
+            >
+              <Lucideicons.x class="icon" />
+            </button>
+          </div>
+          <.live_component
+            module={MarskalWeb.InspectorPanel}
+            id="inspector"
+            user={@current_scope.user}
+            selection={@inspector}
+          />
+        </aside>
       </div>
     </div>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".Inspector">
+      export default {
+        mounted() {
+          this.onClick = (event) => {
+            const link = event.target.closest("a")
+            if (link) {
+              if (link.closest(".task-row")) event.stopPropagation()
+              return
+            }
+            if (event.target.closest("button, input, select, textarea, label, [phx-click]")) return
+            const row = event.target.closest("[data-inspect-type][data-inspect-id]")
+            if (!row || !this.el.contains(row)) return
+            this.pushEvent("inspect", {type: row.dataset.inspectType, id: row.dataset.inspectId})
+          }
+          this.onKeydown = (event) => {
+            if (event.key !== "Escape") return
+            if (!this.el.classList.contains("is-inspector-open")) return
+            event.preventDefault()
+            this.pushEvent("close-inspector", {})
+          }
+          this.el.addEventListener("click", this.onClick)
+          document.addEventListener("keydown", this.onKeydown)
+          this.sync()
+        },
+        updated() {
+          this.sync()
+        },
+        destroyed() {
+          this.el.removeEventListener("click", this.onClick)
+          document.removeEventListener("keydown", this.onKeydown)
+          document.body.classList.remove("inspector-open")
+        },
+        sync() {
+          const panel = this.el.querySelector(".app-inspector")
+          if (!panel) return
+          const open = this.el.classList.contains("is-inspector-open")
+          const narrow = window.matchMedia("(max-width: 64rem)").matches
+          panel.toggleAttribute("inert", narrow && !open)
+          document.body.classList.toggle("inspector-open", narrow && open)
+          if (open && !this.wasOpen) panel.focus({preventScroll: true})
+          this.wasOpen = open
+        }
+      }
+    </script>
 
     <.flash_group flash={@flash} />
     """
   end
+
+  defp inspector_hook(%{user: user}) when not is_nil(user), do: ".Inspector"
+  defp inspector_hook(_scope), do: nil
 
   @doc """
   Shows the flash group with standard titles and content.

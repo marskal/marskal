@@ -5,6 +5,13 @@ defmodule Marskal.ProjectFolders do
   alias Marskal.ProjectFolders.ProjectFolder
   alias Marskal.Repo
 
+  def list_all(%User{} = user) do
+    ProjectFolder
+    |> where([f], f.user_id == ^user.id)
+    |> order_by([f], asc: f.name, asc: f.id)
+    |> Repo.all()
+  end
+
   def list_active(%User{} = user) do
     ProjectFolder
     |> where([f], f.user_id == ^user.id and f.state == :active)

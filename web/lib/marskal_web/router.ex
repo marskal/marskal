@@ -53,7 +53,7 @@ defmodule MarskalWeb.Router do
     post "/imports/:id/apply", ImportBatchController, :apply
 
     live_session :require_authenticated_user,
-      on_mount: [{MarskalWeb.UserAuth, :require_authenticated}] do
+      on_mount: [{MarskalWeb.UserAuth, :require_authenticated}, {MarskalWeb.Inspector, :default}] do
       live "/", OpenTasksLive, :index
       live "/imports", ImportLive, :index
       live "/imports/new", ImportLive, :new

@@ -16,7 +16,13 @@ defmodule MarskalWeb.OpenTasksLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope} current_nav={:open}>
+    <Layouts.app
+      flash={@flash}
+      current_scope={@current_scope}
+      current_nav={:open}
+      inspector={assigns[:inspector]}
+      inspector_refresh={assigns[:inspector_refresh]}
+    >
       <h1>Open tasks</h1>
       <p class="lede">Clarified work, still to do.</p>
 
@@ -24,7 +30,8 @@ defmodule MarskalWeb.OpenTasksLive do
         id="open-tasks"
         tasks={@tasks}
         empty="No open tasks."
-        actions={[:complete, :drop]}
+        actions={[:complete]}
+        inspector={@inspector}
       />
     </Layouts.app>
     """
@@ -32,7 +39,6 @@ defmodule MarskalWeb.OpenTasksLive do
 
   @impl true
   def handle_event("complete", %{"id" => id}, socket), do: act(socket, id, &Tasks.complete_task/3)
-  def handle_event("drop", %{"id" => id}, socket), do: act(socket, id, &Tasks.drop_task/3)
   def handle_event("reopen", %{"id" => id}, socket), do: act(socket, id, &Tasks.reopen_task/3)
 
   defp act(socket, id, fun) do

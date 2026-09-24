@@ -5,14 +5,15 @@ defmodule MarskalWeb.TaskComponentsTest do
 
   alias Marskal.Tasks.Task
 
-  test "a to-do row checks off to complete and still offers drop" do
+  test "a to-do row checks off to complete and does not offer drop" do
     html = render_row(%Task{id: id(), title: "Milk", state: :to_do, notes: nil})
 
     assert html =~ "Milk"
     assert html =~ "aria-label=\"Mark as done\""
     assert html =~ "check__idle"
     assert html =~ "check__hint"
-    assert html =~ "Drop"
+    assert html =~ "phx-click=\"inspect\""
+    refute html =~ "Drop"
     refute html =~ ">Done<"
   end
 

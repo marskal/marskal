@@ -25,6 +25,8 @@ defmodule MarskalWeb.ProjectLive do
       flash={@flash}
       current_scope={@current_scope}
       current_id={@project.id}
+      inspector={assigns[:inspector]}
+      inspector_refresh={assigns[:inspector_refresh]}
     >
       <p :if={@folder} class="lede">
         <.link navigate={~p"/folders/#{@folder.id}"}>{@folder.name}</.link>
@@ -54,7 +56,8 @@ defmodule MarskalWeb.ProjectLive do
         id="project-tasks"
         tasks={@tasks}
         empty="No open tasks in this project."
-        actions={[:complete, :drop]}
+        actions={[:complete]}
+        inspector={@inspector}
       />
     </Layouts.app>
     """
@@ -77,8 +80,9 @@ defmodule MarskalWeb.ProjectLive do
   def handle_event("complete", %{"id" => id}, socket),
     do: task_act(socket, id, &Tasks.complete_task/3)
 
-  def handle_event("drop", %{"id" => id}, socket), do: task_act(socket, id, &Tasks.drop_task/3)
-  def handle_event("reopen", %{"id" => id}, socket), do: task_act(socket, id, &Tasks.reopen_task/3)
+  def handle_event("reopen", %{"id" => id}, socket),
+    do: task_act(socket, id, &Tasks.reopen_task/3)
+
   def handle_event("complete", _params, socket), do: act(socket, &Projects.complete_project/3)
   def handle_event("drop", _params, socket), do: act(socket, &Projects.drop_project/3)
   def handle_event("reopen", _params, socket), do: act(socket, &Projects.reopen_project/3)

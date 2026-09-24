@@ -5,6 +5,7 @@ defmodule MarskalWeb.TaskComponents do
   attr :tasks, :list, required: true
   attr :empty, :string, required: true
   attr :actions, :list, required: true
+  attr :inspector, :any, default: nil
 
   def list(assigns) do
     ~H"""
@@ -20,6 +21,7 @@ defmodule MarskalWeb.TaskComponents do
           background: var(--surface);
           border: 1px solid var(--border);
           border-radius: var(--radius);
+          cursor: pointer;
         }
 
         .check-form {
@@ -75,6 +77,22 @@ defmodule MarskalWeb.TaskComponents do
           color: var(--muted);
         }
 
+        :scope.is-selected {
+          background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+        }
+
+        button.select {
+          display: block;
+          width: 100%;
+          border: 0;
+          background: transparent;
+          padding: 0;
+          color: inherit;
+          font: inherit;
+          text-align: left;
+          cursor: pointer;
+        }
+
         .check:focus-visible {
           outline: 2px solid var(--accent);
           outline-offset: 2px;
@@ -121,7 +139,20 @@ defmodule MarskalWeb.TaskComponents do
     </style>
     <p :if={@tasks == []} class="empty">{@empty}</p>
     <ul id={@id} class="task-list">
-      <li :for={task <- @tasks} id={"task-#{task.id}"} class="task-row">
+      <li
+        :for={task <- @tasks}
+        id={"task-#{task.id}"}
+        class={[
+          "task-row",
+          MarskalWeb.Inspector.selected?(:task, task.id, @inspector) && "is-selected"
+        ]}
+        data-inspect-type="task"
+        data-inspect-id={task.id}
+        aria-current={MarskalWeb.Inspector.selected?(:task, task.id, @inspector) && "true"}
+        phx-click="inspect"
+        phx-value-type="task"
+        phx-value-id={task.id}
+      >
         <span :if={:complete in @actions} class="check-form">
           <button
             type="button"
@@ -146,20 +177,20 @@ defmodule MarskalWeb.TaskComponents do
           </button>
         </span>
         <div class="body">
-          <.link navigate={~p"/tasks/#{task.id}"} class="title">{task.title}</.link>
-          <MarskalWeb.FormattedNotes.block text={task.notes} />
-        </div>
-        <span class="actions">
-          <button :if={:clarify in @actions} type="button" phx-click="clarify" phx-value-id={task.id}>
-            Clarify
-          </button>
           <button
-            :if={:drop in @actions and task.state == :to_do}
             type="button"
-            phx-click="drop"
+            class="select title"
+            phx-click="inspect"
+            phx-value-type="task"
             phx-value-id={task.id}
           >
-            Drop
+            {task.title}
+          </button>
+          <MarskalWeb.FormattedNotes.block text={task.notes} />
+        </div>
+        <span :if={:clarify in @actions} class="actions">
+          <button type="button" phx-click="clarify" phx-value-id={task.id}>
+            Clarify
           </button>
         </span>
       </li>

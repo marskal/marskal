@@ -7,7 +7,7 @@ defmodule MarskalWeb.UserLive.Registration do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope}>
+    <Layouts.app flash={@flash} current_scope={@current_scope} inspector={assigns[:inspector]}>
       <h1>Register</h1>
       <p class="lede">
         Already registered? <.link navigate={~p"/users/log-in"}>Log in</.link>

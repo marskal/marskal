@@ -21,7 +21,13 @@ defmodule MarskalWeb.FolderLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope} current_id={@folder.id}>
+    <Layouts.app
+      flash={@flash}
+      current_scope={@current_scope}
+      current_id={@folder.id}
+      inspector={assigns[:inspector]}
+      inspector_refresh={assigns[:inspector_refresh]}
+    >
       <p :if={@folder.parent_path != []} class="lede">{Enum.join(@folder.parent_path, " / ")}</p>
       <h1>{@folder.name}</h1>
       <p class="actions">
@@ -31,8 +37,25 @@ defmodule MarskalWeb.FolderLive do
 
       <h2>Folders</h2>
       <ul class="nav-tree">
-        <li :for={child <- @children}>
-          <.link navigate={~p"/folders/#{child.id}"}>{child.name}</.link>
+        <li
+          :for={child <- @children}
+          class={[
+            "inspect-row",
+            MarskalWeb.Inspector.selected?(:folder, child.id, @inspector) && "is-selected"
+          ]}
+          data-inspect-type="folder"
+          data-inspect-id={child.id}
+        >
+          <button
+            type="button"
+            class="select"
+            phx-click="inspect"
+            phx-value-type="folder"
+            phx-value-id={child.id}
+          >
+            {child.name}
+          </button>
+          <.link navigate={~p"/folders/#{child.id}"} class="open-quiet">Open</.link>
         </li>
       </ul>
       <p :if={@children == []} class="empty">No folders inside.</p>
@@ -46,8 +69,25 @@ defmodule MarskalWeb.FolderLive do
 
       <h2>Projects</h2>
       <ul class="nav-tree">
-        <li :for={project <- @projects}>
-          <.link navigate={~p"/projects/#{project.id}"}>{project.title}</.link>
+        <li
+          :for={project <- @projects}
+          class={[
+            "inspect-row",
+            MarskalWeb.Inspector.selected?(:project, project.id, @inspector) && "is-selected"
+          ]}
+          data-inspect-type="project"
+          data-inspect-id={project.id}
+        >
+          <button
+            type="button"
+            class="select"
+            phx-click="inspect"
+            phx-value-type="project"
+            phx-value-id={project.id}
+          >
+            {project.title}
+          </button>
+          <.link navigate={~p"/projects/#{project.id}"} class="open-quiet">Open</.link>
         </li>
       </ul>
       <p :if={@projects == []} class="empty">No open projects.</p>

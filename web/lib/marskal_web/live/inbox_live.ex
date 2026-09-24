@@ -18,7 +18,13 @@ defmodule MarskalWeb.InboxLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope} current_nav={:inbox}>
+    <Layouts.app
+      flash={@flash}
+      current_scope={@current_scope}
+      current_nav={:inbox}
+      inspector={assigns[:inspector]}
+      inspector_refresh={assigns[:inspector_refresh]}
+    >
       <h1>Inbox</h1>
       <p class="lede">Unclarified tasks. Clarify one to put it on the open list.</p>
 
@@ -41,7 +47,8 @@ defmodule MarskalWeb.InboxLive do
         id="inbox-tasks"
         tasks={@tasks}
         empty="Nothing in the inbox."
-        actions={[:clarify, :complete, :drop]}
+        actions={[:clarify, :complete]}
+        inspector={@inspector}
       />
     </Layouts.app>
     """
@@ -70,7 +77,6 @@ defmodule MarskalWeb.InboxLive do
 
   def handle_event("clarify", %{"id" => id}, socket), do: act(socket, id, &Tasks.clarify_task/3)
   def handle_event("complete", %{"id" => id}, socket), do: act(socket, id, &Tasks.complete_task/3)
-  def handle_event("drop", %{"id" => id}, socket), do: act(socket, id, &Tasks.drop_task/3)
   def handle_event("reopen", %{"id" => id}, socket), do: act(socket, id, &Tasks.reopen_task/3)
 
   defp act(socket, id, fun) do

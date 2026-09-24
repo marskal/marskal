@@ -62,6 +62,10 @@ defmodule Marskal.Tasks.Task do
     change(task, inbox: false)
   end
 
+  def inbox_changeset(task, inbox) when is_boolean(inbox) do
+    change(task, inbox: inbox)
+  end
+
   def state_changeset(task, state) when state in @states do
     change(task, state: state)
   end

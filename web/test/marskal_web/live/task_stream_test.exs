@@ -9,7 +9,7 @@ defmodule MarskalWeb.TaskStreamTest do
     %{conn: log_in_user(conn, user), user: user}
   end
 
-  test "capture, clarify, complete, and drop", %{conn: conn} do
+  test "capture, clarify, and complete", %{conn: conn} do
     {:ok, inbox, _html} = live(conn, ~p"/inbox")
 
     inbox
@@ -32,18 +32,6 @@ defmodule MarskalWeb.TaskStreamTest do
     |> render_click()
 
     refute has_element?(open, "#open-tasks", "Milk")
-
-    {:ok, inbox, _html} = live(conn, ~p"/inbox")
-
-    inbox
-    |> form("#new-task", task: %{title: "Bread"})
-    |> render_submit()
-
-    inbox
-    |> element("#inbox-tasks button", "Drop")
-    |> render_click()
-
-    refute has_element?(inbox, "#inbox-tasks", "Bread")
   end
 
   test "another user does not see the task", %{conn: conn} do

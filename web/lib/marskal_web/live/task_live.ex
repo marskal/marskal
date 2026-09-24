@@ -20,7 +20,12 @@ defmodule MarskalWeb.TaskLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope}>
+    <Layouts.app
+      flash={@flash}
+      current_scope={@current_scope}
+      inspector={assigns[:inspector]}
+      inspector_refresh={assigns[:inspector_refresh]}
+    >
       <h1>Task</h1>
       <.form for={@form} id="task-form" phx-submit="save" class="capture">
         <label for={@form[:title].id}>Title</label>

@@ -139,7 +139,13 @@ defmodule MarskalWeb.ImportLive do
         clip: rect(0, 0, 0, 0);
       }
     </style>
-    <Layouts.app flash={@flash} current_scope={@current_scope} current_nav={:import}>
+    <Layouts.app
+      flash={@flash}
+      current_scope={@current_scope}
+      current_nav={:import}
+      inspector={assigns[:inspector]}
+      inspector_refresh={assigns[:inspector_refresh]}
+    >
       <%= cond do %>
         <% @live_action == :index -> %>
           <h1>Import</h1>
