@@ -22,6 +22,7 @@ This directory holds **ADRs** — durable decisions and their context.
 | [0011](0011-uuidv7-primary-keys.md) | UUIDv7 primary keys | Accepted |
 | [0012](0012-viewcomponent-scoped-css.md) | ViewComponent widgets with CSS `@scope` | Accepted |
 | [0013](0013-import-framework.md) | Import framework (file now, OAuth later) | Accepted |
+| [0014](0014-offline-sync.md) | Offline sync (field patches, change feed) | Accepted |
 
 ## When to add an ADR
 

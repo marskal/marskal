@@ -36,7 +36,15 @@ Every **domain** table uses a native `uuid` primary key with
 - Future: tags, recurrences, folder memberships, and other product tables
 
 Include users and sessions. Mixed `bigint`/`uuid` FKs forever is worse than
-UUIDs on server-created rows. The invariant is: **every domain key is a UUIDv7**.
+UUIDs on server-created rows. The invariant is: **domain entity keys are
+UUIDv7 by default**, except occurrence ids that the recurrence rule itself
+creates, which are a deterministic UUIDv5 ([ADR 0014](0014-offline-sync.md)).
+
+UUIDv7 is the default, not a ban on other types. A column that is not a
+client-mintable entity key uses whatever fits. A server-only monotonic counter
+is `bigint GENERATED … AS IDENTITY`, not `serial` and not an explicit
+sequence. The change-feed cursor is `GENERATED ALWAYS AS IDENTITY`
+([ADR 0014](0014-offline-sync.md)).
 
 Leave Rails internals alone (`schema_migrations`, `ar_internal_metadata`, Solid
 Cache / Queue / Cable).
@@ -70,10 +78,12 @@ for recency. `ApplicationRecord` sets `implicit_order_column = "created_at"`.
 Keep `created_at` as the display clock; `id` is only a tiebreaker
 (`recent_first` today).
 
-### Not sync
+### Not the whole sync protocol
 
-This only removes the ID-allocation blocker. A sync protocol (revisions,
-tombstones, conflict rules) is a later ADR.
+This only removes the ID-allocation blocker. Field patches, the change feed,
+tombstones, ranks, and conflict rules are [ADR 0014](0014-offline-sync.md).
+That ADR also makes the one exception to “new domain keys are v7”: recurrence
+occurrences the rule itself creates use a deterministic UUIDv5.
 
 ## Consequences
 
@@ -85,5 +95,6 @@ tombstones, conflict rules) is a later ADR.
 - URLs are longer (`/tasks/0193…`). Fine.
 - Index keys are 16 bytes instead of 8. Irrelevant at this scale.
 - `structure.sql` stays the schema dump (enums + `uuid` defaults).
-- Do not reintroduce identity/`serial` surrogate keys on domain tables.
+- Do not reintroduce identity/`serial` surrogate keys on domain entity tables.
+  Identity columns elsewhere are fine when the value must come from the server.
 - Do not add a parallel `client_uuid` beside a bigint PK.

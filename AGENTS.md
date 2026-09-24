@@ -21,6 +21,7 @@ This file is **short and actionable**. Rationale and history live in
 | UUIDv7 primary keys | [0011](docs/adr/0011-uuidv7-primary-keys.md) |
 | ViewComponent + `@scope` CSS | [0012](docs/adr/0012-viewcomponent-scoped-css.md) |
 | Import framework | [0013](docs/adr/0013-import-framework.md) |
+| Sync, offline clients | [0014](docs/adr/0014-offline-sync.md) |
 
 ---
 
@@ -63,8 +64,8 @@ No On Hold, no Skip (**Dropped**). Pause with **Defer** (until or **indefinite**
 
 **Inbox** (ADR 0010): boolean on tasks, orthogonal to state. New captures:
 `inbox=true`, `state=to_do`. Clarify → `inbox=false`. **No** `list` column.
-Default home: **Open tasks** stream. Default timezone until per-user settings:
-**Europe/Copenhagen**.
+Default home: **Open tasks** stream. Timezone is stored per user, default
+**Europe/Copenhagen** (ADR 0014).
 
 ### Recurrence (ADR 0007 — product differentiator)
 
@@ -153,9 +154,11 @@ Recurrence schema may be designed early.
 - Always **`bundle install`**, then **`bin/rails`** / **`bundle exec`**.
 - devenv supplies Ruby + Bundler + Postgres tooling; the **app** supplies Rails.
 - **PostgreSQL only**, single app DB (ADR 0002). Bundler owns `pg`.
-- **Lean into Postgres** (ADR 0002, **0011**): **UUIDv7** PKs (`uuid` + `DEFAULT uuidv7()`),
-  not identity/`serial`; real **foreign keys**; DB constraints for real invariants;
-  extensions OK if in **nixpkgs** (enable in migrations + devenv as needed).
+- **Lean into Postgres** (ADR 0002, **0011**): domain entity PKs default to
+  **UUIDv7** (`uuid` + `DEFAULT uuidv7()`), not identity/`serial`. Other types
+  are fine where they fit — a server-only counter is `GENERATED … AS IDENTITY`,
+  not a sequence. Real **foreign keys**. DB constraints for real invariants.
+  Extensions OK if in **nixpkgs** (enable in migrations + devenv as needed).
   Recency is `created_at`, not `id` (fixtures and clients may mint non-v7 UUIDs).
 - **Schema dump:** `config.active_record.schema_format = :sql` → commit **`db/structure.sql`**
   (not `schema.rb`). Preserves enums, `uuidv7()` defaults, and other Postgres-native DDL.
@@ -196,9 +199,17 @@ Recurrence schema may be designed early.
   Planned / Due on both (ADR 0006).
 - Structure: `tasks.parent_id`, `project_folders` tree, `projects.project_folder_id`;
   no project-to-project parent (ADR 0009). Prevent parent cycles.
-- Done/Dropped retained in history by default (not deleted).
+- Done/Dropped retained in history by default (not deleted). Synced domain rows
+  are discarded with a tombstone, not hard-deleted (ADR 0014).
+- **Sync (ADR 0014):** writes are field patches with a command id, appended to a
+  server change feed. Clients may supply UUIDv7 ids. Task sibling order is a
+  fractional rank. Do not sync derived fields (`parent_path`, effective tags).
+  Recurrence spawning is a pure function; rule-created occurrence ids are
+  UUIDv5 from the series id and the anchor. The web app stays online — no
+  browser offline cache.
 - Tests: state transitions; user isolation; defer/planned/due; outliner/folder structure;
-  **recurrence** matrix (ADR 0007); tag inheritance in Phase 2+.
+  **recurrence** matrix (ADR 0007); tag inheritance in Phase 2+; sync merge,
+  command replay, tombstones, and occurrence-id vectors (ADR 0014).
 
 ### Agent behavior
 

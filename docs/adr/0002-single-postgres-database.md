@@ -33,9 +33,11 @@ beside the VPS.
 We are not targeting lowest-common-denominator SQL. Prefer idiomatic, current PostgreSQL
 features when they improve integrity or clarity.
 
-- **Primary keys are UUIDv7**, not identity/`serial` — see [ADR 0011](0011-uuidv7-primary-keys.md).
-  Domain tables use native `uuid` with `DEFAULT uuidv7()` (PostgreSQL 18). Explicit
-  ids stay allowed so clients can mint keys offline.
+- **Domain entity primary keys default to UUIDv7**, not identity/`serial` — see
+  [ADR 0011](0011-uuidv7-primary-keys.md). Domain tables use native `uuid` with
+  `DEFAULT uuidv7()` (PostgreSQL 18). Explicit ids stay allowed so clients can
+  mint keys offline. Other columns use the type that fits; a server-only counter
+  is an identity column, not a sequence.
 - **Real foreign keys** on every association that is a true FK: `REFERENCES` with
   appropriate `ON DELETE` / `ON UPDATE` behavior. Do not rely on application-only
   referential integrity for core relations (`user_id`, `project_id`, tag parent, join

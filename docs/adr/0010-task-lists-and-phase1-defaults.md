@@ -79,7 +79,8 @@ view of open work, not a bucket you file into.
 ### Time zone
 
 - Store timestamps in UTC.
-- **Default app timezone:** `Europe/Copenhagen` until per-user timezone settings exist.
+- **Default timezone:** `Europe/Copenhagen`, stored per user ([ADR 0014](0014-offline-sync.md)).
+  Until that column exists, the app-wide default remains the fallback.
 - Day boundaries for Planned/agenda use the effective zone (default above for v1).
 
 ## Consequences
