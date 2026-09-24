@@ -32,20 +32,26 @@ defmodule MarskalWeb.Layouts do
     doc: "the current [scope](https://phoenix.hexdocs.pm/scopes.html)"
 
   attr :current_nav, :atom, default: nil
+  attr :current_id, :string, default: nil
 
   slot :inner_block, required: true
 
   def app(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :nav,
+        if(assigns.current_scope && assigns.current_scope.user,
+          do: Marskal.ProjectNav.build(assigns.current_scope.user)
+        )
+      )
+
     ~H"""
     <div class="app">
       <header class="app-header">
         <div class="app-header__brand">
           <.link navigate={~p"/"}>Marskal</.link>
         </div>
-        <nav class="app-nav" :if={@current_scope && @current_scope.user}>
-          <.link navigate={~p"/inbox"} class={nav_class(@current_nav, :inbox)}>Inbox</.link>
-          <.link navigate={~p"/"} class={nav_class(@current_nav, :open)}>Open</.link>
-        </nav>
         <div class="app-header__account">
           <%= if @current_scope && @current_scope.user do %>
             <span class="who">{@current_scope.user.email}</span>
@@ -59,17 +65,23 @@ defmodule MarskalWeb.Layouts do
         </div>
       </header>
 
-      <main class="app-main">
-        {render_slot(@inner_block)}
-      </main>
+      <div class="app-body">
+        <MarskalWeb.NavComponents.sidebar
+          :if={@nav}
+          nav={@nav}
+          user={@current_scope.user}
+          current_nav={@current_nav}
+          current_id={@current_id}
+        />
+        <main class="app-main">
+          {render_slot(@inner_block)}
+        </main>
+      </div>
     </div>
 
     <.flash_group flash={@flash} />
     """
   end
-
-  defp nav_class(current, name) when current == name, do: "is-current"
-  defp nav_class(_current, _name), do: nil
 
   @doc """
   Shows the flash group with standard titles and content.

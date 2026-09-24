@@ -29,8 +29,9 @@ mix run priv/repo/seeds.exs
 | `mts@marskal.example` | `H3mm3l1gh3d` | Superuser. Inbox, open tasks, and `/dev/dashboard`. |
 | `kvp@marskal.example` | `H3mm3l1gh3d` | Second user, for isolation. |
 
-The seed is idempotent. It does not recreate the old folder and project graph.
-That returns when those models are ported.
+The seed is idempotent. It adds the sample folders and projects when the
+account does not have any yet. OmniFocus import is not ported yet. The
+tutorial backup is at `test/fixtures/files/omnifocus-tutorial.ofocus-backup.zip`.
 
 `devenv shell` then `mix test` runs the suite. Postgres must already be up
 (`devenv up` or `devenv processes start postgres`).

@@ -8,19 +8,32 @@ defmodule Marskal.Tasks do
 
   import Ecto.Query
   alias Marskal.Accounts.User
-  alias Marskal.Changes.Change
+  alias Marskal.Changes
   alias Marskal.Repo
   alias Marskal.Tasks.Task
 
   def list_inbox(%User{} = user), do: list_visible(user, true)
   def list_open(%User{} = user), do: list_visible(user, false)
 
+  def list_project_tasks(%User{} = user, project_id) do
+    Task
+    |> where(
+      [t],
+      t.user_id == ^user.id and t.project_id == ^project_id and t.inbox == false and
+        t.state == :to_do
+    )
+    |> order_by([t], desc: t.inserted_at, desc: t.id)
+    |> Repo.all()
+  end
+
+  def get_task(%User{} = user, id), do: Repo.get_by(Task, id: id, user_id: user.id)
+
   def create_task(%User{} = user, attrs, command_id) when is_map(attrs) do
-    run_command(user, command_id, fn ->
+    Changes.apply(user, command_id, "task", fn ->
       changeset = Task.create_changeset(%Task{}, user, attrs)
 
       case Repo.insert(changeset) do
-        {:ok, task} -> {:ok, task, encode_patch(changeset)}
+        {:ok, task} -> {:ok, task, changeset}
         {:error, changeset} -> {:error, changeset}
       end
     end)
@@ -42,6 +55,20 @@ defmodule Marskal.Tasks do
     update_task(user, task_id, command_id, &Task.state_changeset(&1, :dropped))
   end
 
+  def reopen_task(%User{} = user, task_id, command_id) do
+    update_task(user, task_id, command_id, &Task.state_changeset(&1, :to_do))
+  end
+
+  def set_notes(%User{} = user, task_id, notes, command_id) do
+    update_task(user, task_id, command_id, &Task.notes_changeset(&1, %{notes: notes}))
+  end
+
+  def file_task(%User{} = user, task_id, project_id, command_id) do
+    update_task(user, task_id, command_id, fn task ->
+      Task.file_changeset(task, user, %{project_id: project_id})
+    end)
+  end
+
   defp list_visible(user, inbox) do
     Task
     |> where([t], t.user_id == ^user.id and t.inbox == ^inbox and t.state == :to_do)
@@ -50,7 +77,7 @@ defmodule Marskal.Tasks do
   end
 
   defp update_task(user, task_id, command_id, fun) do
-    run_command(user, command_id, fn ->
+    Changes.apply(user, command_id, "task", fn ->
       case Repo.get_by(Task, id: task_id, user_id: user.id) do
         nil ->
           {:error, :not_found}
@@ -59,68 +86,10 @@ defmodule Marskal.Tasks do
           changeset = fun.(task)
 
           case Repo.update(changeset) do
-            {:ok, task} -> {:ok, task, encode_patch(changeset)}
+            {:ok, task} -> {:ok, task, changeset}
             {:error, changeset} -> {:error, changeset}
           end
       end
     end)
   end
-
-  defp run_command(user, command_id, fun) do
-    with :ok <- validate_command_id(command_id) do
-      Repo.transaction(fn ->
-        case Repo.get_by(Change, command_id: command_id) do
-          %Change{} = change ->
-            replay(user, change)
-
-          nil ->
-            case fun.() do
-              {:ok, %Task{} = task, patch} ->
-                %Change{}
-                |> Change.record_changeset(%{
-                  command_id: command_id,
-                  entity_type: "task",
-                  entity_id: task.id,
-                  patch: patch
-                })
-                |> Repo.insert!()
-
-                task
-
-              {:error, reason} ->
-                Repo.rollback(reason)
-            end
-        end
-      end)
-      |> case do
-        {:ok, %Task{} = task} -> {:ok, task}
-        {:error, reason} -> {:error, reason}
-      end
-    end
-  end
-
-  defp replay(user, %Change{entity_type: "task", entity_id: id}) do
-    case Repo.get_by(Task, id: id, user_id: user.id) do
-      %Task{} = task -> task
-      nil -> Repo.rollback(:not_found)
-    end
-  end
-
-  defp validate_command_id(command_id) do
-    case Ecto.UUID.cast(command_id) do
-      {:ok, _} -> :ok
-      :error -> {:error, :invalid_command}
-    end
-  end
-
-  defp encode_patch(changeset) do
-    Map.new(changeset.changes, fn {key, value} ->
-      {Atom.to_string(key), encode_value(value)}
-    end)
-  end
-
-  defp encode_value(value) when is_boolean(value), do: value
-  defp encode_value(value) when is_atom(value), do: Atom.to_string(value)
-  defp encode_value(%DateTime{} = value), do: DateTime.to_iso8601(value)
-  defp encode_value(value), do: value
 end

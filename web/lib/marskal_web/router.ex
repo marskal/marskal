@@ -53,6 +53,9 @@ defmodule MarskalWeb.Router do
       on_mount: [{MarskalWeb.UserAuth, :require_authenticated}] do
       live "/", OpenTasksLive, :index
       live "/inbox", InboxLive, :index
+      live "/projects/:id", ProjectLive, :show
+      live "/folders/:id", FolderLive, :show
+      live "/tasks/:id", TaskLive, :show
       live "/users/settings", UserLive.Settings, :edit
       live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email
     end

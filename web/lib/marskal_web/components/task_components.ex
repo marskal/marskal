@@ -11,7 +11,7 @@ defmodule MarskalWeb.TaskComponents do
     <p :if={@tasks == []} class="empty">{@empty}</p>
     <ul id={@id} class="task-list">
       <li :for={task <- @tasks} id={"task-#{task.id}"} class="task-row">
-        <span class="title">{task.title}</span>
+        <.link navigate={~p"/tasks/#{task.id}"} class="title">{task.title}</.link>
         <span class="actions">
           <button :if={:clarify in @actions} type="button" phx-click="clarify" phx-value-id={task.id}>
             Clarify

@@ -3,12 +3,11 @@
 #   mix run priv/repo/seeds.exs
 #
 # Sign in as:
-#   mts@marskal.example / H3mm3l1gh3d  — superuser, inbox and open tasks
+#   mts@marskal.example / H3mm3l1gh3d  — superuser, folders, projects, tasks
 #   kvp@marskal.example / H3mm3l1gh3d  — second user, one open task
 #
-# Folders, projects, and the tasks that belonged to them are not seeded.
-# That graph comes back when those models are ported. The old list is in
-# git history (`web/db/seeds.rb` before the Phoenix port).
+# Existing tasks are left in place. Folders and projects are added when
+# the account has none yet.
 
 password = "H3mm3l1gh3d"
 
@@ -45,6 +44,80 @@ defmodule Marskal.DevSeed do
     end
   end
 
+  def structure!(user) do
+    if Marskal.Repo.exists?(
+         from f in Marskal.ProjectFolders.ProjectFolder,
+           where: f.user_id == ^user.id
+       ) do
+      :ok
+    else
+      work = folder!(user, "Work")
+      client_a = folder!(user, "Client A", work.id)
+      folder!(user, "Internal", work.id)
+      home = folder!(user, "Home")
+      folder!(user, "Side projects")
+      archive = folder!(user, "Old archive")
+      Marskal.ProjectFolders.drop_folder(user, archive.id, Ecto.UUID.generate())
+
+      website = project!(user, "Launch website", client_a.id, "Public marketing site.")
+      review = project!(user, "Quarterly review", work.id, "Collect numbers, write the one-pager.")
+      reno = project!(user, "Kitchen reno", home.id, "Cabinets and countertop only.")
+      project!(user, "Plan vacation", nil, "Unfiled on purpose.")
+      done = project!(user, "Finish onboarding", nil, "Welcome email shipped.")
+      Marskal.Projects.complete_project(user, done.id, Ecto.UUID.generate())
+      abandoned = project!(user, "Abandoned blog", archive.id, "Parked. The folder is dropped; the project remains.")
+      Marskal.Projects.drop_project(user, abandoned.id, Ecto.UUID.generate())
+
+      task!(user, "Draft homepage copy", website.id)
+      task!(user, "Set up analytics", website.id)
+      bought = task!(user, "Buy the domain", website.id)
+      Marskal.Tasks.complete_task(user, bought.id, Ecto.UUID.generate())
+      mascot = task!(user, "Commission a mascot", website.id)
+      Marskal.Tasks.drop_task(user, mascot.id, Ecto.UUID.generate())
+      task!(user, "Collect last quarter's metrics", review.id)
+      task!(user, "Get three cabinet quotes", reno.id)
+      vacation = Marskal.Projects.get_project(user, project_id_by_title(user, "Plan vacation"))
+      task!(user, "Pick travel dates", vacation.id)
+    end
+  end
+
+  defp folder!(user, name, parent_id \\ nil) do
+    {:ok, folder} =
+      Marskal.ProjectFolders.create_folder(
+        user,
+        %{"name" => name, "parent_id" => parent_id},
+        Ecto.UUID.generate()
+      )
+
+    folder
+  end
+
+  defp project!(user, title, folder_id, notes) do
+    {:ok, project} =
+      Marskal.Projects.create_project(
+        user,
+        %{"title" => title, "notes" => notes, "project_folder_id" => folder_id},
+        Ecto.UUID.generate()
+      )
+
+    project
+  end
+
+  defp task!(user, title, project_id) do
+    {:ok, task} =
+      Marskal.Tasks.create_task(
+        user,
+        %{"title" => title, "project_id" => project_id, "inbox" => false},
+        Ecto.UUID.generate()
+      )
+
+    task
+  end
+
+  defp project_id_by_title(user, title) do
+    Marskal.Repo.get_by!(Marskal.Projects.Project, user_id: user.id, title: title).id
+  end
+
   defp insert!(user, {title, notes, days_ago, placement}) do
     command = Ecto.UUID.generate()
     {:ok, task} = Marskal.Tasks.create_task(user, %{title: title, notes: notes}, command)
@@ -78,6 +151,8 @@ end
 
 dev = Marskal.DevSeed.user!("mts@marskal.example", true, password)
 other = Marskal.DevSeed.user!("kvp@marskal.example", false, password)
+
+Marskal.DevSeed.structure!(dev)
 
 Marskal.DevSeed.tasks!(dev, [
   {"Buy milk", "From the corner shop.", 1, :inbox},
