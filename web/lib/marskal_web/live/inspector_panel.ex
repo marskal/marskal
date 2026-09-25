@@ -334,9 +334,6 @@ defmodule MarskalWeb.InspectorPanel do
             </option>
           </select>
         </div>
-        <div class="actions">
-          <.link navigate={~p"/projects/#{@record.id}"} class="open">Open project</.link>
-        </div>
       </form>
       <.meta record={@record} />
     </section>
@@ -396,9 +393,6 @@ defmodule MarskalWeb.InspectorPanel do
               {label}
             </option>
           </select>
-        </div>
-        <div class="actions">
-          <.link navigate={~p"/folders/#{@record.id}"} class="open">Open folder</.link>
         </div>
       </form>
       <.meta record={@record} />

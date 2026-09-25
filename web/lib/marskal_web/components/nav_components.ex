@@ -35,26 +35,15 @@ defmodule MarskalWeb.NavComponents do
       </ul>
 
       <ul :if={Marskal.ProjectNav.unfiled_projects(@nav) != []} class="nav-tree">
-        <li
-          :for={project <- Marskal.ProjectNav.unfiled_projects(@nav)}
-          class={[
-            "inspect-row",
-            MarskalWeb.Inspector.selected?(:project, project.id, @inspector) && "is-selected"
-          ]}
-          data-inspect-type="project"
-          data-inspect-id={project.id}
-          aria-current={MarskalWeb.Inspector.selected?(:project, project.id, @inspector) && "true"}
-        >
-          <button
-            type="button"
-            class="select"
-            phx-click="inspect"
-            phx-value-type="project"
-            phx-value-id={project.id}
+        <li :for={project <- Marskal.ProjectNav.unfiled_projects(@nav)}>
+          <.record_link
+            type={:project}
+            id={project.id}
+            current_id={@current_id}
+            inspector={@inspector}
           >
             <Lucideicons.circle class="icon" /> {project.title}
-          </button>
-          <.link navigate={~p"/projects/#{project.id}"} class="open-quiet">Open</.link>
+          </.record_link>
         </li>
       </ul>
 
@@ -71,26 +60,9 @@ defmodule MarskalWeb.NavComponents do
   def folder(assigns) do
     ~H"""
     <li>
-      <div
-        class={[
-          "inspect-row",
-          MarskalWeb.Inspector.selected?(:folder, @folder.id, @inspector) && "is-selected"
-        ]}
-        data-inspect-type="folder"
-        data-inspect-id={@folder.id}
-        aria-current={MarskalWeb.Inspector.selected?(:folder, @folder.id, @inspector) && "true"}
-      >
-        <button
-          type="button"
-          class={["select", id_class(@current_id, @folder.id)]}
-          phx-click="inspect"
-          phx-value-type="folder"
-          phx-value-id={@folder.id}
-        >
-          <Lucideicons.folder class="icon" /> {@folder.name}
-        </button>
-        <.link navigate={~p"/folders/#{@folder.id}"} class="open-quiet">Open</.link>
-      </div>
+      <.record_link type={:folder} id={@folder.id} current_id={@current_id} inspector={@inspector}>
+        <Lucideicons.folder class="icon" /> {@folder.name}
+      </.record_link>
       <ul>
         <MarskalWeb.NavComponents.folder
           :for={child <- Marskal.ProjectNav.child_folders(@nav, @folder)}
@@ -99,35 +71,60 @@ defmodule MarskalWeb.NavComponents do
           current_id={@current_id}
           inspector={@inspector}
         />
-        <li
-          :for={project <- Marskal.ProjectNav.projects_in(@nav, @folder)}
-          class={[
-            "inspect-row",
-            MarskalWeb.Inspector.selected?(:project, project.id, @inspector) && "is-selected"
-          ]}
-          data-inspect-type="project"
-          data-inspect-id={project.id}
-          aria-current={MarskalWeb.Inspector.selected?(:project, project.id, @inspector) && "true"}
-        >
-          <button
-            type="button"
-            class="select"
-            phx-click="inspect"
-            phx-value-type="project"
-            phx-value-id={project.id}
+        <li :for={project <- Marskal.ProjectNav.projects_in(@nav, @folder)}>
+          <.record_link
+            type={:project}
+            id={project.id}
+            current_id={@current_id}
+            inspector={@inspector}
           >
             <Lucideicons.circle class="icon" /> {project.title}
-          </button>
-          <.link navigate={~p"/projects/#{project.id}"} class="open-quiet">Open</.link>
+          </.record_link>
         </li>
       </ul>
     </li>
     """
   end
 
+  attr :type, :atom, required: true, values: [:project, :folder]
+  attr :id, :string, required: true
+  attr :current_id, :string, default: nil
+  attr :inspector, :any, default: nil
+  slot :inner_block, required: true
+
+  @doc """
+  A project or folder row. Opens the record's page with the inspector on it.
+  On that page already, a patch only moves the inspector.
+  """
+  def record_link(assigns) do
+    path = record_path(assigns.type, assigns.id)
+
+    assigns =
+      assign(
+        assigns,
+        :to,
+        if(assigns.current_id == assigns.id, do: [patch: path], else: [navigate: path])
+      )
+
+    ~H"""
+    <.link
+      {@to}
+      class={[
+        "inspect-row",
+        @current_id == @id && "is-current",
+        MarskalWeb.Inspector.selected?(@type, @id, @inspector) && "is-selected"
+      ]}
+      aria-current={@current_id == @id && "page"}
+    >
+      {render_slot(@inner_block)}
+    </.link>
+    """
+  end
+
+  @doc "The record's page, with the inspector open on it."
+  def record_path(:project, id), do: ~p"/projects/#{id}?#{[project: id]}"
+  def record_path(:folder, id), do: ~p"/folders/#{id}?#{[folder: id]}"
+
   defp link_class(current, name) when current == name, do: "is-current"
   defp link_class(_current, _name), do: nil
-
-  defp id_class(current, id) when current == id, do: "is-current"
-  defp id_class(_current, _id), do: nil
 end

@@ -114,10 +114,12 @@ defmodule MarskalWeb.InspectorLiveTest do
     {:ok, project} = Projects.create_project(user, %{"title" => "Launch"}, command())
 
     {:ok, view, _html} = live(conn, ~p"/")
-    view |> element("#sidebar button.select", "Launch") |> render_click()
 
+    {:ok, view, _html} =
+      view |> element("#sidebar a", "Launch") |> render_click() |> follow_redirect(conn)
+
+    assert has_element?(view, "#sidebar a.is-current", "Launch")
     assert has_element?(view, "#inspector-project-title[value='Launch']")
-    assert has_element?(view, "a", "Open project")
 
     view |> form("#inspector-project", project: %{title: "Launch site"}) |> render_change()
     assert has_element?(view, "#sidebar", "Launch site")
@@ -129,8 +131,41 @@ defmodule MarskalWeb.InspectorLiveTest do
     assert Projects.get_project(user, project.id).project_folder_id == folder.id
 
     view |> form("#inspector-project", project: %{state: "done"}) |> render_change()
-    refute has_element?(view, "#sidebar button.select", "Launch site")
+    refute has_element?(view, "#sidebar a", "Launch site")
     assert has_element?(view, "#inspector-project option[value='done'][selected]")
+  end
+
+  test "clicking the current page in the sidebar only moves the inspector", %{
+    conn: conn,
+    user: user
+  } do
+    {:ok, project} = Projects.create_project(user, %{"title" => "Launch"}, command())
+
+    {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}")
+    view |> element("#sidebar a", "Launch") |> render_click()
+
+    assert_patch(view, ~p"/projects/#{project.id}?#{[project: project.id]}")
+    assert has_element?(view, "#inspector-project-title[value='Launch']")
+  end
+
+  test "a project on a folder page opens with the inspector on it", %{conn: conn, user: user} do
+    {:ok, folder} = ProjectFolders.create_folder(user, %{"name" => "Work"}, command())
+
+    {:ok, project} =
+      Projects.create_project(
+        user,
+        %{"title" => "Launch", "project_folder_id" => folder.id},
+        command()
+      )
+
+    {:ok, view, _html} = live(conn, ~p"/folders/#{folder.id}")
+
+    {:ok, view, _html} =
+      view |> element(".app-main a", "Launch") |> render_click() |> follow_redirect(conn)
+
+    assert has_element?(view, "#sidebar a.is-current", "Launch")
+    assert has_element?(view, "#inspector-project-title[value='Launch']")
+    assert Projects.get_project(user, project.id).title == "Launch"
   end
 
   test "a folder can be renamed, and its parent list excludes itself and its children", %{
@@ -143,14 +178,17 @@ defmodule MarskalWeb.InspectorLiveTest do
       ProjectFolders.create_folder(user, %{"name" => "Child", "parent_id" => work.id}, command())
 
     {:ok, view, _html} = live(conn, ~p"/")
-    view |> element("#sidebar button.select", "Work") |> render_click()
+
+    {:ok, view, _html} =
+      view |> element("#sidebar a", "Work") |> render_click() |> follow_redirect(conn)
 
     assert has_element?(view, "#inspector-folder-name[value='Work']")
-    assert has_element?(view, "a", "Open folder")
     refute has_element?(view, "#inspector-folder-parent option[value='#{work.id}']")
     refute has_element?(view, "#inspector-folder-parent option[value='#{child.id}']")
 
-    view |> element("#sidebar button.select", "Child") |> render_click()
+    {:ok, view, _html} =
+      view |> element("#sidebar a", "Child") |> render_click() |> follow_redirect(conn)
+
     assert has_element?(view, "#inspector-folder-parent option[value='#{work.id}']")
     refute has_element?(view, "#inspector-folder-parent option[value='#{child.id}']")
 

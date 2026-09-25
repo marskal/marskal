@@ -142,8 +142,7 @@ h1 {
   gap: 0.4rem;
 }
 
-.sidebar a.is-current,
-.sidebar button.select.is-current {
+.sidebar a.is-current {
   font-weight: 650;
 }
 
@@ -155,33 +154,13 @@ h1 {
   border-radius: 6px;
 }
 
+.nav-tree a.inspect-row {
+  display: flex;
+  gap: 0.4rem;
+}
+
 .inspect-row.is-selected {
   background: color-mix(in srgb, var(--accent) 16%, transparent);
-}
-
-.nav-tree button.select,
-.inspect-row button.select {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  border: 0;
-  background: transparent;
-  padding: 0;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.open-quiet {
-  font-size: 0.85rem;
-  color: var(--muted);
-  text-decoration: none;
-}
-
-.open-quiet:hover {
-  color: var(--accent);
-  text-decoration: underline;
 }
 
 .app-inspector {

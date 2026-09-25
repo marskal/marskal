@@ -1,6 +1,8 @@
 defmodule MarskalWeb.FolderLive do
   use MarskalWeb, :live_view
 
+  import MarskalWeb.NavComponents, only: [record_link: 1]
+
   alias Marskal.ProjectFolders
   alias Marskal.ProjectNav
   alias Marskal.Projects
@@ -38,25 +40,10 @@ defmodule MarskalWeb.FolderLive do
 
       <h2>Folders</h2>
       <ul class="nav-tree">
-        <li
-          :for={child <- @children}
-          class={[
-            "inspect-row",
-            MarskalWeb.Inspector.selected?(:folder, child.id, @inspector) && "is-selected"
-          ]}
-          data-inspect-type="folder"
-          data-inspect-id={child.id}
-        >
-          <button
-            type="button"
-            class="select"
-            phx-click="inspect"
-            phx-value-type="folder"
-            phx-value-id={child.id}
-          >
-            {child.name}
-          </button>
-          <.link navigate={~p"/folders/#{child.id}"} class="open-quiet">Open</.link>
+        <li :for={child <- @children}>
+          <.record_link type={:folder} id={child.id} inspector={@inspector}>
+            <Lucideicons.folder class="icon" /> {child.name}
+          </.record_link>
         </li>
       </ul>
       <p :if={@children == []} class="empty">No folders inside.</p>
@@ -70,25 +57,10 @@ defmodule MarskalWeb.FolderLive do
 
       <h2>Projects</h2>
       <ul class="nav-tree">
-        <li
-          :for={project <- @projects}
-          class={[
-            "inspect-row",
-            MarskalWeb.Inspector.selected?(:project, project.id, @inspector) && "is-selected"
-          ]}
-          data-inspect-type="project"
-          data-inspect-id={project.id}
-        >
-          <button
-            type="button"
-            class="select"
-            phx-click="inspect"
-            phx-value-type="project"
-            phx-value-id={project.id}
-          >
-            {project.title}
-          </button>
-          <.link navigate={~p"/projects/#{project.id}"} class="open-quiet">Open</.link>
+        <li :for={project <- @projects}>
+          <.record_link type={:project} id={project.id} inspector={@inspector}>
+            <Lucideicons.circle class="icon" /> {project.title}
+          </.record_link>
         </li>
       </ul>
       <p :if={@projects == []} class="empty">No open projects.</p>
