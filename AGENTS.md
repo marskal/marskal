@@ -210,7 +210,10 @@ The repository root is the product, not the web app (ADR 0015).
 
 ### Hosting
 
-- Local = dev only. Production = VPS (Nix-oriented). Env-based secrets (ADR 0004).
+- Local = dev only. Production = a NixOS host using `web/flake.nix`
+  (`nixosModules.default`). Env-based secrets (ADR 0004).
+- A `mix.lock` change needs a new `depsHash` in `web/nix/package.nix`. A dep that
+  downloads binaries at compile time needs a Nix-side fetch (see mdex_native there).
 
 ### Quality
 
@@ -247,7 +250,6 @@ The repository root is the product, not the web app (ADR 0015).
 
 Resolve with the user when blocking; then prefer an ADR (or a short note here).
 
-- [ ] VPS provider / NixOS vs Nix-on-distro (when deploy starts)
 - [ ] Shared work: open tasks from shared projects on personal open stream vs only under
       shared folder/project views
 - [ ] Sharing roles (viewer/editor) and re-share rules
