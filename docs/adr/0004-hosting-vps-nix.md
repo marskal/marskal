@@ -15,9 +15,14 @@ For now, the app is hosted on a NixOS server, configured elsewhere.
 - **Packaging:** `web/flake.nix` exports the release as
   `packages.x86_64-linux.default` and a NixOS module as
   `nixosModules.default`. The release is built with nixpkgs' `mixRelease`.
-  The flake pins the same nixpkgs as devenv, so production runs the
-  Elixir/OTP that was tested locally. The flake sits in `web/` because it
-  builds that program only; consumers reference it with `?dir=web`.
+  The flake sits in `web/` because it builds that program only; consumers
+  reference it with `?dir=web`.
+- **nixpkgs:** devenv (`web/devenv.yaml`) and `web/flake.nix` both track
+  DeterminateSystems' nixpkgs-weekly, the channel the NixOS hosts use.
+  Update the two locks together. A host may have the input follow its own
+  nixpkgs, so production runs the host's pin of the same channel. That can
+  lag or lead devenv by a few weeks; the release fails loudly if the
+  toolchain it needs is missing.
 - **Deploy:** The host NixOS system takes marskal as a flake input and enables
   `services.marskal`.
 - **The module owns its runtime:**

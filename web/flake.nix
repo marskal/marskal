@@ -7,8 +7,9 @@
 {
   description = "Marskal web app";
 
-  # Same nixpkgs as devenv, so production runs the toolchain tested locally.
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+  # Same channel as devenv.yaml and the NixOS hosts (ADR 0004). Hosts may
+  # have this follow their own nixpkgs. Keep flake.lock on devenv.lock's rev.
+  inputs.nixpkgs.url = "https://flakehub.com/f/DeterminateSystems/nixpkgs-weekly/0.1";
 
   outputs =
     { self, nixpkgs }:
