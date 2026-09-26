@@ -1,4 +1,4 @@
-# 0004. Hosting: VPS (Nix); local is development only
+# 0004. Hosting: NixOS VPS; local is development only
 
 ## Status
 
@@ -6,23 +6,46 @@ Accepted
 
 ## Context
 
-Need a production target that matches a normal multi-user Rails + Postgres app.
-Local-only and PaaS-first (Fly, Heroku, etc.) were considered; the preference is
-direct VPS control, likely with Nix.
+For now, the app is hosted on a NixOS server, configured elsewhere.
 
 ## Decision
 
-- **Development:** devenv on the local machine (Ruby, Bundler, Postgres, app processes).
-  `devenv.nix` lives in `web/` ([ADR 0015](0015-repository-layout.md)).
-- **Production:** **VPS**, configuration preferably with **Nix** (NixOS and/or Nix-based deploys).
-- Local is **not** a production runtime.
-- Config via environment (`DATABASE_URL`, `SECRET_KEY_BASE`, etc.), not laptop-only paths.
-- Do not assume PaaS-specific APIs as the primary deploy model.
-
-Concrete provider and NixOS vs Nix-on-distro remain open until deploy work starts.
+- **Development:** devenv on the local machine. `devenv.nix` lives in `web/`
+  ([ADR 0015](0015-repository-layout.md)).
+- **Packaging:** `web/flake.nix` exports the release as
+  `packages.x86_64-linux.default` and a NixOS module as
+  `nixosModules.default`. The release is built with nixpkgs' `mixRelease`.
+  The flake sits in `web/` because it builds that program only; consumers
+  reference it with `?dir=web`.
+- **nixpkgs:** devenv (`web/devenv.yaml`) and `web/flake.nix` both track
+  DeterminateSystems' nixpkgs-weekly, the channel the NixOS hosts use.
+  Update the two locks together. A host may have the input follow its own
+  nixpkgs, so production runs the host's pin of the same channel. That can
+  lag or lead devenv by a few weeks; the release fails loudly if the
+  toolchain it needs is missing.
+- **Deploy:** The host NixOS system takes marskal as a flake input and enables
+  `services.marskal`.
+- **The module owns its runtime:**
+  - Postgres 18 on the same host, reached over the unix socket with peer auth.
+  - Migrations run before each start.
+  - Phoenix listens on loopback behind nginx, which terminates TLS.
+  - `SECRET_KEY_BASE` and `RELEASE_COOKIE` are generated once into
+    `/var/lib/marskal/secrets.env`.
+- Config via environment (`DATABASE_URL`, `SECRET_KEY_BASE`, `PHX_HOST`, …),
+  not laptop-only paths.
 
 ## Consequences
 
-- App should stay a portable Rails service (web + optional jobs) against Postgres.
-- Secrets, TLS, backups, and process supervision are VPS concerns.
-- Deploy docs/automation can live under Nix without forcing Heroku-style constraints.
+- A change to `mix.lock` changes the name of the deps derivation. The build
+  then fails with a hash mismatch until `depsHash` in `web/nix/package.nix`
+  is updated. It never silently reuses stale deps.
+- Deps that download binaries at compile time need a Nix-side answer.
+  esbuild comes from nixpkgs (`MIX_ESBUILD_PATH`). mdex_native's NIF is
+  pre-fetched per system. A new dep of this kind breaks the build until it
+  gets the same treatment.
+- Keep `config :esbuild, version:` in step with nixpkgs' esbuild.
+- The Nix build targets x86_64-linux only. Adding a system means listing
+  its mdex_native NIF.
+- Backups, secrets beyond the generated pair, and outgoing mail are still
+  open. Prod has no Swoosh adapter yet, so email-change confirmation does
+  not deliver.

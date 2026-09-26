@@ -57,9 +57,12 @@ config :marskal, Oban,
     {Oban.Plugins.Cron, crontab: [{"@hourly", Marskal.Imports.ExpireJob}]}
   ]
 
-# Configure esbuild (the version is required)
+# Configure esbuild (the version is required). The Nix build supplies its
+# own binary through MIX_ESBUILD_PATH instead of downloading one; keep the
+# version in step with nixpkgs' esbuild.
 config :esbuild,
-  version: "0.25.4",
+  version: "0.27.2",
+  path: System.get_env("MIX_ESBUILD_PATH"),
   marskal: [
     args:
       ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --alias:@=.),
