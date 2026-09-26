@@ -1,5 +1,0 @@
-#!/usr/bin/env ruby
-# Development server: http://marskal.localhost:8275
-# Port 8275 ≈ "TASK" on a phone keypad. Override with PORT=... if needed.
-ENV["PORT"] ||= "8275"
-exec "./bin/rails", "server", "-b", "127.0.0.1", "-p", ENV["PORT"], *ARGV

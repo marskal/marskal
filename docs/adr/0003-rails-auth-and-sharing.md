@@ -4,6 +4,11 @@
 
 Accepted
 
+Folder sharing, owner scope, and email + password sessions stay. The Rails
+generator is how the current tree authenticates. The port uses
+`mix phx.gen.auth` instead ([ADR 0016](0016-elixir-phoenix-web.md)). Magic
+link is not the product login.
+
 ## Context
 
 The app will be multi-user. Personal tasks (inbox, open stream, tags) stay private.

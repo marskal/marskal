@@ -13,6 +13,7 @@ direct VPS control, likely with Nix.
 ## Decision
 
 - **Development:** devenv on the local machine (Ruby, Bundler, Postgres, app processes).
+  `devenv.nix` lives in `web/` ([ADR 0015](0015-repository-layout.md)).
 - **Production:** **VPS**, configuration preferably with **Nix** (NixOS and/or Nix-based deploys).
 - Local is **not** a production runtime.
 - Config via environment (`DATABASE_URL`, `SECRET_KEY_BASE`, etc.), not laptop-only paths.

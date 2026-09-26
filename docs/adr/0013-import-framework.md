@@ -4,6 +4,12 @@
 
 Accepted
 
+The framework stands and is ported to Elixir ([ADR 0016](0016-elixir-phoenix-web.md)):
+`Imports.Graph`, `Imports.OmnifocusAdapter`, and Oban jobs in place of Active
+Job. The file fetcher stores the upload in `import_batches.payload` instead of
+Active Storage, and clears it once the batch is applied, fails, or sits
+unapplied for 24 hours.
+
 ## Context
 
 Users will migrate from OmniFocus, Todoist, and similar apps. The first product

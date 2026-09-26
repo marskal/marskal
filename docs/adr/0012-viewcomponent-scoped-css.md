@@ -4,6 +4,10 @@
 
 Accepted
 
+The CSS rules below stay. The ViewComponent and ERB decisions apply to the
+Rails tree only. The port replaces them with HEEx function components
+([ADR 0016](0016-elixir-phoenix-web.md)).
+
 ## Context
 
 Marskal is server-rendered Hotwire (ERB, Stimulus, importmap, no Node). The

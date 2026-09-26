@@ -1,7 +1,9 @@
 # Marskal Tasks — agent rules
 
 Personal task/todo manager: **recurring tasks**, **soft-GTD**, **planning**.
-**Rails** + **PostgreSQL** (single DB), **devenv** locally, **VPS/Nix** in production.
+**PostgreSQL** (single DB), **devenv** locally, **VPS/Nix** in production.
+The web app in `web/` is **Phoenix + LiveView** (ADR 0016): Elixir 1.20,
+Erlang/OTP 29, Bandit, Ecto, Postgres 18.
 
 This file is **short and actionable**. Rationale and history live in
 **[docs/adr/](docs/adr/)** — follow accepted ADRs; don’t re-litigate them in code.
@@ -20,7 +22,10 @@ This file is **short and actionable**. Rationale and history live in
 | Task model, inbox, Phase 1 | [0010](docs/adr/0010-task-lists-and-phase1-defaults.md) |
 | UUIDv7 primary keys | [0011](docs/adr/0011-uuidv7-primary-keys.md) |
 | ViewComponent + `@scope` CSS | [0012](docs/adr/0012-viewcomponent-scoped-css.md) |
+| Web stack (Phoenix, at the port) | [0016](docs/adr/0016-elixir-phoenix-web.md) |
 | Import framework | [0013](docs/adr/0013-import-framework.md) |
+| Sync, offline clients | [0014](docs/adr/0014-offline-sync.md) |
+| Repository layout | [0015](docs/adr/0015-repository-layout.md) |
 
 ---
 
@@ -63,8 +68,8 @@ No On Hold, no Skip (**Dropped**). Pause with **Defer** (until or **indefinite**
 
 **Inbox** (ADR 0010): boolean on tasks, orthogonal to state. New captures:
 `inbox=true`, `state=to_do`. Clarify → `inbox=false`. **No** `list` column.
-Default home: **Open tasks** stream. Default timezone until per-user settings:
-**Europe/Copenhagen**.
+Default home: **Open tasks** stream. Timezone is stored per user, default
+**Europe/Copenhagen** (ADR 0014).
 
 ### Recurrence (ADR 0007 — product differentiator)
 
@@ -135,48 +140,66 @@ Recurrence schema may be designed early.
 
 ## Engineering conventions
 
+### Layout
+
+The repository root is the product, not the web app (ADR 0015).
+
+- **`web/`** — the Phoenix app. `devenv.nix` lives there. Run `devenv shell`
+  and `devenv up` from `web/`. Paths in the Elixir section below are relative
+  to it. Do not add a second app directory beside `web/`.
+- **`docs/`** — ADRs, at the root.
+- Do not add a root `devenv.nix`. Do not create `clients/ios/` or
+  `sync/fixtures/` until that work starts.
+
 ### Environment
 
-- **devenv** for Ruby, Bundler, libpq, Postgres service. No host system Ruby/gems.
-- `devenv shell` before Ruby/Rails work. Prefer editing `devenv.nix` over global installs.
+- **devenv** for Elixir 1.20, OTP 29, libpq, and Postgres. No host Elixir.
+- From `web/`: `devenv shell` before Mix work. Prefer editing `web/devenv.nix`
+  over global installs. Do not float `pkgs.elixir`.
 - Dev URL: **http://marskal.localhost:8275** (port **8275** ≈ TASK on phone keypad).
-- **`devenv up`** starts Postgres + Rails (`processes.rails`). `bin/dev` if you only need Rails.
+- **`devenv up`** (from `web/`) starts Postgres + Phoenix (`processes.server`).
   Postgres is that managed `services.postgres` process — never `pg_ctl start` /
-  `start-postgres` against `.devenv/state/postgres` (it orphans a second cluster).
+  `start-postgres` against `web/.devenv/state/postgres` (it orphans a second cluster).
 
-### Rails
+### Elixir
 
-- **Rails only via Bundler** (`Gemfile` / `Gemfile.lock`). Currently **~> 8.1**.
-- Do **not** add `pkgs.rubyPackages.rails` (or similar) to `devenv.nix` — nix Rails is
-  older and fights the Gemfile on `GEM_PATH`.
-- Do **not** use host or ad-hoc `gem install rails` for project work.
-- Always **`bundle install`**, then **`bin/rails`** / **`bundle exec`**.
-- devenv supplies Ruby + Bundler + Postgres tooling; the **app** supplies Rails.
-- **PostgreSQL only**, single app DB (ADR 0002). Bundler owns `pg`.
-- **Lean into Postgres** (ADR 0002, **0011**): **UUIDv7** PKs (`uuid` + `DEFAULT uuidv7()`),
-  not identity/`serial`; real **foreign keys**; DB constraints for real invariants;
-  extensions OK if in **nixpkgs** (enable in migrations + devenv as needed).
-  Recency is `created_at`, not `id` (fixtures and clients may mint non-v7 UUIDs).
-- **Schema dump:** `config.active_record.schema_format = :sql` → commit **`db/structure.sql`**
-  (not `schema.rb`). Preserves enums, `uuidv7()` defaults, and other Postgres-native DDL.
-- Hotwire (Turbo/Stimulus) / server-rendered HTML unless SPA is justified.
-- Domain names match the vocabulary table. Schema via migrations only.
-- **Import (ADR 0013):** adapters parse to `Imports::Graph`; file upload now,
-  OAuth is a future fetcher. First source: OmniFocus backup. Park unmapped
-  fields on `import_items.extras`. Skip existing `(user, source, source_id)`
-  on re-import. Do not add competing-app gems.
-- **UI (ADR 0012):** pages stay ERB. Reusable widgets are **ViewComponent**
-  (`ApplicationComponent`) plus plain CSS `@scope` in
-  `app/assets/stylesheets/components/<scope-class>.css`. No Tailwind, no UI kit.
-  Tokens stay on `:root` in `application.css` (app shell lives there too).
-- **Icons:** Lucide via `rails_icons` (`icon "name"`). Do not inline ad-hoc SVG
-  paths. The pack is **not** in git — `bin/rails icons:sync` clones it into
-  gitignored `vendor/icons` (also run from `bin/setup`, CI, Docker). Re-download
-  with `FORCE=1`. Preview at `/rails_icons` in development.
+- **Phoenix via Mix** (`mix.exs` / `mix.lock`). Elixir **1.20**, OTP **29**,
+  Phoenix **1.8**, LiveView **1.2**, Bandit.
+- One app, modules `Marskal` and `MarskalWeb`. Not an umbrella.
+- Domain writes go through context functions that append the change feed
+  (ADR 0014). LiveViews do not save a whole row back.
+- Domain primary keys are `uuid` with `DEFAULT uuidv7()`. A caller may supply
+  the id. The change-feed cursor is `bigint GENERATED ALWAYS AS IDENTITY`.
+- UI is HEEx function components. No Tailwind, no daisyUI. Tokens on `:root`,
+  isolation with `@scope` (ADR 0012, ADR 0016).
+- Login that ships is email + password, hashed with Argon2id. Do not present magic link as the way in.
+- LiveDashboard is `/dev/dashboard`, and only a user with `superuser` set can open it.
+- **PostgreSQL only**, single app DB (ADR 0002).
+- **Lean into Postgres** (ADR 0002, **0011**): domain entity PKs default to
+  **UUIDv7** (`uuid` + `DEFAULT uuidv7()`), not identity/`serial`. Other types
+  are fine where they fit — a server-only counter is `GENERATED … AS IDENTITY`,
+  not a sequence. Real **foreign keys**. DB constraints for real invariants.
+  Extensions OK if in **nixpkgs** (enable in migrations + devenv as needed).
+  Recency is `inserted_at`, not `id`.
+- **Migrations are Ecto.** Enums, `uuidv7()` defaults, and identity columns are
+  raw SQL in those migrations (ADR 0016).
+- Server-rendered HEEx / LiveView unless an SPA is justified.
+- Domain names match the vocabulary table. Schema via Ecto migrations only.
+- **Import (ADR 0013):** adapters parse to an `Imports.Graph`; file upload
+  now, OAuth is a future fetcher. First source: OmniFocus backup. Parse and
+  apply run as Oban jobs; the upload is held in `import_batches.payload` only
+  until apply, failure, or expiry after 24 h. Park unmapped fields on
+  `import_items.extras`. Skip existing `(user, source, source_id)` on
+  re-import without touching the user's copy. Do not add competing-app libraries.
+- **UI (ADR 0012, ADR 0016):** HEEx function components plus plain CSS `@scope`.
+  No Tailwind, no daisyUI, no UI kit. Tokens stay on `:root`.
+- **Icons:** the `lucide_icons` package. Use `<Lucideicons.inbox class="icon" />`.
+  Do not inline SVG paths, do not clone the icon repo, and do not add Heroicons.
 
 ### Auth & tenancy
 
-- Rails built-in auth from Phase 0 (ADR 0003). Always scope personal data by `current_user`.
+- Email + password sessions via `phx.gen.auth` (ADR 0003, ADR 0016). Always
+  scope personal data by the current user. Magic link is not the way in.
 - Owner-only until sharing; then **folder_memberships** + ancestor cascade (not
   per-project membership as primary). No personal-org multi-DB tenancy.
 
@@ -196,9 +219,19 @@ Recurrence schema may be designed early.
   Planned / Due on both (ADR 0006).
 - Structure: `tasks.parent_id`, `project_folders` tree, `projects.project_folder_id`;
   no project-to-project parent (ADR 0009). Prevent parent cycles.
-- Done/Dropped retained in history by default (not deleted).
+- Done/Dropped retained in history by default (not deleted). Synced domain rows
+  are discarded with a tombstone, not hard-deleted (ADR 0014).
+- **Sync (ADR 0014):** writes are field patches with a command id, appended to a
+  server change feed. Clients may supply UUIDv7 ids. Task sibling order is a
+  fractional rank. Do not sync derived fields (`parent_path`, effective tags).
+  Recurrence spawning is a pure function; rule-created occurrence ids are
+  UUIDv5 from the series id and the anchor. The web app stays online — no
+  browser offline cache. Writes go through `Marskal.Changes.apply/4`; a patch
+  with no changes appends nothing. Not built yet, and due before the first
+  sync client: `discarded_at`, `resolved_at`, sibling rank, the pull endpoint.
 - Tests: state transitions; user isolation; defer/planned/due; outliner/folder structure;
-  **recurrence** matrix (ADR 0007); tag inheritance in Phase 2+.
+  **recurrence** matrix (ADR 0007); tag inheritance in Phase 2+; sync merge,
+  command replay, tombstones, and occurrence-id vectors (ADR 0014).
 
 ### Agent behavior
 

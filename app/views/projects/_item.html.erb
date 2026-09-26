@@ -1,8 +1,0 @@
-<li class="project-list__item" id="<%= dom_id(project) %>">
-  <%= render ProjectCardComponent.new(
-        project: project,
-        selected: local_assigns.fetch(:selected, false),
-        list_context: local_assigns[:list_context],
-        list_folder_id: local_assigns[:list_folder_id]
-      ) %>
-</li>

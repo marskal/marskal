@@ -1,9 +1,0 @@
-<% if @href %>
-  <%= link_to @href, class: root_class(@variant), **@html do %>
-    <%= content %>
-  <% end %>
-<% else %>
-  <%= tag.button(type: @type, class: root_class(@variant), **@html) do %>
-    <%= content %>
-  <% end %>
-<% end %>

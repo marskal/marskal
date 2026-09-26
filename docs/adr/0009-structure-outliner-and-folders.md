@@ -18,7 +18,9 @@ projects (areas of life, clients, etc.) without forcing project-to-project nesti
 - Tasks form a **tree** per user (and within a project when a task belongs to one).
 - A task may have a **parent task** (`parent_id`); roots have no parent.
 - UI: outliner affordances — indent/outdent, expand/collapse, create child, reorder
-  among siblings (ordering is in scope; exact sort key is implementation detail).
+  among siblings. Sibling order is a **fractional rank** a client can allocate
+  between two neighbors ([ADR 0014](0014-offline-sync.md)), not a renumbered
+  integer.
 - Depth: allow practical nesting; impose a sane max depth only if needed for
   performance/UX (not a product “only 2 levels” rule unless proven necessary).
 - **Subtasks are tasks**: same states (ADR 0008), same Defer/Planned/Due (ADR 0006),
@@ -72,7 +74,7 @@ Tags (ADR 0005) remain orthogonal: project tags inherit to tasks; folders are no
 ## Consequences
 
 - Schema sketch:
-  - `tasks.parent_id` → tasks (nullable FK), sibling position/order column
+  - `tasks.parent_id` → tasks (nullable FK), sibling fractional rank (ADR 0014)
   - `projects` — no parent project FK
   - `project_folders`: `name`, `parent_id`, `parent_path text[]`, `state` active|dropped
   - `projects.project_folder_id` → project_folders (nullable FK)
