@@ -3,6 +3,8 @@ defmodule Marskal.RankTest do
 
   alias Marskal.Rank
 
+  doctest Marskal.Rank
+
   test "the first rank leaves room on both sides" do
     first = Rank.first()
     assert Rank.between(nil, first) < first

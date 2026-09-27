@@ -6,6 +6,31 @@ defmodule Marskal.Rank do
   columns use `COLLATE "C"`. `between/2` returns a rank strictly between two
   neighbors without renumbering either, and never one ending in `0`, so
   there is always room for another.
+
+  ## Reading a rank
+
+  Think of a rank as the digits after a decimal point, in base 62: `"V"` is
+  about 0.5 of the way through the list, `"l"` about 0.75, `"VV"` a little
+  past `"V"`. Putting a sibling between two others takes a value halfway
+  between them. When two ranks are adjacent, like `"V"` and `"W"`, there is
+  no digit in between, so the rank grows a digit, just as 0.55 fits between
+  0.5 and 0.6.
+
+  Three siblings added in turn, then one moved between the first two:
+
+      iex> a = Marskal.Rank.first()
+      "V"
+      iex> b = Marskal.Rank.between(a, nil)
+      "l"
+      iex> c = Marskal.Rank.between(b, nil)
+      "t"
+      iex> Marskal.Rank.between(a, b)
+      "d"
+      iex> Enum.sort([c, a, b])
+      ["V", "l", "t"]
+
+  Only the moved row gets a new rank; its neighbors keep theirs, so a move
+  is one field patch.
   """
 
   @digits ~c"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -18,6 +43,35 @@ defmodule Marskal.Rank do
   @doc """
   A rank after `before` and before `later`. `nil` stands for the start or
   the end of the list.
+
+  With room between the neighbors, the rank is the digit halfway:
+
+      iex> Marskal.Rank.between("V", "l")
+      "d"
+      iex> Marskal.Rank.between(nil, "V")
+      "G"
+
+  Adjacent neighbors get a longer rank. It starts with the lower one and
+  adds a digit halfway to the end:
+
+      iex> Marskal.Rank.between("V", "W")
+      "VV"
+      iex> Marskal.Rank.between("VV", "W")
+      "Vl"
+
+  If the later rank is longer, its first digit alone is enough, since
+  `"W"` sorts before `"W1"`:
+
+      iex> Marskal.Rank.between("V", "W1")
+      "W"
+
+  At the very front, a rank below `"1"` has to start with `"0"`. That is
+  why no rank ends in `0`: there is always something below it.
+
+      iex> Marskal.Rank.between(nil, "1")
+      "0V"
+      iex> Marskal.Rank.between(nil, "01")
+      "00V"
   """
   def between(before, later) do
     a = decode(before || "")
@@ -32,6 +86,8 @@ defmodule Marskal.Rank do
 
   # Digit lists; `nil` for b is the upper end, past every rank. A missing
   # digit in `a` counts as 0.
+  #
+  # A shared leading digit is kept ("VA", "VC" -> "V" + midpoint("A", "C")).
   defp midpoint([x | a], [x | b]), do: [x | midpoint(a, b)]
   defp midpoint([], [0 | b]), do: [0 | midpoint([], b)]
 
@@ -40,8 +96,12 @@ defmodule Marskal.Rank do
     high = if b in [nil, []], do: @base, else: hd(b)
 
     cond do
+      # Room for a digit between: "V", "l" -> "d".
       high - low > 1 -> [div(low + high + 1, 2)]
+      # b's first digit alone is below b: "V", "W1" -> "W".
       match?([_, _ | _], b) -> [high]
+      # Adjacent: keep a's digit and go halfway from the rest of a to the
+      # end: "V", "W" -> "V" + "V".
       true -> [low | midpoint(Enum.drop(a, 1), nil)]
     end
   end
