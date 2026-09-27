@@ -23,7 +23,7 @@ defmodule MarskalWeb.TaskStreamTest do
 
     inbox |> element("#inbox-tasks li.task-row", "Milk") |> render_click()
     inbox |> form("#inspector-task", task: %{location: "none"}) |> render_change()
-    assert has_element?(inbox, "#inbox-tasks", "Milk")
+    refute has_element?(inbox, "#inbox-tasks", "Milk")
 
     {:ok, open, _html} = live(conn, ~p"/")
     assert has_element?(open, "#open-tasks", "Milk")

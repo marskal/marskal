@@ -47,8 +47,8 @@ belong to nothing could never leave.
 - The migration moves any task that had both a project and the inbox flag to
   its project, then adds the constraint.
 - No Clarify button, and no inbox checkbox. The inbox page has no action of
-  its own besides done and dropped; lists keep a moved row until the user
-  leaves the view.
+  its own besides done and dropped. A moved task leaves the list at once;
+  only done and dropped rows stay until the user leaves the view.
 - Project views cannot contain inbox tasks. Tag views and the untagged view
   still mark inbox tasks.
 - No settings for when a task leaves the inbox. The picker makes it explicit.

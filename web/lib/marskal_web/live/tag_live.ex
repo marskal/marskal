@@ -164,7 +164,7 @@ defmodule MarskalWeb.TagLive do
     end
   end
 
-  # Tasks that left the outline stay in their groups until the user leaves
+  # Done and dropped tasks stay in their groups until the user leaves
   # the page (see `MarskalWeb.TaskList`). A group they would empty stays too.
   defp keep_rows(_user, nil, outline), do: outline
 
