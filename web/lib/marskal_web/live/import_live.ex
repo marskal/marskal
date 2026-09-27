@@ -344,7 +344,9 @@ defmodule MarskalWeb.ImportLive do
             <p><.link navigate={~p"/imports/new"} class="btn">Try another file</.link></p>
           </div>
           <p :if={@batch.status == :pending} class="empty">Reading the backup…</p>
-          <p :if={@batch.status == :applying} class="empty">Writing folders, projects, and tasks…</p>
+          <p :if={@batch.status == :applying} class="empty">
+            Writing tags, folders, projects, and tasks…
+          </p>
 
           <div :if={@batch.status == :previewed}>
             <dl class="import-stats">
@@ -360,12 +362,15 @@ defmodule MarskalWeb.ImportLive do
               <div>
                 <dt>Inbox</dt><dd>{stat(@batch, "inbox")}</dd>
               </div>
+              <div>
+                <dt>Tags</dt><dd>{stat(@batch, "tags")}</dd>
+              </div>
             </dl>
             <p :if={samples(@batch) != []} class="lede">
               Includes: {Enum.join(samples(@batch), ", ")}
             </p>
             <p class="lede">
-              Already-imported OmniFocus items are skipped. Dates and tags are stored for later; they are not applied yet.
+              Already-imported OmniFocus items are skipped. Tags whose name is already used at the same place are reused. Dates are stored for later; they are not applied yet.
             </p>
             <form action={~p"/imports/#{@batch.id}/apply"} method="post">
               <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
@@ -383,6 +388,9 @@ defmodule MarskalWeb.ImportLive do
               </div>
               <div>
                 <dt>Created tasks</dt><dd>{created(@batch, "tasks")}</dd>
+              </div>
+              <div>
+                <dt>Created tags</dt><dd>{created(@batch, "tags")}</dd>
               </div>
               <div>
                 <dt>Skipped</dt><dd>{skipped_total(@batch)}</dd>

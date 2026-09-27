@@ -98,7 +98,7 @@ defmodule MarskalWeb.ImportBatchControllerTest do
     refute Repo.get_by(Task, user_id: user.id, title: "Buy milk")
 
     conn = get(recycle(conn), ~p"/imports/#{batch.id}")
-    assert html_response(conn, 200) =~ "Writing folders, projects, and tasks"
+    assert html_response(conn, 200) =~ "Writing tags, folders, projects, and tasks"
 
     drain_imports!()
     assert Repo.reload!(batch).status == :applied

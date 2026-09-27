@@ -1,7 +1,7 @@
 defmodule Marskal.Imports.Graph do
   @moduledoc false
 
-  defstruct [:source, folders: [], projects: [], tasks: []]
+  defstruct [:source, folders: [], projects: [], tasks: [], tags: []]
 
   def stats(%__MODULE__{} = graph) do
     samples =
@@ -13,6 +13,7 @@ defmodule Marskal.Imports.Graph do
       "folders" => length(graph.folders),
       "projects" => length(graph.projects),
       "tasks" => length(graph.tasks),
+      "tags" => length(graph.tags),
       "inbox" => Enum.count(graph.tasks, & &1.inbox),
       "samples" => samples
     }

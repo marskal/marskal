@@ -149,6 +149,15 @@ defmodule Marskal.Tags do
     Enum.filter(tasks, &(effective[&1.id] == []))
   end
 
+  @doc "The live tag with this name under a parent (nil for the top), ignoring case."
+  def find_tag(%User{} = user, parent_id, name) do
+    Tag
+    |> where([t], t.user_id == ^user.id and is_nil(t.discarded_at))
+    |> where_parent(parent_id)
+    |> where([t], fragment("? = ?::citext", t.name, ^String.normalize(String.trim(name), :nfc)))
+    |> Repo.one()
+  end
+
   @doc "A live tag the user owns."
   def get_tag(%User{} = user, id) do
     case Repo.get_owned(Tag, user, id) do

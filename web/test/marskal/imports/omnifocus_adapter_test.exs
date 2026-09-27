@@ -2,6 +2,7 @@ defmodule Marskal.Imports.OmnifocusAdapterTest do
   use ExUnit.Case, async: true
 
   alias Marskal.Imports.Limits
+  alias Marskal.Imports.Graph
   alias Marskal.Imports.OmnifocusAdapter
 
   test "sniffs ofocus-backup names" do
@@ -76,6 +77,39 @@ defmodule Marskal.Imports.OmnifocusAdapterTest do
     assert inspector.notes =~ "Click the Inspect button"
     assert inspector.notes =~ "](https://www.omnigroup.com/forward/of4-inspector)"
     refute inspector.notes =~ "AppleSystemUIFont"
+  end
+
+  test "parses tags, their states, and the links to tasks and projects" do
+    graph = OmnifocusAdapter.parse(OmnifocusBackup.tagged_backup(), filename: "tagged.zip")
+    tags = Map.new(graph.tags, &{&1.source_id, &1})
+
+    assert tags["ctxWife0000"].parent_source_id == "ctxPerson00"
+    assert tags["ctxPerson00"].state == "active"
+    assert tags["ctxWait0000"].state == "on_hold"
+    assert tags["ctxOld00000"].state == "dropped"
+    assert Graph.stats(graph)["tags"] == 6
+
+    call = Enum.find(graph.tasks, &(&1.source_id == "taskCall000"))
+    assert call.tag_source_ids == ["ctxWife0000", "ctxWait0000"]
+    refute Map.has_key?(call.extras, "tag_ids")
+
+    fix = Enum.find(graph.tasks, &(&1.source_id == "taskFix0000"))
+    assert fix.tag_source_ids == ["ctxHome2000"]
+
+    [garden] = graph.projects
+    assert garden.tag_source_ids == ["ctxHome1000"]
+  end
+
+  test "reads the tutorial backup's tags" do
+    graph = OmnifocusAdapter.parse(OmnifocusBackup.tutorial_backup(), filename: "t.zip")
+    names = Map.new(graph.tags, &{&1.source_id, &1.name})
+
+    supermarket = Enum.find(graph.tags, &(&1.name == "Supermarket"))
+    assert names[supermarket.parent_source_id] == "Errands"
+    assert Enum.find(graph.tags, &(&1.name == "Waiting")).state == "on_hold"
+
+    assign = Enum.find(graph.tasks, &(&1.title == "Assign a tag"))
+    assert Enum.map(assign.tag_source_ids, &names[&1]) == ["Hardware Store"]
   end
 
   test "rejects zip-slip entries" do
