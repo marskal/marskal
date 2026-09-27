@@ -45,6 +45,10 @@ defmodule Marskal.Imports.ApplierTest do
     assert milk.inbox
     assert milk.project_id == nil
 
+    both = task!(batch, "taskBoth0000")
+    refute both.inbox
+    assert both.project_id == project.id
+
     done = task!(batch, "taskDone0000")
     assert done.state == :done
   end

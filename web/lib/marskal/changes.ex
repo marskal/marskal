@@ -106,6 +106,7 @@ defmodule Marskal.Changes do
     end
   end
 
+  defp encode_value(nil), do: nil
   defp encode_value(value) when is_boolean(value), do: value
   defp encode_value(value) when is_atom(value), do: Atom.to_string(value)
   defp encode_value(%DateTime{} = value), do: DateTime.to_iso8601(value)

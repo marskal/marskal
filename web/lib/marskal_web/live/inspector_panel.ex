@@ -90,25 +90,6 @@ defmodule MarskalWeb.InspectorPanel do
           color: var(--muted);
         }
 
-        .field--check {
-          flex-direction: row;
-          align-items: flex-start;
-          gap: 0.55rem;
-        }
-
-        .check-copy {
-          display: flex;
-          flex-direction: column;
-          gap: 0.15rem;
-          min-width: 0;
-        }
-
-        .check-copy label {
-          font-size: 0.9rem;
-          font-weight: 600;
-          color: var(--text);
-        }
-
         .hint {
           margin: 0;
           font-size: 0.8rem;
@@ -325,32 +306,14 @@ defmodule MarskalWeb.InspectorPanel do
           >{@record.notes}</textarea>
         </div>
         <div class="field">
-          <label for="inspector-task-project">Project</label>
-          <select id="inspector-task-project" class="input" name="task[project_id]">
-            <option value="">No project</option>
-            <option
-              :for={project <- @options}
-              value={project.id}
-              selected={project.id == @record.project_id}
-            >
-              {project.title}
-            </option>
-          </select>
-        </div>
-        <div class="field field--check">
-          <input type="hidden" name="task[inbox]" value="false" />
-          <input
-            id="inspector-task-inbox"
-            class="checkbox"
-            type="checkbox"
-            name="task[inbox]"
-            value="true"
-            checked={@record.inbox}
+          <label for="inspector-task-location">Location</label>
+          <MarskalWeb.TaskComponents.location_select
+            id="inspector-task-location"
+            class="input"
+            name="task[location]"
+            task={@record}
+            projects={@options}
           />
-          <div class="check-copy">
-            <label for="inspector-task-inbox">Inbox</label>
-            <p class="hint">Unclarified capture. Uncheck to move it to open tasks.</p>
-          </div>
         </div>
         <div class="field">
           <label for="inspector-task-state">State</label>
@@ -669,8 +632,8 @@ defmodule MarskalWeb.InspectorPanel do
   def handle_event("save", %{"task" => params}, socket) do
     attrs =
       params
-      |> Map.take(["title", "notes", "project_id", "inbox", "state"])
-      |> Map.update("inbox", nil, &inbox_checked?/1)
+      |> Map.take(["title", "notes", "state"])
+      |> Map.merge(location_params(params))
       |> Map.reject(fn {_key, value} -> value == nil end)
 
     save(socket, &Tasks.update_task(&1, &2, drop_blank_title(attrs, "title"), &3))
@@ -885,7 +848,12 @@ defmodule MarskalWeb.InspectorPanel do
   defp stamp(_), do: ""
 
   # A hidden "false" is always submitted. A checked box adds "true" after it.
-  defp inbox_checked?(nil), do: nil
-  defp inbox_checked?(values) when is_list(values), do: "true" in Enum.map(values, &to_string/1)
-  defp inbox_checked?(value), do: value in [true, "true"]
+  defp location_params(%{"location" => value}) do
+    value
+    |> MarskalWeb.TaskComponents.parse_location()
+    |> Tasks.location_attrs()
+    |> Map.new(fn {key, value} -> {Atom.to_string(key), value} end)
+  end
+
+  defp location_params(_params), do: %{}
 end

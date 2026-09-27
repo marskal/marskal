@@ -4,7 +4,7 @@ defmodule MarskalWeb.TaskList do
   about its tags: effective tags and unavailable ids (ADR 0005).
 
   A task that leaves the list while the page is open, because it was done,
-  dropped, clarified, or edited, stays in its row until the user leaves the
+  dropped, moved, or edited, stays in its row until the user leaves the
   view. That leaves room to undo a slip without going elsewhere. A new mount
   starts clean, and a view that changes mode resets with `reset_tasks/1`.
   """

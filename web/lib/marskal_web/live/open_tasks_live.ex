@@ -37,7 +37,7 @@ defmodule MarskalWeb.OpenTasksLive do
     >
       <h1>Open tasks</h1>
       <p class="lede">
-        Clarified work, still to do.
+        Work out of the inbox, still to do.
         <.link :if={!@show_unavailable} patch={~p"/?#{[unavailable: 1]}"}>Show unavailable</.link>
         <.link :if={@show_unavailable} patch={~p"/"}>Hide unavailable</.link>
       </p>

@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted
+Accepted. The inbox is amended by [ADR 0017](0017-inbox-location.md): it is
+one of a task's locations (Inbox, No project, or a project), and Clarify
+is replaced by moving the task.
 
 ## Context
 

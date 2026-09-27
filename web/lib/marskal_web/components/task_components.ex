@@ -155,12 +155,6 @@ defmodule MarskalWeb.TaskComponents do
         :scope.is-resolved:has(.check--done) .title {
           text-decoration: line-through;
         }
-
-        .actions {
-          display: flex;
-          gap: 0.35rem;
-          flex-shrink: 0;
-        }
       }
 
       .task-list {
@@ -234,18 +228,41 @@ defmodule MarskalWeb.TaskComponents do
           <MarskalWeb.FormattedNotes.block text={task.notes} />
           <MarskalWeb.TagComponents.chips entries={Map.get(@tags, task.id, [])} />
         </div>
-        <span :if={:clarify in @actions} class="actions">
-          <button :if={task.inbox} type="button" phx-click="clarify" phx-value-id={task.id}>
-            Clarify
-          </button>
-          <button :if={!task.inbox} type="button" phx-click="unclarify" phx-value-id={task.id}>
-            Back to inbox
-          </button>
-        </span>
       </li>
     </ul>
     """
   end
+
+  attr :id, :string, required: true
+  attr :name, :string, required: true
+  attr :task, :any, required: true
+  attr :projects, :list, required: true
+  attr :class, :string, default: nil
+
+  @doc """
+  Where a task lives: the inbox, no project, or one project (ADR 0017).
+  Read the submitted value back with `parse_location/1`.
+  """
+  def location_select(assigns) do
+    assigns = assign(assigns, :location, Marskal.Tasks.location(assigns.task))
+
+    ~H"""
+    <select id={@id} class={@class} name={@name}>
+      <option value="inbox" selected={@location == :inbox}>Inbox</option>
+      <option value="none" selected={@location == :none}>No project</option>
+      <optgroup :if={@projects != []} label="Projects">
+        <option :for={project <- @projects} value={project.id} selected={@location == project.id}>
+          {project.title}
+        </option>
+      </optgroup>
+    </select>
+    """
+  end
+
+  @doc "The location a `location_select/1` value names."
+  def parse_location("inbox"), do: :inbox
+  def parse_location(value) when value in ["none", ""], do: :none
+  def parse_location(project_id) when is_binary(project_id), do: project_id
 
   defp check_event(%{state: :to_do}), do: "complete"
   defp check_event(_task), do: "reopen"

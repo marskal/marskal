@@ -235,7 +235,9 @@ defmodule Marskal.Imports.Applier do
         count(acc, :skipped, "tasks")
 
       nil ->
-        inbox = node.inbox or is_nil(node.project_source_id)
+        # The project wins over a source inbox flag. A project the import
+        # did not create leaves the task in the inbox (ADR 0017).
+        project_id = node.project_source_id && acc.ids[node.project_source_id]
 
         {:ok, task} =
           Tasks.create_task(
@@ -243,8 +245,8 @@ defmodule Marskal.Imports.Applier do
             %{
               "title" => clip(node.title, Tasks.Task.title_max()),
               "notes" => node.notes,
-              "inbox" => inbox,
-              "project_id" => if(inbox, do: nil, else: acc.ids[node.project_source_id]),
+              "inbox" => is_nil(project_id),
+              "project_id" => project_id,
               "state" => state(node.state)
             },
             Ecto.UUID.generate()

@@ -15,7 +15,7 @@ defmodule Marskal.Tasks do
   def list_inbox(%User{} = user), do: list_visible(user, true)
 
   @doc """
-  The open stream: clarified to-do tasks. Tasks that tag state makes
+  The open stream: to-do tasks out of the inbox. Tasks that tag state makes
   unavailable (ADR 0005) are left out unless `unavailable: true`.
   """
   def list_open(%User{} = user, opts \\ []) do
@@ -59,7 +59,8 @@ defmodule Marskal.Tasks do
 
   @doc """
   Patch any of title, notes, project_id, inbox, and state in one command.
-  Fields equal to the stored value are left out of the patch.
+  Fields equal to the stored value are left out of the patch, except that a
+  move always carries both inbox and project_id (ADR 0017).
   """
   def update_task(%User{} = user, task_id, attrs, command_id) when is_map(attrs) do
     Changes.apply(user, command_id, "task", fn ->
@@ -81,11 +82,24 @@ defmodule Marskal.Tasks do
   def rename_task(user, task_id, title, command_id),
     do: update_task(user, task_id, %{title: title}, command_id)
 
-  def clarify_task(user, task_id, command_id),
-    do: update_task(user, task_id, %{inbox: false}, command_id)
+  @doc """
+  Moves a task to the inbox (`:inbox`), out of everything (`:none`), or into
+  a project (its id). The three are one location (ADR 0017).
+  """
+  def move_task(user, task_id, location, command_id),
+    do: update_task(user, task_id, location_attrs(location), command_id)
 
-  def set_inbox(user, task_id, inbox, command_id) when is_boolean(inbox),
-    do: update_task(user, task_id, %{inbox: inbox}, command_id)
+  @doc "The inbox and project_id fields for a location."
+  def location_attrs(:inbox), do: %{inbox: true, project_id: nil}
+  def location_attrs(:none), do: %{inbox: false, project_id: nil}
+
+  def location_attrs(project_id) when is_binary(project_id),
+    do: %{inbox: false, project_id: project_id}
+
+  @doc "A task's location: `:inbox`, `:none`, or its project id."
+  def location(%Task{inbox: true}), do: :inbox
+  def location(%Task{project_id: nil}), do: :none
+  def location(%Task{project_id: project_id}), do: project_id
 
   def complete_task(user, task_id, command_id),
     do: update_task(user, task_id, %{state: :done}, command_id)
@@ -98,9 +112,6 @@ defmodule Marskal.Tasks do
 
   def set_notes(user, task_id, notes, command_id),
     do: update_task(user, task_id, %{notes: notes}, command_id)
-
-  def file_task(user, task_id, project_id, command_id),
-    do: update_task(user, task_id, %{project_id: project_id}, command_id)
 
   defp list_visible(user, inbox) do
     Task
