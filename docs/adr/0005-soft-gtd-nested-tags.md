@@ -69,6 +69,12 @@ Alternatives considered for hierarchy storage:
   `Person/Wife` shows in both places.
 - v1 filters: one tag (with its subtree), and **untagged** (no effective tags).
   Several tags combine with **AND**.
+- Tag views list **to-do** tasks, inbox tasks included (ADR 0010). A visibility
+  selector for finding Done and Dropped items again comes later, for all
+  views.
+- Tags get a `rank` from the start: new tags go last, imports keep the
+  source order. Drag-and-drop reordering is a separate effort across tasks,
+  projects, folders, and tags.
 - Subtree matching expands the selected tag to its descendant ids in app code
   (a user's tree is small) and queries `tag_id = ANY(ids)`. `parent_path`
   serves display, not matching.
