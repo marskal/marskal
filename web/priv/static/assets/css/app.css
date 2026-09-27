@@ -336,8 +336,7 @@ h1 {
 }
 
 .app-main {
-  max-width: 40rem;
-  margin: 0 auto;
+  max-width: 88ch;
   padding: 1.5rem 1.25rem 3rem;
 }
 
