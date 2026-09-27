@@ -34,6 +34,25 @@ defmodule MarskalWeb.TaskStreamTest do
     refute has_element?(open, "#open-tasks", "Milk")
   end
 
+  test "tasks on an on-hold tag hide until unavailable ones are shown", %{conn: conn, user: user} do
+    {:ok, task} =
+      Marskal.Tasks.create_task(user, %{"title" => "Ask Anna", "inbox" => false}, command())
+
+    {:ok, tag} = Marskal.Tags.create_tag(user, %{"name" => "Waiting"}, command())
+    {:ok, _} = Marskal.Tags.tag_task(user, task.id, tag.id, command())
+    {:ok, _} = Marskal.Tags.set_tag_state(user, tag.id, :on_hold, command())
+
+    {:ok, open, _html} = live(conn, ~p"/")
+    refute has_element?(open, "#open-tasks", "Ask Anna")
+
+    open |> element("a", "Show unavailable") |> render_click()
+    assert_patch(open, ~p"/?unavailable=1")
+    assert has_element?(open, "#open-tasks", "Ask Anna")
+
+    open |> element("a", "Hide unavailable") |> render_click()
+    refute has_element?(open, "#open-tasks", "Ask Anna")
+  end
+
   test "another user does not see the task", %{conn: conn} do
     {:ok, inbox, _html} = live(conn, ~p"/inbox")
 
@@ -45,4 +64,6 @@ defmodule MarskalWeb.TaskStreamTest do
     {:ok, _inbox, html} = live(other, ~p"/inbox")
     refute html =~ "Secret"
   end
+
+  defp command, do: Ecto.UUID.generate()
 end
