@@ -178,6 +178,11 @@ task_tags / project_tags
 
 - The OmniFocus adapter parses tags (name, parent, status, order) into the
   graph and links them to tasks and projects. OmniFocus contexts map to tags.
+- A tag whose name is already used under the same parent, by the user or by
+  an earlier tag in the same backup, is reused instead of created, so the
+  uniqueness rule holds without a merge. An existing tag keeps its state.
+- Only tasks and projects the import creates are tagged. A re-import leaves
+  tags on already-imported items as the user has them.
 - Not live yet, so there is no backfill of earlier imports.
 
 ### Sharing (later)

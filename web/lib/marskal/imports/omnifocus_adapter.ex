@@ -6,6 +6,7 @@ defmodule Marskal.Imports.OmnifocusAdapter do
   alias Marskal.Imports.Limits
   alias Marskal.Imports.OmnifocusNote
   alias Marskal.Imports.ProjectNode
+  alias Marskal.Imports.TagNode
   alias Marskal.Imports.TaskNode
   alias Marskal.Imports.Xml
 
@@ -44,16 +45,19 @@ defmodule Marskal.Imports.OmnifocusAdapter do
     documents = xml_documents(bytes, limits)
     if documents == [], do: raise(ArgumentError, "No OmniFocus contents.xml found in the backup.")
 
-    {folders, tasks} =
-      Enum.reduce(documents, {%{}, %{}}, fn xml, {folders, tasks} ->
-        apply_document(xml, folders, tasks, limits)
+    stores =
+      Enum.reduce(documents, %{folders: %{}, tasks: %{}, tags: %{}, links: %{}}, fn xml, stores ->
+        apply_document(xml, stores, limits)
       end)
+
+    tag_ids = tag_ids_by_task(stores)
 
     %Graph{
       source: @source,
-      folders: folder_nodes(folders),
-      projects: project_nodes(tasks),
-      tasks: task_nodes(tasks)
+      folders: folder_nodes(stores.folders),
+      projects: project_nodes(stores.tasks, tag_ids),
+      tasks: task_nodes(stores.tasks, tag_ids),
+      tags: tag_nodes(stores.tags)
     }
   end
 
@@ -158,22 +162,38 @@ defmodule Marskal.Imports.OmnifocusAdapter do
     end
   end
 
-  defp apply_document(xml, folders, tasks, limits) do
+  # Tags are <context> records; <task-to-tag> records link a task (or a
+  # project, which is a task) to one.
+  @records %{
+    "folder" => :folders,
+    "task" => :tasks,
+    "context" => :tags,
+    "task-to-tag" => :links
+  }
+
+  defp apply_document(xml, stores, limits) do
     doc = Xml.parse!(xml)
     unless Xml.name(doc) == "omnifocus", do: raise(ArgumentError, "Not an OmniFocus backup.")
 
-    Enum.reduce(Xml.children(doc), {folders, tasks}, fn element, {folders, tasks} ->
-      if map_size(folders) + map_size(tasks) > limits.records do
+    Enum.reduce(Xml.children(doc), stores, fn element, stores ->
+      if stores |> Map.values() |> Enum.map(&map_size/1) |> Enum.sum() > limits.records do
         raise ArgumentError, "Backup has too many items."
       end
 
-      case Xml.name(element) do
-        "folder" -> {apply_record(folders, element, &parse_folder(&1, limits)), tasks}
-        "task" -> {folders, apply_record(tasks, element, &parse_task(&1, limits))}
-        _ -> {folders, tasks}
+      case Map.fetch(@records, Xml.name(element)) do
+        {:ok, store} ->
+          Map.update!(stores, store, &apply_record(&1, element, parser(store, limits)))
+
+        :error ->
+          stores
       end
     end)
   end
+
+  defp parser(:folders, limits), do: &parse_folder(&1, limits)
+  defp parser(:tasks, limits), do: &parse_task(&1, limits)
+  defp parser(:tags, limits), do: &parse_tag(&1, limits)
+  defp parser(:links, _limits), do: &parse_link/1
 
   defp apply_record(store, element, parser) do
     id = Xml.attr(element, "id")
@@ -212,6 +232,32 @@ defmodule Marskal.Imports.OmnifocusAdapter do
       "hidden" => text_at(element, "hidden") == "true"
     }
   end
+
+  defp parse_tag(element, limits) do
+    parent =
+      element
+      |> Xml.children_named("context")
+      |> Enum.find(&(Xml.attr(&1, "idref") not in [nil, ""]))
+
+    %{
+      "id" => Xml.attr(element, "id"),
+      "name" => clip(text_at(element, "name"), limits.title_chars),
+      "parent_id" => parent && Xml.attr(parent, "idref"),
+      "rank" => text_at(element, "rank"),
+      "hidden" => text_at(element, "hidden"),
+      "on_hold" => text_at(element, "prohibits-next-action")
+    }
+  end
+
+  defp parse_link(element) do
+    %{
+      "task_id" => element |> Xml.child("task") |> idref(),
+      "tag_id" => element |> Xml.child("context") |> idref()
+    }
+  end
+
+  defp idref(nil), do: nil
+  defp idref(element), do: Xml.attr(element, "idref")
 
   defp parse_task(element, limits) do
     parent =
@@ -301,7 +347,52 @@ defmodule Marskal.Imports.OmnifocusAdapter do
     end)
   end
 
-  defp project_nodes(tasks) do
+  # Hidden means dropped; prohibits-next-action means on hold.
+  defp tag_nodes(tags) do
+    Enum.map(tags, fn {_id, row} ->
+      %TagNode{
+        source_id: row["id"],
+        name: row["name"] || "Untitled tag",
+        parent_source_id: if(Map.has_key?(tags, row["parent_id"]), do: row["parent_id"]),
+        state:
+          cond do
+            row["hidden"] == "true" -> "dropped"
+            row["on_hold"] == "true" -> "on_hold"
+            true -> "active"
+          end,
+        rank: parse_rank(row["rank"])
+      }
+    end)
+  end
+
+  defp parse_rank(nil), do: 0
+
+  defp parse_rank(text) do
+    case Integer.parse(text) do
+      {rank, _} -> rank
+      :error -> 0
+    end
+  end
+
+  # A task's tags: the ones named on the task itself, then those from
+  # task-to-tag records, keeping only tags the backup defines.
+  defp tag_ids_by_task(stores) do
+    linked =
+      stores.links
+      |> Map.values()
+      |> Enum.group_by(& &1["task_id"], & &1["tag_id"])
+
+    Map.new(stores.tasks, fn {id, row} ->
+      ids =
+        ((row["tag_ids"] || []) ++ Map.get(linked, id, []))
+        |> Enum.filter(&Map.has_key?(stores.tags, &1))
+        |> Enum.uniq()
+
+      {id, ids}
+    end)
+  end
+
+  defp project_nodes(tasks, tag_ids) do
     tasks
     |> Map.values()
     |> Enum.flat_map(fn row ->
@@ -313,6 +404,7 @@ defmodule Marskal.Imports.OmnifocusAdapter do
             notes: row["notes"],
             folder_source_id: row["project"]["folder_id"],
             state: project_state(row["project"]["status"], row["completed"]),
+            tag_source_ids: Map.get(tag_ids, row["id"], []),
             extras: extras_for(row)
           }
         ]
@@ -322,7 +414,7 @@ defmodule Marskal.Imports.OmnifocusAdapter do
     end)
   end
 
-  defp task_nodes(tasks) do
+  defp task_nodes(tasks, tag_ids) do
     project_ids =
       tasks
       |> Map.values()
@@ -347,6 +439,7 @@ defmodule Marskal.Imports.OmnifocusAdapter do
             project_source_id: project_id,
             parent_source_id: parent_id,
             state: task_state(row),
+            tag_source_ids: Map.get(tag_ids, row["id"], []),
             extras: extras_for(row) |> Map.put("parent_source_id", parent_id) |> compact()
           }
         ]
@@ -406,11 +499,6 @@ defmodule Marskal.Imports.OmnifocusAdapter do
       if row["flagged"], do: Map.put(extras, "flagged", true), else: extras
     end)
     |> put_extra("repeat", row["repeat"])
-    |> then(fn extras ->
-      if row["tag_ids"] not in [nil, []],
-        do: Map.put(extras, "tag_ids", row["tag_ids"]),
-        else: extras
-    end)
     |> then(fn extras ->
       if get_in(row, ["project", "status"]) == "inactive",
         do: Map.put(extras, "defer", "indefinite"),

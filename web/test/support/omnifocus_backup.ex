@@ -47,6 +47,39 @@ defmodule OmnifocusBackup do
   </omnifocus>
   """
 
+  # Tags are <context> records. ctxHome2 differs from ctxHome1 only in
+  # case, and a link names a tag the backup does not define.
+  @tagged_xml """
+  <?xml version="1.0" encoding="UTF-8"?>
+  <omnifocus>
+    <context id="ctxPerson00"><context/><name>Person</name><rank>20</rank><hidden/><prohibits-next-action>false</prohibits-next-action></context>
+    <context id="ctxWife0000"><context idref="ctxPerson00"/><name>Wife</name><rank>0</rank></context>
+    <context id="ctxWait0000"><context/><name>Waiting</name><rank>10</rank><prohibits-next-action>true</prohibits-next-action></context>
+    <context id="ctxOld00000"><context/><name>Old</name><rank>40</rank><hidden>true</hidden></context>
+    <context id="ctxHome1000"><context/><name>Home</name><rank>30</rank></context>
+    <context id="ctxHome2000"><context/><name>home</name><rank>35</rank></context>
+    <task id="projGarden0">
+      <project><status>active</status></project>
+      <name>Garden</name>
+    </task>
+    <task id="taskCall000">
+      <task idref="projGarden0"/>
+      <context idref="ctxWife0000"/>
+      <name>Call about the hedge</name>
+    </task>
+    <task id="taskFix0000">
+      <inbox/>
+      <name>Fix tap</name>
+    </task>
+    <task-to-tag id="projGarden0.ctxHome1000"><task idref="projGarden0"/><context idref="ctxHome1000"/></task-to-tag>
+    <task-to-tag id="taskCall000.ctxWait0000"><task idref="taskCall000"/><context idref="ctxWait0000"/></task-to-tag>
+    <task-to-tag id="taskFix0000.ctxHome2000"><task idref="taskFix0000"/><context idref="ctxHome2000"/></task-to-tag>
+    <task-to-tag id="taskFix0000.ctxGone0000"><task idref="taskFix0000"/><context idref="ctxGone0000"/></task-to-tag>
+  </omnifocus>
+  """
+
+  def tagged_backup, do: zip_with_xml(@tagged_xml)
+
   def compact_backup do
     inner = zip([{"contents.xml", @xml}])
     zip([{"00000000000000=AAAAAAAAAAA+BBBBBBBBBBB.zip", inner}])

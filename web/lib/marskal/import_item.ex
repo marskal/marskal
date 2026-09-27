@@ -7,7 +7,7 @@ defmodule Marskal.ImportItem do
 
   schema "import_items" do
     field :source, :string
-    field :kind, Ecto.Enum, values: [:folder, :project, :task]
+    field :kind, Ecto.Enum, values: [:folder, :project, :task, :tag]
     field :source_id, :string
     field :extras, :map, default: %{}
 
@@ -16,6 +16,7 @@ defmodule Marskal.ImportItem do
     belongs_to :project_folder, Marskal.ProjectFolders.ProjectFolder
     belongs_to :project, Marskal.Projects.Project
     belongs_to :task, Marskal.Tasks.Task
+    belongs_to :tag, Marskal.Tags.Tag
 
     timestamps(type: :utc_datetime)
   end
@@ -31,7 +32,8 @@ defmodule Marskal.ImportItem do
       :extras,
       :project_folder_id,
       :project_id,
-      :task_id
+      :task_id,
+      :tag_id
     ])
     |> validate_required([:import_batch_id, :user_id, :source, :kind, :source_id])
     |> unique_constraint([:user_id, :source, :source_id],

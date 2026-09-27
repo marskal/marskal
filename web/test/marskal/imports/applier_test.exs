@@ -9,6 +9,8 @@ defmodule Marskal.Imports.ApplierTest do
   alias Marskal.Imports.Parser
   alias Marskal.ProjectFolders.ProjectFolder
   alias Marskal.Projects.Project
+  alias Marskal.Tags
+  alias Marskal.Tags.Tag
   alias Marskal.Tasks
   alias Marskal.Tasks.Task
 
@@ -120,6 +122,93 @@ defmodule Marskal.Imports.ApplierTest do
     refute inspector.notes =~ "AppleSystemUIFont"
   end
 
+  describe "tags" do
+    test "creates the tree in source order, with states and links", %{user: user} do
+      {:ok, batch} =
+        user |> preview!(OmnifocusBackup.tagged_backup(), "tagged.zip") |> Applier.call()
+
+      assert batch.stats["created"]["tags"] == 5
+      assert batch.stats["skipped"]["tags"] == 1
+
+      tree = Tags.tree(user)
+
+      assert tree |> Tags.Tree.children(nil) |> Enum.map(& &1.name) ==
+               ~w(Waiting Person Home Old)
+
+      assert Tags.Tree.get(tree, tag!(batch, "ctxWife0000").id).parent_path == ["Person"]
+      assert tag!(batch, "ctxWait0000").state == :on_hold
+      assert tag!(batch, "ctxOld00000").state == :dropped
+
+      call = task!(batch, "taskCall000")
+      garden = project!(batch, "projGarden0")
+      effective = Tags.effective_tags(user, [call], tree)[call.id]
+
+      assert Enum.map(effective, &{&1.tag.name, &1.inherited}) == [
+               {"Waiting", false},
+               {"Wife", false},
+               {"Home", true}
+             ]
+
+      assert Tags.project_tags(user, garden, tree) |> Enum.map(& &1.name) == ["Home"]
+    end
+
+    test "a tag named like its sibling, ignoring case, is the same tag", %{user: user} do
+      {:ok, batch} =
+        user |> preview!(OmnifocusBackup.tagged_backup(), "tagged.zip") |> Applier.call()
+
+      assert tag!(batch, "ctxHome2000").id == tag!(batch, "ctxHome1000").id
+      fix = task!(batch, "taskFix0000")
+      assert [%{tag: %{name: "Home"}}] = Tags.effective_tags(user, [fix], Tags.tree(user))[fix.id]
+    end
+
+    test "reuses a tag the user already has at the same place", %{user: user} do
+      {:ok, waiting} = Tags.create_tag(user, %{"name" => "waiting"}, Ecto.UUID.generate())
+
+      {:ok, batch} =
+        user |> preview!(OmnifocusBackup.tagged_backup(), "tagged.zip") |> Applier.call()
+
+      assert tag!(batch, "ctxWait0000").id == waiting.id
+      assert Tags.get_tag(user, waiting.id).state == :active
+    end
+
+    test "a re-import skips tags and leaves the user's tags on tasks alone", %{user: user} do
+      {:ok, first} =
+        user |> preview!(OmnifocusBackup.tagged_backup(), "tagged.zip") |> Applier.call()
+
+      call = task!(first, "taskCall000")
+      wait = tag!(first, "ctxWait0000")
+      {:ok, _} = Tags.untag_task(user, call.id, wait.id, Ecto.UUID.generate())
+
+      {:ok, second} =
+        user |> preview!(OmnifocusBackup.tagged_backup(), "tagged.zip") |> Applier.call()
+
+      assert second.stats["created"]["tags"] == 0
+      assert length(Tags.list_tags(user)) == 5
+
+      names =
+        Tags.effective_tags(user, [call], Tags.tree(user))[call.id] |> Enum.map(& &1.tag.name)
+
+      refute "Waiting" in names
+    end
+
+    test "the tutorial backup's tags arrive", %{user: user} do
+      {:ok, batch} =
+        user
+        |> preview!(OmnifocusBackup.tutorial_backup(), "omnifocus-tutorial.ofocus-backup.zip")
+        |> Applier.call()
+
+      assert batch.stats["created"]["tags"] == 12
+      tree = Tags.tree(user)
+      paths = tree |> Tags.Tree.all() |> Enum.map(&Tag.path/1)
+      assert ["Errands", "Supermarket"] in paths
+
+      assign = Repo.get_by!(Task, user_id: user.id, title: "Assign a tag")
+
+      assert [%{tag: %{name: "Hardware Store"}}] =
+               Tags.effective_tags(user, [assign], tree)[assign.id]
+    end
+  end
+
   test "does not import into another user", %{user: user, other: other} do
     batch = preview!(user, OmnifocusBackup.compact_backup(), "OmniFocus.ofocus-backup")
     assert {:ok, _} = Applier.call(batch)
@@ -152,6 +241,11 @@ defmodule Marskal.Imports.ApplierTest do
   defp project!(batch, source_id) do
     item = item!(batch, source_id)
     Repo.get!(Project, item.project_id)
+  end
+
+  defp tag!(batch, source_id) do
+    %ImportItem{tag_id: id} = item!(batch, source_id)
+    Repo.get!(Tag, id)
   end
 
   defp task!(batch, source_id) do

@@ -3,7 +3,10 @@ defmodule Marskal.Imports.Applier do
   Writes a parsed graph for the batch's user.
 
   Each new record is one command, created in its final state. A source id
-  already imported by this user is skipped and left as the user has it now.
+  already imported by this user is skipped and left as the user has it now,
+  tags included: only new tasks and projects are tagged. A tag whose name is
+  already used under the same parent, by the user or by another tag in the
+  backup, is not created again; its tasks get the existing tag (ADR 0005).
   The uploaded payload is dropped once the batch is applied or has failed.
   """
 
@@ -15,9 +18,10 @@ defmodule Marskal.Imports.Applier do
   alias Marskal.ProjectFolders
   alias Marskal.Projects
   alias Marskal.Repo
+  alias Marskal.Tags
   alias Marskal.Tasks
 
-  @kinds %{"folders" => 0, "projects" => 0, "tasks" => 0}
+  @kinds %{"folders" => 0, "projects" => 0, "tasks" => 0, "tags" => 0}
 
   def call(batch) do
     batch = batch |> Repo.preload(:user) |> Imports.load_payload()
@@ -43,6 +47,11 @@ defmodule Marskal.Imports.Applier do
         skipped: @kinds,
         existing: existing_items(batch)
       }
+
+      acc =
+        graph.tags
+        |> by_level()
+        |> Enum.reduce(acc, &apply_tag(batch, &1, &2))
 
       acc =
         graph.folders
@@ -91,6 +100,22 @@ defmodule Marskal.Imports.Applier do
     Enum.reverse(ordered)
   end
 
+  # Level by level, siblings in source rank order, so every parent is
+  # created before its children and new tags keep the source's order.
+  defp by_level(tags) do
+    {levels, _} =
+      tags
+      |> parents_first()
+      |> Enum.map_reduce(%{}, fn node, depths ->
+        depth = if d = depths[node.parent_source_id], do: d + 1, else: 0
+        {{depth, node}, Map.put(depths, node.source_id, depth)}
+      end)
+
+    levels
+    |> Enum.sort_by(fn {depth, node} -> {depth, node.rank} end)
+    |> Enum.map(&elem(&1, 1))
+  end
+
   defp visit(node, by_id, {ordered, seen} = acc, path) do
     if MapSet.member?(seen, node.source_id) or MapSet.member?(path, node.source_id) do
       acc
@@ -102,6 +127,54 @@ defmodule Marskal.Imports.Applier do
         end
 
       {[node | ordered], MapSet.put(seen, node.source_id)}
+    end
+  end
+
+  defp apply_tag(batch, node, acc) do
+    case Map.get(acc.existing, node.source_id) do
+      %ImportItem{tag_id: id} ->
+        acc |> put_id(node, id) |> count(:skipped, "tags")
+
+      nil ->
+        user = batch.user
+        name = clip(node.name, 200)
+        # A parent the user has since deleted means the tag goes to the top.
+        parent_id = acc.ids[node.parent_source_id]
+        parent_id = if parent_id && Tags.get_tag(user, parent_id), do: parent_id
+
+        # Look first: a failed insert would abort the import's transaction.
+        {tag, bucket} =
+          case Tags.find_tag(user, parent_id, name) do
+            %Tags.Tag{} = existing ->
+              {existing, :skipped}
+
+            nil ->
+              attrs = %{"name" => name, "parent_id" => parent_id, "state" => node.state}
+              {:ok, tag} = Tags.create_tag(user, attrs, Ecto.UUID.generate())
+              {tag, :created}
+          end
+
+        acc
+        |> record!(batch, :tag, node, %{tag_id: tag.id})
+        |> put_id(node, tag.id)
+        |> count(bucket, "tags")
+    end
+  end
+
+  defp tag_all!(user, kind, owner_id, node, acc) do
+    for source_id <- node.tag_source_ids, tag_id = acc.ids[source_id], reduce: :ok do
+      :ok ->
+        result =
+          case kind do
+            :task -> Tags.tag_task(user, owner_id, tag_id, Ecto.UUID.generate())
+            :project -> Tags.tag_project(user, owner_id, tag_id, Ecto.UUID.generate())
+          end
+
+        # A tag the user deleted since an earlier import is left off.
+        case result do
+          {:ok, _} -> :ok
+          {:error, :not_found} -> :ok
+        end
     end
   end
 
@@ -147,6 +220,8 @@ defmodule Marskal.Imports.Applier do
             Ecto.UUID.generate()
           )
 
+        tag_all!(batch.user, :project, project.id, node, acc)
+
         acc
         |> record!(batch, :project, node, %{project_id: project.id})
         |> put_id(node, project.id)
@@ -174,6 +249,8 @@ defmodule Marskal.Imports.Applier do
             },
             Ecto.UUID.generate()
           )
+
+        tag_all!(batch.user, :task, task.id, node, acc)
 
         acc
         |> record!(batch, :task, node, %{task_id: task.id})
