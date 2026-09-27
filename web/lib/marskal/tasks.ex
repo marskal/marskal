@@ -13,14 +13,25 @@ defmodule Marskal.Tasks do
   alias Marskal.Tasks.Task
 
   def list_inbox(%User{} = user), do: list_visible(user, true)
-  def list_open(%User{} = user), do: list_visible(user, false)
 
+  @doc """
+  The open stream: clarified to-do tasks. Tasks that tag state makes
+  unavailable (ADR 0005) are left out unless `unavailable: true`.
+  """
+  def list_open(%User{} = user, opts \\ []) do
+    tasks = list_visible(user, false)
+
+    if Keyword.get(opts, :unavailable, false),
+      do: tasks,
+      else: Marskal.Tags.reject_unavailable(user, tasks)
+  end
+
+  @doc "A project's to-do tasks, inbox ones included (ADR 0010)."
   def list_project_tasks(%User{} = user, project_id) do
     Task
     |> where(
       [t],
-      t.user_id == ^user.id and t.project_id == ^project_id and t.inbox == false and
-        t.state == :to_do
+      t.user_id == ^user.id and t.project_id == ^project_id and t.state == :to_do
     )
     |> order_by([t], desc: t.inserted_at, desc: t.id)
     |> Repo.all()

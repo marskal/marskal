@@ -17,8 +17,11 @@ defmodule Marskal.Tags do
   alias Marskal.Tags.Link
   alias Marskal.Tags.ProjectTag
   alias Marskal.Tags.Tag
+  alias Marskal.Tags.Search
   alias Marskal.Tags.TaskTag
+  alias Marskal.Tags.Tree
   alias Marskal.Tasks
+  alias Marskal.Tasks.Task
   alias Marskal.Uuid
 
   @doc "Every live tag the user has, dropped ones included, in sibling order."
@@ -27,6 +30,102 @@ defmodule Marskal.Tags do
     |> where([t], t.user_id == ^user.id and is_nil(t.discarded_at))
     |> order_by([t], asc: t.rank, asc: t.id)
     |> Repo.all()
+  end
+
+  @doc "The user's live tags as a `Marskal.Tags.Tree`."
+  def tree(%User{} = user), do: Tree.new(list_tags(user))
+
+  @doc "Autocomplete over the user's visible tags (ADR 0005)."
+  def search(%Tree{} = tree, query), do: Search.run(tree, query)
+
+  @doc """
+  Each task's effective tags: its own, then its project's (ADR 0005), as
+  `%{tag: tag, inherited: boolean}` in tree order, keyed by task id. Tags
+  from a parent task are never included.
+  """
+  def effective_tags(%User{} = user, tasks, %Tree{} = tree) do
+    direct = link_pairs(TaskTag, :task_id, user, Enum.map(tasks, & &1.id))
+
+    inherited =
+      link_pairs(ProjectTag, :project_id, user, tasks |> Enum.map(& &1.project_id) |> Enum.uniq())
+
+    Map.new(tasks, fn task ->
+      own = Map.get(direct, task.id, [])
+      from_project = Map.get(inherited, task.project_id, []) -- own
+
+      entries =
+        for {id, inherited?} <- Enum.map(own, &{&1, false}) ++ Enum.map(from_project, &{&1, true}),
+            tag = Tree.get(tree, id),
+            do: %{tag: tag, inherited: inherited?}
+
+      {task.id, Enum.sort_by(entries, &Tree.position(tree, &1.tag.id))}
+    end)
+  end
+
+  @doc "Ids of the tasks that tag state makes unavailable (ADR 0005)."
+  def unavailable_ids(%Tree{} = tree, effective) do
+    for {task_id, entries} <- effective,
+        not Tree.available?(tree, Enum.map(entries, & &1.tag.id)),
+        into: MapSet.new(),
+        do: task_id
+  end
+
+  @doc "The tasks that are available, keeping their order."
+  def reject_unavailable(%User{} = user, tasks) do
+    tree = tree(user)
+    unavailable = unavailable_ids(tree, effective_tags(user, tasks, tree))
+    Enum.reject(tasks, &MapSet.member?(unavailable, &1.id))
+  end
+
+  @doc """
+  The tag view (ADR 0005): the tag's own to-do tasks, then one group per
+  child tag, nested the same way. Inbox tasks are included (ADR 0010). A
+  task shows under every tag it carries. Empty groups are left out, and so
+  are dropped subtrees, unless the selected tag is itself dropped.
+
+  Returns `%{root: node, effective: map, unavailable: MapSet}`, where a node
+  is `%{tag: tag, tasks: [task], children: [node]}`, or nil for an unknown
+  tag.
+  """
+  def outline(%User{} = user, tag_id) do
+    tree = tree(user)
+
+    with %Tag{} = tag <- Tree.get(tree, tag_id) do
+      include? =
+        if Tree.visible?(tree, tag.id),
+          do: &Tree.visible?(tree, &1.id),
+          else: fn _tag -> true end
+
+      ids = tree |> Tree.subtree(tag.id) |> Enum.filter(include?) |> Enum.map(& &1.id)
+      tasks = to_do_tasks_tagged(user, ids)
+      effective = effective_tags(user, tasks, tree)
+
+      by_tag =
+        for task <- tasks, %{tag: t} <- effective[task.id], t.id in ids, reduce: %{} do
+          acc -> Map.update(acc, t.id, [task], &[task | &1])
+        end
+        |> Map.new(fn {id, tasks} -> {id, Enum.reverse(tasks)} end)
+
+      %{
+        root: outline_node(tree, tag, by_tag, include?),
+        effective: effective,
+        unavailable: unavailable_ids(tree, effective)
+      }
+    end
+  end
+
+  @doc "To-do tasks, inbox included, with no effective tags."
+  def untagged_tasks(%User{} = user) do
+    tree = tree(user)
+
+    tasks =
+      Task
+      |> where([t], t.user_id == ^user.id and t.state == :to_do)
+      |> order_by([t], desc: t.inserted_at, desc: t.id)
+      |> Repo.all()
+
+    effective = effective_tags(user, tasks, tree)
+    Enum.filter(tasks, &(effective[&1.id] == []))
   end
 
   @doc "A live tag the user owns."
@@ -109,6 +208,49 @@ defmodule Marskal.Tags do
 
   def untag_project(user, project_id, tag_id, command_id),
     do: write_link(user, :project, project_id, tag_id, :untag, command_id)
+
+  ## Reading
+
+  defp link_pairs(schema, owner_field, user, owner_ids) do
+    owner_ids = Enum.reject(owner_ids, &is_nil/1)
+
+    schema
+    |> where([l], l.user_id == ^user.id and is_nil(l.discarded_at))
+    |> where([l], field(l, ^owner_field) in ^owner_ids)
+    |> order_by([l], asc: l.inserted_at, asc: l.id)
+    |> select([l], {field(l, ^owner_field), l.tag_id})
+    |> Repo.all()
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+  end
+
+  defp to_do_tasks_tagged(user, tag_ids) do
+    tagged =
+      from l in TaskTag,
+        where: l.user_id == ^user.id and l.tag_id in ^tag_ids and is_nil(l.discarded_at),
+        select: l.task_id
+
+    via_project =
+      from l in ProjectTag,
+        where: l.user_id == ^user.id and l.tag_id in ^tag_ids and is_nil(l.discarded_at),
+        select: l.project_id
+
+    Task
+    |> where([t], t.user_id == ^user.id and t.state == :to_do)
+    |> where([t], t.id in subquery(tagged) or t.project_id in subquery(via_project))
+    |> order_by([t], desc: t.inserted_at, desc: t.id)
+    |> Repo.all()
+  end
+
+  defp outline_node(tree, tag, by_tag, include?) do
+    children =
+      tree
+      |> Tree.children(tag.id)
+      |> Enum.filter(include?)
+      |> Enum.map(&outline_node(tree, &1, by_tag, include?))
+      |> Enum.reject(&(&1.tasks == [] and &1.children == []))
+
+    %{tag: tag, tasks: Map.get(by_tag, tag.id, []), children: children}
+  end
 
   ## Tags
 

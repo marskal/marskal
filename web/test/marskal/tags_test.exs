@@ -222,14 +222,131 @@ defmodule Marskal.TagsTest do
     end
   end
 
+  describe "reading" do
+    test "effective tags are the task's own, then its project's", %{user: user} do
+      {:ok, project} = Projects.create_project(user, %{"title" => "Garden"}, command())
+      task = task!(user, project_id: project.id)
+      home = tag!(user, "Home")
+      waiting = tag!(user, "Waiting")
+      {:ok, _} = Tags.tag_project(user, project.id, home.id, command())
+      {:ok, _} = Tags.tag_project(user, project.id, waiting.id, command())
+      {:ok, _} = Tags.tag_task(user, task.id, waiting.id, command())
+
+      tree = Tags.tree(user)
+      entries = Tags.effective_tags(user, [task], tree)[task.id]
+
+      assert Enum.map(entries, &{&1.tag.name, &1.inherited}) == [
+               {"Home", true},
+               {"Waiting", false}
+             ]
+    end
+
+    test "the open stream leaves out tasks blocked by tag state", %{user: user} do
+      waiting = tag!(user, "Waiting")
+      old = tag!(user, "Old")
+      home = tag!(user, "Home")
+      held = task!(user, tags: [waiting, home])
+      only_dropped = task!(user, tags: [old])
+      partly_dropped = task!(user, tags: [old, home])
+      plain = task!(user)
+
+      {:ok, _} = Tags.set_tag_state(user, waiting.id, :on_hold, command())
+      {:ok, _} = Tags.set_tag_state(user, old.id, :dropped, command())
+
+      assert ids(Tasks.list_open(user)) == Enum.sort([partly_dropped.id, plain.id])
+
+      assert ids(Tasks.list_open(user, unavailable: true)) ==
+               Enum.sort([held.id, only_dropped.id, partly_dropped.id, plain.id])
+    end
+
+    test "a tag's outline groups tasks by child tag", %{user: user} do
+      person = tag!(user, "Person")
+      family = tag!(user, "Family", person)
+      wife = tag!(user, "Wife", family)
+      kid = tag!(user, "Kid", person)
+      old = tag!(user, "Old", person)
+      {:ok, _} = Tags.set_tag_state(user, old.id, :dropped, command())
+
+      {:ok, project} = Projects.create_project(user, %{"title" => "Anniversary"}, command())
+      {:ok, _} = Tags.tag_project(user, project.id, wife.id, command())
+
+      direct = task!(user, tags: [person])
+      both = task!(user, tags: [person, wife])
+      via_project = task!(user, project_id: project.id)
+      in_inbox = task!(user, inbox: true, tags: [wife])
+      done = task!(user, tags: [person])
+      {:ok, _} = Tasks.complete_task(user, done.id, command())
+      _hidden = task!(user, tags: [old])
+
+      %{root: root, unavailable: unavailable} = Tags.outline(user, person.id)
+
+      assert ids(root.tasks) == Enum.sort([direct.id, both.id])
+      assert Enum.map(root.children, & &1.tag.name) == ["Family"]
+
+      assert [%{tag: %{name: "Wife"}, tasks: wife_tasks, children: []}] =
+               hd(root.children).children
+
+      assert ids(wife_tasks) == Enum.sort([both.id, via_project.id, in_inbox.id])
+      assert MapSet.size(unavailable) == 0
+      refute kid.id in Enum.map(root.children, & &1.tag.id)
+    end
+
+    test "a dropped tag's own outline still shows its tasks", %{user: user} do
+      old = tag!(user, "Old")
+      task = task!(user, tags: [old])
+      {:ok, _} = Tags.set_tag_state(user, old.id, :dropped, command())
+
+      %{root: root, unavailable: unavailable} = Tags.outline(user, old.id)
+      assert ids(root.tasks) == [task.id]
+      assert MapSet.member?(unavailable, task.id)
+    end
+
+    test "untagged tasks have no tags of their own or from a project", %{user: user} do
+      {:ok, project} = Projects.create_project(user, %{"title" => "Garden"}, command())
+      home = tag!(user, "Home")
+      {:ok, _} = Tags.tag_project(user, project.id, home.id, command())
+
+      inbox = task!(user, inbox: true)
+      _inherits = task!(user, project_id: project.id)
+      _tagged = task!(user, tags: [home])
+
+      assert ids(Tags.untagged_tasks(user)) == [inbox.id]
+    end
+
+    test "a project view includes its inbox tasks", %{user: user} do
+      {:ok, project} = Projects.create_project(user, %{"title" => "Garden"}, command())
+      task = task!(user, project_id: project.id, inbox: true)
+
+      assert ids(Tasks.list_project_tasks(user, project.id)) == [task.id]
+    end
+
+    test "outlines stay inside one user", %{user: user, other: other} do
+      theirs = tag!(other, "Theirs")
+      assert Tags.outline(user, theirs.id) == nil
+    end
+  end
+
+  defp ids(tasks), do: tasks |> Enum.map(& &1.id) |> Enum.sort()
+
   defp tag!(user, name, parent \\ nil) do
     attrs = %{"name" => name, "parent_id" => parent && parent.id}
     {:ok, tag} = Tags.create_tag(user, attrs, command())
     tag
   end
 
-  defp task!(user) do
-    {:ok, task} = Tasks.create_task(user, %{"title" => "Call"}, command())
+  defp task!(user, opts \\ []) do
+    attrs = %{
+      "title" => "Call",
+      "inbox" => Keyword.get(opts, :inbox, false),
+      "project_id" => opts[:project_id]
+    }
+
+    {:ok, task} = Tasks.create_task(user, attrs, command())
+
+    for tag <- Keyword.get(opts, :tags, []) do
+      {:ok, _} = Tags.tag_task(user, task.id, tag.id, command())
+    end
+
     task
   end
 

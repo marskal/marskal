@@ -5,12 +5,17 @@ defmodule MarskalWeb.OpenTasksLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    user = socket.assigns.current_scope.user
+    {:ok, assign(socket, :page_title, "Open tasks")}
+  end
 
-    {:ok,
-     socket
-     |> assign(:page_title, "Open tasks")
-     |> assign(:tasks, Tasks.list_open(user))}
+  # Tasks made unavailable by tag state (ADR 0005) are hidden unless
+  # ?unavailable=1; deferred tasks will join the same toggle (ADR 0006).
+  @impl true
+  def handle_params(params, _uri, socket) do
+    socket
+    |> assign(:show_unavailable, params["unavailable"] == "1")
+    |> load_tasks()
+    |> then(&{:noreply, &1})
   end
 
   @impl true
@@ -25,7 +30,11 @@ defmodule MarskalWeb.OpenTasksLive do
       change_version={assigns[:change_version] || 0}
     >
       <h1>Open tasks</h1>
-      <p class="lede">Clarified work, still to do.</p>
+      <p class="lede">
+        Clarified work, still to do.
+        <.link :if={!@show_unavailable} patch={~p"/?#{[unavailable: 1]}"}>Show unavailable</.link>
+        <.link :if={@show_unavailable} patch={~p"/"}>Hide unavailable</.link>
+      </p>
 
       <MarskalWeb.TaskComponents.list
         id="open-tasks"
@@ -40,7 +49,7 @@ defmodule MarskalWeb.OpenTasksLive do
 
   @impl true
   def handle_info({:marskal_change, _type, _id}, socket) do
-    {:noreply, assign(socket, :tasks, Tasks.list_open(socket.assigns.current_scope.user))}
+    {:noreply, load_tasks(socket)}
   end
 
   @impl true
@@ -52,7 +61,7 @@ defmodule MarskalWeb.OpenTasksLive do
 
     case fun.(user, id, Ecto.UUID.generate()) do
       {:ok, _task} ->
-        {:noreply, assign(socket, :tasks, Tasks.list_open(user))}
+        {:noreply, load_tasks(socket)}
 
       {:error, :not_found} ->
         {:noreply, put_flash(socket, :error, "That task is not available.")}
@@ -60,5 +69,10 @@ defmodule MarskalWeb.OpenTasksLive do
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Could not update task.")}
     end
+  end
+
+  defp load_tasks(socket) do
+    user = socket.assigns.current_scope.user
+    assign(socket, :tasks, Tasks.list_open(user, unavailable: socket.assigns.show_unavailable))
   end
 end
