@@ -2,7 +2,7 @@ defmodule Marskal.Repo.Migrations.AddExpiredImportStatus do
   use Ecto.Migration
 
   def up do
-    execute "ALTER TYPE import_batch_status ADD VALUE 'expired'"
+    execute "ALTER TYPE import_batch_status ADD VALUE IF NOT EXISTS 'expired'"
   end
 
   # Postgres cannot drop an enum value. Expired batches become failed and the
