@@ -49,7 +49,7 @@ defmodule MarskalWeb.Layouts do
       <header class="app-header">
         <div class="app-header__brand">
           <.link navigate={~p"/"}>
-            <img src={~p"/icon.svg"} alt="" class="app-header__logo" />
+            <img src={~p"/images/icon.svg"} alt="" class="app-header__logo" />
             <span>Marskal</span>
           </.link>
         </div>

@@ -16,17 +16,17 @@ defmodule MarskalWeb.PageControllerTest do
     html = html_response(conn, 200)
 
     assert html =~ ~s(class="app-header__logo")
-    assert html =~ ~s(src="/icon.svg")
+    assert html =~ ~s(src="/images/icon.svg")
     assert html =~ ">Marskal<"
     assert html =~ ~s(rel="icon")
-    assert html =~ ~s(href="/icon.svg")
+    assert html =~ ~s(href="/images/icon.svg")
     assert html =~ ~s(rel="apple-touch-icon")
-    assert html =~ ~s(href="/icon.png")
+    assert html =~ ~s(href="/images/icon.png")
   end
 
   test "icon files are served", %{conn: conn} do
-    assert get(conn, ~p"/icon.svg").status == 200
-    assert get(conn, ~p"/icon.png").status == 200
+    assert get(conn, ~p"/images/icon.svg").status == 200
+    assert get(conn, ~p"/images/icon.png").status == 200
     assert get(conn, ~p"/favicon.ico").status == 200
   end
 end
