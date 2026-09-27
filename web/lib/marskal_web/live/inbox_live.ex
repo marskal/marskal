@@ -1,6 +1,8 @@
 defmodule MarskalWeb.InboxLive do
   use MarskalWeb, :live_view
 
+  import MarskalWeb.TaskList, only: [assign_tasks: 2]
+
   alias Marskal.Tasks
 
   @impl true
@@ -12,7 +14,7 @@ defmodule MarskalWeb.InboxLive do
      |> assign(:page_title, "Inbox")
      |> assign(:command_id, Ecto.UUID.generate())
      |> assign(:form, to_form(%{"title" => ""}, as: "task"))
-     |> assign(:tasks, Tasks.list_inbox(user))}
+     |> assign_tasks(Tasks.list_inbox(user))}
   end
 
   @impl true
@@ -47,6 +49,8 @@ defmodule MarskalWeb.InboxLive do
       <MarskalWeb.TaskComponents.list
         id="inbox-tasks"
         tasks={@tasks}
+        tags={@task_tags.tags}
+        unavailable={@task_tags.unavailable}
         empty="Nothing in the inbox."
         actions={[:clarify, :complete]}
         inspector={@inspector}
@@ -57,7 +61,7 @@ defmodule MarskalWeb.InboxLive do
 
   @impl true
   def handle_info({:marskal_change, _type, _id}, socket) do
-    {:noreply, assign(socket, :tasks, Tasks.list_inbox(socket.assigns.current_scope.user))}
+    {:noreply, assign_tasks(socket, Tasks.list_inbox(socket.assigns.current_scope.user))}
   end
 
   @impl true
@@ -71,7 +75,7 @@ defmodule MarskalWeb.InboxLive do
          |> put_flash(:info, "Added.")
          |> assign(:command_id, Ecto.UUID.generate())
          |> assign(:form, to_form(%{"title" => ""}, as: "task"))
-         |> assign(:tasks, Tasks.list_inbox(user))}
+         |> assign_tasks(Tasks.list_inbox(user))}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, form: to_form(changeset, as: "task"))}
@@ -90,7 +94,7 @@ defmodule MarskalWeb.InboxLive do
 
     case fun.(user, id, Ecto.UUID.generate()) do
       {:ok, _task} ->
-        {:noreply, assign(socket, :tasks, Tasks.list_inbox(user))}
+        {:noreply, assign_tasks(socket, Tasks.list_inbox(user))}
 
       {:error, :not_found} ->
         {:noreply, put_flash(socket, :error, "That task is not available.")}

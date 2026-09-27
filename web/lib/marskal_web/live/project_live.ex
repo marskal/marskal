@@ -1,6 +1,8 @@
 defmodule MarskalWeb.ProjectLive do
   use MarskalWeb, :live_view
 
+  import MarskalWeb.TaskList, only: [assign_tasks: 2]
+
   alias Marskal.Projects
   alias Marskal.Tasks
 
@@ -56,6 +58,9 @@ defmodule MarskalWeb.ProjectLive do
       <MarskalWeb.TaskComponents.list
         id="project-tasks"
         tasks={@tasks}
+        tags={@task_tags.tags}
+        unavailable={@task_tags.unavailable}
+        mark_inbox
         empty="No open tasks in this project."
         actions={[:complete]}
         inspector={@inspector}
@@ -135,6 +140,6 @@ defmodule MarskalWeb.ProjectLive do
     |> assign(:page_title, project.title)
     |> assign(:project, project)
     |> assign(:folder, folder)
-    |> assign(:tasks, Tasks.list_project_tasks(user, project.id))
+    |> assign_tasks(Tasks.list_project_tasks(user, project.id))
   end
 end

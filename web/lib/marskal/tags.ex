@@ -62,6 +62,25 @@ defmodule Marskal.Tags do
     end)
   end
 
+  @doc """
+  What a task list shows about tags: `%{tags: effective, unavailable: ids}`
+  for these tasks, from one tree.
+  """
+  def annotate(%User{} = user, tasks) do
+    tree = tree(user)
+    effective = effective_tags(user, tasks, tree)
+    %{tags: effective, unavailable: unavailable_ids(tree, effective)}
+  end
+
+  @doc "A project's own tags, in tree order."
+  def project_tags(%User{} = user, project, %Tree{} = tree) do
+    ProjectTag
+    |> link_pairs(:project_id, user, [project.id])
+    |> Map.get(project.id, [])
+    |> Enum.flat_map(&List.wrap(Tree.get(tree, &1)))
+    |> Enum.sort_by(&Tree.position(tree, &1.id))
+  end
+
   @doc "Ids of the tasks that tag state makes unavailable (ADR 0005)."
   def unavailable_ids(%Tree{} = tree, effective) do
     for {task_id, entries} <- effective,
@@ -83,7 +102,8 @@ defmodule Marskal.Tags do
   task shows under every tag it carries. Empty groups are left out, and so
   are dropped subtrees, unless the selected tag is itself dropped.
 
-  Returns `%{root: node, effective: map, unavailable: MapSet}`, where a node
+  Returns `%{root: node, tree: tree, effective: map, unavailable: MapSet}`,
+  where a node
   is `%{tag: tag, tasks: [task], children: [node]}`, or nil for an unknown
   tag.
   """
@@ -108,6 +128,7 @@ defmodule Marskal.Tags do
 
       %{
         root: outline_node(tree, tag, by_tag, include?),
+        tree: tree,
         effective: effective,
         unavailable: unavailable_ids(tree, effective)
       }

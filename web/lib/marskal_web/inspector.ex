@@ -31,11 +31,23 @@ defmodule MarskalWeb.Inspector do
      |> attach_hook(:inspector_info, :handle_info, &on_info/2)}
   end
 
+  @selection_keys ~w(task project folder tag)
+
   defp on_params(params, uri, socket) do
+    uri = URI.parse(uri)
+
+    # Other query params, such as the open stream's ?unavailable=1, survive
+    # opening and closing the inspector.
+    page_query =
+      (uri.query || "")
+      |> URI.decode_query()
+      |> Map.drop(@selection_keys)
+
     socket =
       socket
       |> assign(:inspector, selection(params))
-      |> assign(:inspector_path, URI.parse(uri).path)
+      |> assign(:inspector_path, uri.path)
+      |> assign(:inspector_page_query, page_query)
 
     # push_patch always asks the view for handle_params/3. A view that does not
     # define one must be halted here, or the patch crashes. Views that do
@@ -44,12 +56,12 @@ defmodule MarskalWeb.Inspector do
   end
 
   defp on_event("inspect", %{"type" => type, "id" => id}, socket)
-       when type in ["task", "project", "folder"] and is_binary(id) do
+       when type in @selection_keys and is_binary(id) do
     {:halt, push_patch(socket, to: query_path(socket, %{type => id}))}
   end
 
   defp on_event("close-inspector", _params, socket) do
-    {:halt, push_patch(socket, to: socket.assigns.inspector_path)}
+    {:halt, push_patch(socket, to: query_path(socket, %{}))}
   end
 
   defp on_event(_event, _params, socket), do: {:cont, socket}
@@ -74,6 +86,7 @@ defmodule MarskalWeb.Inspector do
       id = present(params["task"]) -> %{type: :task, id: id}
       id = present(params["project"]) -> %{type: :project, id: id}
       id = present(params["folder"]) -> %{type: :folder, id: id}
+      id = present(params["tag"]) -> %{type: :tag, id: id}
       true -> nil
     end
   end
@@ -81,7 +94,10 @@ defmodule MarskalWeb.Inspector do
   defp present(id) when is_binary(id) and id != "", do: id
   defp present(_), do: nil
 
-  defp query_path(socket, query) do
-    socket.assigns.inspector_path <> "?" <> URI.encode_query(query)
+  defp query_path(socket, selection) do
+    case Map.merge(socket.assigns.inspector_page_query, selection) do
+      query when query == %{} -> socket.assigns.inspector_path
+      query -> socket.assigns.inspector_path <> "?" <> URI.encode_query(query)
+    end
   end
 end

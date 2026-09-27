@@ -135,6 +135,15 @@ h1 {
   }
 }
 
+.sidebar-heading {
+  margin: 1.5rem 0 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 .sidebar-links a,
 .nav-tree a {
   display: inline-flex;
