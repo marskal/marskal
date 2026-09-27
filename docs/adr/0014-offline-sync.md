@@ -205,3 +205,11 @@ not; the rows an import created sync as ordinary entities.
   web app. Shortcuts call the same operations (add to Inbox, add to a project,
   complete, drop, read a project's open tasks).
 - Do not build an offline mode in the browser.
+- Tombstones and change rows are not kept forever. For space, and because a
+  discarded row and its patches still hold what the user wrote, a later purge
+  hard-deletes discarded rows and change-feed rows older than a retention
+  window. A client whose cursor is older than the window gets a fresh
+  snapshot instead of the incremental feed, so the purge never leaves a
+  device with a gap it cannot see. The window, and how it interacts with
+  account deletion and data export, are decided when the purge is built.
+  Not built yet.

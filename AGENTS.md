@@ -253,3 +253,5 @@ Resolve with the user when blocking; then prefer an ADR (or a short note here).
 - [ ] Shared work: open tasks from shared projects on personal open stream vs only under
       shared folder/project views
 - [ ] Sharing roles (viewer/editor) and re-share rules
+- [ ] Tombstone and change-feed retention: purge window, and the snapshot
+      fallback for clients behind it (ADR 0014)
