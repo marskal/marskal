@@ -5,6 +5,7 @@ defmodule MarskalWeb.TagLive do
   alias Marskal.Tags.Tree
   alias Marskal.Tasks
   alias MarskalWeb.TagComponents
+  alias MarskalWeb.TaskList
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -151,6 +152,8 @@ defmodule MarskalWeb.TagLive do
         socket |> put_flash(:info, "That tag was deleted.") |> push_navigate(to: ~p"/")
 
       %{root: root, tree: tree} = outline ->
+        outline = keep_rows(user, socket.assigns[:outline], outline)
+
         socket
         |> assign(:page_title, TagComponents.path_text(root.tag))
         |> assign(:tag, root.tag)
@@ -160,6 +163,56 @@ defmodule MarskalWeb.TagLive do
         |> assign(:task_tags, %{tags: outline.effective, unavailable: outline.unavailable})
     end
   end
+
+  # Tasks that left the outline stay in their groups until the user leaves
+  # the page (see `MarskalWeb.TaskList`). A group they would empty stays too.
+  defp keep_rows(_user, nil, outline), do: outline
+
+  defp keep_rows(user, old, outline) do
+    case TaskList.lingering(user, node_tasks(old.root), node_tasks(outline.root)) do
+      lingering when lingering == %{} ->
+        outline
+
+      lingering ->
+        kept = Tags.annotate(user, Map.values(lingering))
+
+        %{
+          outline
+          | root: merge_node(old.root, outline.root, lingering),
+            effective: Map.merge(outline.effective, kept.tags),
+            unavailable: MapSet.union(outline.unavailable, kept.unavailable)
+        }
+    end
+  end
+
+  defp merge_node(old, node, lingering) do
+    old_children = Map.new(old.children, &{&1.tag.id, &1})
+    ids = MapSet.new(node.children, & &1.tag.id)
+
+    children =
+      Enum.map(node.children, fn child ->
+        case old_children[child.tag.id] do
+          nil -> child
+          old_child -> merge_node(old_child, child, lingering)
+        end
+      end)
+
+    gone =
+      for old_child <- old.children,
+          old_child.tag.id not in ids,
+          kept = merge_node(old_child, %{old_child | tasks: [], children: []}, lingering),
+          node_tasks(kept) != [],
+          into: %{},
+          do: {old_child.tag.id, kept}
+
+    %{
+      node
+      | tasks: TaskList.merge(old.tasks, node.tasks, lingering),
+        children: TaskList.merge(old.children, children, gone, & &1.tag.id)
+    }
+  end
+
+  defp node_tasks(node), do: node.tasks ++ Enum.flat_map(node.children, &node_tasks/1)
 
   defp ancestors(tree, tag) do
     case tag.parent_id && Tree.get(tree, tag.parent_id) do

@@ -49,7 +49,7 @@ defmodule MarskalWeb.InspectorLiveTest do
     assert render(view) =~ "Select a task, project, folder, or tag to edit."
   end
 
-  test "changing state and inbox moves the task out of the current list", %{
+  test "changing state and inbox keeps the row until the view changes", %{
     conn: conn,
     user: user
   } do
@@ -59,7 +59,7 @@ defmodule MarskalWeb.InspectorLiveTest do
     view |> element("#open-tasks li.task-row", "Milk") |> render_click()
     view |> form("#inspector-task", task: %{state: "done"}) |> render_change()
 
-    refute has_element?(view, "#open-tasks", "Milk")
+    assert has_element?(view, "#open-tasks li.is-resolved", "Milk")
     assert has_element?(view, "#inspector-task option[value='done'][selected]")
 
     {:ok, inbox} = Tasks.create_task(user, %{"title" => "Bread"}, command())
@@ -67,8 +67,11 @@ defmodule MarskalWeb.InspectorLiveTest do
     inbox_view |> element("#inbox-tasks li.task-row", "Bread") |> render_click()
     inbox_view |> form("#inspector-task", task: %{inbox: "false"}) |> render_change()
 
-    refute has_element?(inbox_view, "#inbox-tasks", "Bread")
+    assert has_element?(inbox_view, "#inbox-tasks button", "Back to inbox")
     assert Tasks.get_task(user, inbox.id).inbox == false
+
+    {:ok, view, _html} = live(conn, ~p"/")
+    refute has_element?(view, "#open-tasks", "Milk")
   end
 
   test "a direct link opens the task, and someone else's task does not", %{conn: conn, user: user} do

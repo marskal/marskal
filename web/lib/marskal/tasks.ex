@@ -39,6 +39,13 @@ defmodule Marskal.Tasks do
 
   def get_task(%User{} = user, id), do: Repo.get_owned(Task, user, id)
 
+  @doc "The user's tasks with these ids, in no particular order."
+  def get_tasks(%User{} = user, ids) do
+    Task
+    |> where([t], t.user_id == ^user.id and t.id in ^ids)
+    |> Repo.all()
+  end
+
   def create_task(%User{} = user, attrs, command_id) when is_map(attrs) do
     Changes.apply(user, command_id, "task", fn ->
       changeset = Task.create_changeset(%Task{}, user, attrs)
