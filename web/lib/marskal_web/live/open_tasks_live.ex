@@ -1,21 +1,25 @@
 defmodule MarskalWeb.OpenTasksLive do
   use MarskalWeb, :live_view
 
-  import MarskalWeb.TaskList, only: [assign_tasks: 2]
+  import MarskalWeb.TaskList, only: [assign_tasks: 2, reset_tasks: 1]
 
   alias Marskal.Tasks
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :page_title, "Open tasks")}
+    {:ok, socket |> assign(:page_title, "Open tasks") |> assign(:show_unavailable, nil)}
   end
 
   # Tasks made unavailable by tag state (ADR 0005) are hidden unless
   # ?unavailable=1; deferred tasks will join the same toggle (ADR 0006).
+  # Flipping it is a new view, so kept rows go; opening the inspector is not.
   @impl true
   def handle_params(params, _uri, socket) do
+    show = params["unavailable"] == "1"
+
     socket
-    |> assign(:show_unavailable, params["unavailable"] == "1")
+    |> then(&if(&1.assigns.show_unavailable == show, do: &1, else: reset_tasks(&1)))
+    |> assign(:show_unavailable, show)
     |> load_tasks()
     |> then(&{:noreply, &1})
   end

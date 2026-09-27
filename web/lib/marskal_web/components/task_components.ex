@@ -148,6 +148,14 @@ defmodule MarskalWeb.TaskComponents do
           color: var(--muted);
         }
 
+        :scope.is-resolved .title {
+          color: var(--muted);
+        }
+
+        :scope.is-resolved:has(.check--done) .title {
+          text-decoration: line-through;
+        }
+
         .actions {
           display: flex;
           gap: 0.35rem;
@@ -171,7 +179,8 @@ defmodule MarskalWeb.TaskComponents do
         class={[
           "task-row",
           MarskalWeb.Inspector.selected?(:task, task.id, @inspector) && "is-selected",
-          MapSet.member?(@unavailable, task.id) && "is-unavailable"
+          MapSet.member?(@unavailable, task.id) && "is-unavailable",
+          task.state != :to_do && "is-resolved"
         ]}
         data-inspect-type="task"
         data-inspect-id={task.id}
@@ -226,8 +235,11 @@ defmodule MarskalWeb.TaskComponents do
           <MarskalWeb.TagComponents.chips entries={Map.get(@tags, task.id, [])} />
         </div>
         <span :if={:clarify in @actions} class="actions">
-          <button type="button" phx-click="clarify" phx-value-id={task.id}>
+          <button :if={task.inbox} type="button" phx-click="clarify" phx-value-id={task.id}>
             Clarify
+          </button>
+          <button :if={!task.inbox} type="button" phx-click="unclarify" phx-value-id={task.id}>
+            Back to inbox
           </button>
         </span>
       </li>

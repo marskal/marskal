@@ -57,6 +57,23 @@ defmodule MarskalWeb.TagsLiveTest do
       assert has_element?(view, "#tag-tasks-#{wife.id} .mark--inbox")
     end
 
+    test "a done task keeps its row and its group until the view changes", %{
+      conn: conn,
+      user: user
+    } do
+      person = tag!(user, "Person")
+      wife = tag!(user, "Wife", person)
+      flowers = task!(user, "Flowers", tags: [wife])
+
+      {:ok, view, _html} = live(conn, ~p"/tags/#{person.id}")
+      view |> element("#task-#{flowers.id} button.check") |> render_click()
+
+      assert has_element?(view, "#tag-tasks-#{wife.id} li.is-resolved", "Flowers")
+
+      {:ok, view, _html} = live(conn, ~p"/tags/#{person.id}")
+      refute has_element?(view, "#tag-group-#{wife.id}")
+    end
+
     test "putting it on hold marks its tasks unavailable", %{conn: conn, user: user} do
       waiting = tag!(user, "Waiting")
       task = task!(user, "Reply from Bo", tags: [waiting])
