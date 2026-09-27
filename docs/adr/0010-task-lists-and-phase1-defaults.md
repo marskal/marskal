@@ -49,6 +49,8 @@ view of open work, not a bucket you file into.
 - **Default home (Phase 1+):** **Open tasks** — `state = to_do` and `inbox = false`
   (and, when dates exist, not still-deferred per ADR 0006).
 - **Inbox** is a separate view for unclarified items (`inbox = true`, typically open).
+- Inbox gates only the open stream. **Project and tag views** show a matching
+  to-do task even while it is still in the inbox, marked as such.
 - There is no first-class “Next” list; the open stream is the engage view.
 - **Waiting** / **Someday** (and similar): **tags** when tags ship — not schema enums.
   Indefinite **Defer** remains the visibility pause (hide until cleared), distinct from

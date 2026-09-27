@@ -115,6 +115,12 @@ Project folders (nested) → Project (flat) → Tasks (nested outliner)
 
 - Nested tags on **tasks** and **projects**.
 - **Effective task tags** = task tags ∪ **project tags** (inheritance at read/filter time).
+  Never from a parent task.
+- A tag matches its subtree. The tag view is an outline: the tag's own tasks, then one
+  group per child tag.
+- Tag states **Active | On Hold | Dropped**. An on-hold effective tag, or
+  only dropped ones, makes a task **unavailable**. On Hold applies to that tag only;
+  Dropped covers its subtree.
 - No `ltree`; `parent_id` + `parent_path text[]` (see ADR).
 
 ---
@@ -205,8 +211,16 @@ The repository root is the product, not the web app (ADR 0015).
 
 ### Tags (Phase 2+)
 
-- Per ADR 0005: `name`, `parent_id`, `parent_path text[]`; task↔tag and project↔tag;
-  effective task tags include project tags; no `ltree`; HTML breadcrumbs; Unicode/emoji OK.
+- Per ADR 0005: `name` (citext, unique per parent among live tags), `parent_id`,
+  `parent_path text[]`, `state`, `rank`, `merged_into_id`, `discarded_at`; no `ltree`;
+  HTML breadcrumbs; Unicode/emoji OK, NFC.
+- `task_tags` / `project_tags` are entities with owner and `discarded_at`. Their id is
+  UUIDv5 of the pair; untag and re-tag toggle `discarded_at` on that row.
+- Subtree filters expand descendant ids in app code, not via `parent_path`.
+- Offline duplicate tags merge on sync via `merged_into_id` (ADR 0014).
+- Any character may be in a tag name, `/` included. Show paths as segments with a
+  `›` chevron element between them. Autocomplete matches a query both as a literal
+  name and as a path split on `/ : › > \`.
 
 ### Hosting
 
