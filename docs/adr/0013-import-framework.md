@@ -15,8 +15,8 @@ unapplied for 24 hours.
 Users will migrate from OmniFocus, Todoist, and similar apps. The first product
 surface is **upload a backup file**. Later we want **“Sign in to Todoist”** (OAuth)
 without a second pipeline. Competing formats differ; Marskal’s model does not
-(ADR 0008–0010). Tags, dates, outliner, and recurrence are not in the schema yet
-(ADR 0005–0007, 0009).
+(ADR 0008–0010). Dates, outliner, and recurrence are not in the schema yet
+(ADR 0006, 0007, 0009). Tags arrive in Phase 2 (ADR 0005).
 
 ## Decision
 
@@ -28,8 +28,11 @@ without a second pipeline. Competing formats differ; Marskal’s model does not
 - **`import_batches`** (per user, source, channel, status, stats) own the upload.
   **`import_items`** map `(user, source, source_id)` → Marskal rows (explicit FKs,
   not polymorphic). Re-import **skips** existing source ids (does not overwrite).
-- Unmapped Phase 2/3 fields (tags, defer/planned/due, parent, repeat, flagged)
-  go in **`import_items.extras` jsonb**, not notes.
+- Unmapped Phase 2/3 fields (defer/planned/due, parent, repeat, flagged) go in
+  **`import_items.extras` jsonb**, not notes.
+- When a field gains a Marskal home, the adapter maps it and it leaves
+  `extras`. Tags do so with the tags slice: the OmniFocus adapter parses tags
+  and contexts into the graph as their own items (ADR 0005).
 - First adapter: **OmniFocus `.ofocus` / `.ofocus-backup`** (zip-of-zips XML,
   replay master + transactions). Flatten nested actions until `tasks.parent_id`
   exists.
@@ -37,5 +40,9 @@ without a second pipeline. Competing formats differ; Marskal’s model does not
 ## Consequences
 
 - New sources add an adapter + sniff, not new controllers.
-- Applying dates/tags later is a job over `extras`, not a re-parse requirement.
+- `extras` keeps unmapped values for inspection, not for backfill. The payload
+  is gone after apply, so a value is only as complete as what the adapter
+  stored. OmniFocus tag definitions, for one, were never stored. Before
+  launch, a field that gains a home is picked up by importing again, not by a
+  backfill job.
 - Jobs run through Active Job (async in development; Solid Queue in production).

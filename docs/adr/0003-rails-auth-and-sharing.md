@@ -67,6 +67,11 @@ considered per-project memberships, org tenancy, and no-login shortcuts. With
 - Whether open tasks from shared projects appear on each member’s personal open stream
   or only under shared folder/project views (still open).
 - Exact roles and who may re-share or invite.
+- Tags on shared folders. Tags are personal trees, and a tag link belongs to the
+  tagged task's owner (ADR 0005), so a member cannot tag a task they do not own.
+  Decide whether members see the owner's tags, whether they can have their own,
+  and how tag state (On Hold / Dropped) affects availability for someone who
+  does not own the tag.
 
 ## Consequences
 

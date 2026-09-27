@@ -72,7 +72,10 @@ The server merges **per field**, in the order it receives commands:
 - Different fields both survive (check-off and rename).
 - The same field: the later command wins.
 - **Discard wins.** Once `discarded_at` is set, later patches to that row are
-  ignored. There is no silent revive.
+  ignored. There is no silent revive. The exception is a **tag link row**
+  (task↔tag, project↔tag): whether the link exists is its only content, so
+  `discarded_at` there is an ordinary field and the later command wins
+  (ADR 0005).
 - **`resolved_at` is first-write.** The first accepted transition of a task to
   Done or Dropped fixes it. A later resolve does not move it.
 
@@ -115,12 +118,32 @@ gets a snapshot, then the incremental feed.
 - Synced rows are not hard-deleted. **Done** and **Dropped** stay, as already
   required. A real removal sets `discarded_at` so the feed can carry the
   tombstone. Join rows (task↔tag, project↔tag) have their own UUID and their
-  own tombstone.
+  own tombstone. That UUID is v5 of the pair (ADR 0005), so two devices
+  tagging the same task offline produce one row.
 - **Sibling order is a fractional rank** (a string the client can place
   strictly between the two neighbors it already has). The server does not
   renumber siblings on an ordinary insert. A rebalance, if one is ever needed,
   is itself a set of synced rank patches. The same rule applies if projects or
   folders later gain manual order.
+
+### Duplicate tags from offline devices
+
+Tag names are unique per parent (ADR 0005). Two devices offline can each
+create `Waiting` at the root. The server keeps the one it received first. When
+it receives the second:
+
+- It stores the second tag already discarded, with `merged_into_id` pointing at
+  the first, and appends that to the feed.
+- It rewrites that tag's link rows onto the first tag. Each rewritten link
+  takes the v5 id of the new pair, and the old link row is discarded.
+- It moves the second tag's children under the first, merging again where a
+  child name clashes.
+- A later command naming the merged tag, as a parent or in a link, is applied
+  to the tag it was merged into.
+
+A client that pulls a tag with `merged_into_id` repoints its local references
+the same way and drops its own copy. A rename or reparent that clashes arrives
+as the same kind of merge.
 
 ### Derived data is not synced
 
@@ -182,7 +205,8 @@ not; the rows an import created sync as ordinary entities.
   phone does, or the first native client has nothing trustworthy to pull.
 - Schema grows a change feed (`bigint GENERATED ALWAYS AS IDENTITY` cursor,
   unique command id),
-  `discarded_at` on synced domain tables, a fractional rank on task siblings,
+  `discarded_at` on synced domain tables (tags and their link rows first, with
+  the tags slice), a fractional rank on task siblings,
   and `users.timezone` (not null, default `Europe/Copenhagen`).
 - `parent_path` stays as a cache maintained in application code. It is not a
   column the client may correct.
