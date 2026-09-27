@@ -48,6 +48,23 @@ defmodule MarskalWeb.NavComponents do
       </ul>
 
       <.live_component module={MarskalWeb.NewFolderForm} id="new-root-folder" user={@user} />
+
+      <h2 class="sidebar-heading">Tags</h2>
+      <ul class="nav-tree" id="sidebar-tags">
+        <MarskalWeb.NavComponents.tag
+          :for={tag <- Marskal.ProjectNav.tags_in(@nav, nil)}
+          nav={@nav}
+          tag={tag}
+          current_id={@current_id}
+          inspector={@inspector}
+        />
+        <li>
+          <.link navigate={~p"/tags/untagged"} class={link_class(@current_nav, :untagged)}>
+            <Lucideicons.tag class="icon" /> Untagged
+          </.link>
+        </li>
+      </ul>
+      <.live_component module={MarskalWeb.NewTagForm} id="new-root-tag" user={@user} />
     </aside>
     """
   end
@@ -86,14 +103,38 @@ defmodule MarskalWeb.NavComponents do
     """
   end
 
-  attr :type, :atom, required: true, values: [:project, :folder]
+  attr :nav, :any, required: true
+  attr :tag, :any, required: true
+  attr :current_id, :string, default: nil
+  attr :inspector, :any, default: nil
+
+  def tag(assigns) do
+    ~H"""
+    <li>
+      <.record_link type={:tag} id={@tag.id} current_id={@current_id} inspector={@inspector}>
+        <Lucideicons.tag class="icon" /> {@tag.name}
+      </.record_link>
+      <ul :if={Marskal.ProjectNav.tags_in(@nav, @tag.id) != []}>
+        <MarskalWeb.NavComponents.tag
+          :for={child <- Marskal.ProjectNav.tags_in(@nav, @tag.id)}
+          nav={@nav}
+          tag={child}
+          current_id={@current_id}
+          inspector={@inspector}
+        />
+      </ul>
+    </li>
+    """
+  end
+
+  attr :type, :atom, required: true, values: [:project, :folder, :tag]
   attr :id, :string, required: true
   attr :current_id, :string, default: nil
   attr :inspector, :any, default: nil
   slot :inner_block, required: true
 
   @doc """
-  A project or folder row. Opens the record's page with the inspector on it.
+  A project, folder, or tag row. Opens the record's page with the inspector on it.
   On that page already, a patch only moves the inspector.
   """
   def record_link(assigns) do
@@ -124,6 +165,7 @@ defmodule MarskalWeb.NavComponents do
   @doc "The record's page, with the inspector open on it."
   def record_path(:project, id), do: ~p"/projects/#{id}?#{[project: id]}"
   def record_path(:folder, id), do: ~p"/folders/#{id}?#{[folder: id]}"
+  def record_path(:tag, id), do: ~p"/tags/#{id}?#{[tag: id]}"
 
   defp link_class(current, name) when current == name, do: "is-current"
   defp link_class(_current, _name), do: nil

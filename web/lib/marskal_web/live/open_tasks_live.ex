@@ -1,6 +1,8 @@
 defmodule MarskalWeb.OpenTasksLive do
   use MarskalWeb, :live_view
 
+  import MarskalWeb.TaskList, only: [assign_tasks: 2]
+
   alias Marskal.Tasks
 
   @impl true
@@ -39,6 +41,8 @@ defmodule MarskalWeb.OpenTasksLive do
       <MarskalWeb.TaskComponents.list
         id="open-tasks"
         tasks={@tasks}
+        tags={@task_tags.tags}
+        unavailable={@task_tags.unavailable}
         empty="No open tasks."
         actions={[:complete]}
         inspector={@inspector}
@@ -73,6 +77,6 @@ defmodule MarskalWeb.OpenTasksLive do
 
   defp load_tasks(socket) do
     user = socket.assigns.current_scope.user
-    assign(socket, :tasks, Tasks.list_open(user, unavailable: socket.assigns.show_unavailable))
+    assign_tasks(socket, Tasks.list_open(user, unavailable: socket.assigns.show_unavailable))
   end
 end

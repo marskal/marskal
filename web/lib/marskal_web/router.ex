@@ -61,6 +61,8 @@ defmodule MarskalWeb.Router do
       live "/inbox", InboxLive, :index
       live "/projects/:id", ProjectLive, :show
       live "/folders/:id", FolderLive, :show
+      live "/tags/untagged", UntaggedLive, :index
+      live "/tags/:id", TagLive, :show
       live "/tasks/:id", TaskLive, :show
       live "/users/settings", UserLive.Settings, :edit
       live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email

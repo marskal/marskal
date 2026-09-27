@@ -2,9 +2,12 @@ defmodule Marskal.ProjectNav do
   @moduledoc """
   Sidebar tree. Dropped folders and done or dropped projects stay out.
   A project filed under a dropped ancestor is not hoisted into the list.
+  Tags come as a `Marskal.Tags.Tree`; dropped subtrees are hidden.
   """
 
-  defstruct [:folders_by_parent, :projects_by_folder]
+  alias Marskal.Tags.Tree
+
+  defstruct [:folders_by_parent, :projects_by_folder, :tags]
 
   def build(user) do
     folders = Marskal.ProjectFolders.list_active(user)
@@ -12,8 +15,14 @@ defmodule Marskal.ProjectNav do
 
     %__MODULE__{
       folders_by_parent: Enum.group_by(folders, & &1.parent_id),
-      projects_by_folder: Enum.group_by(projects, & &1.project_folder_id)
+      projects_by_folder: Enum.group_by(projects, & &1.project_folder_id),
+      tags: Marskal.Tags.tree(user)
     }
+  end
+
+  @doc "Visible child tags of a tag, or the visible roots for `nil`."
+  def tags_in(%__MODULE__{tags: tree}, parent_id) do
+    tree |> Tree.children(parent_id) |> Enum.filter(&Tree.visible?(tree, &1.id))
   end
 
   def empty?(%__MODULE__{} = nav) do

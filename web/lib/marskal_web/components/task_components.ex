@@ -7,6 +7,13 @@ defmodule MarskalWeb.TaskComponents do
   attr :actions, :list, required: true
   attr :inspector, :any, default: nil
 
+  attr :tags, :map,
+    default: %{},
+    doc: "effective tags by task id, from `Marskal.Tags.annotate/2`"
+
+  attr :unavailable, :any, default: MapSet.new(), doc: "ids of tasks tag state blocks"
+  attr :mark_inbox, :boolean, default: false, doc: "label tasks still in the inbox"
+
   def list(assigns) do
     ~H"""
     <style :type={MarskalWeb.ColocatedCSS}>
@@ -122,6 +129,25 @@ defmodule MarskalWeb.TaskComponents do
           font-size: 0.9rem;
         }
 
+        .marks {
+          display: inline-flex;
+          gap: 0.35rem;
+          margin-inline-start: 0.5rem;
+          font-size: 0.75rem;
+          color: var(--muted);
+          vertical-align: middle;
+        }
+
+        .mark {
+          padding: 0 0.4rem;
+          border: 1px solid var(--border);
+          border-radius: 4px;
+        }
+
+        :scope.is-unavailable .title {
+          color: var(--muted);
+        }
+
         .actions {
           display: flex;
           gap: 0.35rem;
@@ -144,7 +170,8 @@ defmodule MarskalWeb.TaskComponents do
         id={"task-#{task.id}"}
         class={[
           "task-row",
-          MarskalWeb.Inspector.selected?(:task, task.id, @inspector) && "is-selected"
+          MarskalWeb.Inspector.selected?(:task, task.id, @inspector) && "is-selected",
+          MapSet.member?(@unavailable, task.id) && "is-unavailable"
         ]}
         data-inspect-type="task"
         data-inspect-id={task.id}
@@ -186,7 +213,17 @@ defmodule MarskalWeb.TaskComponents do
           >
             {task.title}
           </button>
+          <span
+            :if={MapSet.member?(@unavailable, task.id) or (@mark_inbox and task.inbox)}
+            class="marks"
+          >
+            <span :if={@mark_inbox and task.inbox} class="mark mark--inbox">Inbox</span>
+            <span :if={MapSet.member?(@unavailable, task.id)} class="mark mark--unavailable">
+              Unavailable
+            </span>
+          </span>
           <MarskalWeb.FormattedNotes.block text={task.notes} />
+          <MarskalWeb.TagComponents.chips entries={Map.get(@tags, task.id, [])} />
         </div>
         <span :if={:clarify in @actions} class="actions">
           <button type="button" phx-click="clarify" phx-value-id={task.id}>

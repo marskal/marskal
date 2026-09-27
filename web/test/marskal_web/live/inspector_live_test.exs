@@ -15,7 +15,7 @@ defmodule MarskalWeb.InspectorLiveTest do
 
   test "the open page shows an empty inspector", %{conn: conn} do
     {:ok, _view, html} = live(conn, ~p"/")
-    assert html =~ "Select a task, project, or folder to edit."
+    assert html =~ "Select a task, project, folder, or tag to edit."
     assert html =~ "app-inspector"
   end
 
@@ -46,7 +46,7 @@ defmodule MarskalWeb.InspectorLiveTest do
 
     refute has_element?(view, "#inspector-task")
     refute has_element?(view, "#open-tasks li.is-selected")
-    assert render(view) =~ "Select a task, project, or folder to edit."
+    assert render(view) =~ "Select a task, project, folder, or tag to edit."
   end
 
   test "changing state and inbox moves the task out of the current list", %{
