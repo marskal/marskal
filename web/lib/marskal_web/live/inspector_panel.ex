@@ -115,7 +115,10 @@ defmodule MarskalWeb.InspectorPanel do
           color: var(--muted);
         }
 
-        .input {
+        /* input.input matches app.css input[type="text"] on specificity, so the
+           scoped rule wins. */
+        .input,
+        input.input {
           width: 100%;
           padding: 0.45rem 0.6rem;
           border: 1px solid var(--border);
