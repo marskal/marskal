@@ -31,6 +31,25 @@ defmodule Marskal.Rank do
 
   Only the moved row gets a new rank; its neighbors keep theirs, so a move
   is one field patch.
+
+  ## Why not a float
+
+  Each insert into the same gap halves it. A double has 52 bits of
+  precision, so about 50 inserts at one spot, such as moving tasks to the
+  top again and again, make the midpoint equal a neighbor. Then the whole
+  sibling list needs new ranks. Every renumbered row is a patch that syncs
+  to every device, and two offline devices renumbering the same list
+  conflict on rows neither user moved (ADR 0014). A string can always grow
+  one more digit, so every move stays one patch.
+
+  Clients must place a rank offline and agree with the server. String
+  comparison is the same everywhere; floats can round differently on the
+  way through JSON and each client's storage. Postgres `numeric` has the
+  precision, but client decimal types stop at about 38 digits.
+
+  The cost is length. Each digit adds about 6 bits of room: 1,000 inserts
+  into one gap make a rank of roughly 170 characters. Ordinary reordering
+  stays at one to three.
   """
 
   @digits ~c"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"

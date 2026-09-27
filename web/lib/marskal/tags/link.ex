@@ -7,6 +7,9 @@ defmodule Marskal.Tags.Link do
   tagging again clears it.
   """
 
+  # A made-up constant fixed by ADR 0005 ("0005" is the ADR number). Every
+  # client hashes with it, so changing it would rename every link row and
+  # duplicate links across devices.
   @namespace "a5c0ffee-0005-5000-8000-000000000005"
 
   @doc "The link id for `kind` (`:task` or `:project`), owner id, and tag id."
