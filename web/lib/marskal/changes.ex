@@ -13,6 +13,9 @@ defmodule Marskal.Changes do
   alias Marskal.ProjectFolders.ProjectFolder
   alias Marskal.Projects.Project
   alias Marskal.Repo
+  alias Marskal.Tags.ProjectTag
+  alias Marskal.Tags.Tag
+  alias Marskal.Tags.TaskTag
   alias Marskal.Tasks.Task
 
   def subscribe(user) do
@@ -91,6 +94,9 @@ defmodule Marskal.Changes do
   defp fetch(user, "task", id), do: Repo.get_by(Task, id: id, user_id: user.id)
   defp fetch(user, "project", id), do: Repo.get_by(Project, id: id, user_id: user.id)
   defp fetch(user, "project_folder", id), do: Repo.get_by(ProjectFolder, id: id, user_id: user.id)
+  defp fetch(user, "tag", id), do: Repo.get_by(Tag, id: id, user_id: user.id)
+  defp fetch(user, "task_tag", id), do: Repo.get_by(TaskTag, id: id, user_id: user.id)
+  defp fetch(user, "project_tag", id), do: Repo.get_by(ProjectTag, id: id, user_id: user.id)
   defp fetch(_user, _type, _id), do: nil
 
   defp validate_command_id(command_id) do
