@@ -428,7 +428,9 @@ defmodule Marskal.Imports.OmnifocusAdapter do
         []
       else
         {project_id, parent_id} = resolve_project(row, tasks, project_ids)
-        inbox = row["inbox"] == true or is_nil(project_id)
+        # A task in a project is in that project, even if the backup also
+        # flags it inbox; one without a project is in the inbox (ADR 0017).
+        inbox = is_nil(project_id)
 
         [
           %TaskNode{

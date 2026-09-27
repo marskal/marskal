@@ -23,6 +23,7 @@ This file is **short and actionable**. Rationale and history live in
 | UUIDv7 primary keys | [0011](docs/adr/0011-uuidv7-primary-keys.md) |
 | ViewComponent + `@scope` CSS | [0012](docs/adr/0012-viewcomponent-scoped-css.md) |
 | Web stack (Phoenix, at the port) | [0016](docs/adr/0016-elixir-phoenix-web.md) |
+| Inbox as a location | [0017](docs/adr/0017-inbox-location.md) |
 | Import framework | [0013](docs/adr/0013-import-framework.md) |
 | Sync, offline clients | [0014](docs/adr/0014-offline-sync.md) |
 | Repository layout | [0015](docs/adr/0015-repository-layout.md) |
@@ -34,7 +35,7 @@ This file is **short and actionable**. Rationale and history live in
 | Term | Meaning |
 |------|---------|
 | **Task** | Code/model name for captured work (`tasks` table) — ADR 0010 |
-| **Inbox** | Unclarified tasks (`inbox = true`) — only special placement flag |
+| **Inbox** | A location beside **No project** and each project (`inbox = true`, no project) — ADR 0017 |
 | **Open tasks** | Default engage stream: `state = to_do`, `inbox = false` (not deferred when dates exist) |
 | **Project** | Outcome needing more than one action; **not** nestable under other projects |
 | **Project folder** | Nestable container for projects; **name** only + **Active/Dropped**; **share unit** later — ADR 0003, 0009 |
@@ -51,7 +52,7 @@ This file is **short and actionable**. Rationale and history live in
 ### Soft-GTD flow
 
 1. Capture → Inbox (`inbox = true`)  
-2. Clarify → leave inbox (`inbox = false`); drop, tag, project, dates as needed (later phases)  
+2. Move → a project or **No project** (leaves the inbox); tag, drop, dates as needed  
 3. Organize → projects, dates, tags (tags/projects from Phase 2)  
 4. Reflect → weekly review support  
 5. Engage → open stream + plan + tag/project filters + dues  
@@ -66,8 +67,10 @@ use **tags** (ADR 0005). Detailed task audit history is a separate future concer
 **Tasks and projects** share three states: **To-Do** | **Done** | **Dropped**.  
 No On Hold, no Skip (**Dropped**). Pause with **Defer** (until or **indefinite**).
 
-**Inbox** (ADR 0010): boolean on tasks, orthogonal to state. New captures:
-`inbox=true`, `state=to_do`. Clarify → `inbox=false`. **No** `list` column.
+**Inbox** (ADR 0010, 0017): a task's location is Inbox | No project | a
+project; `CHECK (NOT inbox OR project_id IS NULL)`. One picker moves a task,
+and a move patches `inbox` and `project_id` together. Tags do not affect it.
+New captures: `inbox=true`, `state=to_do`. No Clarify action. **No** `list` column.
 Default home: **Open tasks** stream. Timezone is stored per user, default
 **Europe/Copenhagen** (ADR 0014).
 
@@ -132,7 +135,7 @@ Build in order; keep each shippable.
 | Phase | Deliver |
 |-------|---------|
 | **0 Foundation** | Rails + devenv Postgres; layout; **Rails auth** (`generate authentication`); `user_id` on personal models |
-| **1 Capture & clarify** | Task model; **inbox** boolean; **open tasks** stream; states (To-Do / Done / Dropped) |
+| **1 Capture & inbox** | Task model; **inbox** boolean; **open tasks** stream; states (To-Do / Done / Dropped) |
 | **2 Projects, planning, tags** | Projects + **folders**; **task outliner**; dates/tags/inheritance; agenda; Waiting/Someday as tags |
 | **3 Recurrence** | ADR 0007: mode, anchor, interval, limits, end date/count; Done/Dropped spawn rules |
 | **4 Review & polish** | Weekly review; tag UX polish; empty states; keyboard-friendly capture |

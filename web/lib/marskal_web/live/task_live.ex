@@ -45,21 +45,16 @@ defmodule MarskalWeb.TaskLive do
           rows="4"
           placeholder="Markdown is fine…"
         >{@form[:notes].value}</textarea>
-        <label for={@form[:project_id].id}>Project</label>
-        <select name={@form[:project_id].name} id={@form[:project_id].id}>
-          <option value="">None</option>
-          <option
-            :for={project <- @projects}
-            value={project.id}
-            selected={project.id == @task.project_id}
-          >
-            {project.title}
-          </option>
-        </select>
+        <label for="task-location">Location</label>
+        <MarskalWeb.TaskComponents.location_select
+          id="task-location"
+          name="task[location]"
+          task={@task}
+          projects={@projects}
+        />
         <button type="submit">Save</button>
       </.form>
       <p class="actions">
-        <button :if={@task.inbox} type="button" phx-click="clarify">Clarify</button>
         <button :if={@task.state == :to_do} type="button" phx-click="complete">Done</button>
         <button :if={@task.state == :to_do} type="button" phx-click="drop">Drop</button>
         <button :if={@task.state != :to_do} type="button" phx-click="reopen">Reopen</button>
@@ -89,7 +84,12 @@ defmodule MarskalWeb.TaskLive do
   @impl true
   def handle_event("save", %{"task" => params}, socket) do
     user = socket.assigns.current_scope.user
-    attrs = Map.take(params, ["title", "notes", "project_id"])
+    location = MarskalWeb.TaskComponents.parse_location(params["location"] || "none")
+
+    attrs =
+      params
+      |> Map.take(["title", "notes"])
+      |> Map.merge(Map.new(Tasks.location_attrs(location), fn {k, v} -> {to_string(k), v} end))
 
     case Tasks.update_task(user, socket.assigns.task.id, attrs, Ecto.UUID.generate()) do
       {:ok, task} ->
@@ -103,7 +103,6 @@ defmodule MarskalWeb.TaskLive do
     end
   end
 
-  def handle_event("clarify", _params, socket), do: act(socket, &Tasks.clarify_task/3)
   def handle_event("complete", _params, socket), do: act(socket, &Tasks.complete_task/3)
   def handle_event("drop", _params, socket), do: act(socket, &Tasks.drop_task/3)
   def handle_event("reopen", _params, socket), do: act(socket, &Tasks.reopen_task/3)
@@ -127,8 +126,7 @@ defmodule MarskalWeb.TaskLive do
       to_form(
         %{
           "title" => task.title,
-          "notes" => task.notes,
-          "project_id" => task.project_id
+          "notes" => task.notes
         },
         as: "task"
       )

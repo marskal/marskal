@@ -33,6 +33,7 @@ defmodule Marskal.Tasks.Task do
     |> validate_length(:title, max: @title_max)
     |> put_change(:user_id, user.id)
     |> default_inbox()
+    |> put_location()
     |> assoc_constraint(:user)
     |> owned_project_constraint()
   end
@@ -43,14 +44,60 @@ defmodule Marskal.Tasks.Task do
     |> cast(attrs, [:title, :notes, :project_id, :inbox, :state])
     |> validate_required([:title, :inbox, :state])
     |> validate_length(:title, max: @title_max)
+    |> put_location()
     |> owned_project_constraint()
   end
 
-  # A blank inbox value from a form means the default, not NULL.
+  # A new task goes to the inbox unless it is given a project. A blank inbox
+  # value from a form means that default, not NULL.
   defp default_inbox(changeset) do
-    if get_field(changeset, :inbox) == nil,
-      do: put_change(changeset, :inbox, true),
-      else: changeset
+    case fetch_change(changeset, :inbox) do
+      {:ok, inbox} when is_boolean(inbox) ->
+        changeset
+
+      _ ->
+        put_change(changeset, :inbox, is_nil(get_field(changeset, :project_id)))
+    end
+  end
+
+  # Inbox and project are one location (ADR 0017): the inbox, a project, or
+  # neither. Choosing a project leaves the inbox; choosing the inbox leaves
+  # the project. A move patches both fields, so two offline moves merge as
+  # one field and never pair a project with the inbox.
+  defp put_location(changeset) do
+    inbox = fetch_change(changeset, :inbox)
+    project = fetch_change(changeset, :project_id)
+
+    cond do
+      inbox == :error and project == :error ->
+        changeset
+
+      match?({:ok, id} when is_binary(id), project) and inbox_requested?(changeset) ->
+        add_error(changeset, :inbox, "cannot hold a task that has a project")
+
+      match?({:ok, id} when is_binary(id), project) ->
+        move(changeset, false, get_field(changeset, :project_id))
+
+      inbox == {:ok, true} ->
+        move(changeset, true, nil)
+
+      true ->
+        move(changeset, get_field(changeset, :inbox), get_field(changeset, :project_id))
+    end
+    |> check_constraint(:inbox,
+      name: :tasks_inbox_no_project,
+      message: "cannot hold a task that has a project"
+    )
+  end
+
+  # Asked for, even if the task is already there, so the change drops it.
+  defp inbox_requested?(changeset),
+    do: Map.get(changeset.params, "inbox") in [true, "true"]
+
+  defp move(changeset, inbox, project_id) do
+    changeset
+    |> force_change(:inbox, inbox)
+    |> force_change(:project_id, project_id)
   end
 
   # tasks_project_id_fkey is (project_id, user_id), so another user's project

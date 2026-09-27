@@ -10,7 +10,7 @@ states, uniqueness, and link rows.
 Classic GTD uses **contexts** (`@home`, `@errands`, …) and fixed lists (next, waiting,
 someday, …). We want GTD-inspired **flow** without rigid list enums. Organization
 should be flexible (people, duration, place, energy, etc.), support **Unicode and
-emoji**, and allow hierarchy such as `Person` → `Wife`, `Location` → `Home`.
+emoji**, and allow hierarchy such as `Person` → `Wife`, `Place` → `Home`.
 
 Alternatives considered for hierarchy storage:
 
@@ -25,15 +25,15 @@ Alternatives considered for hierarchy storage:
 
 ### Product
 
-- **Soft-GTD:** capture → clarify → organize → reflect → engage — without enforcing
+- **Soft-GTD:** capture → move out of the inbox → organize → reflect → engage — without enforcing
   full GTD dogma or a multi-list placement enum (ADR 0010).
-- **Inbox** is a boolean on tasks (unclarified). **Open tasks** (not inbox, to-do) is
+- **Inbox** is a location beside projects (ADR 0017). **Open tasks** (not inbox, to-do) is
   the default engage stream. **Projects**, **tags**, and **dates** build other views.
 - **No** first-class Context entity or hardcoded context / list vocabulary in schema.
 - **Waiting**, **Someday**, and similar are **user tag conventions** (not `list` enums).
 - **Nested tags** only; many tags per entity; per-user tag trees.
 - Example segments (user convention, not schema enums): `Person`/`Wife`,
-  `Duration`/`Short`, `Location`/`Home`, and optionally root tags like `Waiting` /
+  `Duration`/`Short`, `Place`/`Home`, and optionally root tags like `Waiting` /
   `Someday`.
 - Tags apply to **tasks** and **projects**.
 - **Tags ship in Phase 2** (with projects & planning), not Phase 1.

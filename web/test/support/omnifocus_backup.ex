@@ -44,6 +44,13 @@ defmodule OmnifocusBackup do
       <added>2024-01-05T00:00:00.000Z</added>
       <rank>6</rank>
     </task>
+    <task id="taskBoth0000">
+      <inbox/>
+      <task idref="projSite0000"/>
+      <name>Order business cards</name>
+      <added>2024-01-06T00:00:00.000Z</added>
+      <rank>7</rank>
+    </task>
   </omnifocus>
   """
 

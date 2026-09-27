@@ -118,7 +118,7 @@ defmodule Marskal.DevSeed do
     {:ok, task} =
       Marskal.Tasks.create_task(
         user,
-        %{"title" => title, "project_id" => project_id, "inbox" => false},
+        %{"title" => title, "project_id" => project_id},
         Ecto.UUID.generate()
       )
 
@@ -139,11 +139,11 @@ defmodule Marskal.DevSeed do
           task
 
         :open ->
-          {:ok, task} = Marskal.Tasks.clarify_task(user, task.id, Ecto.UUID.generate())
+          {:ok, task} = Marskal.Tasks.move_task(user, task.id, :none, Ecto.UUID.generate())
           task
 
         :done ->
-          {:ok, task} = Marskal.Tasks.clarify_task(user, task.id, Ecto.UUID.generate())
+          {:ok, task} = Marskal.Tasks.move_task(user, task.id, :none, Ecto.UUID.generate())
           {:ok, task} = Marskal.Tasks.complete_task(user, task.id, Ecto.UUID.generate())
           task
 

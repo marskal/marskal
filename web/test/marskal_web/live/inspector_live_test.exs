@@ -49,7 +49,7 @@ defmodule MarskalWeb.InspectorLiveTest do
     assert render(view) =~ "Select a task, project, folder, or tag to edit."
   end
 
-  test "changing state and inbox keeps the row until the view changes", %{
+  test "a done task keeps its row; a moved one leaves at once", %{
     conn: conn,
     user: user
   } do
@@ -65,9 +65,9 @@ defmodule MarskalWeb.InspectorLiveTest do
     {:ok, inbox} = Tasks.create_task(user, %{"title" => "Bread"}, command())
     {:ok, inbox_view, _html} = live(conn, ~p"/inbox")
     inbox_view |> element("#inbox-tasks li.task-row", "Bread") |> render_click()
-    inbox_view |> form("#inspector-task", task: %{inbox: "false"}) |> render_change()
+    inbox_view |> form("#inspector-task", task: %{location: "none"}) |> render_change()
 
-    assert has_element?(inbox_view, "#inbox-tasks button", "Back to inbox")
+    refute has_element?(inbox_view, "#inbox-tasks", "Bread")
     assert Tasks.get_task(user, inbox.id).inbox == false
 
     {:ok, view, _html} = live(conn, ~p"/")
@@ -236,7 +236,7 @@ defmodule MarskalWeb.InspectorLiveTest do
     assert has_element?(view, "#open-tasks", "Oat milk")
     assert has_element?(view, "#inspector-task-title[value='Oat milk']")
     assert has_element?(view, "#sidebar", "Launch")
-    assert has_element?(view, "#inspector-task-project option", "Launch")
+    assert has_element?(view, "#inspector-task-location option", "Launch")
   end
 
   defp command, do: Ecto.UUID.generate()

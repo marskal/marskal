@@ -313,13 +313,6 @@ defmodule Marskal.TagsTest do
       assert ids(Tags.untagged_tasks(user)) == [inbox.id]
     end
 
-    test "a project view includes its inbox tasks", %{user: user} do
-      {:ok, project} = Projects.create_project(user, %{"title" => "Garden"}, command())
-      task = task!(user, project_id: project.id, inbox: true)
-
-      assert ids(Tasks.list_project_tasks(user, project.id)) == [task.id]
-    end
-
     test "outlines stay inside one user", %{user: user, other: other} do
       theirs = tag!(other, "Theirs")
       assert Tags.outline(user, theirs.id) == nil

@@ -29,7 +29,9 @@ defmodule MarskalWeb.InboxLive do
       change_version={assigns[:change_version] || 0}
     >
       <h1>Inbox</h1>
-      <p class="lede">Unclarified tasks. Clarify one to put it on the open list.</p>
+      <p class="lede">
+        New captures. Move one to a project, or to no project, to put it on the open list.
+      </p>
 
       <.form for={@form} id="new-task" phx-submit="create" class="capture">
         <input type="hidden" name="command_id" value={@command_id} />
@@ -52,7 +54,7 @@ defmodule MarskalWeb.InboxLive do
         tags={@task_tags.tags}
         unavailable={@task_tags.unavailable}
         empty="Nothing in the inbox."
-        actions={[:clarify, :complete]}
+        actions={[:complete]}
         inspector={@inspector}
       />
     </Layouts.app>
@@ -84,11 +86,6 @@ defmodule MarskalWeb.InboxLive do
         {:noreply, put_flash(socket, :error, "Could not add task.")}
     end
   end
-
-  def handle_event("clarify", %{"id" => id}, socket), do: act(socket, id, &Tasks.clarify_task/3)
-
-  def handle_event("unclarify", %{"id" => id}, socket),
-    do: act(socket, id, &Tasks.set_inbox(&1, &2, true, &3))
 
   def handle_event("complete", %{"id" => id}, socket), do: act(socket, id, &Tasks.complete_task/3)
   def handle_event("reopen", %{"id" => id}, socket), do: act(socket, id, &Tasks.reopen_task/3)

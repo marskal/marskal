@@ -3,10 +3,11 @@ defmodule MarskalWeb.TaskList do
   Assigns a task list with what `MarskalWeb.TaskComponents.list/1` shows
   about its tags: effective tags and unavailable ids (ADR 0005).
 
-  A task that leaves the list while the page is open, because it was done,
-  dropped, clarified, or edited, stays in its row until the user leaves the
-  view. That leaves room to undo a slip without going elsewhere. A new mount
-  starts clean, and a view that changes mode resets with `reset_tasks/1`.
+  A task marked done or dropped while the page is open stays in its row
+  until the user leaves the view, so a slip can be undone in place. A task
+  that leaves the list for any other reason, such as a move or a new tag,
+  goes at once. A new mount starts clean, and a view that changes mode
+  resets with `reset_tasks/1`.
   """
 
   import Phoenix.Component, only: [assign: 3]
@@ -25,14 +26,21 @@ defmodule MarskalWeb.TaskList do
   def reset_tasks(socket), do: assign(socket, :tasks, [])
 
   @doc """
-  The tasks in `shown` that are missing from `fresh`, reloaded, by id.
+  The tasks in `shown` that are missing from `fresh` because they are now
+  done or dropped, reloaded, by id.
   """
   def lingering(user, shown, fresh) do
     fresh_ids = MapSet.new(fresh, & &1.id)
 
     case for(task <- shown, task.id not in fresh_ids, do: task.id) do
-      [] -> %{}
-      ids -> user |> Marskal.Tasks.get_tasks(ids) |> Map.new(&{&1.id, &1})
+      [] ->
+        %{}
+
+      ids ->
+        for task <- Marskal.Tasks.get_tasks(user, ids),
+            task.state != :to_do,
+            into: %{},
+            do: {task.id, task}
     end
   end
 

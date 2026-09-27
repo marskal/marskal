@@ -39,6 +39,10 @@ defmodule Marskal.Imports.OmnifocusAdapterTest do
 
     done = Enum.find(graph.tasks, &(&1.title == "Pick palette"))
     assert done.state == "done"
+
+    both = Enum.find(graph.tasks, &(&1.title == "Order business cards"))
+    refute both.inbox
+    assert both.project_source_id == "projSite0000"
   end
 
   test "parses an OmniFocus 4.9 tutorial package zip" do

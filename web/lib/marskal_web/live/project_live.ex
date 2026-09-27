@@ -60,7 +60,6 @@ defmodule MarskalWeb.ProjectLive do
         tasks={@tasks}
         tags={@task_tags.tags}
         unavailable={@task_tags.unavailable}
-        mark_inbox
         empty="No open tasks in this project."
         actions={[:complete]}
         inspector={@inspector}
@@ -80,7 +79,7 @@ defmodule MarskalWeb.ProjectLive do
   @impl true
   def handle_event("create", %{"task" => params, "command_id" => command_id}, socket) do
     user = socket.assigns.current_scope.user
-    attrs = Map.merge(params, %{"project_id" => socket.assigns.project.id, "inbox" => false})
+    attrs = Map.put(params, "project_id", socket.assigns.project.id)
 
     case Tasks.create_task(user, attrs, command_id) do
       {:ok, _task} ->
