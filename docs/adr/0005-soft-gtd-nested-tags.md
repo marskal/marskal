@@ -196,7 +196,15 @@ decision when sharing ships.
   `project_tags`, ahead of the rest of ADR 0014's pre-sync work.
 - "Available" becomes a computed property of a task: not deferred, and not
   blocked by tag state. The open stream and later the agenda filter on it.
-- Hierarchy queries expand ids in app code; no `ltree` extension.
+- Hierarchy queries expand ids in app code; no `ltree` extension. A user's
+  tree is small enough to load per request. If subtree filters ever have to
+  run inside SQL (combined filters with pagination over large task sets, or
+  subtree checks across shared trees), add `ancestor_ids uuid[]` with a GIN
+  index and query `ancestor_ids @> ARRAY[id]`, or use a recursive CTE over
+  `parent_id`. Either is a migration and a backfill: the path is derived and
+  not synced (ADR 0014), so clients and the sync protocol do not change.
+  `ltree` over ids would also work, but adds an extension for no gain over
+  the array.
 - Unicode-first tags remain viable long-term.
 - Tag filter queries must join project tags for tasks that belong to a project.
 - Tests: effective tags (task ∪ project, never parent task); subtree outline
