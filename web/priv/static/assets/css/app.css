@@ -11,6 +11,7 @@
   --border: #d9d6cf;
   --accent: #1f5c4d;
   --accent-contrast: #fff;
+  --danger: #a3261d;
   --danger-bg: #fde8e8;
   --notice-bg: #e5f3ec;
   --radius: 8px;
@@ -27,6 +28,7 @@
     --border: #333833;
     --accent: #6fbfa8;
     --accent-contrast: #0d1a16;
+    --danger: #f0a39c;
     --danger-bg: #3a1f1f;
     --notice-bg: #1a2e24;
   }

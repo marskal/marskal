@@ -44,6 +44,7 @@ defmodule Marskal.MixProject do
       {:oban, "~> 2.20"},
       {:mdex, "~> 0.13"},
       {:lucide_icons, "~> 2.4"},
+      {:tz, "~> 0.28"},
       {:phoenix_live_dashboard, "~> 0.8"},
       {:phoenix, "~> 1.8.14"},
       {:phoenix_ecto, "~> 4.5"},

@@ -12,6 +12,7 @@ defmodule Marskal.Imports.Applier do
 
   import Ecto.Query
 
+  alias Marskal.Dates
   alias Marskal.ImportItem
   alias Marskal.Imports
   alias Marskal.Imports.OmnifocusAdapter
@@ -221,7 +222,8 @@ defmodule Marskal.Imports.Applier do
               "notes" => node.notes,
               "project_folder_id" => acc.ids[node.folder_source_id],
               "state" => state(node.state)
-            },
+            }
+            |> Map.merge(dates(node, batch.user)),
             Ecto.UUID.generate()
           )
 
@@ -253,7 +255,8 @@ defmodule Marskal.Imports.Applier do
               "inbox" => is_nil(project_id),
               "project_id" => project_id,
               "state" => state(node.state)
-            },
+            }
+            |> Map.merge(dates(node, batch.user)),
             Ecto.UUID.generate()
           )
 
@@ -264,6 +267,25 @@ defmodule Marskal.Imports.Applier do
         |> count(:created, "tasks")
     end
   end
+
+  # Source dates are read in the user's zone when they carry none. A value
+  # that does not parse is left out; the item keeps its source row. An
+  # indefinite defer wins over a defer date (ADR 0006).
+  defp dates(node, user) do
+    zone = user.timezone
+
+    %{
+      "deferred_indefinitely" => node.deferred_indefinitely == true,
+      "defer_until" =>
+        if(node.deferred_indefinitely, do: nil, else: parse(node.defer_until, :defer_until, zone)),
+      "planned_at" => parse(node.planned, :planned_at, zone),
+      "due_at" => parse(node.due, :due_at, zone),
+      "resolved_at" =>
+        if(state(node.state) != "to_do", do: parse(node.resolved_at, :resolved_at, zone))
+    }
+  end
+
+  defp parse(value, field, zone), do: Dates.parse_source(value, field, zone)
 
   defp state(state) when state in ["done", "dropped"], do: state
   defp state(_state), do: "to_do"

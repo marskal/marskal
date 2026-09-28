@@ -78,3 +78,18 @@ Defer is optional and is either:
   show-deferred.
 - Agenda keys off **Planned**.
 - UI teaches three dates; indefinite is a Defer option, not a fourth status chip.
+
+## Implementation notes (2026-09-28)
+
+- Columns: `defer_until`, `deferred_indefinitely` (check: not both),
+  `planned_at`, `due_at`, all `timestamptz`. A Defer change patches both
+  Defer columns, so offline edits merge into one shape (ADR 0014).
+- People pick a day and an optional time on their stored zone's clock. A day
+  with no time takes the field's default: Defer 00:00, Planned 09:00, Due
+  17:00.
+- A task in a still-deferred project counts as deferred.
+- Deferred follows the tag-unavailable rule (ADR 0005): the open stream and
+  the agenda hide both behind one "Show unavailable" toggle; project, tag,
+  and inbox views show the task with a mark.
+- The agenda for today also lists to-do tasks planned on earlier days, so a
+  missed plan stays visible.

@@ -11,6 +11,11 @@ defmodule Marskal.Imports.ProjectNode do
     :notes,
     :folder_source_id,
     :state,
+    :defer_until,
+    :planned,
+    :due,
+    :resolved_at,
+    deferred_indefinitely: false,
     tag_source_ids: [],
     extras: %{}
   ]
@@ -26,6 +31,11 @@ defmodule Marskal.Imports.TaskNode do
     :project_source_id,
     :parent_source_id,
     :state,
+    :defer_until,
+    :planned,
+    :due,
+    :resolved_at,
+    deferred_indefinitely: false,
     tag_source_ids: [],
     extras: %{}
   ]

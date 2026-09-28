@@ -10,8 +10,8 @@ defmodule MarskalWeb.OpenTasksLive do
     {:ok, socket |> assign(:page_title, "Open tasks") |> assign(:show_unavailable, nil)}
   end
 
-  # Tasks made unavailable by tag state (ADR 0005) are hidden unless
-  # ?unavailable=1; deferred tasks will join the same toggle (ADR 0006).
+  # Tasks made unavailable by tag state (ADR 0005), and deferred ones
+  # (ADR 0006), are hidden unless ?unavailable=1.
   # Flipping it is a new view, so kept rows go; opening the inspector is not.
   @impl true
   def handle_params(params, _uri, socket) do
@@ -47,6 +47,8 @@ defmodule MarskalWeb.OpenTasksLive do
         tasks={@tasks}
         tags={@task_tags.tags}
         unavailable={@task_tags.unavailable}
+        deferred={@task_tags.deferred}
+        zone={@current_scope.user.timezone}
         empty="No open tasks."
         actions={[:complete]}
         inspector={@inspector}

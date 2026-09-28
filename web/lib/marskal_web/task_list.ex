@@ -1,7 +1,8 @@
 defmodule MarskalWeb.TaskList do
   @moduledoc """
   Assigns a task list with what `MarskalWeb.TaskComponents.list/1` shows
-  about its tags: effective tags and unavailable ids (ADR 0005).
+  about its tags: effective tags and unavailable ids (ADR 0005), and which
+  tasks are deferred (ADR 0006).
 
   A task marked done or dropped while the page is open stays in its row
   until the user leaves the view, so a slip can be undone in place. A task
@@ -19,7 +20,17 @@ defmodule MarskalWeb.TaskList do
 
     socket
     |> assign(:tasks, tasks)
-    |> assign(:task_tags, Marskal.Tags.annotate(user, tasks))
+    |> assign(:task_tags, annotate(user, tasks))
+  end
+
+  @doc """
+  What a task list shows beside the titles: effective tags and the ids tag
+  state makes unavailable (ADR 0005), and the deferred ids (ADR 0006).
+  """
+  def annotate(user, tasks) do
+    user
+    |> Marskal.Tags.annotate(tasks)
+    |> Map.put(:deferred, Marskal.Tasks.deferred_ids(user, tasks))
   end
 
   @doc "Forgets the rows on screen, so the next `assign_tasks/2` shows only its own."

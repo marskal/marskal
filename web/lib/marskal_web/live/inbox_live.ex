@@ -53,6 +53,8 @@ defmodule MarskalWeb.InboxLive do
         tasks={@tasks}
         tags={@task_tags.tags}
         unavailable={@task_tags.unavailable}
+        deferred={@task_tags.deferred}
+        zone={@current_scope.user.timezone}
         empty="Nothing in the inbox."
         actions={[:complete]}
         inspector={@inspector}

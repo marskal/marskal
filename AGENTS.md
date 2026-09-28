@@ -249,7 +249,8 @@ The repository root is the product, not the web app (ADR 0015).
   UUIDv5 from the series id and the anchor. The web app stays online — no
   browser offline cache. Writes go through `Marskal.Changes.apply/4`; a patch
   with no changes appends nothing. Not built yet, and due before the first
-  sync client: `discarded_at`, `resolved_at`, sibling rank, the pull endpoint.
+  sync client: sibling rank, the pull endpoint, the `resolved_at` skew clamp,
+  and `discarded_at` on project folders.
 - Tests: state transitions; user isolation; defer/planned/due; outliner/folder structure;
   **recurrence** matrix (ADR 0007); tag inheritance in Phase 2+; sync merge,
   command replay, tombstones, and occurrence-id vectors (ADR 0014).

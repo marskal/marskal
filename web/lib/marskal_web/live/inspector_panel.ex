@@ -206,6 +206,30 @@ defmodule MarskalWeb.InspectorPanel do
           margin-right: auto;
         }
 
+        .dates {
+          gap: 0.6rem;
+        }
+
+        .day-time {
+          display: flex;
+          flex-direction: column;
+          gap: 0.3rem;
+        }
+
+        .day-time__inputs {
+          display: grid;
+          grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+          gap: 0.4rem;
+        }
+
+        .indefinite {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          font-weight: 400;
+          color: var(--text);
+        }
+
         .meta {
           margin: 0;
           padding-top: 0.75rem;
@@ -238,6 +262,7 @@ defmodule MarskalWeb.InspectorPanel do
       </p>
       <.task_form
         :if={match?(%Tasks.Task{}, @record)}
+        zone={@user.timezone}
         myself={@myself}
         record={@record}
         options={@options}
@@ -247,6 +272,7 @@ defmodule MarskalWeb.InspectorPanel do
       />
       <.project_form
         :if={match?(%Projects.Project{}, @record)}
+        zone={@user.timezone}
         myself={@myself}
         record={@record}
         options={@options}
@@ -278,6 +304,7 @@ defmodule MarskalWeb.InspectorPanel do
   attr :error, :string, default: nil
   attr :tagging, :map, required: true
   attr :picker, :map, required: true
+  attr :zone, :string, required: true
 
   defp task_form(assigns) do
     ~H"""
@@ -330,12 +357,28 @@ defmodule MarskalWeb.InspectorPanel do
             </option>
           </select>
         </div>
+        <MarskalWeb.DateFields.inputs
+          form="task"
+          id="inspector-task-dates"
+          record={@record}
+          zone={@zone}
+        />
         <div class="actions">
+          <button
+            type="button"
+            id="inspector-task-delete"
+            class="danger"
+            phx-click="delete"
+            phx-target={@myself}
+            data-confirm="Delete this task? To finish it or give it up, use Done or Dropped."
+          >
+            Delete
+          </button>
           <.link navigate={~p"/tasks/#{@record.id}"} class="open">Open task</.link>
         </div>
       </form>
       <.tag_picker id="inspector-task-tags" myself={@myself} tagging={@tagging} picker={@picker} />
-      <.meta record={@record} />
+      <.meta record={@record} zone={@zone} />
     </section>
     """
   end
@@ -346,6 +389,7 @@ defmodule MarskalWeb.InspectorPanel do
   attr :error, :string, default: nil
   attr :tagging, :map, required: true
   attr :picker, :map, required: true
+  attr :zone, :string, required: true
 
   defp project_form(assigns) do
     ~H"""
@@ -407,9 +451,28 @@ defmodule MarskalWeb.InspectorPanel do
             </option>
           </select>
         </div>
+        <MarskalWeb.DateFields.inputs
+          form="project"
+          id="inspector-project-dates"
+          record={@record}
+          zone={@zone}
+        />
+        <div class="actions">
+          <button
+            type="button"
+            id="inspector-project-delete"
+            class="danger"
+            phx-click="delete"
+            phx-target={@myself}
+            data-confirm="Delete this project and every task in it? To finish it or give it up, use Done or Dropped."
+          >
+            Delete
+          </button>
+          <.link navigate={~p"/projects/#{@record.id}"} class="open">Open project</.link>
+        </div>
       </form>
       <.tag_picker id="inspector-project-tags" myself={@myself} tagging={@tagging} picker={@picker} />
-      <.meta record={@record} />
+      <.meta record={@record} zone={@zone} />
     </section>
     """
   end
@@ -615,17 +678,22 @@ defmodule MarskalWeb.InspectorPanel do
   end
 
   attr :record, :any, required: true
+  attr :zone, :string, default: "Europe/Copenhagen"
 
   defp meta(assigns) do
     ~H"""
     <dl class="meta">
       <div>
         <dt>Created</dt>
-        <dd>{stamp(@record.inserted_at)}</dd>
+        <dd>{stamp(@record.inserted_at, @zone)}</dd>
       </div>
       <div>
         <dt>Updated</dt>
-        <dd>{stamp(@record.updated_at)}</dd>
+        <dd>{stamp(@record.updated_at, @zone)}</dd>
+      </div>
+      <div :if={Map.get(@record, :resolved_at)}>
+        <dt>First resolved</dt>
+        <dd>{stamp(@record.resolved_at, @zone)}</dd>
       </div>
     </dl>
     """
@@ -638,12 +706,17 @@ defmodule MarskalWeb.InspectorPanel do
       |> Map.take(["title", "notes", "state"])
       |> Map.merge(location_params(params))
       |> Map.reject(fn {_key, value} -> value == nil end)
+      |> Map.merge(date_params(params, socket))
 
     save(socket, &Tasks.update_task(&1, &2, drop_blank_title(attrs, "title"), &3))
   end
 
   def handle_event("save", %{"project" => params}, socket) do
-    attrs = Map.take(params, ["title", "notes", "project_folder_id", "state"])
+    attrs =
+      params
+      |> Map.take(["title", "notes", "project_folder_id", "state"])
+      |> Map.merge(date_params(params, socket))
+
     save(socket, &Projects.update_project(&1, &2, drop_blank_title(attrs, "title"), &3))
   end
 
@@ -655,6 +728,21 @@ defmodule MarskalWeb.InspectorPanel do
   def handle_event("save", %{"tag" => params}, socket) do
     attrs = Map.take(params, ["name", "parent_id", "state"])
     save(socket, &Tags.update_tag(&1, &2, drop_blank_title(attrs, "name"), &3))
+  end
+
+  def handle_event("delete", _params, socket) do
+    %{user: user, record: record} = socket.assigns
+
+    result =
+      case record do
+        %Tasks.Task{} -> Tasks.delete_task(user, record.id, Ecto.UUID.generate())
+        %Projects.Project{} -> Projects.delete_project(user, record.id, Ecto.UUID.generate())
+      end
+
+    case result do
+      {:ok, _} -> {:noreply, assign(socket, record: nil, error: nil)}
+      {:error, _} -> {:noreply, assign(socket, :error, "Could not delete.")}
+    end
   end
 
   def handle_event("tag-delete", _params, socket) do
@@ -847,8 +935,10 @@ defmodule MarskalWeb.InspectorPanel do
     |> Enum.flat_map(fn child -> [child.id | descendant_ids(folders, child.id)] end)
   end
 
-  defp stamp(%DateTime{} = datetime), do: Calendar.strftime(datetime, "%Y-%m-%d %H:%M")
-  defp stamp(_), do: ""
+  defp stamp(%DateTime{} = datetime, zone),
+    do: datetime |> DateTime.shift_zone!(zone) |> Calendar.strftime("%Y-%m-%d %H:%M")
+
+  defp stamp(_datetime, _zone), do: ""
 
   # A hidden "false" is always submitted. A checked box adds "true" after it.
   defp location_params(%{"location" => value}) do
@@ -859,4 +949,13 @@ defmodule MarskalWeb.InspectorPanel do
   end
 
   defp location_params(_params), do: %{}
+
+  # The date inputs are only on the task and project forms. A post from
+  # elsewhere, without them, leaves the dates alone.
+  defp date_params(%{"due_date" => _} = params, socket) do
+    %{user: user, record: record} = socket.assigns
+    MarskalWeb.DateFields.params_to_attrs(params, record, user.timezone)
+  end
+
+  defp date_params(_params, _socket), do: %{}
 end

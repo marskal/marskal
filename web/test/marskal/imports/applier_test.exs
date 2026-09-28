@@ -41,6 +41,9 @@ defmodule Marskal.Imports.ApplierTest do
     refute draft.inbox
     assert draft.project_id == project.id
     assert draft.state == :to_do
+    assert draft.due_at == ~U[2024-03-01 16:00:00Z]
+    assert draft.defer_until == ~U[2024-02-20 08:00:00Z]
+    assert draft.planned_at == nil
 
     milk = task!(batch, "taskInbox000")
     assert milk.inbox
@@ -52,6 +55,7 @@ defmodule Marskal.Imports.ApplierTest do
 
     done = task!(batch, "taskDone0000")
     assert done.state == :done
+    assert done.resolved_at == ~U[2024-02-01 00:00:00Z]
   end
 
   test "second import skips existing source ids", %{user: user} do
@@ -242,9 +246,9 @@ defmodule Marskal.Imports.ApplierTest do
     food = Repo.get_by!(ImportItem, user_id: user.id, source: "todoist", source_id: "tag:l1")
     assert food.tag_id == existing.id
 
-    item = Repo.get_by!(ImportItem, user_id: user.id, source_id: "task:t1")
-    assert item.extras["planned"] == "2026-09-28"
-    assert item.extras["due"] == "2026-10-01"
+    # Days with no time take the default time in the user's zone (CEST here).
+    assert milk.planned_at == ~U[2026-09-28 07:00:00Z]
+    assert milk.due_at == ~U[2026-10-01 15:00:00Z]
 
     names =
       Tag |> where([t], t.user_id == ^user.id) |> Repo.all() |> Enum.map(& &1.name) |> Enum.sort()

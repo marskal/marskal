@@ -28,6 +28,8 @@ defmodule OmnifocusBackup do
     <task id="taskDraft000">
       <task idref="projSite0000"/>
       <name>Draft homepage</name>
+      <due>2024-03-01T16:00:00.000Z</due>
+      <start>2024-02-20T08:00:00.000Z</start>
       <added>2024-01-03T00:00:00.000Z</added>
       <rank>4</rank>
     </task>

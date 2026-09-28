@@ -4,15 +4,24 @@ defmodule Marskal.Projects do
   alias Marskal.Changes
   alias Marskal.Projects.Project
   alias Marskal.Repo
+  alias Marskal.Tasks
+  alias Marskal.Tasks.Task
+  alias Marskal.Uuid
 
   def list_open(%User{} = user) do
     Project
-    |> where([p], p.user_id == ^user.id and p.state == :to_do)
+    |> where([p], p.user_id == ^user.id and p.state == :to_do and is_nil(p.discarded_at))
     |> order_by([p], asc: p.title, asc: p.id)
     |> Repo.all()
   end
 
-  def get_project(%User{} = user, id), do: Repo.get_owned(Project, user, id)
+  @doc "A live project the user owns."
+  def get_project(%User{} = user, id) do
+    case Repo.get_owned(Project, user, id) do
+      %Project{discarded_at: nil} = project -> project
+      _ -> nil
+    end
+  end
 
   def create_project(%User{} = user, attrs, command_id) do
     Changes.apply(user, command_id, "project", fn ->
@@ -25,7 +34,7 @@ defmodule Marskal.Projects do
     end)
   end
 
-  @doc "Patch any of title, notes, project_folder_id, and state in one command."
+  @doc "Patch any of title, notes, project_folder_id, state, and the dates in one command."
   def update_project(%User{} = user, id, attrs, command_id) when is_map(attrs) do
     Changes.apply(user, command_id, "project", fn ->
       case get_project(user, id) do
@@ -39,6 +48,34 @@ defmodule Marskal.Projects do
             {:ok, project} -> {:ok, project, changeset}
             {:error, changeset} -> {:error, changeset}
           end
+      end
+    end)
+  end
+
+  @doc """
+  Discards the project and every task in it (ADR 0014). Each task gets its
+  own change, under a command id derived from this one, so a replay
+  discards nothing twice.
+  """
+  def delete_project(%User{} = user, id, command_id) do
+    Changes.apply(user, command_id, "project", fn ->
+      case get_project(user, id) do
+        nil ->
+          {:error, :not_found}
+
+        project ->
+          Task
+          |> where([t], t.project_id == ^project.id and is_nil(t.discarded_at))
+          |> Repo.all()
+          |> Enum.each(fn task ->
+            {:ok, _} =
+              Changes.apply(user, Uuid.v5(command_id, "task|#{task.id}"), "task", fn ->
+                Tasks.discard(task)
+              end)
+          end)
+
+          changeset = Project.discard_changeset(project)
+          {:ok, Repo.update!(changeset), changeset}
       end
     end)
   end
