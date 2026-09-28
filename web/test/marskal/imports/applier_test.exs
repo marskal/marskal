@@ -5,6 +5,7 @@ defmodule Marskal.Imports.ApplierTest do
   alias Marskal.Changes.Change
   alias Marskal.ImportBatch
   alias Marskal.ImportItem
+  alias Marskal.Imports
   alias Marskal.Imports.Applier
   alias Marskal.Imports.Parser
   alias Marskal.ProjectFolders.ProjectFolder
@@ -213,6 +214,56 @@ defmodule Marskal.Imports.ApplierTest do
     end
   end
 
+  test "applies a todoist snapshot, including labels, and skips it the second time", %{
+    user: user
+  } do
+    {:ok, existing} = Tags.create_tag(user, %{"name" => "Food"}, Ecto.UUID.generate())
+
+    batch = preview_todoist!(user)
+    assert batch.status == :previewed
+    assert batch.stats["tags"] == 2
+    assert batch.external_account == "ada@example.com"
+
+    assert {:ok, applied} = Applier.call(batch)
+    assert applied.stats["created"]["tasks"] == 4
+    assert applied.stats["created"]["tags"] == 1
+    assert applied.stats["skipped"]["tags"] == 1
+    assert Imports.load_payload(applied).payload == nil
+
+    milk = Repo.get_by!(Task, user_id: user.id, title: "Buy milk")
+    assert milk.inbox
+    tree = Tags.tree(user)
+
+    labels =
+      user |> Tags.effective_tags([milk], tree) |> Map.fetch!(milk.id) |> Enum.map(& &1.tag.name)
+
+    assert Enum.sort(labels) == ["Errand", "Food"]
+
+    food = Repo.get_by!(ImportItem, user_id: user.id, source: "todoist", source_id: "tag:l1")
+    assert food.tag_id == existing.id
+
+    item = Repo.get_by!(ImportItem, user_id: user.id, source_id: "task:t1")
+    assert item.extras["planned"] == "2026-09-28"
+    assert item.extras["due"] == "2026-10-01"
+
+    names =
+      Tag |> where([t], t.user_id == ^user.id) |> Repo.all() |> Enum.map(& &1.name) |> Enum.sort()
+
+    assert names == ["Errand", "Food"]
+
+    again = preview_todoist!(user)
+    assert {:ok, again} = Applier.call(again)
+    assert again.stats["created"]["tasks"] == 0
+    assert again.stats["skipped"]["tasks"] == 4
+    assert again.stats["created"]["tags"] == 0
+
+    assert Repo.aggregate(
+             from(t in Task, where: t.user_id == ^user.id and t.title == "Buy milk"),
+             :count
+           ) ==
+             1
+  end
+
   test "does not import into another user", %{user: user, other: other} do
     batch = preview!(user, OmnifocusBackup.compact_backup(), "OmniFocus.ofocus-backup")
     assert {:ok, _} = Applier.call(batch)
@@ -231,6 +282,23 @@ defmodule Marskal.Imports.ApplierTest do
         status: :pending,
         filename: filename,
         payload: bytes
+      })
+      |> Repo.insert()
+
+    Parser.call(batch)
+  end
+
+  defp preview_todoist!(user) do
+    {:ok, batch} =
+      %ImportBatch{}
+      |> ImportBatch.changeset(%{
+        user_id: user.id,
+        source: "todoist",
+        channel: :oauth,
+        status: :pending,
+        filename: "Todoist",
+        external_account: "ada@example.com",
+        payload: TodoistSnapshot.json()
       })
       |> Repo.insert()
 

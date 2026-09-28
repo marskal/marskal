@@ -50,6 +50,8 @@ defmodule MarskalWeb.Router do
     pipe_through [:browser, :require_authenticated_user]
 
     post "/imports", ImportBatchController, :create
+    get "/imports/todoist", ImportBatchController, :todoist
+    get "/imports/todoist/callback", ImportBatchController, :todoist_callback
     post "/imports/:id/apply", ImportBatchController, :apply
 
     live_session :require_authenticated_user,

@@ -70,7 +70,9 @@ in
       default = "${stateDir}/secrets.env";
       description = ''
         Environment file with `SECRET_KEY_BASE` and `RELEASE_COOKIE`.
-        Created with random values when missing.
+        Created with random values when missing. Optional Todoist import
+        credentials (`TODOIST_CLIENT_ID`, `TODOIST_CLIENT_SECRET`, and
+        `TODOIST_REDIRECT_URI`) can be added to the same file.
       '';
     };
   };

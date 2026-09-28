@@ -194,12 +194,13 @@ The repository root is the product, not the web app (ADR 0015).
   raw SQL in those migrations (ADR 0016).
 - Server-rendered HEEx / LiveView unless an SPA is justified.
 - Domain names match the vocabulary table. Schema via Ecto migrations only.
-- **Import (ADR 0013):** adapters parse to an `Imports.Graph`; file upload
-  now, OAuth is a future fetcher. First source: OmniFocus backup. Parse and
-  apply run as Oban jobs; the upload is held in `import_batches.payload` only
-  until apply, failure, or expiry after 24 h. Park unmapped fields on
-  `import_items.extras`. Skip existing `(user, source, source_id)` on
-  re-import without touching the user's copy. Do not add competing-app libraries.
+- **Import (ADR 0013):** adapters parse to an `Imports.Graph`. Fetchers
+  acquire bytes: an OmniFocus backup upload, or Todoist OAuth (API v1 sync,
+  `data:read`, token not stored). Parse and apply run as Oban jobs; the
+  payload is held in `import_batches.payload` only until apply, failure, or
+  expiry after 24 h. Park unmapped fields on `import_items.extras`. Skip
+  existing `(user, source, source_id)` on re-import without touching the
+  user's copy. Do not add competing-app libraries.
 - **UI (ADR 0012, ADR 0016):** HEEx function components plus plain CSS `@scope`.
   No Tailwind, no daisyUI, no UI kit. Tokens stay on `:root`.
 - **Icons:** the `lucide_icons` package. Use `<Lucideicons.inbox class="icon" />`.

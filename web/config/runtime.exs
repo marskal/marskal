@@ -20,6 +20,32 @@ if System.get_env("PHX_SERVER") do
   config :marskal, MarskalWeb.Endpoint, server: true
 end
 
+# Todoist OAuth. Absent credentials hide a working sign-in; the import page
+# explains that. Tests keep the stub from test.exs and read no secrets. The
+# token from a sign-in is not stored.
+if config_env() != :test do
+  todoist = Application.get_env(:marskal, Marskal.Imports.Todoist, [])
+
+  todoist_redirect =
+    case System.get_env("TODOIST_REDIRECT_URI") do
+      uri when is_binary(uri) and uri != "" ->
+        uri
+
+      _ ->
+        if config_env() == :prod do
+          "https://#{System.get_env("PHX_HOST") || "marskal.example"}/imports/todoist/callback"
+        else
+          todoist[:redirect_uri]
+        end
+    end
+
+  config :marskal, Marskal.Imports.Todoist,
+    client_id: System.get_env("TODOIST_CLIENT_ID") || todoist[:client_id],
+    client_secret: System.get_env("TODOIST_CLIENT_SECRET") || todoist[:client_secret],
+    redirect_uri: todoist_redirect,
+    req_options: todoist[:req_options] || []
+end
+
 default_port = if config_env() == :dev, do: "8275", else: "4000"
 
 config :marskal, MarskalWeb.Endpoint,
