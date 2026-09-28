@@ -8,6 +8,7 @@ defmodule MarskalWeb.ImportBatchControllerTest do
   alias Marskal.ImportBatch
   alias Marskal.Imports
   alias Marskal.Imports.ApplyJob
+  alias Marskal.Imports.Todoist
   alias Marskal.Imports.Limits
   alias Marskal.Imports.ParseJob
   alias Marskal.Repo
@@ -20,6 +21,91 @@ defmodule MarskalWeb.ImportBatchControllerTest do
   test "index requires sign in" do
     conn = build_conn() |> get(~p"/imports")
     assert redirected_to(conn) == ~p"/users/log-in"
+  end
+
+  test "import page offers todoist", %{conn: conn} do
+    {:ok, _view, html} = live(conn, ~p"/imports")
+    assert html =~ "Import from Todoist"
+    assert html =~ "/imports/todoist"
+  end
+
+  test "todoist sign-in stores a snapshot and previews it", %{conn: conn, user: user} do
+    Req.Test.stub(Todoist, fn conn ->
+      case conn.request_path do
+        "/oauth/access_token" ->
+          Req.Test.json(conn, %{"access_token" => "token-1", "refresh_token" => "do-not-store"})
+
+        "/api/v1/sync" ->
+          assert Plug.Conn.get_req_header(conn, "authorization") == ["Bearer token-1"]
+          Req.Test.json(conn, TodoistSnapshot.small())
+
+        other ->
+          flunk("unexpected Todoist request #{other}")
+      end
+    end)
+
+    conn = get(conn, ~p"/imports/todoist")
+    assert redirected_to(conn) =~ "https://app.todoist.com/oauth/authorize"
+    query = conn |> redirected_to() |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
+    assert query["scope"] == "data:read"
+    assert query["client_id"] == "todoist-client"
+    assert query["redirect_uri"] == "http://www.example.com/imports/todoist/callback"
+
+    conn =
+      get(
+        conn,
+        ~p"/imports/todoist/callback?#{[code: "abc", state: query["state"]]}"
+      )
+
+    batch = last_batch(user)
+    assert redirected_to(conn) == ~p"/imports/#{batch.id}"
+    assert batch.source == "todoist"
+    assert batch.channel == :oauth
+    assert batch.external_account == "ada@example.com"
+    assert_enqueued(worker: ParseJob, args: %{batch_id: batch.id})
+
+    payload = Imports.load_payload(batch).payload
+    assert payload =~ "Buy milk"
+    refute payload =~ "token-1"
+    refute payload =~ "do-not-store"
+
+    drain_imports!()
+    batch = Repo.reload!(batch)
+    assert batch.status == :previewed
+    assert batch.stats["tasks"] == 4
+    assert batch.stats["tags"] == 2
+
+    conn = get(recycle(conn), ~p"/imports/#{batch.id}")
+    html = html_response(conn, 200)
+    assert html =~ "Labels become tags"
+    assert html =~ "Buy milk"
+  end
+
+  test "todoist callback rejects a mismatched state", %{conn: conn, user: user} do
+    conn = get(conn, ~p"/imports/todoist")
+    conn = get(conn, ~p"/imports/todoist/callback?#{[code: "abc", state: "nope"]}")
+
+    assert redirected_to(conn) == ~p"/imports"
+    assert batch_count(user) == 0
+
+    conn = get(recycle(conn), ~p"/imports")
+    assert html_response(conn, 200) =~ "could not be confirmed"
+  end
+
+  test "todoist callback reports a declined sign-in", %{conn: conn, user: user} do
+    conn = get(conn, ~p"/imports/todoist")
+    query = conn |> redirected_to() |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
+
+    conn =
+      get(
+        conn,
+        ~p"/imports/todoist/callback?#{[error: "access_denied", state: query["state"]]}"
+      )
+
+    assert redirected_to(conn) == ~p"/imports"
+    assert batch_count(user) == 0
+    conn = get(recycle(conn), ~p"/imports")
+    assert html_response(conn, 200) =~ "Todoist access was declined"
   end
 
   test "upload parses and previews", %{conn: conn, user: user} do

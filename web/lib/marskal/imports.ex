@@ -13,6 +13,7 @@ defmodule Marskal.Imports do
   alias Marskal.Imports.BundlePackager
   alias Marskal.Imports.Limits
   alias Marskal.Imports.ParseJob
+  alias Marskal.Imports.Todoist
   alias Marskal.Repo
 
   def list_batches(%User{} = user) do
@@ -47,17 +48,50 @@ defmodule Marskal.Imports do
   end
 
   def ingest_upload(%User{} = user, params) when is_map(params) do
-    cond do
-      rate_limited?(user) ->
-        {:error, "Too many imports in the last hour. Try again later."}
+    if rate_limited?(user) do
+      {:error, rate_limit_message()}
+    else
+      case read_payload(params) do
+        {:ok, filename, bytes} ->
+          insert_and_enqueue(user, %{
+            user_id: user.id,
+            source: "omnifocus",
+            channel: :file,
+            status: :pending,
+            filename: filename,
+            payload: bytes
+          })
 
-      true ->
-        case read_payload(params) do
-          {:ok, filename, bytes} -> insert_and_enqueue(user, filename, bytes)
-          {:error, message} -> {:error, message}
-        end
+        {:error, message} ->
+          {:error, message}
+      end
     end
   end
+
+  @doc """
+  Exchange a Todoist authorization code, store the sync snapshot, and enqueue
+  parsing. The access token is not written to the batch.
+  """
+  def ingest_todoist(%User{} = user, code, redirect_uri) do
+    if rate_limited?(user) do
+      {:error, rate_limit_message()}
+    else
+      with {:ok, token} <- Todoist.exchange_code(code, redirect_uri),
+           {:ok, payload, account} <- Todoist.fetch_snapshot(token) do
+        insert_and_enqueue(user, %{
+          user_id: user.id,
+          source: "todoist",
+          channel: :oauth,
+          status: :pending,
+          filename: "Todoist",
+          external_account: account,
+          payload: payload
+        })
+      end
+    end
+  end
+
+  defp rate_limit_message, do: "Too many imports in the last hour. Try again later."
 
   def enqueue_apply(%ImportBatch{status: :previewed} = batch) do
     result =
@@ -77,16 +111,8 @@ defmodule Marskal.Imports do
 
   def enqueue_apply(%ImportBatch{}), do: {:error, :not_ready}
 
-  defp insert_and_enqueue(user, filename, bytes) do
-    changeset =
-      ImportBatch.changeset(%ImportBatch{}, %{
-        user_id: user.id,
-        source: "omnifocus",
-        channel: :file,
-        status: :pending,
-        filename: filename,
-        payload: bytes
-      })
+  defp insert_and_enqueue(_user, attrs) do
+    changeset = ImportBatch.changeset(%ImportBatch{}, attrs)
 
     result =
       Ecto.Multi.new()

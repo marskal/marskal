@@ -32,6 +32,13 @@ config :marskal, Marskal.Mailer, adapter: Swoosh.Adapters.Test
 # Jobs are inserted, then a test drains them. They do not run inside the request.
 config :marskal, Oban, testing: :manual
 
+# Todoist HTTP is stubbed. runtime.exs leaves these alone in test.
+config :marskal, Marskal.Imports.Todoist,
+  client_id: "todoist-client",
+  client_secret: "todoist-secret",
+  redirect_uri: "http://www.example.com/imports/todoist/callback",
+  req_options: [plug: {Req.Test, Marskal.Imports.Todoist}]
+
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
 

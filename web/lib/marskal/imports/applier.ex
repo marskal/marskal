@@ -15,6 +15,7 @@ defmodule Marskal.Imports.Applier do
   alias Marskal.ImportItem
   alias Marskal.Imports
   alias Marskal.Imports.OmnifocusAdapter
+  alias Marskal.Imports.TodoistAdapter
   alias Marskal.ProjectFolders
   alias Marskal.Projects
   alias Marskal.Repo
@@ -38,7 +39,7 @@ defmodule Marskal.Imports.Applier do
   end
 
   defp apply_graph(batch) do
-    graph = OmnifocusAdapter.parse(batch.payload, filename: batch.filename)
+    graph = graph_for(batch)
 
     Repo.transaction(fn ->
       acc = %{
@@ -81,6 +82,10 @@ defmodule Marskal.Imports.Applier do
     |> Ecto.Changeset.force_change(:payload, nil)
     |> Repo.update!()
   end
+
+  defp graph_for(%{source: "todoist"} = batch), do: TodoistAdapter.parse(batch.payload)
+
+  defp graph_for(batch), do: OmnifocusAdapter.parse(batch.payload, filename: batch.filename)
 
   defp existing_items(batch) do
     ImportItem

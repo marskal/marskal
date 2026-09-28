@@ -28,11 +28,13 @@ marskal-*.tar
 # Ignore assets that are produced by build tools.
 /priv/static/assets/js/
 
-# devenv local state
+# devenv and other localdev stuff.
 /.devenv/
 /.direnv/
 /result
 devenv.local.nix
+devenv.local.yaml
+secretspec.toml
 
 # Ignore digested assets cache.
 /priv/static/cache_manifest.json

@@ -36,6 +36,21 @@ without a second pipeline. Competing formats differ; Marskal’s model does not
 - First adapter: **OmniFocus `.ofocus` / `.ofocus-backup`** (zip-of-zips XML,
   replay master + transactions). Flatten nested actions until `tasks.parent_id`
   exists.
+- **Todoist** is the OAuth fetcher. The user signs in with scope `data:read`.
+  Marskal exchanges the code, downloads one API v1 sync snapshot (`user`,
+  `projects`, `items`, `sections`, `labels`, `folders`), stores that JSON as
+  the batch payload, and discards the token. Refresh tokens are not kept.
+  Client id and secret come from `TODOIST_CLIENT_ID` and
+  `TODOIST_CLIENT_SECRET`; the redirect defaults to
+  `/imports/todoist/callback` on the public host (`TODOIST_REDIRECT_URI`
+  overrides it).
+- What already has a home is applied: folders, projects, tasks, and labels
+  as tags. The inbox project is not created. A nested Todoist project
+  becomes a folder. A parent with no tasks of its own is only that folder;
+  a parent that also has tasks keeps them in a project named "<name> tasks"
+  inside the folder. Sections, subtask parent, a Todoist due date (planned),
+  a deadline (due), and the recurrence text stay in `extras`. Completed-task
+  history is not in the sync snapshot and is not imported.
 
 ## Consequences
 
@@ -45,4 +60,4 @@ without a second pipeline. Competing formats differ; Marskal’s model does not
   stored. OmniFocus tag definitions, for one, were never stored. Before
   launch, a field that gains a home is picked up by importing again, not by a
   backfill job.
-- Jobs run through Active Job (async in development; Solid Queue in production).
+- Jobs run through Oban.

@@ -152,9 +152,10 @@ defmodule MarskalWeb.ImportLive do
       <%= cond do %>
         <% @live_action == :index -> %>
           <h1>Import</h1>
-          <p class="lede">Bring a backup from another app into this account.</p>
-          <p>
-            <.link navigate={~p"/imports/new"} class="btn btn-primary">Upload an OmniFocus backup</.link>
+          <p class="lede">Bring tasks in from Todoist, or from an OmniFocus backup.</p>
+          <p class="actions">
+            <.link href={~p"/imports/todoist"} class="btn btn-primary">Import from Todoist</.link>
+            <.link navigate={~p"/imports/new"} class="btn">Upload an OmniFocus backup</.link>
           </p>
           <h2 :if={@batches != []}>Recent imports</h2>
           <ul :if={@batches != []} class="import-list">
@@ -167,7 +168,7 @@ defmodule MarskalWeb.ImportLive do
             </li>
           </ul>
           <p :if={@batches == []} class="empty">
-            No imports yet. Start with an OmniFocus Backup Document.
+            No imports yet. Import from Todoist, or upload an OmniFocus Backup Document.
           </p>
         <% @live_action == :new -> %>
           <p class="lede"><.link navigate={~p"/imports"}>Import</.link></p>
@@ -337,13 +338,20 @@ defmodule MarskalWeb.ImportLive do
         <% @live_action == :show && @batch -> %>
           <p class="lede"><.link navigate={~p"/imports"}>Import</.link></p>
           <h1>{source_label(@batch.source)} import</h1>
-          <p class="lede">{@batch.filename || "Backup"} · {status_label(@batch.status)}</p>
+          <p class="lede">
+            {@batch.external_account || @batch.filename || "Backup"} · {status_label(@batch.status)}
+          </p>
 
           <div :if={@batch.status in [:failed, :expired]}>
             <p class="flash flash-error" role="alert">{@batch.error_message}</p>
-            <p><.link navigate={~p"/imports/new"} class="btn">Try another file</.link></p>
+            <p :if={@batch.source == "todoist"}>
+              <.link href={~p"/imports/todoist"} class="btn">Try Todoist again</.link>
+            </p>
+            <p :if={@batch.source != "todoist"}>
+              <.link navigate={~p"/imports/new"} class="btn">Try another file</.link>
+            </p>
           </div>
-          <p :if={@batch.status == :pending} class="empty">Reading the backup…</p>
+          <p :if={@batch.status == :pending} class="empty">{reading_label(@batch)}</p>
           <p :if={@batch.status == :applying} class="empty">
             Writing tags, folders, projects, and tasks…
           </p>
@@ -359,6 +367,9 @@ defmodule MarskalWeb.ImportLive do
               <div>
                 <dt>Tasks</dt><dd>{stat(@batch, "tasks")}</dd>
               </div>
+              <div :if={@batch.source == "todoist"}>
+                <dt>Tags</dt><dd>{stat(@batch, "tags")}</dd>
+              </div>
               <div>
                 <dt>Inbox</dt><dd>{stat(@batch, "inbox")}</dd>
               </div>
@@ -369,9 +380,7 @@ defmodule MarskalWeb.ImportLive do
             <p :if={samples(@batch) != []} class="lede">
               Includes: {Enum.join(samples(@batch), ", ")}
             </p>
-            <p class="lede">
-              Already-imported OmniFocus items are skipped. Tags whose name is already used at the same place are reused. Dates are stored for later; they are not applied yet.
-            </p>
+            <p class="lede">{preview_note(@batch)}</p>
             <form action={~p"/imports/#{@batch.id}/apply"} method="post">
               <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
               <button type="submit">Import into Marskal</button>
@@ -459,7 +468,19 @@ defmodule MarskalWeb.ImportLive do
   defp status_label(other), do: to_string(other)
 
   defp source_label("omnifocus"), do: "OmniFocus"
+  defp source_label("todoist"), do: "Todoist"
   defp source_label(other), do: to_string(other)
+
+  defp reading_label(%{source: "todoist"}), do: "Reading your Todoist account…"
+  defp reading_label(_batch), do: "Reading the backup…"
+
+  defp preview_note(%{source: "todoist"}) do
+    "Already-imported Todoist items are skipped. Labels become tags. Dates, sections, subtasks, and recurrence are kept for later and not applied yet. Completed history is not included."
+  end
+
+  defp preview_note(_batch) do
+    "Already-imported OmniFocus items are skipped. Tags whose name is already used at the same place are reused. Dates are stored for later; they are not applied yet."
+  end
 
   defp format_when(%DateTime{} = datetime), do: Calendar.strftime(datetime, "%Y-%m-%d %H:%M")
   defp format_when(_datetime), do: ""
