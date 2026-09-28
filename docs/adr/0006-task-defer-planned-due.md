@@ -84,6 +84,10 @@ Defer is optional and is either:
 - Columns: `defer_until`, `deferred_indefinitely` (check: not both),
   `planned_at`, `due_at`, all `timestamptz`. A Defer change patches both
   Defer columns, so offline edits merge into one shape (ADR 0014).
+- Indefinite is a boolean, not `defer_until = 'infinity'`. Infinity needs
+  Postgrex's `allow_infinite_timestamps`, a custom Ecto type for `:inf`, a
+  JSON sentinel every sync client must agree on, and a guard in recurrence
+  anchor math. The explicit field costs one extra column.
 - People pick a day and an optional time on their stored zone's clock. A day
   with no time takes the field's default: Defer 00:00, Planned 09:00, Due
   17:00.
