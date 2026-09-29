@@ -112,3 +112,6 @@ Views: the project and inbox pages show the outline, with collapse kept per
 browser and outliner keys: Tab and Shift-Tab, or the macOS-style Cmd-] and
 Cmd-[, indent and outdent; Alt-Up and Alt-Down move among siblings. Other lists
 stay flat and name a subtask's parent before its title.
+Rows drag by a handle (SortableJS). The drop depth follows how far the pointer
+moved sideways, one level per indent, within what the neighboring rows allow;
+the subtree moves with its root.
