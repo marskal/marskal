@@ -1,4 +1,6 @@
-// Type checking only: esbuild compiles, `npm run typecheck` checks.
+// Type checking only: esbuild strips the types, `npm run typecheck` checks.
+// erasableSyntaxOnly keeps to syntax that stripping alone turns into
+// JavaScript (no enums, namespaces, or parameter properties).
 //
 // Hex packages are not npm dependencies. esbuild finds them through
 // NODE_PATH (config/config.exs), and `paths` points TypeScript at the same
@@ -16,6 +18,7 @@
       "phoenix_live_view": ["../deps/phoenix_live_view"]
     },
     "strict": true,
+    "erasableSyntaxOnly": true,
     "noEmit": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
