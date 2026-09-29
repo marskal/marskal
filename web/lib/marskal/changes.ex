@@ -72,6 +72,21 @@ defmodule Marskal.Changes do
     end
   end
 
+  @doc """
+  A write that follows from another command, such as a subtree moving with
+  its root. It gets its own command id, derived from the action's, so a
+  replay of the action replays it too.
+  """
+  def cascade(user, command_id, entity_type, entity_id, fun) do
+    {:ok, _} =
+      __MODULE__.apply(
+        user,
+        Marskal.Uuid.v5(command_id, "#{entity_type}|#{entity_id}"),
+        entity_type,
+        fun
+      )
+  end
+
   def encode_patch(%Ecto.Changeset{} = changeset) do
     Map.new(changeset.changes, fn {key, value} ->
       {Atom.to_string(key), encode_value(value)}

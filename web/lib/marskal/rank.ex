@@ -125,6 +125,54 @@ defmodule Marskal.Rank do
     end
   end
 
+  @doc """
+  `count` ranks in order, spread evenly, for giving a whole list its order
+  at once (a backfill or an import). Each is as short as the list allows,
+  with room left in every gap.
+
+      iex> Marskal.Rank.spread(3)
+      ["F", "U", "j"]
+      iex> Marskal.Rank.spread(0)
+      []
+  """
+  def spread(0), do: []
+
+  def spread(count) when is_integer(count) and count > 0 do
+    width = width_for(count)
+    step = div(Integer.pow(@base, width), count + 1)
+
+    for i <- 1..count do
+      (i * step)
+      |> Integer.digits(@base)
+      |> pad(width)
+      |> strip_zeros()
+      |> encode()
+    end
+  end
+
+  @doc "True for a well-formed rank: `0-9A-Za-z`, not ending in `0`."
+  def valid?(rank) when is_binary(rank),
+    do: rank != "" and not String.ends_with?(rank, "0") and valid_digits?(rank)
+
+  def valid?(_rank), do: false
+
+  defp valid_digits?(rank),
+    do: rank |> String.to_charlist() |> Enum.all?(&Map.has_key?(@values, &1))
+
+  # Digits for `count` ranks with at least one free rank in each gap.
+  defp width_for(count, width \\ 1) do
+    if Integer.pow(@base, width) >= 2 * (count + 1),
+      do: width,
+      else: width_for(count, width + 1)
+  end
+
+  defp pad(digits, width), do: List.duplicate(0, width - length(digits)) ++ digits
+
+  # "V0" and "V" are the same point; the shorter one keeps the rule that
+  # no rank ends in 0.
+  defp strip_zeros(digits),
+    do: digits |> Enum.reverse() |> Enum.drop_while(&(&1 == 0)) |> Enum.reverse()
+
   defp decode(rank) do
     rank
     |> String.to_charlist()

@@ -248,6 +248,8 @@ The repository root is the product, not the web app (ADR 0015).
   Planned / Due on both (ADR 0006).
 - Structure: `tasks.parent_id`, `project_folders` tree, `projects.project_folder_id`;
   no project-to-project parent (ADR 0009). Prevent parent cycles.
+  A subtask lives where its parent does; a move to another location leaves the
+  parent and takes the subtree along. The outline trigger checks both at commit.
 - Done/Dropped retained in history by default (not deleted). Synced domain rows
   are discarded with a tombstone, not hard-deleted (ADR 0014).
 - **Sync (ADR 0014):** writes are field patches with a command id, appended to a
@@ -257,8 +259,8 @@ The repository root is the product, not the web app (ADR 0015).
   UUIDv5 from the series id and the anchor. The web app stays online — no
   browser offline cache. Writes go through `Marskal.Changes.apply/4`; a patch
   with no changes appends nothing. Not built yet, and due before the first
-  sync client: sibling rank, the pull endpoint, the `resolved_at` skew clamp,
-  and `discarded_at` on project folders.
+  sync client: the pull endpoint, the `resolved_at` skew clamp, and
+  `discarded_at` on project folders.
 - Tests: state transitions; user isolation; defer/planned/due; outliner/folder structure;
   **recurrence** matrix (ADR 0007); tag inheritance in Phase 2+; sync merge,
   command replay, tombstones, and occurrence-id vectors (ADR 0014).

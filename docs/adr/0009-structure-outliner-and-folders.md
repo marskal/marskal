@@ -85,3 +85,21 @@ Tags (ADR 0005) remain orthogonal: project tags inherit to tasks; folders are no
 - Queries: subtree loads, reorder, prevent cycles on task and folder parent changes.
 - Tests: cycle prevention; indent into project task keeps project; folder nest; project
   cannot parent another project; (later) share cascade with ADR 0003.
+
+## Implementation note (2026-09-29)
+
+The move rules left open above:
+
+- A subtask always has its parent's location (Inbox, No project, or the parent's
+  project). Indenting or placing a task under another moves it, and its subtree,
+  there.
+- Choosing another location for a subtask takes it out from under its parent, to
+  the top level of the new location. Its own subtasks go with it.
+- Sibling order is `rank` among tasks with the same parent, or the same location
+  at the top. New tasks go to the bottom, except the inbox, which lists newest
+  first.
+- Deleting a task discards its subtree.
+
+A deferred constraint trigger (`tasks_outline`) checks at commit that a live
+subtask shares its parent's location, has a live parent, and is not its own
+ancestor.

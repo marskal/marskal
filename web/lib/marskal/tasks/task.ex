@@ -20,9 +20,11 @@ defmodule Marskal.Tasks.Task do
     field :due_at, :utc_datetime
     field :resolved_at, :utc_datetime
     field :discarded_at, :utc_datetime
+    field :rank, :string
 
     belongs_to :user, Marskal.Accounts.User
     belongs_to :project, Marskal.Projects.Project
+    belongs_to :parent, __MODULE__
 
     timestamps(type: :utc_datetime)
   end
@@ -31,7 +33,9 @@ defmodule Marskal.Tasks.Task do
 
   @doc """
   A new task. `state` and `resolved_at` may be given so an import can create
-  a resolved task, with its source's resolve time, in one command.
+  a resolved task, with its source's resolve time, in one command. A client
+  may give its own `rank`; `Marskal.Tasks` places the task when it does
+  not, and moves a subtask to where its parent is.
   """
   def create_changeset(task, user, attrs) do
     task
@@ -40,6 +44,8 @@ defmodule Marskal.Tasks.Task do
       :title,
       :notes,
       :project_id,
+      :parent_id,
+      :rank,
       :inbox,
       :state,
       :resolved_at | Dates.fields()
@@ -54,6 +60,8 @@ defmodule Marskal.Tasks.Task do
     |> assoc_constraint(:user)
     |> owned_project_constraint()
     |> date_constraints()
+    |> validate_rank()
+    |> outline_constraints()
   end
 
   @doc "Any subset of the editable fields. Only fields that differ reach the patch."
@@ -69,7 +77,38 @@ defmodule Marskal.Tasks.Task do
     |> date_constraints()
   end
 
+  @doc """
+  A place in the outline: `parent_id` and `rank`, with the location that
+  goes with the parent. `Marskal.Tasks` works these out.
+  """
+  def place_changeset(task, %{parent_id: _, rank: _, inbox: _, project_id: _} = place) do
+    task
+    |> change(place)
+    |> validate_rank()
+    |> owned_project_constraint()
+    |> outline_constraints()
+  end
+
+  @doc "The location a subtask takes from its parent, when the parent moves."
+  def relocate_changeset(task, inbox, project_id),
+    do: change(task, inbox: inbox, project_id: project_id)
+
   def discard_changeset(task), do: Dates.discard(task)
+
+  defp validate_rank(changeset) do
+    validate_change(changeset, :rank, fn :rank, rank ->
+      if Marskal.Rank.valid?(rank), do: [], else: [rank: "is not a valid rank"]
+    end)
+  end
+
+  # tasks_parent_id_fkey is (parent_id, user_id), so another user's task
+  # fails here.
+  defp outline_constraints(changeset) do
+    foreign_key_constraint(changeset, :parent_id,
+      name: :tasks_parent_id_fkey,
+      message: "must be one of your tasks"
+    )
+  end
 
   defp date_constraints(changeset) do
     changeset
