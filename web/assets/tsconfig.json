@@ -10,8 +10,8 @@
 // so they are checked there.
 {
   "compilerOptions": {
-    "target": "es2022",
-    "lib": ["es2022", "dom", "dom.iterable"],
+    "target": "es2024",
+    "lib": ["es2024", "dom", "dom.iterable"],
     "module": "preserve",
     "moduleResolution": "bundler",
     "paths": {
