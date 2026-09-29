@@ -205,6 +205,11 @@ The repository root is the product, not the web app (ADR 0015).
   No Tailwind, no daisyUI, no UI kit. Tokens stay on `:root`.
 - **Icons:** the `lucide_icons` package. Use `<Lucideicons.inbox class="icon" />`.
   Do not inline SVG paths, do not clone the icon repo, and do not add Heroicons.
+- **JavaScript is TypeScript.** Colocated hooks take `extension="ts"` and extend
+  `ViewHook`. `mix assets.check` type-checks them (precommit runs it).
+- **npm packages** go in `assets/package.json`. Do not vendor a published library.
+  Hex JS packages (`phoenix`, `phoenix_live_view`) stay out of npm. For utilities
+  reach for `es-toolkit` before writing helpers.
 
 ### Auth & tenancy
 
@@ -232,6 +237,8 @@ The repository root is the product, not the web app (ADR 0015).
   (`nixosModules.default`). Env-based secrets (ADR 0004).
 - A `mix.lock` change needs a new `depsHash` in `web/nix/package.nix`. A dep that
   downloads binaries at compile time needs a Nix-side fetch (see mdex_native there).
+  A `package-lock.json` change needs nothing there. The build installs only npm
+  `dependencies`: whatever the bundle imports goes there, checkers in `devDependencies`.
 
 ### Quality
 

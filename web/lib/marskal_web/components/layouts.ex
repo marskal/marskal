@@ -111,40 +111,50 @@ defmodule MarskalWeb.Layouts do
         </aside>
       </div>
     </div>
-    <script :type={Phoenix.LiveView.ColocatedHook} name=".Inspector">
-      export default {
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".Inspector" extension="ts">
+      import {ViewHook} from "phoenix_live_view"
+
+      export default class extends ViewHook {
+        wasOpen = false
+
+        onClick = (event: MouseEvent) => {
+          if (!(event.target instanceof Element)) return
+          const link = event.target.closest("a")
+          if (link) {
+            if (link.closest(".task-row")) event.stopPropagation()
+            return
+          }
+          if (event.target.closest("button, input, select, textarea, label, [phx-click]")) return
+          const row = event.target.closest<HTMLElement>("[data-inspect-type][data-inspect-id]")
+          if (!row || !this.el.contains(row)) return
+          this.pushEvent("inspect", {type: row.dataset.inspectType, id: row.dataset.inspectId})
+        }
+
+        onKeydown = (event: KeyboardEvent) => {
+          if (event.key !== "Escape") return
+          if (!this.el.classList.contains("is-inspector-open")) return
+          event.preventDefault()
+          this.pushEvent("close-inspector", {})
+        }
+
         mounted() {
-          this.onClick = (event) => {
-            const link = event.target.closest("a")
-            if (link) {
-              if (link.closest(".task-row")) event.stopPropagation()
-              return
-            }
-            if (event.target.closest("button, input, select, textarea, label, [phx-click]")) return
-            const row = event.target.closest("[data-inspect-type][data-inspect-id]")
-            if (!row || !this.el.contains(row)) return
-            this.pushEvent("inspect", {type: row.dataset.inspectType, id: row.dataset.inspectId})
-          }
-          this.onKeydown = (event) => {
-            if (event.key !== "Escape") return
-            if (!this.el.classList.contains("is-inspector-open")) return
-            event.preventDefault()
-            this.pushEvent("close-inspector", {})
-          }
           this.el.addEventListener("click", this.onClick)
           document.addEventListener("keydown", this.onKeydown)
           this.sync()
-        },
+        }
+
         updated() {
           this.sync()
-        },
+        }
+
         destroyed() {
           this.el.removeEventListener("click", this.onClick)
           document.removeEventListener("keydown", this.onKeydown)
           document.body.classList.remove("inspector-open")
-        },
+        }
+
         sync() {
-          const panel = this.el.querySelector(".app-inspector")
+          const panel = this.el.querySelector<HTMLElement>(".app-inspector")
           if (!panel) return
           const open = this.el.classList.contains("is-inspector-open")
           const narrow = window.matchMedia("(max-width: 64rem)").matches

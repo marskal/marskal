@@ -19,6 +19,18 @@ in
     package = beam.erlang;
   };
 
+  # npm for assets/, installed on shell entry. esbuild itself comes from the
+  # esbuild Hex package.
+  languages.javascript = {
+    enable = true;
+    package = pkgs.nodejs_24;
+    directory = "assets";
+    npm = {
+      enable = true;
+      install.enable = true;
+    };
+  };
+
   services.postgres = {
     enable = true;
     package = pkgs.postgresql_18;

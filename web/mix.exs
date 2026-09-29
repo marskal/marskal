@@ -78,13 +78,20 @@ defmodule Marskal.MixProject do
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
-      "assets.setup": ["esbuild.install --if-missing"],
+      "assets.setup": ["esbuild.install --if-missing", "cmd --cd assets npm ci"],
+      "assets.check": ["compile", "cmd --cd assets npm run --silent typecheck"],
       "assets.build": ["compile", "esbuild marskal"],
       "assets.deploy": [
         "esbuild marskal --minify",
         "phx.digest"
       ],
-      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"]
+      precommit: [
+        "compile --warnings-as-errors",
+        "assets.check",
+        "deps.unlock --unused",
+        "format",
+        "test"
+      ]
     ]
   end
 end

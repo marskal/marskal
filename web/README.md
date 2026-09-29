@@ -50,6 +50,9 @@ The scope is read-only. The access token downloads one sync snapshot and is
 not stored. Parsing and applying run on the Oban `imports` queue; the page
 refreshes until the job finishes.
 
+`devenv shell` installs the npm packages in `assets/`. `mix assets.check`
+type-checks the TypeScript, colocated hooks included.
+
 `devenv shell` then `mix test` runs the suite. Postgres must already be up
 (`devenv up` or `devenv processes start postgres`).
 

@@ -1,32 +1,25 @@
-// This file is needed on most editors to enable the intelligent autocompletion
-// of LiveView's JavaScript API methods. You can safely delete it if you don't need it.
+// Type checking only: esbuild compiles, `npm run typecheck` checks.
 //
-// Note: This file assumes a basic esbuild setup without node_modules.
-// We include a generic paths alias to deps to mimic how esbuild resolves
-// the Phoenix and LiveView JavaScript assets.
-// If you have a package.json in your project, you should remove the
-// paths configuration and instead add the phoenix dependencies to the
-// dependencies section of your package.json:
+// Hex packages are not npm dependencies. esbuild finds them through
+// NODE_PATH (config/config.exs), and `paths` points TypeScript at the same
+// place. Phoenix ships no types, so @types/phoenix stands in for it.
 //
-// {
-//   ...
-//   "dependencies": {
-//     ...,
-//     "phoenix": "../deps/phoenix",
-//     "phoenix_html": "../deps/phoenix_html",
-//     "phoenix_live_view": "../deps/phoenix_live_view"
-//   }
-// }
-//
-// Feel free to adjust this configuration however you need.
+// Colocated hooks written with extension="ts" are extracted under _build,
+// so they are checked there.
 {
   "compilerOptions": {
-    "baseUrl": ".",
+    "target": "es2022",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
     "paths": {
-      "*": ["../deps/*"]
+      "phoenix_live_view": ["../deps/phoenix_live_view"]
     },
-    "allowJs": true,
-    "noEmit": true
+    "strict": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true
   },
-  "include": ["js/**/*"]
+  "include": ["js/**/*", "../_build/*/phoenix-colocated/marskal/**/*.ts"]
 }
