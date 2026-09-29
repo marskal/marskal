@@ -36,7 +36,7 @@ This file is **short and actionable**. Rationale and history live in
 |------|---------|
 | **Task** | Code/model name for captured work (`tasks` table) — ADR 0010 |
 | **Inbox** | A location beside **No project** and each project (`inbox = true`, no project) — ADR 0017 |
-| **Open tasks** | Default engage stream: `state = to_do`, `inbox = false` (not deferred when dates exist) |
+| **Open tasks** | Default engage stream: `state = to_do`, `inbox = false`, not under a resolved task or project (not deferred when dates exist) |
 | **Project** | Outcome needing more than one action; **not** nestable under other projects |
 | **Project folder** | Nestable container for projects; **name** only + **Active/Dropped**; **share unit** later — ADR 0003, 0009 |
 | **Tag** | Nested label on tasks/projects; project tags **inherit** to tasks (ADR 0005) |
@@ -112,7 +112,8 @@ Project folders (nested) → Project (flat) → Tasks (nested outliner)
 - **Project folders:** nested; **name** + **Active | Dropped** only (no Done/dates).
   Projects optionally filed in one folder; drop folder does not resolve projects.
 - **Sharing (later):** share a **folder** → that folder + subfolders + projects (+ tasks).
-- Subtasks are full tasks; parent Done/Dropped does not auto-resolve children by default.
+- Subtasks are full tasks. A Done/Dropped parent task or project makes the tasks below it
+  count as resolved (derived; their own state is not written). Reopening brings them back.
 
 ### Tags (ADR 0005, Phase 2+)
 

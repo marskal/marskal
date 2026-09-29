@@ -37,13 +37,51 @@ defmodule Marskal.Tasks do
     |> then(&Marskal.Tags.reject_unavailable(user, &1))
   end
 
-  @doc "A project's to-do tasks, inbox ones included (ADR 0010)."
+  @doc "A project's open tasks, inbox ones included (ADR 0010)."
   def list_project_tasks(%User{} = user, project_id) do
     Task
-    |> where([t], t.user_id == ^user.id and is_nil(t.discarded_at))
-    |> where([t], t.project_id == ^project_id and t.state == :to_do)
+    |> where_open(user)
+    |> where([t], t.project_id == ^project_id)
     |> order_by([t], asc: t.rank, asc: t.id)
     |> Repo.all()
+  end
+
+  @doc """
+  Narrows a task query to the user's open tasks: live, To-Do, and not
+  resolved along with something above them. A task under a Done or
+  Dropped task, at any depth, or in a Done or Dropped project, counts as
+  resolved too, though its own state stays To-Do. Reopening what is above
+  brings it back as it was.
+  """
+  def where_open(query, %User{} = user) do
+    resolved_projects =
+      from p in Project, where: p.user_id == ^user.id and p.state != :to_do, select: p.id
+
+    query
+    |> where([t], t.user_id == ^user.id and t.state == :to_do and is_nil(t.discarded_at))
+    |> where([t], is_nil(t.project_id) or t.project_id not in subquery(resolved_projects))
+    |> where([t], t.id not in subquery(under_resolved(user)))
+  end
+
+  # Every task below a resolved task. UNION stops at a repeated row, should
+  # a cycle ever slip past the outline trigger.
+  defp under_resolved(user) do
+    children_of_resolved =
+      from c in Task,
+        join: p in Task,
+        on: c.parent_id == p.id,
+        where: p.user_id == ^user.id and p.state != :to_do,
+        select: %{id: c.id}
+
+    deeper =
+      from t in Task,
+        join: u in "under_resolved",
+        on: t.parent_id == u.id,
+        select: %{id: t.id}
+
+    from(u in "under_resolved", select: type(u.id, Ecto.UUID))
+    |> recursive_ctes(true)
+    |> with_cte("under_resolved", as: ^union(children_of_resolved, ^deeper))
   end
 
   @doc """
@@ -57,7 +95,7 @@ defmodule Marskal.Tasks do
 
     tasks =
       Task
-      |> where([t], t.user_id == ^user.id and is_nil(t.discarded_at) and t.state == :to_do)
+      |> where_open(user)
       |> where([t], t.planned_at < ^until)
       |> then(fn query ->
         if Keyword.get(opts, :carry_over, false),
@@ -380,8 +418,8 @@ defmodule Marskal.Tasks do
   # every location, newest first.
   defp list_visible(user, inbox) do
     Task
-    |> where([t], t.user_id == ^user.id and is_nil(t.discarded_at))
-    |> where([t], t.inbox == ^inbox and t.state == :to_do)
+    |> where_open(user)
+    |> where([t], t.inbox == ^inbox)
     |> then(fn query ->
       if inbox,
         do: order_by(query, [t], asc: t.rank, asc: t.id),

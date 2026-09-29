@@ -204,15 +204,6 @@ defmodule Marskal.OutlineTest do
       assert_outline!()
     end
 
-    test "resolving a parent leaves its subtasks alone", %{user: user, project: project} do
-      [a] = add(user, project, ["A"])
-      {:ok, child} = create(user, project, %{"title" => "Child", "parent_id" => a.id})
-
-      {:ok, _} = Tasks.complete_task(user, a.id, command_id())
-
-      assert Repo.get!(Task, child.id).state == :to_do
-    end
-
     test "deleting a task discards its subtree", %{user: user, project: project} do
       [a] = add(user, project, ["A"])
       {:ok, child} = create(user, project, %{"title" => "Child", "parent_id" => a.id})
@@ -233,6 +224,64 @@ defmodule Marskal.OutlineTest do
 
       assert {:error, :not_found} = Tasks.place_task(user, mine.id, theirs.id, nil, command_id())
       assert {:error, :not_found} = Tasks.place_task(other, mine.id, nil, nil, command_id())
+    end
+  end
+
+  describe "resolving what is above" do
+    test "a resolved task resolves its subtree until it reopens", %{user: user, project: project} do
+      [a, other] = add(user, project, ["A", "Other"])
+      {:ok, child} = create(user, project, %{"title" => "Child", "parent_id" => a.id})
+
+      {:ok, grandchild} =
+        create(user, project, %{"title" => "Grandchild", "parent_id" => child.id})
+
+      {:ok, _} = Tasks.complete_task(user, a.id, command_id())
+
+      assert ids(Tasks.list_project_tasks(user, project.id)) == [other.id]
+      assert Repo.get!(Task, grandchild.id).state == :to_do
+
+      {:ok, _} = Tasks.reopen_task(user, a.id, command_id())
+
+      assert Enum.sort(ids(Tasks.list_project_tasks(user, project.id))) ==
+               Enum.sort([a.id, other.id, child.id, grandchild.id])
+    end
+
+    test "a dropped parent resolves its subtree in every list", %{user: user} do
+      {:ok, a} = Tasks.create_task(user, %{"title" => "A", "inbox" => false}, command_id())
+
+      {:ok, child} =
+        Tasks.create_task(
+          user,
+          %{"title" => "Child", "parent_id" => a.id, "planned_at" => DateTime.utc_now()},
+          command_id()
+        )
+
+      {:ok, tag} = Marskal.Tags.create_tag(user, %{"name" => "Home"}, command_id())
+      {:ok, _} = Marskal.Tags.tag_task(user, child.id, tag.id, command_id())
+      today = Marskal.Dates.today(user.timezone)
+
+      assert child.id in ids(Tasks.list_open(user))
+      assert child.id in ids(Tasks.list_planned(user, today))
+
+      {:ok, _} = Tasks.drop_task(user, a.id, command_id())
+
+      refute child.id in ids(Tasks.list_open(user))
+      refute child.id in ids(Tasks.list_planned(user, today))
+      assert Marskal.Tags.outline(user, tag.id).root.tasks == []
+    end
+
+    test "a resolved project resolves its tasks", %{user: user, project: project} do
+      [a] = add(user, project, ["A"])
+      assert a.id in ids(Tasks.list_open(user))
+
+      {:ok, _} = Projects.complete_project(user, project.id, command_id())
+
+      refute a.id in ids(Tasks.list_open(user))
+      assert Tasks.list_project_tasks(user, project.id) == []
+      refute a.id in ids(Marskal.Tags.untagged_tasks(user))
+
+      {:ok, _} = Projects.reopen_project(user, project.id, command_id())
+      assert a.id in ids(Tasks.list_open(user))
     end
   end
 

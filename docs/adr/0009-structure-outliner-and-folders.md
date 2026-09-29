@@ -99,6 +99,10 @@ The move rules left open above:
   at the top. New tasks go to the bottom, except the inbox, which lists newest
   first.
 - Deleting a task discards its subtree.
+- Completing or dropping a task, or its project, makes the open tasks below it count
+  as resolved: they leave every open list, though their own state stays To-Do.
+  Reopening brings them back as they were. Nothing is written to them, so this
+  replaces the "independent states" default above only in how they show.
 
 A deferred constraint trigger (`tasks_outline`) checks at commit that a live
 subtask shares its parent's location, has a live parent, and is not its own

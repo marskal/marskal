@@ -140,7 +140,7 @@ defmodule Marskal.Tags do
 
     tasks =
       Task
-      |> where([t], t.user_id == ^user.id and t.state == :to_do and is_nil(t.discarded_at))
+      |> Tasks.where_open(user)
       |> order_by([t], desc: t.inserted_at, desc: t.id)
       |> Repo.all()
 
@@ -264,7 +264,7 @@ defmodule Marskal.Tags do
         select: l.project_id
 
     Task
-    |> where([t], t.user_id == ^user.id and t.state == :to_do and is_nil(t.discarded_at))
+    |> Tasks.where_open(user)
     |> where([t], t.id in subquery(tagged) or t.project_id in subquery(via_project))
     |> order_by([t], desc: t.inserted_at, desc: t.id)
     |> Repo.all()
