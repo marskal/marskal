@@ -402,12 +402,18 @@ defmodule MarskalWeb.TaskComponents do
       }
 
       // The row keys of an outliner: Tab and Shift-Tab indent and outdent,
+      // as do the macOS-style Cmd-] and Cmd-[ (Ctrl off a Mac).
       // Alt-Up and Alt-Down move among siblings, Up and Down move focus.
+      const command = (e: KeyboardEvent) => e.metaKey || e.ctrlKey
+      const plain = (e: KeyboardEvent) => !command(e) && !e.altKey
+
+      const bracket = (e: KeyboardEvent, key: "[" | "]") => command(e) && !e.altKey && e.key === key
+
       const moves: Record<string, (event: KeyboardEvent) => boolean> = {
-        "outline-indent": (e) => e.key === "Tab" && !e.shiftKey,
-        "outline-outdent": (e) => e.key === "Tab" && e.shiftKey,
-        "outline-up": (e) => e.altKey && e.key === "ArrowUp",
-        "outline-down": (e) => e.altKey && e.key === "ArrowDown",
+        "outline-indent": (e) => (plain(e) && e.key === "Tab" && !e.shiftKey) || bracket(e, "]"),
+        "outline-outdent": (e) => (plain(e) && e.key === "Tab" && e.shiftKey) || bracket(e, "["),
+        "outline-up": (e) => e.altKey && !command(e) && e.key === "ArrowUp",
+        "outline-down": (e) => e.altKey && !command(e) && e.key === "ArrowDown",
       }
 
       export default class extends ViewHook<HTMLUListElement> {
@@ -417,7 +423,7 @@ defmodule MarskalWeb.TaskComponents do
           if (!(event.target instanceof HTMLElement)) return
           const row = event.target.closest<HTMLElement>(".task-row")
           const id = row?.dataset.inspectId
-          if (!row || !id || event.ctrlKey || event.metaKey) return
+          if (!row || !id) return
 
           const move = Object.keys(moves).find((name) => moves[name]?.(event))
           if (move) {
@@ -427,7 +433,7 @@ defmodule MarskalWeb.TaskComponents do
             return
           }
 
-          if (event.altKey || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) return
+          if (!plain(event) || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) return
           const rows = Array.from(this.el.querySelectorAll<HTMLElement>(":scope > .task-row"))
           const next = rows[rows.indexOf(row) + (event.key === "ArrowUp" ? -1 : 1)]
           if (!next) return

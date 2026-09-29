@@ -109,6 +109,6 @@ subtask shares its parent's location, has a live parent, and is not its own
 ancestor.
 
 Views: the project and inbox pages show the outline, with collapse kept per
-browser and outliner keys (Tab and Shift-Tab indent and outdent, Alt-Up and
-Alt-Down move among siblings). Other lists stay flat and name a subtask's
-parent before its title.
+browser and outliner keys: Tab and Shift-Tab, or the macOS-style Cmd-] and
+Cmd-[, indent and outdent; Alt-Up and Alt-Down move among siblings. Other lists
+stay flat and name a subtask's parent before its title.
