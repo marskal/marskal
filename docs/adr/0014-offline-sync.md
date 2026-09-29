@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted
+Accepted. The protocol stands. The client set, and where the client engine
+lives, are amended by [ADR 0018](0018-rust-client-sync-library.md): desktop,
+Android, iOS, and an optional terminal client share one Rust library.
 
 Settles the sync protocol deferred by [ADR 0011](0011-uuidv7-primary-keys.md).
 Specifies the sibling order left open by [ADR 0009](0009-structure-outliner-and-folders.md).
@@ -49,6 +51,11 @@ Alternatives considered:
 |--------|------|-------------------------|
 | **Web** | Now | None. It talks to the server. |
 | **iOS app, widget, Siri Shortcuts** | Later | The on-device database for rows it already has |
+
+[ADR 0018](0018-rust-client-sync-library.md) adds the other offline clients: a
+desktop app, Android, and an optional terminal UI. Each trusts its own
+on-device database the same way, through one shared Rust engine rather than a
+port per shell.
 
 The web app does not grow an offline cache. The phone, the widget, and
 Shortcuts share one local database. They apply the same operations as the
@@ -157,9 +164,11 @@ applying patches. A client value for them is not authoritative.
 
 The rule stays structured data on the series (ADR 0007). "Next anchor" is a
 **pure function** of the rule, the mode, the previous anchor, the resolution
-time (on completion only), and the user's timezone. Elixir and Swift must
-produce the same answers for a shared set of fixture vectors. Do not bury the
-calendar math inside a controller or a LiveView.
+time (on completion only), and the user's timezone. Elixir and the client
+library must produce the same answers for a shared set of fixture vectors.
+The library is Rust, and a shell does not reimplement it
+([ADR 0018](0018-rust-client-sync-library.md)). Do not bury the calendar math
+inside a controller, a LiveView, or a shell.
 
 **Occurrence ids for rows the rule creates are UUIDv5**, not v7. This is the
 one exception to ADR 0011's "new domain keys are v7." Both sides must mint the
@@ -211,7 +220,9 @@ not; the rows an import created sync as ordinary entities.
 - `parent_path` stays as a cache maintained in application code. It is not a
   column the client may correct.
 - Recurrence work includes the pure function and the fixture file in the same
-  change as the schema. A second language later runs those fixtures unchanged.
+  change as the schema. The Rust client library is the second implementation
+  and runs those fixtures unchanged (ADR 0018). A further shell does not add
+  a third.
 - Tests that lock this ADR: different fields merge; same field, later command
   wins; command replay is a no-op; discard beats a stale patch; `resolved_at`
   stays on the first resolve and clamps outside the skew window; a client

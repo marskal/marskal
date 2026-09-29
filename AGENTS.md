@@ -26,6 +26,7 @@ This file is **short and actionable**. Rationale and history live in
 | Inbox as a location | [0017](docs/adr/0017-inbox-location.md) |
 | Import framework | [0013](docs/adr/0013-import-framework.md) |
 | Sync, offline clients | [0014](docs/adr/0014-offline-sync.md) |
+| Client sync library (Rust) | [0018](docs/adr/0018-rust-client-sync-library.md) |
 | Repository layout | [0015](docs/adr/0015-repository-layout.md) |
 
 ---
@@ -160,8 +161,10 @@ The repository root is the product, not the web app (ADR 0015).
   and `devenv up` from `web/`. Paths in the Elixir section below are relative
   to it. Do not add a second app directory beside `web/`.
 - **`docs/`** — ADRs, at the root.
-- Do not add a root `devenv.nix`. Do not create `clients/ios/` or
+- Do not add a root `devenv.nix`. Do not create `clients/`, `sync/core/`, or
   `sync/fixtures/` until that work starts.
+- Offline clients link one Rust library, `sync/core` (ADR 0018). Do not
+  reimplement that engine in a shell. The Phoenix app does not call it.
 
 ### Environment
 
@@ -261,8 +264,9 @@ The repository root is the product, not the web app (ADR 0015).
   Recurrence spawning is a pure function; rule-created occurrence ids are
   UUIDv5 from the series id and the anchor. The web app stays online — no
   browser offline cache. Writes go through `Marskal.Changes.apply/4`; a patch
-  with no changes appends nothing. Not built yet, and due before the first
-  sync client: the pull endpoint, the `resolved_at` skew clamp, and
+  with no changes appends nothing. Offline clients share one Rust engine
+  (ADR 0018) instead of porting it per shell. Not built yet, and due before
+  that crate: the pull endpoint, the `resolved_at` skew clamp, and
   `discarded_at` on project folders.
 - Tests: state transitions; user isolation; defer/planned/due; outliner/folder structure;
   **recurrence** matrix (ADR 0007); tag inheritance in Phase 2+; sync merge,
