@@ -206,15 +206,20 @@ defmodule MarskalWeb.ImportLive do
             <input type="file" class="backup-drop__hidden" webkitdirectory directory data-directory />
             <button type="submit">Upload and preview</button>
           </form>
-          <script :type={Phoenix.LiveView.ColocatedHook} name=".BackupDrop">
-            export default {
+          <script :type={Phoenix.LiveView.ColocatedHook} name=".BackupDrop" extension="ts">
+            import {ViewHook} from "phoenix_live_view"
+
+            type Collected = {file: File; path: string}
+            type SetStatus = (text: string) => void
+
+            export default class extends ViewHook<HTMLFormElement> {
               mounted() {
                 const form = this.el
-                const dropzone = form.querySelector("[data-dropzone]")
+                const dropzone = form.querySelector<HTMLElement>("[data-dropzone]")
                 const status = form.querySelector("[data-status]")
-                const fileInput = form.querySelector("[data-file]")
-                const directoryInput = form.querySelector("[data-directory]")
-                const setStatus = (text) => { if (status) status.textContent = text }
+                const fileInput = form.querySelector<HTMLInputElement>("[data-file]")
+                const directoryInput = form.querySelector<HTMLInputElement>("[data-directory]")
+                const setStatus: SetStatus = (text) => { if (status) status.textContent = text }
 
                 form.querySelector("[data-pick-file]")?.addEventListener("click", () => fileInput?.click())
                 form.querySelector("[data-pick-directory]")?.addEventListener("click", () => directoryInput?.click())
@@ -246,13 +251,16 @@ defmodule MarskalWeb.ImportLive do
                   event.preventDefault()
                   dropzone.classList.remove("is-over")
                   const items = Array.from(event.dataTransfer?.items || [])
-                  const entries = items.map((item) => item.webkitGetAsEntry?.()).filter(Boolean)
+                  const entries = items
+                    .map((item) => item.webkitGetAsEntry?.())
+                    .filter((entry): entry is FileSystemEntry => !!entry)
                   if (entries.length) {
-                    const collected = []
+                    const collected: Collected[] = []
                     for (const entry of entries) collected.push(...await collectEntry(entry, ""))
-                    if (collected.length === 1 && isZip(collected[0].file)) {
-                      assignFile(fileInput, collected[0].file)
-                      setStatus(collected[0].file.name)
+                    const [only] = collected
+                    if (collected.length === 1 && only && isZip(only.file)) {
+                      assignFile(fileInput, only.file)
+                      setStatus(only.file.name)
                       form.requestSubmit()
                       return
                     }
@@ -271,17 +279,17 @@ defmodule MarskalWeb.ImportLive do
               }
             }
 
-            function assignFile(input, file) {
+            function assignFile(input: HTMLInputElement | null, file: File) {
               if (!input) return
               const transfer = new DataTransfer()
               transfer.items.add(file)
               input.files = transfer.files
             }
 
-            async function submitBundle(form, collected, setStatus) {
+            async function submitBundle(form: HTMLFormElement, collected: Collected[], setStatus: SetStatus) {
               setStatus(`Reading ${collected.length} files from the backup…`)
               const body = new FormData()
-              const token = form.querySelector("input[name='_csrf_token']")?.value
+              const token = form.querySelector<HTMLInputElement>("input[name='_csrf_token']")?.value
               if (token) body.append("_csrf_token", token)
               collected.forEach(({file, path}) => {
                 body.append("import_batch[bundle_files][]", file, file.name)
@@ -300,22 +308,22 @@ defmodule MarskalWeb.ImportLive do
               setStatus("Could not read that backup. Try dropping it again, or upload the zip inside the package.")
             }
 
-            async function collectEntry(entry, prefix) {
+            async function collectEntry(entry: FileSystemEntry, prefix: string): Promise<Collected[]> {
               const path = prefix ? `${prefix}${entry.name}` : entry.name
-              if (entry.isFile) {
-                const file = await new Promise((resolve, reject) => entry.file(resolve, reject))
+              if (isFile(entry)) {
+                const file = await new Promise<File>((resolve, reject) => entry.file(resolve, reject))
                 return [{file, path}]
               }
-              if (!entry.isDirectory) return []
+              if (!isDirectory(entry)) return []
               const children = await readDirectory(entry)
-              const collected = []
+              const collected: Collected[] = []
               for (const child of children) collected.push(...await collectEntry(child, `${path}/`))
               return collected
             }
 
-            function readDirectory(entry) {
+            function readDirectory(entry: FileSystemDirectoryEntry): Promise<FileSystemEntry[]> {
               const reader = entry.createReader()
-              const entries = []
+              const entries: FileSystemEntry[] = []
               return new Promise((resolve, reject) => {
                 const tick = () => {
                   reader.readEntries((batch) => {
@@ -331,7 +339,15 @@ defmodule MarskalWeb.ImportLive do
               })
             }
 
-            function isZip(file) {
+            function isFile(entry: FileSystemEntry): entry is FileSystemFileEntry {
+              return entry.isFile
+            }
+
+            function isDirectory(entry: FileSystemEntry): entry is FileSystemDirectoryEntry {
+              return entry.isDirectory
+            }
+
+            function isZip(file: File) {
               return /\.zip$/i.test(file.name) || /\.ofocus(-backup)?$/i.test(file.name)
             }
           </script>

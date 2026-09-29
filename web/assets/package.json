@@ -1,0 +1,15 @@
+{
+  "name": "marskal-assets",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "topbar": "^3.0.1"
+  },
+  "devDependencies": {
+    "@types/phoenix": "^1.6.7",
+    "typescript": "^7.0.2"
+  }
+}

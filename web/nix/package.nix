@@ -6,6 +6,11 @@
   instead of silently reusing the old deps. Put the new hash in
   `depsHash`.
 
+  npm packages come from assets/package-lock.json through importNpmLock,
+  which fetches each tarball by the integrity hash in the lock, so there is
+  no hash to update here. Only runtime dependencies are installed:
+  devDependencies like TypeScript are for checking, not for the bundle.
+
   Two deps download binaries at compile time, which the sandbox forbids:
 
   - esbuild uses nixpkgs' binary through `MIX_ESBUILD_PATH`
@@ -19,8 +24,10 @@
   stdenv,
   beamPackages,
   esbuild,
+  importNpmLock,
   fetchurl,
   linkFarm,
+  nodejs_24,
 }:
 let
   pname = "marskal";
@@ -71,6 +78,22 @@ let
       };
     };
 
+  # The lock without its dev entries, and package.json to match, so
+  # `npm ci` accepts it.
+  npmPackage = removeAttrs (lib.importJSON ../assets/package.json) [ "devDependencies" ];
+  npmLock = lib.importJSON ../assets/package-lock.json;
+  npmRuntimeLock = npmLock // {
+    packages = lib.filterAttrs (path: entry: !(entry.dev or false)) npmLock.packages // {
+      "" = removeAttrs npmLock.packages."" [ "devDependencies" ];
+    };
+  };
+
+  nodeModules = importNpmLock.buildNodeModules {
+    package = npmPackage;
+    packageLock = npmRuntimeLock;
+    nodejs = nodejs_24;
+  };
+
   mixFodDeps = beamPackages.fetchMixDeps {
     pname = "${pname}-deps-${lockDigest}";
     inherit version src;
@@ -89,6 +112,12 @@ beamPackages.mixRelease {
     MIX_ESBUILD_PATH = lib.getExe esbuild;
     RUSTLER_PRECOMPILED_GLOBAL_CACHE_PATH = linkFarm "rustler-precompiled-cache" [ mdexNativeNif ];
   };
+
+  # Before compiling: LiveView links assets/node_modules into the colocated
+  # hooks directory when it extracts them.
+  preBuild = ''
+    ln -s ${nodeModules}/node_modules assets/node_modules
+  '';
 
   # Compile first: esbuild bundles the colocated hooks and CSS that the
   # LiveView compiler writes under _build.
