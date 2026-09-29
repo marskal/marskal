@@ -285,6 +285,77 @@ defmodule Marskal.OutlineTest do
     end
   end
 
+  describe "inherited dates" do
+    test "a subtask with no Planned is on its parent's agenda day", %{
+      user: user,
+      project: project
+    } do
+      today = Marskal.Dates.today(user.timezone)
+      tomorrow = Date.add(today, 1)
+      [a] = add(user, project, ["A"])
+      {:ok, _} = Tasks.update_task(user, a.id, %{planned_at: noon(user, today)}, command_id())
+      {:ok, child} = create(user, project, %{"title" => "Child", "parent_id" => a.id})
+
+      {:ok, grandchild} =
+        create(user, project, %{"title" => "Grandchild", "parent_id" => child.id})
+
+      {:ok, own} =
+        create(user, project, %{
+          "title" => "Own",
+          "parent_id" => a.id,
+          "planned_at" => noon(user, tomorrow)
+        })
+
+      assert Enum.sort(ids(Tasks.list_planned(user, today))) ==
+               Enum.sort([a.id, child.id, grandchild.id])
+
+      assert ids(Tasks.list_planned(user, tomorrow)) == [own.id]
+      assert Repo.get!(Task, child.id).planned_at == nil
+    end
+
+    test "Due comes from the nearest task above, then the project", %{
+      user: user,
+      project: project
+    } do
+      project_due = ~U[2026-12-01 12:00:00Z]
+      parent_due = ~U[2026-11-01 12:00:00Z]
+      {:ok, _} = Projects.update_project(user, project.id, %{due_at: project_due}, command_id())
+      [a, b] = add(user, project, ["A", "B"])
+      {:ok, _} = Tasks.update_task(user, b.id, %{due_at: parent_due}, command_id())
+      {:ok, child} = create(user, project, %{"title" => "Child", "parent_id" => b.id})
+
+      dates = Tasks.effective_dates(user, [a, b, child])
+
+      assert dates[a.id].due_at == project_due
+      assert dates[b.id].due_at == parent_due
+      assert dates[child.id].due_at == parent_due
+    end
+
+    test "a subtask is deferred while its parent is, whatever its own Defer",
+         %{user: user, project: project} do
+      now = DateTime.utc_now(:second)
+      [a] = add(user, project, ["A"])
+
+      {:ok, _} =
+        Tasks.update_task(user, a.id, %{defer_until: DateTime.add(now, 7, :day)}, command_id())
+
+      {:ok, child} = create(user, project, %{"title" => "Child", "parent_id" => a.id})
+
+      {:ok, early} =
+        create(user, project, %{
+          "title" => "Early",
+          "parent_id" => a.id,
+          "defer_until" => DateTime.add(now, 1, :day)
+        })
+
+      deferred = Tasks.deferred_ids(user, [child, early], DateTime.add(now, 2, :day))
+
+      assert MapSet.equal?(deferred, MapSet.new([child.id, early.id]))
+      refute child.id in ids(Tasks.list_open(user))
+      assert child.id in ids(Tasks.list_open(user, unavailable: true))
+    end
+  end
+
   describe "the database" do
     test "refuses a subtask that is not where its parent is", %{user: user, project: project} do
       [a] = add(user, project, ["A"])
@@ -339,6 +410,9 @@ defmodule Marskal.OutlineTest do
   defp children(task), do: task |> Marskal.Tasks.Outline.children() |> ids()
 
   defp ids(tasks), do: Enum.map(tasks, & &1.id)
+
+  defp noon(user, date),
+    do: date |> DateTime.new!(~T[12:00:00], user.timezone) |> DateTime.shift_zone!("Etc/UTC")
 
   defp command_id, do: Ecto.UUID.generate()
 end

@@ -90,6 +90,7 @@ defmodule MarskalWeb.TagLive do
         tags={@task_tags.tags}
         unavailable={@task_tags.unavailable}
         deferred={@task_tags.deferred}
+        dates={@task_tags.dates}
         zone={@zone}
         mark_inbox
         empty="No tasks carry this tag itself."
@@ -168,7 +169,8 @@ defmodule MarskalWeb.TagLive do
         |> assign(:task_tags, %{
           tags: outline.effective,
           unavailable: outline.unavailable,
-          deferred: Tasks.deferred_ids(user, node_tasks(outline.root))
+          deferred: Tasks.deferred_ids(user, node_tasks(outline.root)),
+          dates: Tasks.effective_dates(user, node_tasks(outline.root))
         })
     end
   end

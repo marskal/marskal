@@ -99,7 +99,9 @@ Default home: **Open tasks** stream. Timezone is stored per user, default
 
 - Agenda driven by **Planned**. Inbox needs none of the three.
 - **Indefinite defer** replaces On Hold for open-ended pause (tasks and projects).
-- Project dates do not auto-rewrite child task date columns (default).
+- Dates are never copied down. A task with no Planned or Due goes by the nearest task
+  above that has one, then its project; it is deferred while anything above it is
+  (`Marskal.Tasks.EffectiveDates`, derived at read time).
 
 ### Structure (ADR 0009)
 

@@ -13,6 +13,7 @@ defmodule Marskal.Tasks do
   alias Marskal.Dates
   alias Marskal.Projects.Project
   alias Marskal.Repo
+  alias Marskal.Tasks.EffectiveDates
   alias Marskal.Tasks.Outline
   alias Marskal.Tasks.Task
 
@@ -85,10 +86,12 @@ defmodule Marskal.Tasks do
   end
 
   @doc """
-  The agenda for `date` in the user's zone: to-do tasks planned that day,
-  earliest first (ADR 0006). With `carry_over: true`, tasks planned on
-  earlier days and still to do come first. Deferred and unavailable tasks
-  are left out unless `unavailable: true`, as in `list_open/2`.
+  The agenda for `date` in the user's zone: open tasks planned that day,
+  earliest first (ADR 0006), by the Planned they go by: their own, or
+  else what they inherit (`Marskal.Tasks.EffectiveDates`). With
+  `carry_over: true`, tasks planned on earlier days and still to do come
+  first. Deferred and unavailable tasks are left out unless
+  `unavailable: true`, as in `list_open/2`.
   """
   def list_planned(%User{} = user, %Date{} = date, opts \\ []) do
     {from, until} = Dates.day_bounds(date, user.timezone)
@@ -96,37 +99,33 @@ defmodule Marskal.Tasks do
     tasks =
       Task
       |> where_open(user)
-      |> where([t], t.planned_at < ^until)
+      |> join(:inner, [t], d in ^EffectiveDates.name(), on: d.id == t.id)
+      |> where([t, d], d.planned_at < type(^until, :utc_datetime))
       |> then(fn query ->
         if Keyword.get(opts, :carry_over, false),
           do: query,
-          else: where(query, [t], t.planned_at >= ^from)
+          else: where(query, [t, d], d.planned_at >= type(^from, :utc_datetime))
       end)
-      |> order_by([t], asc: t.planned_at, asc: t.inserted_at, asc: t.id)
+      |> order_by([t, d], asc: d.planned_at, asc: t.inserted_at, asc: t.id)
+      |> EffectiveDates.with_dates(user)
       |> Repo.all()
 
     if Keyword.get(opts, :unavailable, false), do: tasks, else: available(user, tasks)
   end
 
   @doc """
-  Ids of the tasks that are deferred now: by their own Defer, or because
-  their project is still deferred (ADR 0006).
+  Ids of the tasks that are deferred now: by their own Defer, or because a
+  task above them or their project still is (ADR 0006).
   """
   def deferred_ids(%User{} = user, tasks, now \\ DateTime.utc_now()) do
-    project_ids = tasks |> Enum.map(& &1.project_id) |> Enum.reject(&is_nil/1) |> Enum.uniq()
-
-    deferred_projects =
-      Project
-      |> where([p], p.user_id == ^user.id and p.id in ^project_ids)
-      |> Repo.all()
-      |> Enum.filter(&Dates.deferred?(&1, now))
-      |> MapSet.new(& &1.id)
-
-    for task <- tasks,
-        Dates.deferred?(task, now) or MapSet.member?(deferred_projects, task.project_id),
+    for {id, dates} <- EffectiveDates.for_tasks(user, tasks),
+        Dates.deferred?(dates, now),
         into: MapSet.new(),
-        do: task.id
+        do: id
   end
+
+  @doc "The dates each task goes by, own or inherited, by id."
+  def effective_dates(%User{} = user, tasks), do: EffectiveDates.for_tasks(user, tasks)
 
   @doc "A live task the user owns."
   def get_task(%User{} = user, id) do

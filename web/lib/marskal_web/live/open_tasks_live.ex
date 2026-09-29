@@ -48,6 +48,7 @@ defmodule MarskalWeb.OpenTasksLive do
         tags={@task_tags.tags}
         unavailable={@task_tags.unavailable}
         deferred={@task_tags.deferred}
+        dates={@task_tags.dates}
         zone={@current_scope.user.timezone}
         empty="No open tasks."
         actions={[:complete]}
