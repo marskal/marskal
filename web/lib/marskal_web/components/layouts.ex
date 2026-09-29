@@ -44,7 +44,7 @@ defmodule MarskalWeb.Layouts do
     <div
       id="app-shell"
       class={["app", @inspector && "is-inspector-open"]}
-      phx-hook={inspector_hook(@current_scope)}
+      phx-hook=".Inspector"
     >
       <header class="app-header">
         <div class="app-header__brand">
@@ -169,9 +169,6 @@ defmodule MarskalWeb.Layouts do
     <.flash_group flash={@flash} />
     """
   end
-
-  defp inspector_hook(%{user: user}) when not is_nil(user), do: ".Inspector"
-  defp inspector_hook(_scope), do: nil
 
   @doc """
   Shows the flash group with standard titles and content.
