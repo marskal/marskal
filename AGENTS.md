@@ -36,7 +36,7 @@ This file is **short and actionable**. Rationale and history live in
 |------|---------|
 | **Task** | Code/model name for captured work (`tasks` table) — ADR 0010 |
 | **Inbox** | A location beside **No project** and each project (`inbox = true`, no project) — ADR 0017 |
-| **Open tasks** | Default engage stream: `state = to_do`, `inbox = false` (not deferred when dates exist) |
+| **Open tasks** | Default engage stream: `state = to_do`, `inbox = false`, not under a resolved task or project (not deferred when dates exist) |
 | **Project** | Outcome needing more than one action; **not** nestable under other projects |
 | **Project folder** | Nestable container for projects; **name** only + **Active/Dropped**; **share unit** later — ADR 0003, 0009 |
 | **Tag** | Nested label on tasks/projects; project tags **inherit** to tasks (ADR 0005) |
@@ -99,7 +99,9 @@ Default home: **Open tasks** stream. Timezone is stored per user, default
 
 - Agenda driven by **Planned**. Inbox needs none of the three.
 - **Indefinite defer** replaces On Hold for open-ended pause (tasks and projects).
-- Project dates do not auto-rewrite child task date columns (default).
+- Dates are never copied down. A task with no Planned or Due goes by the nearest task
+  above that has one, then its project; it is deferred while anything above it is
+  (`Marskal.Tasks.EffectiveDates`, derived at read time).
 
 ### Structure (ADR 0009)
 
@@ -112,7 +114,8 @@ Project folders (nested) → Project (flat) → Tasks (nested outliner)
 - **Project folders:** nested; **name** + **Active | Dropped** only (no Done/dates).
   Projects optionally filed in one folder; drop folder does not resolve projects.
 - **Sharing (later):** share a **folder** → that folder + subfolders + projects (+ tasks).
-- Subtasks are full tasks; parent Done/Dropped does not auto-resolve children by default.
+- Subtasks are full tasks. A Done/Dropped parent task or project makes the tasks below it
+  count as resolved (derived; their own state is not written). Reopening brings them back.
 
 ### Tags (ADR 0005, Phase 2+)
 
@@ -248,6 +251,8 @@ The repository root is the product, not the web app (ADR 0015).
   Planned / Due on both (ADR 0006).
 - Structure: `tasks.parent_id`, `project_folders` tree, `projects.project_folder_id`;
   no project-to-project parent (ADR 0009). Prevent parent cycles.
+  A subtask lives where its parent does; a move to another location leaves the
+  parent and takes the subtree along. The outline trigger checks both at commit.
 - Done/Dropped retained in history by default (not deleted). Synced domain rows
   are discarded with a tombstone, not hard-deleted (ADR 0014).
 - **Sync (ADR 0014):** writes are field patches with a command id, appended to a
@@ -257,8 +262,8 @@ The repository root is the product, not the web app (ADR 0015).
   UUIDv5 from the series id and the anchor. The web app stays online — no
   browser offline cache. Writes go through `Marskal.Changes.apply/4`; a patch
   with no changes appends nothing. Not built yet, and due before the first
-  sync client: sibling rank, the pull endpoint, the `resolved_at` skew clamp,
-  and `discarded_at` on project folders.
+  sync client: the pull endpoint, the `resolved_at` skew clamp, and
+  `discarded_at` on project folders.
 - Tests: state transitions; user isolation; defer/planned/due; outliner/folder structure;
   **recurrence** matrix (ADR 0007); tag inheritance in Phase 2+; sync merge,
   command replay, tombstones, and occurrence-id vectors (ADR 0014).

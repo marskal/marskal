@@ -32,6 +32,28 @@ defmodule Marskal.RankTest do
     assert Rank.between(nil, "01") < "01"
   end
 
+  test "spread ranks are ordered, short, and leave room" do
+    ranks = Rank.spread(5000)
+
+    assert ranks == Enum.sort(ranks)
+    assert ranks == Enum.uniq(ranks)
+    assert Enum.all?(ranks, &Rank.valid?/1)
+    assert Enum.all?(ranks, &(String.length(&1) <= 3))
+
+    for [a, b] <- Enum.chunk_every(ranks, 2, 1, :discard) do
+      assert Rank.between(a, b) > a
+    end
+  end
+
+  test "valid? accepts ranks and refuses anything else" do
+    assert Rank.valid?("V")
+    assert Rank.valid?("0V")
+    refute Rank.valid?("")
+    refute Rank.valid?("V0")
+    refute Rank.valid?("a-")
+    refute Rank.valid?(nil)
+  end
+
   test "neighbors out of order are refused" do
     assert_raise ArgumentError, fn -> Rank.between("b", "a") end
     assert_raise ArgumentError, fn -> Rank.between("a", "a") end

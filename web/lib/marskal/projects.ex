@@ -6,7 +6,6 @@ defmodule Marskal.Projects do
   alias Marskal.Repo
   alias Marskal.Tasks
   alias Marskal.Tasks.Task
-  alias Marskal.Uuid
 
   def list_open(%User{} = user) do
     Project
@@ -68,10 +67,7 @@ defmodule Marskal.Projects do
           |> where([t], t.project_id == ^project.id and is_nil(t.discarded_at))
           |> Repo.all()
           |> Enum.each(fn task ->
-            {:ok, _} =
-              Changes.apply(user, Uuid.v5(command_id, "task|#{task.id}"), "task", fn ->
-                Tasks.discard(task)
-              end)
+            Changes.cascade(user, command_id, "task", task.id, fn -> Tasks.discard(task) end)
           end)
 
           changeset = Project.discard_changeset(project)

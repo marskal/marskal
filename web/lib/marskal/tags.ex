@@ -22,7 +22,6 @@ defmodule Marskal.Tags do
   alias Marskal.Tags.Tree
   alias Marskal.Tasks
   alias Marskal.Tasks.Task
-  alias Marskal.Uuid
 
   @doc "Every live tag the user has, dropped ones included, in sibling order."
   def list_tags(%User{} = user) do
@@ -141,7 +140,7 @@ defmodule Marskal.Tags do
 
     tasks =
       Task
-      |> where([t], t.user_id == ^user.id and t.state == :to_do and is_nil(t.discarded_at))
+      |> Tasks.where_open(user)
       |> order_by([t], desc: t.inserted_at, desc: t.id)
       |> Repo.all()
 
@@ -265,7 +264,7 @@ defmodule Marskal.Tags do
         select: l.project_id
 
     Task
-    |> where([t], t.user_id == ^user.id and t.state == :to_do and is_nil(t.discarded_at))
+    |> Tasks.where_open(user)
     |> where([t], t.id in subquery(tagged) or t.project_id in subquery(via_project))
     |> order_by([t], desc: t.inserted_at, desc: t.id)
     |> Repo.all()
@@ -338,14 +337,14 @@ defmodule Marskal.Tags do
 
   defp discard_subtree(user, command_id, tag) do
     for child <- live_children(tag) do
-      cascade(user, command_id, "tag", child.id, fn ->
+      Changes.cascade(user, command_id, "tag", child.id, fn ->
         discard_subtree(user, command_id, child)
       end)
     end
 
     for {schema, type} <- [{TaskTag, "task_tag"}, {ProjectTag, "project_tag"}],
         link <- live_links(schema, tag) do
-      cascade(user, command_id, type, link.id, fn -> discard_link(link) end)
+      Changes.cascade(user, command_id, type, link.id, fn -> discard_link(link) end)
     end
 
     discard(tag)
@@ -371,22 +370,22 @@ defmodule Marskal.Tags do
         link <- live_links(schema, duplicate) do
       owner_id = Map.fetch!(link, owner_field(kind))
 
-      cascade(user, command_id, "#{kind}_tag", Link.id(kind, owner_id, target.id), fn ->
+      Changes.cascade(user, command_id, "#{kind}_tag", Link.id(kind, owner_id, target.id), fn ->
         upsert_link(user, kind, owner_id, target, :tag)
       end)
 
-      cascade(user, command_id, "#{kind}_tag", link.id, fn -> discard_link(link) end)
+      Changes.cascade(user, command_id, "#{kind}_tag", link.id, fn -> discard_link(link) end)
     end
 
     for child <- live_children(duplicate) do
       case twin(target, child.name) do
         nil ->
-          cascade(user, command_id, "tag", child.id, fn ->
+          Changes.cascade(user, command_id, "tag", child.id, fn ->
             write_tag(user, child, %{parent_id: target.id})
           end)
 
         twin ->
-          cascade(user, command_id, "tag", child.id, fn ->
+          Changes.cascade(user, command_id, "tag", child.id, fn ->
             merge(user, command_id, child, twin)
           end)
       end
@@ -402,11 +401,6 @@ defmodule Marskal.Tags do
     |> where([t], t.parent_id == ^parent.id and is_nil(t.discarded_at))
     |> where([t], fragment("? = ?::citext", t.name, ^name))
     |> Repo.one()
-  end
-
-  # A cascaded write gets its own command id, derived from the action's.
-  defp cascade(user, command_id, type, entity_id, fun) do
-    {:ok, _} = Changes.apply(user, Uuid.v5(command_id, "#{type}|#{entity_id}"), type, fun)
   end
 
   ## Links

@@ -13,6 +13,8 @@ defmodule Marskal.Tasks do
   alias Marskal.Dates
   alias Marskal.Projects.Project
   alias Marskal.Repo
+  alias Marskal.Tasks.EffectiveDates
+  alias Marskal.Tasks.Outline
   alias Marskal.Tasks.Task
 
   def list_inbox(%User{} = user), do: list_visible(user, true)
@@ -36,58 +38,94 @@ defmodule Marskal.Tasks do
     |> then(&Marskal.Tags.reject_unavailable(user, &1))
   end
 
-  @doc "A project's to-do tasks, inbox ones included (ADR 0010)."
+  @doc "A project's open tasks, inbox ones included (ADR 0010)."
   def list_project_tasks(%User{} = user, project_id) do
     Task
-    |> where([t], t.user_id == ^user.id and is_nil(t.discarded_at))
-    |> where([t], t.project_id == ^project_id and t.state == :to_do)
-    |> order_by([t], desc: t.inserted_at, desc: t.id)
+    |> where_open(user)
+    |> where([t], t.project_id == ^project_id)
+    |> order_by([t], asc: t.rank, asc: t.id)
     |> Repo.all()
   end
 
   @doc """
-  The agenda for `date` in the user's zone: to-do tasks planned that day,
-  earliest first (ADR 0006). With `carry_over: true`, tasks planned on
-  earlier days and still to do come first. Deferred and unavailable tasks
-  are left out unless `unavailable: true`, as in `list_open/2`.
+  Narrows a task query to the user's open tasks: live, To-Do, and not
+  resolved along with something above them. A task under a Done or
+  Dropped task, at any depth, or in a Done or Dropped project, counts as
+  resolved too, though its own state stays To-Do. Reopening what is above
+  brings it back as it was.
+  """
+  def where_open(query, %User{} = user) do
+    resolved_projects =
+      from p in Project, where: p.user_id == ^user.id and p.state != :to_do, select: p.id
+
+    query
+    |> where([t], t.user_id == ^user.id and t.state == :to_do and is_nil(t.discarded_at))
+    |> where([t], is_nil(t.project_id) or t.project_id not in subquery(resolved_projects))
+    |> where([t], t.id not in subquery(under_resolved(user)))
+  end
+
+  # Every task below a resolved task. UNION stops at a repeated row, should
+  # a cycle ever slip past the outline trigger.
+  defp under_resolved(user) do
+    children_of_resolved =
+      from c in Task,
+        join: p in Task,
+        on: c.parent_id == p.id,
+        where: p.user_id == ^user.id and p.state != :to_do,
+        select: %{id: c.id}
+
+    deeper =
+      from t in Task,
+        join: u in "under_resolved",
+        on: t.parent_id == u.id,
+        select: %{id: t.id}
+
+    from(u in "under_resolved", select: type(u.id, Ecto.UUID))
+    |> recursive_ctes(true)
+    |> with_cte("under_resolved", as: ^union(children_of_resolved, ^deeper))
+  end
+
+  @doc """
+  The agenda for `date` in the user's zone: open tasks planned that day,
+  earliest first (ADR 0006), by the Planned they go by: their own, or
+  else what they inherit (`Marskal.Tasks.EffectiveDates`). With
+  `carry_over: true`, tasks planned on earlier days and still to do come
+  first. Deferred and unavailable tasks are left out unless
+  `unavailable: true`, as in `list_open/2`.
   """
   def list_planned(%User{} = user, %Date{} = date, opts \\ []) do
     {from, until} = Dates.day_bounds(date, user.timezone)
 
     tasks =
       Task
-      |> where([t], t.user_id == ^user.id and is_nil(t.discarded_at) and t.state == :to_do)
-      |> where([t], t.planned_at < ^until)
+      |> where_open(user)
+      |> join(:inner, [t], d in ^EffectiveDates.name(), on: d.id == t.id)
+      |> where([t, d], d.planned_at < type(^until, :utc_datetime))
       |> then(fn query ->
         if Keyword.get(opts, :carry_over, false),
           do: query,
-          else: where(query, [t], t.planned_at >= ^from)
+          else: where(query, [t, d], d.planned_at >= type(^from, :utc_datetime))
       end)
-      |> order_by([t], asc: t.planned_at, asc: t.inserted_at, asc: t.id)
+      |> order_by([t, d], asc: d.planned_at, asc: t.inserted_at, asc: t.id)
+      |> EffectiveDates.with_dates(user)
       |> Repo.all()
 
     if Keyword.get(opts, :unavailable, false), do: tasks, else: available(user, tasks)
   end
 
   @doc """
-  Ids of the tasks that are deferred now: by their own Defer, or because
-  their project is still deferred (ADR 0006).
+  Ids of the tasks that are deferred now: by their own Defer, or because a
+  task above them or their project still is (ADR 0006).
   """
   def deferred_ids(%User{} = user, tasks, now \\ DateTime.utc_now()) do
-    project_ids = tasks |> Enum.map(& &1.project_id) |> Enum.reject(&is_nil/1) |> Enum.uniq()
-
-    deferred_projects =
-      Project
-      |> where([p], p.user_id == ^user.id and p.id in ^project_ids)
-      |> Repo.all()
-      |> Enum.filter(&Dates.deferred?(&1, now))
-      |> MapSet.new(& &1.id)
-
-    for task <- tasks,
-        Dates.deferred?(task, now) or MapSet.member?(deferred_projects, task.project_id),
+    for {id, dates} <- EffectiveDates.for_tasks(user, tasks),
+        Dates.deferred?(dates, now),
         into: MapSet.new(),
-        do: task.id
+        do: id
   end
+
+  @doc "The dates each task goes by, own or inherited, by id."
+  def effective_dates(%User{} = user, tasks), do: EffectiveDates.for_tasks(user, tasks)
 
   @doc "A live task the user owns."
   def get_task(%User{} = user, id) do
@@ -104,9 +142,18 @@ defmodule Marskal.Tasks do
     |> Repo.all()
   end
 
+  @doc """
+  A new task. With `parent_id` it is a subtask and lives where its parent
+  does, whatever location is given. With `after_id` it goes right after
+  that sibling; otherwise at the top of the inbox or the bottom of
+  anywhere else. A `rank` from a client is kept as given.
+  """
   def create_task(%User{} = user, attrs, command_id) when is_map(attrs) do
     Changes.apply(user, command_id, "task", fn ->
-      changeset = Task.create_changeset(%Task{}, user, attrs)
+      changeset =
+        %Task{}
+        |> Task.create_changeset(user, attrs)
+        |> place_new(user, attr(attrs, :after_id))
 
       case Repo.insert(changeset) do
         {:ok, task} -> {:ok, task, changeset}
@@ -120,6 +167,9 @@ defmodule Marskal.Tasks do
   command. Fields equal to the stored value are left out of the patch,
   except that a move always carries both inbox and project_id (ADR 0017),
   and a Defer change both of its fields (ADR 0006).
+
+  A move to another location takes the task out from under its parent,
+  and its subtasks go with it.
   """
   def update_task(%User{} = user, task_id, attrs, command_id) when is_map(attrs) do
     Changes.apply(user, command_id, "task", fn ->
@@ -128,25 +178,58 @@ defmodule Marskal.Tasks do
           {:error, :not_found}
 
         task ->
-          changeset = Task.update_changeset(task, attrs)
-
-          case Repo.update(changeset) do
-            {:ok, task} -> {:ok, task, changeset}
-            {:error, changeset} -> {:error, changeset}
-          end
+          changeset = task |> Task.update_changeset(attrs) |> detach_on_move(user, task)
+          write_with_subtree(user, command_id, changeset)
       end
     end)
   end
 
   @doc """
-  Discards the task. Later patches to it are ignored and it leaves every
-  view; Done and Dropped are how work normally ends (ADR 0014).
+  Places a task in the outline: under `parent_id` (`nil` for the top of its
+  location), right after the sibling `after_id` (`nil` for first). At the
+  top, the task stays in its location unless `after_id` names a task in
+  another one. Its subtasks come along.
+  """
+  def place_task(%User{} = user, task_id, parent_id, after_id, command_id) do
+    Changes.apply(user, command_id, "task", fn ->
+      case get_task(user, task_id) do
+        nil -> {:error, :not_found}
+        task -> place(user, command_id, task, parent_id, after_id)
+      end
+    end)
+  end
+
+  @doc "Makes the task the last subtask of the sibling above it."
+  def indent_task(%User{} = user, task_id, command_id) do
+    Changes.apply(user, command_id, "task", fn ->
+      with %Task{} = task <- get_task(user, task_id) || {:error, :not_found},
+           %Task{} = above <- Outline.previous_sibling(user, task) || {:error, :first} do
+        last = Outline.last_child(user, above)
+        place(user, command_id, task, above.id, last && last.id)
+      end
+    end)
+  end
+
+  @doc "Moves the task out of its parent, to just after it."
+  def outdent_task(%User{} = user, task_id, command_id) do
+    Changes.apply(user, command_id, "task", fn ->
+      with %Task{} = task <- get_task(user, task_id) || {:error, :not_found},
+           %Task{} = parent <- parent(user, task) || {:error, :top_level} do
+        place(user, command_id, task, parent.parent_id, parent.id)
+      end
+    end)
+  end
+
+  @doc """
+  Discards the task and its subtasks. Later patches to them are ignored
+  and they leave every view; Done and Dropped are how work normally ends
+  (ADR 0014).
   """
   def delete_task(%User{} = user, task_id, command_id) do
     Changes.apply(user, command_id, "task", fn ->
       case get_task(user, task_id) do
         nil -> {:error, :not_found}
-        task -> discard(task)
+        task -> discard_subtree(user, command_id, task)
       end
     end)
   end
@@ -191,11 +274,156 @@ defmodule Marskal.Tasks do
   def set_notes(user, task_id, notes, command_id),
     do: update_task(user, task_id, %{notes: notes}, command_id)
 
+  ## Outline
+
+  defp parent(_user, %Task{parent_id: nil}), do: nil
+  defp parent(user, %Task{parent_id: id}), do: get_task(user, id)
+
+  defp place(user, command_id, task, parent_id, after_id) do
+    with {:ok, group} <- target_group(user, task, parent_id, after_id),
+         {:ok, rank} <- Outline.rank_after(user, group, after_id, task.id) do
+      changeset = Task.place_changeset(task, Map.put(group, :rank, rank))
+      write_with_subtree(user, command_id, changeset)
+    end
+  end
+
+  defp target_group(_user, task, nil, nil), do: {:ok, %{Outline.group(task) | parent_id: nil}}
+
+  # At the top, the sibling to follow says which location.
+  defp target_group(user, _task, nil, after_id) do
+    case get_task(user, after_id) do
+      nil -> {:error, :not_a_sibling}
+      after_task -> {:ok, %{Outline.group(after_task) | parent_id: nil}}
+    end
+  end
+
+  defp target_group(user, task, parent_id, _after_id) do
+    case get_task(user, parent_id) do
+      nil ->
+        {:error, :not_found}
+
+      parent ->
+        if Outline.within?(parent, task.id),
+          do: {:error, :cycle},
+          else: {:ok, Outline.children_of(parent)}
+    end
+  end
+
+  # A new subtask lives where its parent does. Ranks from a client stand.
+  defp place_new(%Ecto.Changeset{valid?: false} = changeset, _user, _after_id), do: changeset
+
+  defp place_new(changeset, user, after_id) do
+    changeset =
+      case Ecto.Changeset.get_field(changeset, :parent_id) do
+        nil ->
+          changeset
+
+        parent_id ->
+          case get_task(user, parent_id) do
+            nil ->
+              Ecto.Changeset.add_error(changeset, :parent_id, "must be one of your tasks")
+
+            parent ->
+              changeset
+              |> Ecto.Changeset.force_change(:inbox, parent.inbox)
+              |> Ecto.Changeset.force_change(:project_id, parent.project_id)
+          end
+      end
+
+    cond do
+      not changeset.valid? ->
+        changeset
+
+      Ecto.Changeset.get_change(changeset, :rank) ->
+        changeset
+
+      true ->
+        group = Outline.group(Ecto.Changeset.apply_changes(changeset))
+
+        case new_rank(user, group, after_id) do
+          {:ok, rank} -> Ecto.Changeset.put_change(changeset, :rank, rank)
+          {:error, _} -> Ecto.Changeset.add_error(changeset, :after_id, "must be a sibling")
+        end
+    end
+  end
+
+  defp new_rank(user, group, nil), do: {:ok, Outline.default_rank(user, group)}
+  defp new_rank(user, group, after_id), do: Outline.rank_after(user, group, after_id)
+
+  # Moving to another location leaves the parent behind: the task goes to
+  # the top of the new location, placed as a new task would be.
+  defp detach_on_move(%Ecto.Changeset{valid?: false} = changeset, _user, _task), do: changeset
+
+  defp detach_on_move(changeset, user, task) do
+    moved = Outline.group(Ecto.Changeset.apply_changes(changeset))
+
+    if moved.inbox == task.inbox and moved.project_id == task.project_id do
+      changeset
+    else
+      group = %{moved | parent_id: nil}
+
+      changeset
+      |> Ecto.Changeset.put_change(:parent_id, nil)
+      |> Ecto.Changeset.put_change(:rank, Outline.default_rank(user, group, task.id))
+    end
+  end
+
+  defp write_with_subtree(user, command_id, changeset) do
+    case Repo.update(changeset) do
+      {:ok, task} ->
+        if Ecto.Changeset.changed?(changeset, :inbox) or
+             Ecto.Changeset.changed?(changeset, :project_id) do
+          relocate_subtree(user, command_id, task)
+        end
+
+        {:ok, task, changeset}
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
+  end
+
+  # Subtasks follow their parent to its new location, one command each.
+  defp relocate_subtree(user, command_id, task) do
+    for child <- Outline.children(task) do
+      Changes.cascade(user, command_id, "task", child.id, fn ->
+        changeset = Task.relocate_changeset(child, task.inbox, task.project_id)
+        moved = Repo.update!(changeset)
+        relocate_subtree(user, command_id, moved)
+        {:ok, moved, changeset}
+      end)
+    end
+  end
+
+  defp discard_subtree(user, command_id, task) do
+    for child <- Outline.children(task) do
+      Changes.cascade(user, command_id, "task", child.id, fn ->
+        discard_subtree(user, command_id, child)
+      end)
+    end
+
+    discard(task)
+  end
+
+  # Forms send a blank for none.
+  defp attr(attrs, key) do
+    case Map.get(attrs, key) || Map.get(attrs, Atom.to_string(key)) do
+      "" -> nil
+      value -> value
+    end
+  end
+
+  # The inbox is a location, in outline order. The open stream gathers
+  # every location, newest first.
   defp list_visible(user, inbox) do
     Task
-    |> where([t], t.user_id == ^user.id and is_nil(t.discarded_at))
-    |> where([t], t.inbox == ^inbox and t.state == :to_do)
-    |> order_by([t], desc: t.inserted_at, desc: t.id)
+    |> where_open(user)
+    |> where([t], t.inbox == ^inbox)
+    |> then(fn query ->
+      if inbox,
+        do: order_by(query, [t], asc: t.rank, asc: t.id),
+        else: order_by(query, [t], desc: t.inserted_at, desc: t.id)
+    end)
     |> Repo.all()
   end
 end

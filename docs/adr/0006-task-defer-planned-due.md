@@ -97,3 +97,9 @@ Defer is optional and is either:
   and inbox views show the task with a mark.
 - The agenda for today also lists to-do tasks planned on earlier days, so a
   missed plan stays visible.
+- Dates inherit down the outline (2026-09-29, with ADR 0009 nesting). A task
+  with no Planned or Due of its own goes by its nearest ancestor task's, then
+  its project's; the agenda and the Due marks use that. A task is deferred
+  while it, any ancestor, or its project is, so an earlier Defer on a subtask
+  does not surface it before its parent. Inherited dates are derived at read
+  time, not written, and rows mark them as inherited.

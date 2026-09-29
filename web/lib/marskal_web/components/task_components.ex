@@ -18,11 +18,19 @@ defmodule MarskalWeb.TaskComponents do
     default: MapSet.new(),
     doc: "ids of deferred tasks, from `Marskal.Tasks.deferred_ids/2`"
 
+  attr :dates, :map,
+    default: %{},
+    doc: "effective dates by task id, from `Marskal.Tasks.effective_dates/2`"
+
   attr :zone, :string, default: "Europe/Copenhagen", doc: "the user's zone, for date labels"
 
   def list(assigns) do
     assigns =
-      assign(assigns, now: DateTime.utc_now(), today: Marskal.Dates.today(assigns.zone))
+      assign(assigns,
+        now: DateTime.utc_now(),
+        today: Marskal.Dates.today(assigns.zone),
+        inherited_hint: "From the task or project above"
+      )
 
     ~H"""
     <style :type={MarskalWeb.ColocatedCSS}>
@@ -163,6 +171,10 @@ defmodule MarskalWeb.TaskComponents do
           color: var(--accent);
         }
 
+        .mark--inherited {
+          border-style: dashed;
+        }
+
         :scope.is-unavailable .title {
           color: var(--muted);
         }
@@ -187,7 +199,7 @@ defmodule MarskalWeb.TaskComponents do
     <p :if={@tasks == []} class="empty">{@empty}</p>
     <ul id={@id} class="task-list">
       <li
-        :for={task <- @tasks}
+        :for={{task, d} <- with_dates(@tasks, @dates)}
         id={"task-#{task.id}"}
         class={[
           "task-row",
@@ -238,7 +250,7 @@ defmodule MarskalWeb.TaskComponents do
           </button>
           <span
             :if={
-              (@mark_inbox and task.inbox) or task.planned_at != nil or task.due_at != nil or
+              (@mark_inbox and task.inbox) or d.planned_at != nil or d.due_at != nil or
                 MapSet.member?(@unavailable, task.id) or MapSet.member?(@deferred, task.id)
             }
             class="marks"
@@ -248,19 +260,30 @@ defmodule MarskalWeb.TaskComponents do
               Unavailable
             </span>
             <span :if={MapSet.member?(@deferred, task.id)} class="mark mark--deferred">
-              {deferred_label(task, @zone, @today, @now)}
+              {deferred_label(d, @zone, @today, @now)}
             </span>
             <span
-              :if={task.planned_at}
-              class={["mark mark--planned", planned_today?(task, @zone, @today) && "mark--today"]}
+              :if={d.planned_at}
+              class={[
+                "mark mark--planned",
+                planned_today?(task, d, @zone, @today) && "mark--today",
+                inherited?(task, d, :planned_at) && "mark--inherited"
+              ]}
+              title={inherited?(task, d, :planned_at) && @inherited_hint}
             >
-              Planned {MarskalWeb.DateFields.short(task.planned_at, :planned_at, @zone, @today)}
+              Planned {MarskalWeb.DateFields.short(d.planned_at, :planned_at, @zone, @today)}
             </span>
             <span
-              :if={task.due_at}
-              class={["mark mark--due", Marskal.Dates.overdue?(task, @now) && "mark--overdue"]}
+              :if={d.due_at}
+              class={[
+                "mark mark--due",
+                Marskal.Dates.overdue?(%{state: task.state, due_at: d.due_at}, @now) &&
+                  "mark--overdue",
+                inherited?(task, d, :due_at) && "mark--inherited"
+              ]}
+              title={inherited?(task, d, :due_at) && @inherited_hint}
             >
-              Due {MarskalWeb.DateFields.short(task.due_at, :due_at, @zone, @today)}
+              Due {MarskalWeb.DateFields.short(d.due_at, :due_at, @zone, @today)}
             </span>
           </span>
           <MarskalWeb.FormattedNotes.block text={task.notes} />
@@ -302,16 +325,25 @@ defmodule MarskalWeb.TaskComponents do
   def parse_location(value) when value in ["none", ""], do: :none
   def parse_location(project_id) when is_binary(project_id), do: project_id
 
-  # A task can be deferred by its project, with no Defer of its own.
-  defp deferred_label(task, zone, today, now) do
-    if Marskal.Dates.deferred?(task, now) and task.defer_until,
-      do:
-        "Deferred until #{MarskalWeb.DateFields.short(task.defer_until, :defer_until, zone, today)}",
-      else: "Deferred"
+  # Each task with the dates it goes by: its own, or inherited from the
+  # task or project above (`Marskal.Tasks.effective_dates/2`). A task
+  # missing from `dates` goes by its own.
+  defp with_dates(tasks, dates), do: Enum.map(tasks, &{&1, Map.get(dates, &1.id, &1)})
+
+  defp inherited?(task, dates, field),
+    do: is_nil(Map.get(task, field)) and Map.get(dates, field) != nil
+
+  # Defer comes from the task or anything above it; the latest one wins.
+  defp deferred_label(dates, zone, today, now) do
+    if Marskal.Dates.deferred?(dates, now) and not dates.deferred_indefinitely and
+         dates.defer_until,
+       do:
+         "Deferred until #{MarskalWeb.DateFields.short(dates.defer_until, :defer_until, zone, today)}",
+       else: "Deferred"
   end
 
-  defp planned_today?(task, zone, today) do
-    task.state == :to_do and elem(Marskal.Dates.to_local(task.planned_at, zone), 0) == today
+  defp planned_today?(task, dates, zone, today) do
+    task.state == :to_do and elem(Marskal.Dates.to_local(dates.planned_at, zone), 0) == today
   end
 
   defp check_event(%{state: :to_do}), do: "complete"
