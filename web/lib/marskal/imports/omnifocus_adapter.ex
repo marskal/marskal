@@ -404,6 +404,11 @@ defmodule Marskal.Imports.OmnifocusAdapter do
             notes: row["notes"],
             folder_source_id: row["project"]["folder_id"],
             state: project_state(row["project"]["status"], row["completed"]),
+            deferred_indefinitely: row["project"]["status"] == "inactive",
+            defer_until: row["start"],
+            planned: row["planned"],
+            due: row["due"],
+            resolved_at: row["completed"],
             tag_source_ids: Map.get(tag_ids, row["id"], []),
             extras: extras_for(row)
           }
@@ -441,6 +446,10 @@ defmodule Marskal.Imports.OmnifocusAdapter do
             project_source_id: project_id,
             parent_source_id: parent_id,
             state: task_state(row),
+            defer_until: row["start"],
+            planned: row["planned"],
+            due: row["due"],
+            resolved_at: row["completed"],
             tag_source_ids: Map.get(tag_ids, row["id"], []),
             extras: extras_for(row) |> Map.put("parent_source_id", parent_id) |> compact()
           }
@@ -494,18 +503,10 @@ defmodule Marskal.Imports.OmnifocusAdapter do
 
   defp extras_for(row) do
     %{}
-    |> put_extra("defer_until", row["start"])
-    |> put_extra("due", row["due"])
-    |> put_extra("planned", row["planned"])
     |> then(fn extras ->
       if row["flagged"], do: Map.put(extras, "flagged", true), else: extras
     end)
     |> put_extra("repeat", row["repeat"])
-    |> then(fn extras ->
-      if get_in(row, ["project", "status"]) == "inactive",
-        do: Map.put(extras, "defer", "indefinite"),
-        else: extras
-    end)
   end
 
   defp put_extra(extras, _key, value) when value in [nil, ""], do: extras

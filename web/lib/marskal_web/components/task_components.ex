@@ -14,7 +14,16 @@ defmodule MarskalWeb.TaskComponents do
   attr :unavailable, :any, default: MapSet.new(), doc: "ids of tasks tag state blocks"
   attr :mark_inbox, :boolean, default: false, doc: "label tasks still in the inbox"
 
+  attr :deferred, :any,
+    default: MapSet.new(),
+    doc: "ids of deferred tasks, from `Marskal.Tasks.deferred_ids/2`"
+
+  attr :zone, :string, default: "Europe/Copenhagen", doc: "the user's zone, for date labels"
+
   def list(assigns) do
+    assigns =
+      assign(assigns, now: DateTime.utc_now(), today: Marskal.Dates.today(assigns.zone))
+
     ~H"""
     <style :type={MarskalWeb.ColocatedCSS}>
       @scope (.task-row) {
@@ -144,6 +153,16 @@ defmodule MarskalWeb.TaskComponents do
           border-radius: 4px;
         }
 
+        .mark--overdue {
+          border-color: currentColor;
+          color: var(--danger);
+        }
+
+        .mark--today {
+          border-color: currentColor;
+          color: var(--accent);
+        }
+
         :scope.is-unavailable .title {
           color: var(--muted);
         }
@@ -173,7 +192,8 @@ defmodule MarskalWeb.TaskComponents do
         class={[
           "task-row",
           MarskalWeb.Inspector.selected?(:task, task.id, @inspector) && "is-selected",
-          MapSet.member?(@unavailable, task.id) && "is-unavailable",
+          (MapSet.member?(@unavailable, task.id) or MapSet.member?(@deferred, task.id)) &&
+            "is-unavailable",
           task.state != :to_do && "is-resolved"
         ]}
         data-inspect-type="task"
@@ -217,12 +237,30 @@ defmodule MarskalWeb.TaskComponents do
             {task.title}
           </button>
           <span
-            :if={MapSet.member?(@unavailable, task.id) or (@mark_inbox and task.inbox)}
+            :if={
+              (@mark_inbox and task.inbox) or task.planned_at != nil or task.due_at != nil or
+                MapSet.member?(@unavailable, task.id) or MapSet.member?(@deferred, task.id)
+            }
             class="marks"
           >
             <span :if={@mark_inbox and task.inbox} class="mark mark--inbox">Inbox</span>
             <span :if={MapSet.member?(@unavailable, task.id)} class="mark mark--unavailable">
               Unavailable
+            </span>
+            <span :if={MapSet.member?(@deferred, task.id)} class="mark mark--deferred">
+              {deferred_label(task, @zone, @today, @now)}
+            </span>
+            <span
+              :if={task.planned_at}
+              class={["mark mark--planned", planned_today?(task, @zone, @today) && "mark--today"]}
+            >
+              Planned {MarskalWeb.DateFields.short(task.planned_at, :planned_at, @zone, @today)}
+            </span>
+            <span
+              :if={task.due_at}
+              class={["mark mark--due", Marskal.Dates.overdue?(task, @now) && "mark--overdue"]}
+            >
+              Due {MarskalWeb.DateFields.short(task.due_at, :due_at, @zone, @today)}
             </span>
           </span>
           <MarskalWeb.FormattedNotes.block text={task.notes} />
@@ -263,6 +301,18 @@ defmodule MarskalWeb.TaskComponents do
   def parse_location("inbox"), do: :inbox
   def parse_location(value) when value in ["none", ""], do: :none
   def parse_location(project_id) when is_binary(project_id), do: project_id
+
+  # A task can be deferred by its project, with no Defer of its own.
+  defp deferred_label(task, zone, today, now) do
+    if Marskal.Dates.deferred?(task, now) and task.defer_until,
+      do:
+        "Deferred until #{MarskalWeb.DateFields.short(task.defer_until, :defer_until, zone, today)}",
+      else: "Deferred"
+  end
+
+  defp planned_today?(task, zone, today) do
+    task.state == :to_do and elem(Marskal.Dates.to_local(task.planned_at, zone), 0) == today
+  end
 
   defp check_event(%{state: :to_do}), do: "complete"
   defp check_event(_task), do: "reopen"

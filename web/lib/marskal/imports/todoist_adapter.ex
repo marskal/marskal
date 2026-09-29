@@ -259,6 +259,9 @@ defmodule Marskal.Imports.TodoistAdapter do
       project_source_id: project_source_id,
       parent_source_id: parent,
       state: if(done?(row), do: "done", else: "to_do"),
+      planned: date_value(row["due"]),
+      due: date_value(row["deadline"]),
+      resolved_at: if(done?(row), do: row["completed_at"]),
       tag_source_ids:
         names |> Enum.map(&label_ids[tag_key(&1)]) |> Enum.reject(&is_nil/1) |> Enum.uniq(),
       extras:
@@ -266,9 +269,7 @@ defmodule Marskal.Imports.TodoistAdapter do
         |> put_extra("parent_source_id", parent)
         |> put_extra("section", section_names[string_id(row["section_id"])])
         |> put_extra("order_key", row["order_key"])
-        |> put_extra("planned", date_value(row["due"]))
         |> put_extra("planned_zone", get_in(row, ["due", "timezone"]))
-        |> put_extra("due", date_value(row["deadline"]))
         |> put_extra("repeat", repeat(row["due"]))
         |> put_priority(row["priority"])
     }

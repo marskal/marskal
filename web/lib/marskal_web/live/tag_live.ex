@@ -56,6 +56,7 @@ defmodule MarskalWeb.TagLive do
         root_id={@tag.id}
         task_tags={@task_tags}
         inspector={@inspector}
+        zone={@current_scope.user.timezone}
       />
 
       <.form for={@tag_form} id="new-child-tag" phx-submit="create-tag" class="capture">
@@ -71,6 +72,7 @@ defmodule MarskalWeb.TagLive do
   attr :node, :map, required: true
   attr :root_id, :string, required: true
   attr :task_tags, :map, required: true
+  attr :zone, :string, required: true
   attr :inspector, :any, default: nil
 
   # The tag's own tasks, then one section per child tag, nested the same
@@ -87,6 +89,8 @@ defmodule MarskalWeb.TagLive do
         tasks={@node.tasks}
         tags={@task_tags.tags}
         unavailable={@task_tags.unavailable}
+        deferred={@task_tags.deferred}
+        zone={@zone}
         mark_inbox
         empty="No tasks carry this tag itself."
         actions={[:complete]}
@@ -98,6 +102,7 @@ defmodule MarskalWeb.TagLive do
         root_id={@root_id}
         task_tags={@task_tags}
         inspector={@inspector}
+        zone={@zone}
       />
     </section>
     """
@@ -160,7 +165,11 @@ defmodule MarskalWeb.TagLive do
         |> assign(:state, Tree.state(tree, root.tag.id) || root.tag.state)
         |> assign(:ancestors, ancestors(tree, root.tag))
         |> assign(:outline, outline)
-        |> assign(:task_tags, %{tags: outline.effective, unavailable: outline.unavailable})
+        |> assign(:task_tags, %{
+          tags: outline.effective,
+          unavailable: outline.unavailable,
+          deferred: Tasks.deferred_ids(user, node_tasks(outline.root))
+        })
     end
   end
 

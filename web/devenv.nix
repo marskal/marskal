@@ -4,6 +4,7 @@ let
 in
 {
   packages = [
+    pkgs.forgejo-cli # `fj`, for pull requests on gitte.hoegh.digital
     pkgs.libpq
     pkgs.pkg-config
   ];

@@ -48,9 +48,9 @@ defmodule Marskal.Imports.TodoistAdapterTest do
     assert milk.inbox
     assert milk.project_source_id == nil
     assert milk.tag_source_ids == ["tag:l1", "tag:shared:errand"]
-    assert milk.extras["planned"] == "2026-09-28"
+    assert milk.planned == "2026-09-28"
     assert milk.extras["repeat"] == "every monday"
-    assert milk.extras["due"] == "2026-10-01"
+    assert milk.due == "2026-10-01"
     assert milk.extras["priority"] == 4
 
     copy = Enum.find(graph.tasks, &(&1.title == "Write copy"))

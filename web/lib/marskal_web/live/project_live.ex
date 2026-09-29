@@ -60,6 +60,8 @@ defmodule MarskalWeb.ProjectLive do
         tasks={@tasks}
         tags={@task_tags.tags}
         unavailable={@task_tags.unavailable}
+        deferred={@task_tags.deferred}
+        zone={@current_scope.user.timezone}
         empty="No open tasks in this project."
         actions={[:complete]}
         inspector={@inspector}

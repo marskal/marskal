@@ -78,6 +78,10 @@ config :logger, :default_formatter,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# Dates show in the user's stored zone (ADR 0006). tz ships the IANA data,
+# so nothing is downloaded at compile or run time.
+config :elixir, :time_zone_database, Tz.TimeZoneDatabase
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
