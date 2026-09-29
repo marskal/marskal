@@ -16,7 +16,7 @@ defmodule MarskalWeb.ProjectLive do
          socket |> put_flash(:error, "That project is not available.") |> redirect(to: ~p"/")}
 
       project ->
-        {:ok, assign_project(socket, user, project)}
+        {:ok, socket |> MarskalWeb.Outline.attach() |> assign_project(user, project)}
     end
   end
 
@@ -62,6 +62,10 @@ defmodule MarskalWeb.ProjectLive do
         unavailable={@task_tags.unavailable}
         deferred={@task_tags.deferred}
         dates={@task_tags.dates}
+        resolved={@task_tags.resolved}
+        parents={@task_tags.parents}
+        outline
+        collapsed={@collapsed}
         zone={@current_scope.user.timezone}
         empty="No open tasks in this project."
         actions={[:complete]}

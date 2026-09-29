@@ -78,6 +78,16 @@ defmodule Marskal.Tasks.Outline do
     |> Repo.one()
   end
 
+  @doc "The sibling just after `task`, if there is one."
+  def next_sibling(user, %Task{} = task) do
+    user
+    |> siblings(group(task), task.id)
+    |> where([t], t.rank > ^task.rank)
+    |> order_by([t], asc: t.rank, asc: t.id)
+    |> limit(1)
+    |> Repo.one()
+  end
+
   @doc "The last subtask of `parent`, if it has any."
   def last_child(user, %Task{} = parent) do
     user

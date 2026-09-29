@@ -17,6 +17,11 @@ defmodule MarskalWeb.DateFields do
   attr :record, :any, required: true
   attr :zone, :string, required: true
 
+  attr :inherited, :map,
+    default: nil,
+    doc:
+      "the dates the record goes by (`Marskal.Tasks.effective_dates/2`), to show what it inherits"
+
   @doc "The three date fields for a task or project."
   def inputs(assigns) do
     ~H"""
@@ -30,6 +35,9 @@ defmodule MarskalWeb.DateFields do
         zone={@zone}
         disabled={@record.deferred_indefinitely}
       />
+      <p :if={inherited_defer(@record, @inherited, @zone)} class="hint inherited">
+        {inherited_defer(@record, @inherited, @zone)}
+      </p>
       <label class="indefinite">
         <input type="hidden" name={"#{@form}[deferred_indefinitely]"} value="false" />
         <input
@@ -48,7 +56,13 @@ defmodule MarskalWeb.DateFields do
         record={@record}
         zone={@zone}
       />
+      <p :if={inherited(@record, @inherited, :planned_at, @zone)} class="hint inherited">
+        {inherited(@record, @inherited, :planned_at, @zone)}
+      </p>
       <.day_time label="Due" form={@form} id={@id} field={:due_at} record={@record} zone={@zone} />
+      <p :if={inherited(@record, @inherited, :due_at, @zone)} class="hint inherited">
+        {inherited(@record, @inherited, :due_at, @zone)}
+      </p>
       <p class="hint">A day with no time starts at {default_hint()}.</p>
     </div>
     """
@@ -102,6 +116,32 @@ defmodule MarskalWeb.DateFields do
       </div>
     </div>
     """
+  end
+
+  # What a blank field goes by instead, from the task or project above.
+  defp inherited(record, inherited, field, zone) do
+    value = inherited && Map.get(inherited, field)
+
+    if value && is_nil(Map.fetch!(record, field)),
+      do: "From above: #{short(value, field, zone)}"
+  end
+
+  defp inherited_defer(record, inherited, zone) do
+    cond do
+      is_nil(inherited) or not Dates.deferred?(inherited, DateTime.utc_now()) ->
+        nil
+
+      Dates.deferred?(record, DateTime.utc_now()) and
+        record.deferred_indefinitely == inherited.deferred_indefinitely and
+          record.defer_until == inherited.defer_until ->
+        nil
+
+      inherited.deferred_indefinitely ->
+        "Deferred indefinitely by the task or project above."
+
+      true ->
+        "Deferred until #{short(inherited.defer_until, :defer_until, zone)} by the task or project above."
+    end
   end
 
   defp default_hint do
