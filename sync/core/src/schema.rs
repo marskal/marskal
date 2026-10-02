@@ -1,0 +1,137 @@
+//! The local SQLite schema and its migrations (ADR 0018).
+//!
+//! Synced tables mirror the server's rows, with the same field names, and
+//! no foreign keys: a pulled row may refer to one that has not arrived yet
+//! (ADR 0019). Timestamps are the server's UTC strings, which sort in time
+//! order. Ranks compare byte by byte, as SQLite's default collation does.
+
+use rusqlite::Connection;
+
+use crate::error::Result;
+
+const MIGRATIONS: &[&str] = &[r#"
+CREATE TABLE meta (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
+
+CREATE TABLE project_folders (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  parent_id TEXT,
+  state TEXT NOT NULL DEFAULT 'active',
+  discarded_at TEXT,
+  inserted_at TEXT,
+  updated_at TEXT
+);
+
+CREATE TABLE projects (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  notes TEXT,
+  state TEXT NOT NULL DEFAULT 'to_do',
+  project_folder_id TEXT,
+  defer_until TEXT,
+  deferred_indefinitely INTEGER NOT NULL DEFAULT 0,
+  planned_at TEXT,
+  due_at TEXT,
+  resolved_at TEXT,
+  discarded_at TEXT,
+  inserted_at TEXT,
+  updated_at TEXT
+);
+
+CREATE TABLE tags (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  parent_id TEXT,
+  state TEXT NOT NULL DEFAULT 'active',
+  rank TEXT,
+  merged_into_id TEXT,
+  discarded_at TEXT,
+  inserted_at TEXT,
+  updated_at TEXT
+);
+
+CREATE TABLE tasks (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  notes TEXT,
+  state TEXT NOT NULL DEFAULT 'to_do',
+  inbox INTEGER NOT NULL DEFAULT 1,
+  project_id TEXT,
+  parent_id TEXT,
+  rank TEXT,
+  defer_until TEXT,
+  deferred_indefinitely INTEGER NOT NULL DEFAULT 0,
+  planned_at TEXT,
+  due_at TEXT,
+  resolved_at TEXT,
+  discarded_at TEXT,
+  inserted_at TEXT,
+  updated_at TEXT
+);
+
+CREATE INDEX tasks_parent_id ON tasks (parent_id);
+CREATE INDEX tasks_project_id ON tasks (project_id);
+
+CREATE TABLE task_tags (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL,
+  tag_id TEXT NOT NULL,
+  discarded_at TEXT,
+  inserted_at TEXT,
+  updated_at TEXT
+);
+
+CREATE TABLE project_tags (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  tag_id TEXT NOT NULL,
+  discarded_at TEXT,
+  inserted_at TEXT,
+  updated_at TEXT
+);
+
+-- Field patches not yet accepted by the server, in the order they were made.
+CREATE TABLE outbox (
+  seq INTEGER PRIMARY KEY AUTOINCREMENT,
+  command_id TEXT NOT NULL UNIQUE,
+  entity TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  op TEXT NOT NULL,
+  fields TEXT NOT NULL,
+  at TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX outbox_entity ON outbox (entity, entity_id);
+
+-- Commands the server refused, kept so the user can be told once.
+CREATE TABLE rejections (
+  command_id TEXT PRIMARY KEY,
+  entity TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  op TEXT NOT NULL,
+  fields TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  errors TEXT,
+  rejected_at TEXT NOT NULL,
+  seen INTEGER NOT NULL DEFAULT 0
+);
+"#];
+
+/// Brings the database to the latest schema. `user_version` counts the
+/// migrations applied.
+pub(crate) fn migrate(conn: &mut Connection) -> Result<()> {
+    let applied: i64 = conn.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+
+    for (index, sql) in MIGRATIONS.iter().enumerate().skip(applied as usize) {
+        let tx = conn.transaction()?;
+        tx.execute_batch(sql)?;
+        tx.pragma_update(None, "user_version", (index + 1) as i64)?;
+        tx.commit()?;
+    }
+
+    Ok(())
+}

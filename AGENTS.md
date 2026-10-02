@@ -164,8 +164,12 @@ The repository root is the product, not the web app (ADR 0015).
   and `devenv up` from `web/`. Paths in the Elixir section below are relative
   to it. Do not add a second app directory beside `web/`.
 - **`docs/`** — ADRs, at the root.
-- Do not add a root `devenv.nix`. Do not create `clients/`, `sync/core/`, or
-  `sync/fixtures/` until that work starts.
+- Do not add a root `devenv.nix`.
+- **`sync/core/`** — the Rust client engine (ADR 0018): SQLite, outbox, pull
+  merge, reads, and the operations every shell shares. `devenv shell` there
+  for cargo. **`sync/fixtures/`** — vectors both Elixir and Rust run
+  (`Marskal.SyncFixturesTest`, `tests/fixtures.rs`); regenerate from Elixir,
+  never edit by hand.
 - The first shell is `clients/terminal`: one `marskal` binary with subcommands,
   `--json` for agents, and later `marskal tui` (ADR 0020). XDG base
   directories on every platform, macOS included. Each Rust program

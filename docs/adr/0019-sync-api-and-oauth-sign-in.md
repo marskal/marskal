@@ -241,9 +241,11 @@ The response has one result per command, in order:
 | `replayed` | This command id was already applied | Remove from outbox |
 | `rejected` | Invalid: unknown field, failed validation, not visible, discarded | Remove from outbox, record the reason |
 
-A rejected command is not retried. Its fields are no longer dirty, so the
-next pull overwrites them with the server's values, and the local change
-disappears. The client keeps the reason so it can tell the user once.
+A rejected command is not retried. Its fields are no longer dirty, and the
+next pull is a snapshot, which overwrites them with the server's values. An
+incremental pull would not: it carries only rows the server changed, and a
+refused command changed nothing. The client keeps the reason so it can tell
+the user once.
 
 A command not in the results, because the server stopped, or because the
 request failed, stays in the outbox and is sent again. Command ids make that
