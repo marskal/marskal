@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted
+Accepted. Where clients share code is amended by
+[ADR 0018](0018-rust-client-sync-library.md): offline clients link one Rust
+sync library and do not share a UI.
 
 ## Context
 
@@ -26,8 +28,9 @@ One repository. The root is the product, not the web app.
 ```text
 docs/adr/          # product decisions
 web/               # the web app, including devenv.nix
-sync/fixtures/     # recurrence vectors — create with that work, not before
-clients/ios/       # SwiftUI, widget, App Intents — create when that work starts
+sync/fixtures/     # recurrence and merge vectors — create with that work, not before
+sync/core/         # Rust client sync library — create with the first offline client (ADR 0018)
+clients/ios/       # SwiftUI shell — create when that work starts
 ```
 
 - **`web/`** is the online client and the host: domain, sync endpoint, and
@@ -38,9 +41,12 @@ clients/ios/       # SwiftUI, widget, App Intents — create when that work star
 - **`devenv.nix` and `devenv.lock` live in `web/`.** Run `devenv shell` and
   `devenv up` from there. No root `devenv.nix`, and no root file whose only job
   is to `cd web`.
-- **Do not create `clients/ios/` or `sync/fixtures/` until that work starts.**
-  The iOS app is not an Elixir umbrella app. Android, if it ever exists, is a
-  sibling directory reading the same fixtures, not a shared native core.
+- **Do not create `clients/`, `sync/core/`, or `sync/fixtures/` until that work
+  starts.** The iOS app is not an Elixir umbrella app. Offline clients link
+  the Rust library in `sync/core`
+  ([ADR 0018](0018-rust-client-sync-library.md)). They do not share a UI core,
+  and the web app does not call the library. Other shells are sibling
+  directories under `clients/`, created when that shell starts.
 - **Docs stay at the root.** `AGENTS.md` and `docs/` describe the product.
   Paths in the web-app conventions are relative to `web/`.
 - **Versions stay independent.** The web app deploys by commit. An App Store

@@ -1,0 +1,109 @@
+# 0018. Rust client sync library
+
+## Status
+
+Accepted
+
+Amends the client set in [ADR 0014](0014-offline-sync.md): desktop, Android,
+iOS, and an optional terminal client share one engine. The protocol is
+unchanged.
+
+Amends [ADR 0015](0015-repository-layout.md): those clients share a Rust
+library. They still do not share a UI, and the web app does not call the
+library.
+
+## Context
+
+ADR 0014 specifies offline sync and assumed one native client, an iOS app,
+with the client rules ported to Swift and checked by fixture vectors. ADR 0015
+put that app in `clients/ios` and said Android, if it ever existed, would be a
+sibling reading the same fixtures, not a shared native core.
+
+The intended clients are now a cross-platform desktop app, Android, iOS (the
+app, the widget, and Shortcuts), and possibly a terminal UI. Each needs a
+local database, an outbox, and the merge rules. Those rules are where a second
+implementation loses a check-off or mints a duplicate occurrence. Four ports
+is a different cost from the one Swift port ADR 0014 accepted.
+
+The server is not one of those ports. It is the authority, it has no outbox,
+and LiveView calls the Elixir domain in-process. The pure rules — recurrence
+and the occurrence ids — still have to agree across that boundary.
+
+## Decision
+
+Offline clients share one Rust library at `sync/core`. Create it with the
+first offline client, and not before the server pull endpoint exists. Do not
+create the directory before that.
+
+The library is the client engine for [ADR 0014](0014-offline-sync.md). It
+owns:
+
+- The local **SQLite** schema and its migrations. One file. Not Postgres.
+- The **outbox**: field patches and command ids.
+- The **pull merge**. A field with a pending local edit keeps the local value.
+  Every other field takes the server value. Discard wins. `resolved_at` is
+  first-write.
+- **Fractional rank**, tag `merged_into_id`, and the derived fields
+  (`parent_path`, effective tags), recomputed after applying patches.
+- **Recurrence** and the **UUIDv5** occurrence ids, including a provisional
+  next occurrence that is shown locally and never pushed.
+
+The exported API is coarse and synchronous: open the database, apply a
+command, apply a pull response, read tasks. The library does not perform HTTP,
+store secrets, schedule work, or draw a UI.
+
+Shells own HTTP, the keychain or keystore, notifications, and the UI.
+
+- **iOS and Android** call the library through **UniFFI**. On iOS the same
+  static library links into the app, the widget extension, and the Shortcuts
+  extension. The database file lives in the App Group. A widget check-off
+  writes the outbox. The push waits until the app is open.
+- A **Rust** shell, including a terminal UI, calls the crate in-process.
+- A **non-Rust** desktop shell, if one is chosen, calls a **C ABI** over the
+  same crate. This ADR does not choose the desktop toolkit.
+
+Shells are sibling directories under `clients/`, created when that shell
+starts: `clients/ios`, `clients/android`, `clients/desktop`, and `clients/tui`
+only if a terminal client is built. Building them is later work. This ADR does
+not schedule it.
+
+The **server stays Elixir**. Do not call this library from Phoenix, and do not
+put the domain behind a NIF. Elixir and the library are the two
+implementations of the pure rules, and both run `sync/fixtures`. A new shell
+does not add a third.
+
+The iOS app is not an Elixir umbrella. There is no shared UI core.
+
+### Alternatives considered
+
+- **A port per shell, locked only by fixtures.** Rejected for this client set.
+  The fixtures stay, as the check between Elixir and the library. They are not
+  a reason to write the engine four times.
+- **Kotlin Multiplatform.** Rejected. It has the best shared SQL tooling, and
+  no boundary on Android, but a terminal UI or a non-Kotlin desktop window
+  would be hosting the Kotlin runtime. The iOS widget would carry that runtime
+  too.
+- **Swift as the shared library.** Rejected. iOS would be native, and every
+  other shell would call Swift from outside. That fits a phone-first product,
+  not peer clients.
+- **A shared UI toolkit** (GPUI, Qt, Flutter, Compose). Rejected. iOS still
+  wants SwiftUI, a widget, and App Intents. The desktop toolkit stays an open
+  choice.
+- **C++.** Rejected. It links everywhere, and it is the wrong language for the
+  merge rules.
+
+## Consequences
+
+- Do not create `sync/core`, `sync/fixtures`, or `clients/` until that work
+  starts. The pull endpoint, the `resolved_at` skew clamp, and `discarded_at`
+  on project folders still come before the crate (ADR 0014).
+- Recurrence and merge fixtures are written for two runners, Elixir and Rust,
+  not for every shell.
+- When the crate exists, its toolchain is not a root `devenv.nix` that wraps
+  `web/` (ADR 0015).
+- Library tests cover the client rules against those fixtures: dirty-field
+  pull merge, discard, `resolved_at`, a rank between two neighbors, occurrence
+  ids, and a provisional row that is not pushed.
+- The web app stays online. It does not gain an offline cache (ADR 0014).
+- Versions stay independent. The library has its own version. An App Store
+  build number is still not a git tag.
