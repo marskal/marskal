@@ -156,6 +156,38 @@ defmodule Marskal.DatesTest do
       assert imported.resolved_at == ~U[2024-02-01 00:00:00Z]
     end
 
+    test "a client's time stands inside the skew window, and receipt time outside it" do
+      now = ~U[2026-10-02 12:00:00Z]
+
+      assert Dates.resolution_time(~U[2026-10-02 12:02:00Z], now) == ~U[2026-10-02 12:02:00Z]
+      assert Dates.resolution_time(~U[2026-10-02 12:02:01Z], now) == now
+      assert Dates.resolution_time(~U[2026-09-30 12:00:00Z], now) == ~U[2026-09-30 12:00:00Z]
+      assert Dates.resolution_time(~U[2026-09-30 11:59:59Z], now) == now
+
+      assert Dates.resolution_time(~U[2026-10-02 11:00:00.750000Z], now) ==
+               ~U[2026-10-02 11:00:00Z]
+
+      assert Dates.resolution_time(nil, now) == now
+    end
+
+    test "a resolve from a client takes its time, clamped", %{user: user} do
+      {:ok, task} = Tasks.create_task(user, %{"title" => "Milk"}, command_id())
+      an_hour_ago = DateTime.add(DateTime.utc_now(:second), -3600)
+
+      {:ok, done} =
+        Tasks.update_task(user, task.id, %{state: :done}, command_id(), at: an_hour_ago)
+
+      assert done.resolved_at == an_hour_ago
+
+      {:ok, project} = Projects.create_project(user, %{title: "Garden"}, command_id())
+      next_week = DateTime.add(DateTime.utc_now(), 7, :day)
+
+      {:ok, dropped} =
+        Projects.update_project(user, project.id, %{state: :dropped}, command_id(), at: next_week)
+
+      assert DateTime.diff(DateTime.utc_now(), dropped.resolved_at) in 0..5
+    end
+
     test "projects follow the same rule", %{user: user} do
       {:ok, project} = Projects.create_project(user, %{title: "Garden"}, command_id())
       {:ok, done} = Projects.complete_project(user, project.id, command_id())

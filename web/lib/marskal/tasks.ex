@@ -147,12 +147,13 @@ defmodule Marskal.Tasks do
   does, whatever location is given. With `after_id` it goes right after
   that sibling; otherwise at the top of the inbox or the bottom of
   anywhere else. A `rank` from a client is kept as given.
+  `at:` is as for `update_task/5`.
   """
-  def create_task(%User{} = user, attrs, command_id) when is_map(attrs) do
+  def create_task(%User{} = user, attrs, command_id, opts \\ []) when is_map(attrs) do
     Changes.apply(user, command_id, "task", fn ->
       changeset =
         %Task{}
-        |> Task.create_changeset(user, attrs)
+        |> Task.create_changeset(user, attrs, opts)
         |> place_new(user, attr(attrs, :after_id))
 
       case Repo.insert(changeset) do
@@ -170,15 +171,18 @@ defmodule Marskal.Tasks do
 
   A move to another location takes the task out from under its parent,
   and its subtasks go with it.
+
+  `at:` is when a client says the user acted, for `resolved_at`
+  (`Marskal.Dates.resolution_time/2`).
   """
-  def update_task(%User{} = user, task_id, attrs, command_id) when is_map(attrs) do
+  def update_task(%User{} = user, task_id, attrs, command_id, opts \\ []) when is_map(attrs) do
     Changes.apply(user, command_id, "task", fn ->
       case get_task(user, task_id) do
         nil ->
           {:error, :not_found}
 
         task ->
-          changeset = task |> Task.update_changeset(attrs) |> detach_on_move(user, task)
+          changeset = task |> Task.update_changeset(attrs, opts) |> detach_on_move(user, task)
           write_with_subtree(user, command_id, changeset)
       end
     end)

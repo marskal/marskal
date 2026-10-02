@@ -25,7 +25,7 @@ defmodule Marskal.Projects.Project do
     timestamps(type: :utc_datetime)
   end
 
-  def create_changeset(project, user, attrs) do
+  def create_changeset(project, user, attrs, opts \\ []) do
     project
     |> cast(attrs, [
       :id,
@@ -39,24 +39,37 @@ defmodule Marskal.Projects.Project do
     |> validate_length(:title, max: Marskal.Tasks.Task.title_max())
     |> put_change(:user_id, user.id)
     |> Dates.put_defer()
-    |> Dates.put_resolved_at()
+    |> Dates.put_resolved_at(opts[:at])
     |> owned_folder_constraint()
+    |> validate_live_folder()
     |> date_constraints()
   end
 
   @doc "Any subset of the editable fields. Only fields that differ reach the patch."
-  def update_changeset(project, attrs) do
+  def update_changeset(project, attrs, opts \\ []) do
     project
     |> cast(attrs, [:title, :notes, :project_folder_id, :state | Dates.fields()])
     |> validate_required([:title, :state])
     |> validate_length(:title, max: Marskal.Tasks.Task.title_max())
     |> Dates.put_defer()
-    |> Dates.put_resolved_at()
+    |> Dates.put_resolved_at(opts[:at])
     |> owned_folder_constraint()
+    |> validate_live_folder()
     |> date_constraints()
   end
 
   def discard_changeset(project), do: Dates.discard(project)
+
+  # A discarded folder takes no projects. Another user's folder fails the
+  # foreign key below.
+  defp validate_live_folder(changeset) do
+    validate_change(changeset, :project_folder_id, fn :project_folder_id, id ->
+      case Marskal.Repo.get(Marskal.ProjectFolders.ProjectFolder, id) do
+        %{discarded_at: %DateTime{}} -> [project_folder_id: "must belong to you"]
+        _ -> []
+      end
+    end)
+  end
 
   # projects_project_folder_id_fkey is (project_folder_id, user_id).
   defp owned_folder_constraint(changeset) do

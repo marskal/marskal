@@ -3,23 +3,30 @@ defmodule Marskal.ProjectFolders do
   alias Marskal.Accounts.User
   alias Marskal.Changes
   alias Marskal.ProjectFolders.ProjectFolder
+  alias Marskal.Projects.Project
   alias Marskal.Repo
 
   def list_all(%User{} = user) do
     ProjectFolder
-    |> where([f], f.user_id == ^user.id)
+    |> where([f], f.user_id == ^user.id and is_nil(f.discarded_at))
     |> order_by([f], asc: f.name, asc: f.id)
     |> Repo.all()
   end
 
   def list_active(%User{} = user) do
     ProjectFolder
-    |> where([f], f.user_id == ^user.id and f.state == :active)
+    |> where([f], f.user_id == ^user.id and f.state == :active and is_nil(f.discarded_at))
     |> order_by([f], asc: f.name, asc: f.id)
     |> Repo.all()
   end
 
-  def get_folder(%User{} = user, id), do: Repo.get_owned(ProjectFolder, user, id)
+  @doc "A live folder the user owns."
+  def get_folder(%User{} = user, id) do
+    case Repo.get_owned(ProjectFolder, user, id) do
+      %ProjectFolder{discarded_at: nil} = folder -> folder
+      _ -> nil
+    end
+  end
 
   def create_folder(%User{} = user, attrs, command_id) do
     Changes.apply(user, command_id, "project_folder", fn ->
@@ -69,6 +76,45 @@ defmodule Marskal.ProjectFolders do
 
   def activate_folder(user, id, command_id),
     do: update_folder(user, id, %{state: :active}, command_id)
+
+  @doc """
+  Discards the folder and its subfolders (ADR 0014). Their projects are not
+  deleted: they are unfiled, as dropping a folder does not resolve them
+  (ADR 0009). Each row gets its own change under a command id derived from
+  this one.
+  """
+  def delete_folder(%User{} = user, id, command_id) do
+    Changes.apply(user, command_id, "project_folder", fn ->
+      case get_folder(user, id) do
+        nil -> {:error, :not_found}
+        folder -> discard_subtree(user, command_id, folder)
+      end
+    end)
+  end
+
+  defp discard_subtree(user, command_id, folder) do
+    ProjectFolder
+    |> where([f], f.parent_id == ^folder.id and is_nil(f.discarded_at))
+    |> Repo.all()
+    |> Enum.each(fn child ->
+      Changes.cascade(user, command_id, "project_folder", child.id, fn ->
+        discard_subtree(user, command_id, child)
+      end)
+    end)
+
+    Project
+    |> where([p], p.project_folder_id == ^folder.id and is_nil(p.discarded_at))
+    |> Repo.all()
+    |> Enum.each(fn project ->
+      Changes.cascade(user, command_id, "project", project.id, fn ->
+        changeset = Ecto.Changeset.change(project, project_folder_id: nil)
+        {:ok, Repo.update!(changeset), changeset}
+      end)
+    end)
+
+    changeset = ProjectFolder.discard_changeset(folder)
+    {:ok, Repo.update!(changeset), changeset}
+  end
 
   # parent_path is derived and not synced (ADR 0014), so descendants are
   # rewritten here without a change row.

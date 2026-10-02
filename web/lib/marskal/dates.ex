@@ -85,14 +85,35 @@ defmodule Marskal.Dates do
 
   @doc """
   Sets `resolved_at` on the first move to Done or Dropped. A later resolve,
-  after a reopen, leaves it alone (ADR 0014).
+  after a reopen, leaves it alone (ADR 0014). `at` is when a client says
+  the user acted; see `resolution_time/2`.
   """
-  def put_resolved_at(changeset) do
+  def put_resolved_at(changeset, at \\ nil) do
     resolving? = get_field(changeset, :state) in [:done, :dropped]
 
     if resolving? and is_nil(get_field(changeset, :resolved_at)),
-      do: put_change(changeset, :resolved_at, DateTime.utc_now(:second)),
+      do: put_change(changeset, :resolved_at, resolution_time(at)),
       else: changeset
+  end
+
+  @skew_ahead 2 * 60
+  @skew_behind 48 * 60 * 60
+
+  @doc """
+  The resolve time for a client's `at`, received at `now`. Within 2 minutes
+  ahead of `now` and 48 hours behind it, `at` stands. Outside that window,
+  or without `at`, it is `now` (ADR 0014).
+  """
+  def resolution_time(at, now \\ DateTime.utc_now()) do
+    now = DateTime.truncate(now, :second)
+
+    with %DateTime{} <- at,
+         true <- DateTime.diff(at, now) <= @skew_ahead,
+         true <- DateTime.diff(now, at) <= @skew_behind do
+      DateTime.truncate(at, :second)
+    else
+      _ -> now
+    end
   end
 
   @doc "Marks the record discarded. Later patches to it are ignored (ADR 0014)."

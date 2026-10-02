@@ -22,9 +22,9 @@ defmodule Marskal.Projects do
     end
   end
 
-  def create_project(%User{} = user, attrs, command_id) do
+  def create_project(%User{} = user, attrs, command_id, opts \\ []) do
     Changes.apply(user, command_id, "project", fn ->
-      changeset = Project.create_changeset(%Project{}, user, attrs)
+      changeset = Project.create_changeset(%Project{}, user, attrs, opts)
 
       case Repo.insert(changeset) do
         {:ok, project} -> {:ok, project, changeset}
@@ -33,15 +33,18 @@ defmodule Marskal.Projects do
     end)
   end
 
-  @doc "Patch any of title, notes, project_folder_id, state, and the dates in one command."
-  def update_project(%User{} = user, id, attrs, command_id) when is_map(attrs) do
+  @doc """
+  Patch any of title, notes, project_folder_id, state, and the dates in one
+  command. `at:` is as for `Marskal.Tasks.update_task/5`.
+  """
+  def update_project(%User{} = user, id, attrs, command_id, opts \\ []) when is_map(attrs) do
     Changes.apply(user, command_id, "project", fn ->
       case get_project(user, id) do
         nil ->
           {:error, :not_found}
 
         project ->
-          changeset = Project.update_changeset(project, attrs)
+          changeset = Project.update_changeset(project, attrs, opts)
 
           case Repo.update(changeset) do
             {:ok, project} -> {:ok, project, changeset}

@@ -2,9 +2,12 @@ defmodule Marskal.StructureTest do
   use Marskal.DataCase, async: true
 
   alias Marskal.AccountsFixtures
+  alias Marskal.Changes.Change
   alias Marskal.ProjectFolders
+  alias Marskal.ProjectFolders.ProjectFolder
   alias Marskal.ProjectNav
   alias Marskal.Projects
+  alias Marskal.Repo
   alias Marskal.Tasks
 
   setup do
@@ -82,6 +85,70 @@ defmodule Marskal.StructureTest do
 
     assert Enum.map(Tasks.list_project_tasks(user, project.id), & &1.id) == [task.id]
     assert Tasks.list_inbox(user) == []
+  end
+
+  describe "deleting a folder" do
+    test "discards its subfolders and unfiles their projects", %{user: user} do
+      {:ok, work} = ProjectFolders.create_folder(user, %{"name" => "Work"}, command())
+
+      {:ok, client} =
+        ProjectFolders.create_folder(
+          user,
+          %{"name" => "Client", "parent_id" => work.id},
+          command()
+        )
+
+      {:ok, site} =
+        Projects.create_project(
+          user,
+          %{"title" => "Site", "project_folder_id" => client.id},
+          command()
+        )
+
+      delete = command()
+      {:ok, discarded} = ProjectFolders.delete_folder(user, work.id, delete)
+
+      assert %DateTime{} = discarded.discarded_at
+      assert ProjectFolders.list_all(user) == []
+      assert ProjectFolders.get_folder(user, client.id) == nil
+      assert Repo.get!(ProjectFolder, client.id).discarded_at
+
+      site = Projects.get_project(user, site.id)
+      assert site.project_folder_id == nil
+      assert site.discarded_at == nil
+
+      changes = Repo.all(from c in Change, where: c.user_id == ^user.id, select: c.entity_id)
+      assert work.id in changes and client.id in changes
+
+      count = Repo.aggregate(Change, :count)
+      assert {:ok, _} = ProjectFolders.delete_folder(user, work.id, delete)
+      assert Repo.aggregate(Change, :count) == count
+    end
+
+    test "a discarded folder takes no patches, subfolders, or projects", %{user: user} do
+      {:ok, gone} = ProjectFolders.create_folder(user, %{"name" => "Gone"}, command())
+      {:ok, _} = ProjectFolders.delete_folder(user, gone.id, command())
+
+      assert {:error, :not_found} = ProjectFolders.rename_folder(user, gone.id, "Back", command())
+
+      assert {:error, changeset} =
+               ProjectFolders.create_folder(
+                 user,
+                 %{"name" => "Child", "parent_id" => gone.id},
+                 command()
+               )
+
+      assert "must belong to you" in errors_on(changeset).parent_id
+
+      assert {:error, changeset} =
+               Projects.create_project(
+                 user,
+                 %{"title" => "Filed", "project_folder_id" => gone.id},
+                 command()
+               )
+
+      assert "must belong to you" in errors_on(changeset).project_folder_id
+    end
   end
 
   defp command, do: Ecto.UUID.generate()
