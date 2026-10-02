@@ -95,7 +95,7 @@ defmodule Marskal.Hydra do
   @doc """
   Creates or updates every client in `priv/hydra/clients`, one JSON file
   per application, so a deploy converges on them. devenv sends the same
-  files. Installs of one application share its client.
+  files. Every copy of an application signs in as its one client.
   """
   def ensure_clients do
     dir = Application.app_dir(:marskal, Path.join("priv", @clients_dir))
