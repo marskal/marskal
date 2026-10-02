@@ -27,8 +27,9 @@ This directory holds **ADRs** — durable decisions and their context.
 | [0016](0016-elixir-phoenix-web.md) | Elixir and Phoenix for the web app | Accepted |
 | [0017](0017-inbox-location.md) | The inbox is a location beside projects | Accepted |
 | [0018](0018-rust-client-sync-library.md) | Rust client sync library | Accepted; shells amended by [0020](0020-terminal-client.md) |
-| [0019](0019-sync-api-and-oauth-sign-in.md) | Sync API and OAuth sign-in | Accepted |
+| [0019](0019-sync-api-and-oauth-sign-in.md) | Sync API and OAuth sign-in | Accepted; sign-in replaced by [0021](0021-ory-hydra-authorization-server.md) |
 | [0020](0020-terminal-client.md) | Terminal client | Accepted |
+| [0021](0021-ory-hydra-authorization-server.md) | Ory Hydra as the authorization server | Accepted |
 
 ## When to add an ADR
 

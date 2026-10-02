@@ -29,6 +29,7 @@ This file is **short and actionable**. Rationale and history live in
 | Client sync library (Rust) | [0018](docs/adr/0018-rust-client-sync-library.md) |
 | Sync API, OAuth sign-in | [0019](docs/adr/0019-sync-api-and-oauth-sign-in.md) |
 | Terminal client (`marskal`) | [0020](docs/adr/0020-terminal-client.md) |
+| OAuth server (Ory Hydra) | [0021](docs/adr/0021-ory-hydra-authorization-server.md) |
 | Repository layout | [0015](docs/adr/0015-repository-layout.md) |
 
 ---
@@ -272,11 +273,13 @@ The repository root is the product, not the web app (ADR 0015).
   browser offline cache. Writes go through `Marskal.Changes.apply/4`; a patch
   with no changes appends nothing. Offline clients share one Rust engine
   (ADR 0018) instead of porting it per shell. Not built yet, and due before
-  that crate: OAuth sign-in and the pull and push endpoints (ADR 0019).
-- **Sync API (ADR 0019):** `/api/v1`. The web app is an OAuth 2.1
-  authorization server: device grant now, authorization code + PKCE and client
-  registration only when a client needs them. Opaque hashed tokens, rotating
-  refresh tokens, scopes `sync:read` and `sync:write`. Pull returns current rows after a cursor, or a snapshot. Push applies
+  that crate: OAuth sign-in, the pull and push endpoints (ADR 0019), the
+  `resolved_at` skew clamp, and `discarded_at` on project folders.
+- **Sync API (ADR 0019):** `/api/v1`, bearer tokens from Ory Hydra (ADR 0021).
+  Do not write OAuth protocol code in the web app: Hydra runs it, and the web
+  app is its login, consent, and device verification UI over the admin API,
+  and introspects tokens. The admin port is never exposed. Scopes
+  `offline_access`, `sync:read`, `sync:write`; one device per consent. Pull returns current rows after a cursor, or a snapshot. Push applies
   commands in order; each entity has an allow-list of client-writable fields
   in its context. A rejected command is not retried.
 - Tests: state transitions; user isolation; defer/planned/due; outliner/folder structure;
