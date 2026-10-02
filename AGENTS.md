@@ -80,8 +80,16 @@ Default home: **Open tasks** stream. Timezone is stored per user, default
 
 ### Recurrence (ADR 0007 — product differentiator)
 
-- Model **series** vs **occurrence**; not only “next due.”
-- **Mode:** **regular** (next on schedule even if previous open) or **on completion**.
+- Model **series** vs **occurrence**; not only “next due.” `recurrence_series` holds
+  the rule and `kind` (task | project). Occurrences are tasks or projects with
+  `series_id` and an immutable `occurrence_for`. The first build repeats tasks only.
+- The next occurrence copies the latest (greatest `occurrence_for`): title, notes,
+  location, parent, tags. In the first build a task's subtasks are not copied.
+  Other dates keep their offset from the anchor on the user's zone clock.
+- Occurrences are the history; no completions table. A generated id that exists,
+  discarded or not, is never created again.
+- **Mode:** **regular** (next on schedule even if previous open, at most 10 open;
+  slots missed at the cap are skipped) or **on completion**.
 - **On completion:** both **Done** and **Dropped** resolve the instance and **spawn next**
   (from resolution time + rule). To-Do does not.
 - Anchor on **one of** Defer / Planned / Due; that field is what the rule advances.
