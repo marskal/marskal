@@ -156,6 +156,7 @@ defmodule Marskal.Accounts do
   Updates the user password.
 
   Returns a tuple with the updated user, as well as a list of expired tokens.
+  Every device signed in through Hydra is signed out too (ADR 0021).
 
   ## Examples
 
@@ -167,9 +168,13 @@ defmodule Marskal.Accounts do
 
   """
   def update_user_password(user, attrs) do
-    user
-    |> User.password_changeset(attrs)
-    |> update_user_and_delete_all_tokens()
+    with {:ok, {user, _expired}} = ok <-
+           user
+           |> User.password_changeset(attrs)
+           |> update_user_and_delete_all_tokens() do
+      Marskal.Devices.sign_out_all(user)
+      ok
+    end
   end
 
   ## Session

@@ -1,0 +1,8 @@
+{
+  "client_id": "marskal-terminal",
+  "client_name": "Marskal for the terminal",
+  "token_endpoint_auth_method": "none",
+  "grant_types": ["urn:ietf:params:oauth:grant-type:device_code", "refresh_token"],
+  "response_types": [],
+  "scope": "offline_access sync:read sync:write"
+}

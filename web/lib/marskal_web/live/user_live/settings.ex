@@ -4,6 +4,7 @@ defmodule MarskalWeb.UserLive.Settings do
   on_mount {MarskalWeb.UserAuth, :require_sudo_mode}
 
   alias Marskal.Accounts
+  alias Marskal.Devices
 
   @impl true
   def render(assigns) do
@@ -71,6 +72,64 @@ defmodule MarskalWeb.UserLive.Settings do
           Save Password
         </.button>
       </.form>
+
+      <div class="divider" />
+
+      <style :type={MarskalWeb.ColocatedCSS}>
+        @scope (.device-list) {
+          ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+          }
+
+          li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--space);
+            padding: 0.65rem 0.85rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+          }
+
+          li div {
+            display: flex;
+            flex-direction: column;
+          }
+
+          .muted {
+            color: var(--muted);
+            font-size: 0.9rem;
+          }
+        }
+      </style>
+
+      <section id="devices" class="device-list">
+        <h2>Devices</h2>
+        <p class="muted">Programs signed in as you, such as the <code>marskal</code> command.</p>
+        <p :if={@devices == []} class="empty">No devices are signed in.</p>
+        <ul :if={@devices != []}>
+          <li :for={device <- @devices} id={"device-#{device.id}"}>
+            <div>
+              <strong>{device.name}</strong>
+              <span class="muted">{last_used(device, @current_scope.user)}</span>
+            </div>
+            <button
+              class="btn"
+              phx-click="sign_out_device"
+              phx-value-id={device.id}
+              data-confirm={"Sign out #{device.name}?"}
+            >
+              Sign out
+            </button>
+          </li>
+        </ul>
+      </section>
     </Layouts.app>
     """
   end
@@ -100,6 +159,7 @@ defmodule MarskalWeb.UserLive.Settings do
       |> assign(:email_form, to_form(email_changeset))
       |> assign(:password_form, to_form(password_changeset))
       |> assign(:trigger_submit, false)
+      |> assign(:devices, Devices.list(user))
 
     {:ok, socket}
   end
@@ -150,6 +210,12 @@ defmodule MarskalWeb.UserLive.Settings do
     {:noreply, assign(socket, password_form: password_form)}
   end
 
+  def handle_event("sign_out_device", %{"id" => id}, socket) do
+    user = socket.assigns.current_scope.user
+    _ = Devices.sign_out(user, id)
+    {:noreply, assign(socket, :devices, Devices.list(user))}
+  end
+
   def handle_event("update_password", params, socket) do
     %{"user" => user_params} = params
     user = socket.assigns.current_scope.user
@@ -162,5 +228,12 @@ defmodule MarskalWeb.UserLive.Settings do
       changeset ->
         {:noreply, assign(socket, password_form: to_form(changeset, action: :insert))}
     end
+  end
+
+  defp last_used(%{last_used_at: nil}, _user), do: "not used yet"
+
+  defp last_used(device, user) do
+    {date, _time} = Marskal.Dates.to_local(device.last_used_at, user.timezone)
+    "last used " <> Calendar.strftime(date, "%-d %b %Y")
   end
 end

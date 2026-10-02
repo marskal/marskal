@@ -99,8 +99,11 @@ Its admin port listens on localhost only and is never proxied.
   the device out. Reuse after that window revokes the chain.
 - Scopes: `sync:read` and `sync:write` as in ADR 0019, plus
   `offline_access`, which Hydra requires for a refresh token.
-- One public client, `marskal`, with the device and refresh grants, created
-  by the deployment and by devenv, idempotently.
+- One client per application, public, from a file in `priv/hydra/clients`,
+  created by the deployment and by devenv, idempotently. Installs of one
+  application share it. The terminal program is `marskal-terminal`, with the
+  device and refresh grants. Another application, such as a phone app with
+  the authorization code grant, gets its own.
 
 ### Devices
 
