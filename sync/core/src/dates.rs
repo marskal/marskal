@@ -32,11 +32,16 @@ pub fn from_local(date: Date, time: Option<Time>, field: DateField, zone: &TimeZ
 
     let at = match zone.to_ambiguous_timestamp(datetime).offset() {
         AmbiguousOffset::Unambiguous { offset } => offset.to_timestamp(datetime).ok(),
-        // The first instant after the gap is the transition itself.
+        // The first instant after the gap is the transition itself. Read with
+        // the offset before it, the time lands at or after the transition:
+        // exactly on it when the time is the gap's first minute, such as a
+        // Defer day's 00:00 where DST starts at midnight. `preceding` is
+        // strict, so look from just past the guess.
         AmbiguousOffset::Gap { before, .. } => before
             .to_timestamp(datetime)
             .ok()
-            .and_then(|guess| zone.preceding(guess).next())
+            .and_then(|guess| guess.checked_add(jiff::SignedDuration::from_nanos(1)).ok())
+            .and_then(|past| zone.preceding(past).next())
             .map(|transition| transition.timestamp()),
         AmbiguousOffset::Fold { before, .. } => before.to_timestamp(datetime).ok(),
     };
@@ -188,6 +193,34 @@ mod tests {
             Some(jiff::civil::date(2026, 12, 24))
         );
         assert_eq!(parse_day("someday", friday), None);
+    }
+
+    // The same instant is a different day on each side of the date line, and
+    // "today" is the zone's own.
+    #[test]
+    fn today_is_the_zone_s_day_across_the_date_line() {
+        let now: Timestamp = "2026-10-02T11:00:00Z".parse().unwrap();
+        let kiritimati = TimeZone::get("Pacific/Kiritimati").unwrap();
+        let pago_pago = TimeZone::get("Pacific/Pago_Pago").unwrap();
+
+        let east = parse("today", DateField::Defer, &kiritimati, now).unwrap();
+        let west = parse("today", DateField::Defer, &pago_pago, now).unwrap();
+
+        // 01:00 on 3 October in Kiritimati (+14); midnight began 2 Oct 10:00Z.
+        assert_eq!(east.to_string(), "2026-10-02T10:00:00Z");
+        // 00:00 on 2 October in Pago Pago (-11) was 2 Oct 11:00Z.
+        assert_eq!(west.to_string(), "2026-10-02T11:00:00Z");
+
+        let tomorrow = parse("tomorrow", DateField::Due, &pago_pago, now).unwrap();
+        assert_eq!(tomorrow.to_string(), "2026-10-04T04:00:00Z");
+    }
+
+    #[test]
+    fn a_time_in_a_quarter_hour_zone() {
+        let now: Timestamp = "2026-10-02T08:00:00Z".parse().unwrap();
+        let kathmandu = TimeZone::get("Asia/Kathmandu").unwrap();
+        let at = parse("2026-10-05 08:00", DateField::Planned, &kathmandu, now).unwrap();
+        assert_eq!(at.to_string(), "2026-10-05T02:15:00Z");
     }
 
     #[test]

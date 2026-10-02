@@ -1,6 +1,10 @@
 //! The shared vectors in `sync/fixtures`, which the server runs too
 //! (ADR 0018).
 
+use jiff::Timestamp;
+use jiff::civil::{Date, Time};
+use jiff::tz::TimeZone;
+use marskal_sync::dates::{self, DateField};
 use marskal_sync::ids::{LinkKind, link_id};
 use marskal_sync::rank;
 use serde_json::Value;
@@ -60,6 +64,31 @@ fn link_ids_json() {
         assert_eq!(
             link_id(kind, owner, tag).to_string(),
             case["id"].as_str().unwrap()
+        );
+    }
+}
+
+#[test]
+fn dates_json() {
+    for case in read("dates.json")["from_local"].as_array().unwrap() {
+        let zone = TimeZone::get(case["zone"].as_str().unwrap()).unwrap();
+        let date: Date = case["date"].as_str().unwrap().parse().unwrap();
+        let time: Option<Time> = case["time"].as_str().map(|t| t.parse().unwrap());
+        let field = match case["field"].as_str().unwrap() {
+            "defer" => DateField::Defer,
+            "planned" => DateField::Planned,
+            _ => DateField::Due,
+        };
+        let expected: Timestamp = case["at"].as_str().unwrap().parse().unwrap();
+
+        assert_eq!(
+            dates::from_local(date, time, field, &zone),
+            expected,
+            "{} {} {:?}: {}",
+            case["zone"],
+            case["date"],
+            case["time"],
+            case["why"]
         );
     }
 }

@@ -34,5 +34,23 @@ defmodule Marskal.SyncFixturesTest do
     end
   end
 
+  test "dates.json" do
+    fields = %{"defer" => :defer_until, "planned" => :planned_at, "due" => :due_at}
+
+    for v <- read("dates.json")["from_local"] do
+      time = v["time"] && Time.from_iso8601!(v["time"])
+      {:ok, at, 0} = DateTime.from_iso8601(v["at"])
+
+      assert Marskal.Dates.from_local(
+               Date.from_iso8601!(v["date"]),
+               time,
+               fields[v["field"]],
+               v["zone"]
+             ) ==
+               at,
+             "#{v["zone"]} #{v["date"]} #{v["time"]}: #{v["why"]}"
+    end
+  end
+
   defp read(name), do: @fixtures |> Path.join(name) |> File.read!() |> Jason.decode!()
 end
