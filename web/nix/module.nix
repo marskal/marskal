@@ -42,7 +42,7 @@ let
   hydraExe = lib.getExe hydra.package;
   hydraStateDir = "/var/lib/marskal-hydra";
   hydraEnvironment = {
-    DSN = "postgres://marskal-hydra@/marskal_hydra?host=/run/postgresql&sslmode=disable";
+    DSN = "postgres://marskal_hydra@/marskal_hydra?host=/run/postgresql&sslmode=disable";
   };
   hydraConfig = pkgs.writeText "hydra.json" (
     builtins.toJSON (
@@ -53,8 +53,8 @@ let
     )
   );
   hydraServiceConfig = {
-    User = "marskal-hydra";
-    Group = "marskal-hydra";
+    User = "marskal_hydra";
+    Group = "marskal_hydra";
     EnvironmentFile = hydra.secretsFile;
     StateDirectory = "marskal-hydra";
     StateDirectoryMode = "0750";
@@ -154,12 +154,13 @@ in
     };
     users.groups.marskal = { };
 
-    users.users.marskal-hydra = {
+    # Named like its database, so peer auth and ensureDBOwnership line up.
+    users.users.marskal_hydra = {
       isSystemUser = true;
-      group = "marskal-hydra";
+      group = "marskal_hydra";
       home = hydraStateDir;
     };
-    users.groups.marskal-hydra = { };
+    users.groups.marskal_hydra = { };
 
     environment.systemPackages = [ adminCommand ];
 
@@ -174,27 +175,11 @@ in
           name = "marskal";
           ensureDBOwnership = true;
         }
-        # ensureDBOwnership needs the user and database names to match.
-        { name = "marskal-hydra"; }
+        {
+          name = "marskal_hydra";
+          ensureDBOwnership = true;
+        }
       ];
-    };
-
-    systemd.services.marskal-hydra-db = {
-      description = "Give Hydra its database";
-      requires = [ "postgresql.target" ];
-      after = [
-        "postgresql.target"
-        "postgresql-setup.service"
-      ];
-      script = ''
-        ${lib.getExe' config.services.postgresql.package "psql"} -v ON_ERROR_STOP=1 \
-          -c 'ALTER DATABASE marskal_hydra OWNER TO "marskal-hydra"'
-      '';
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        User = "postgres";
-      };
     };
 
     systemd.services.marskal-hydra-secrets = {
@@ -209,8 +194,8 @@ in
       '';
       serviceConfig = {
         Type = "oneshot";
-        User = "marskal-hydra";
-        Group = "marskal-hydra";
+        User = "marskal_hydra";
+        Group = "marskal_hydra";
         StateDirectory = "marskal-hydra";
         StateDirectoryMode = "0750";
       };
@@ -220,12 +205,12 @@ in
       description = "Ory Hydra for Marskal";
       wantedBy = [ "multi-user.target" ];
       requires = [
-        "marskal-hydra-db.service"
+        "postgresql.target"
         "marskal-hydra-secrets.service"
       ];
       after = [
         "network.target"
-        "marskal-hydra-db.service"
+        "postgresql.target"
         "marskal-hydra-secrets.service"
       ];
       environment = hydraEnvironment;
@@ -240,8 +225,8 @@ in
     # Hydra does not prune its own tables.
     systemd.services.marskal-hydra-janitor = {
       description = "Prune expired Hydra tokens and requests";
-      requires = [ "marskal-hydra-db.service" ];
-      after = [ "marskal-hydra-db.service" ];
+      requires = [ "postgresql.target" ];
+      after = [ "postgresql.target" ];
       environment = hydraEnvironment;
       serviceConfig = hydraServiceConfig // {
         Type = "oneshot";
