@@ -43,6 +43,13 @@ defmodule Marskal.Changes do
                     {entity, false}
 
                   patch ->
+                    # Change ids are allocated one writer at a time per user, so
+                    # they commit in id order and a pull cursor never passes
+                    # one still in flight (ADR 0019).
+                    Repo.query!("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
+                      "changes:" <> user.id
+                    ])
+
                     %Change{}
                     |> Change.record_changeset(%{
                       command_id: command_id,
@@ -121,9 +128,10 @@ defmodule Marskal.Changes do
     end
   end
 
-  defp encode_value(nil), do: nil
-  defp encode_value(value) when is_boolean(value), do: value
-  defp encode_value(value) when is_atom(value), do: Atom.to_string(value)
-  defp encode_value(%DateTime{} = value), do: DateTime.to_iso8601(value)
-  defp encode_value(value), do: value
+  @doc "A field value as JSON carries it: ISO 8601 for instants, strings for enums."
+  def encode_value(nil), do: nil
+  def encode_value(value) when is_boolean(value), do: value
+  def encode_value(value) when is_atom(value), do: Atom.to_string(value)
+  def encode_value(%DateTime{} = value), do: DateTime.to_iso8601(value)
+  def encode_value(value), do: value
 end
