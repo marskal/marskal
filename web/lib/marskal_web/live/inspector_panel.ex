@@ -47,6 +47,7 @@ defmodule MarskalWeb.InspectorPanel do
     |> assign(:record, record)
     |> assign(:options, options(user, record))
     |> assign(:tagging, tagging(user, record))
+    |> assign(:outline, outline(user, record))
     |> assign(:picker, picker || %{query: "", results: []})
     |> assign(:error, error)
     |> assign(:loaded_selection, selection)
@@ -269,6 +270,7 @@ defmodule MarskalWeb.InspectorPanel do
         error={@error}
         tagging={@tagging}
         picker={@picker}
+        outline={@outline}
       />
       <.project_form
         :if={match?(%Projects.Project{}, @record)}
@@ -305,6 +307,10 @@ defmodule MarskalWeb.InspectorPanel do
   attr :tagging, :map, required: true
   attr :picker, :map, required: true
   attr :zone, :string, required: true
+
+  attr :outline, :map,
+    default: %{},
+    doc: "the task's parent, the dates it goes by, and whether it is resolved from above"
 
   defp task_form(assigns) do
     ~H"""
@@ -344,6 +350,9 @@ defmodule MarskalWeb.InspectorPanel do
             task={@record}
             projects={@options}
           />
+          <p :if={@outline[:parent]} class="hint" id="inspector-task-parent">
+            Subtask of {@outline[:parent].title}. Choosing another location moves it out.
+          </p>
         </div>
         <div class="field">
           <label for="inspector-task-state">State</label>
@@ -356,12 +365,16 @@ defmodule MarskalWeb.InspectorPanel do
               {label}
             </option>
           </select>
+          <p :if={@outline[:resolved_above]} class="hint" id="inspector-task-resolved-above">
+            Resolved along with the task or project above. Reopen that to bring this back.
+          </p>
         </div>
         <MarskalWeb.DateFields.inputs
           form="task"
           id="inspector-task-dates"
           record={@record}
           zone={@zone}
+          inherited={@outline[:dates]}
         />
         <div class="actions">
           <button
@@ -890,6 +903,19 @@ defmodule MarskalWeb.InspectorPanel do
   defp tagging(_user, _record), do: nil
 
   defp visible_tags(tree), do: tree |> Tree.all() |> Enum.filter(&Tree.visible?(tree, &1.id))
+
+  # Where a task sits: its parent, the dates it goes by, and whether a task
+  # or project above has resolved it (ADR 0006, ADR 0009).
+  defp outline(user, %Tasks.Task{} = task) do
+    %{
+      parent: task.parent_id && Tasks.get_task(user, task.parent_id),
+      dates: Tasks.effective_dates(user, [task])[task.id],
+      resolved_above:
+        task.state == :to_do and MapSet.member?(Tasks.resolved_ids(user, [task.id]), task.id)
+    }
+  end
+
+  defp outline(_user, _record), do: %{}
 
   defp load(_user, nil), do: nil
   defp load(user, %{type: :task, id: id}), do: Tasks.get_task(user, id)

@@ -22,6 +22,20 @@ defmodule MarskalWeb.TaskComponents do
     default: %{},
     doc: "effective dates by task id, from `Marskal.Tasks.effective_dates/2`"
 
+  attr :resolved, :any,
+    default: MapSet.new(),
+    doc: "ids resolved along with a task or project above, from `Marskal.Tasks.resolved_ids/2`"
+
+  attr :parents, :map,
+    default: %{},
+    doc: "each subtask's parent, for the breadcrumb in a flat list"
+
+  attr :outline, :boolean,
+    default: false,
+    doc: "show the tasks as their outline: subtasks under their parent, in rank order"
+
+  attr :collapsed, :any, default: MapSet.new(), doc: "ids whose subtasks the outline hides"
+
   attr :zone, :string, default: "Europe/Copenhagen", doc: "the user's zone, for date labels"
 
   def list(assigns) do
@@ -29,7 +43,8 @@ defmodule MarskalWeb.TaskComponents do
       assign(assigns,
         now: DateTime.utc_now(),
         today: Marskal.Dates.today(assigns.zone),
-        inherited_hint: "From the task or project above"
+        inherited_hint: "From the task or project above",
+        rows: rows(assigns)
       )
 
     ~H"""
@@ -175,6 +190,48 @@ defmodule MarskalWeb.TaskComponents do
           border-style: dashed;
         }
 
+        :scope[style*="--depth"] {
+          margin-inline-start: calc(var(--depth) * 1.75rem);
+        }
+
+        .disclosure {
+          flex: 0 0 1.5rem;
+          align-self: center;
+          margin-inline-end: -0.5rem;
+        }
+
+        .disclosure button {
+          display: grid;
+          place-items: center;
+          width: 1.5rem;
+          height: 1.5rem;
+          padding: 0;
+          border: 0;
+          border-radius: 4px;
+          background: transparent;
+          color: var(--muted);
+          cursor: pointer;
+        }
+
+        .disclosure .icon {
+          width: 1rem;
+          height: 1rem;
+        }
+
+        .disclosure button:focus-visible {
+          outline: 2px solid var(--accent);
+          outline-offset: 1px;
+        }
+
+        .crumb {
+          color: var(--muted);
+          font-size: 0.85em;
+        }
+
+        .crumb .chevron {
+          margin-inline: 0.35em;
+        }
+
         :scope.is-unavailable .title {
           color: var(--muted);
         }
@@ -197,17 +254,19 @@ defmodule MarskalWeb.TaskComponents do
       }
     </style>
     <p :if={@tasks == []} class="empty">{@empty}</p>
-    <ul id={@id} class="task-list">
+    <ul id={@id} class="task-list" phx-hook=".Outline" data-outline={@outline}>
       <li
-        :for={{task, d} <- with_dates(@tasks, @dates)}
+        :for={%{task: task, dates: d, depth: depth, children?: children?} <- @rows}
         id={"task-#{task.id}"}
         class={[
           "task-row",
           MarskalWeb.Inspector.selected?(:task, task.id, @inspector) && "is-selected",
           (MapSet.member?(@unavailable, task.id) or MapSet.member?(@deferred, task.id)) &&
             "is-unavailable",
-          task.state != :to_do && "is-resolved"
+          (task.state != :to_do or MapSet.member?(@resolved, task.id)) && "is-resolved"
         ]}
+        style={depth > 0 && "--depth: #{depth}"}
+        data-depth={@outline && depth}
         data-inspect-type="task"
         data-inspect-id={task.id}
         aria-current={MarskalWeb.Inspector.selected?(:task, task.id, @inspector) && "true"}
@@ -215,6 +274,29 @@ defmodule MarskalWeb.TaskComponents do
         phx-value-type="task"
         phx-value-id={task.id}
       >
+        <span :if={@outline} class="disclosure">
+          <button
+            :if={children?}
+            type="button"
+            phx-click="outline-toggle"
+            phx-value-id={task.id}
+            aria-expanded={to_string(not MapSet.member?(@collapsed, task.id))}
+            aria-label={
+              if MapSet.member?(@collapsed, task.id), do: "Show subtasks", else: "Hide subtasks"
+            }
+          >
+            <Lucideicons.chevron_right
+              :if={MapSet.member?(@collapsed, task.id)}
+              class="icon"
+              aria-hidden="true"
+            />
+            <Lucideicons.chevron_down
+              :if={not MapSet.member?(@collapsed, task.id)}
+              class="icon"
+              aria-hidden="true"
+            />
+          </button>
+        </span>
         <span :if={:complete in @actions} class="check-form">
           <button
             type="button"
@@ -246,6 +328,9 @@ defmodule MarskalWeb.TaskComponents do
             phx-value-type="task"
             phx-value-id={task.id}
           >
+            <span :if={!@outline && @parents[task.id]} class="crumb">
+              {@parents[task.id].title}<span class="chevron" aria-hidden="true">›</span>
+            </span>
             {task.title}
           </button>
           <span
@@ -291,6 +376,92 @@ defmodule MarskalWeb.TaskComponents do
         </div>
       </li>
     </ul>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".Outline" extension="ts">
+      import {ViewHook} from "phoenix_live_view"
+
+      // Collapsed tasks are kept per browser. The server renders the
+      // outline, so it is told the saved set on mount and tells the hook
+      // what to save after each toggle.
+      const key = "marskal:outline:collapsed"
+
+      function load(): string[] {
+        try {
+          const ids: unknown = JSON.parse(localStorage.getItem(key) ?? "[]")
+          return Array.isArray(ids) ? ids.filter((id) => typeof id === "string") : []
+        } catch {
+          return []
+        }
+      }
+
+      function save(ids: string[]) {
+        try {
+          localStorage.setItem(key, JSON.stringify(ids))
+        } catch {
+          // Private windows may refuse storage; the outline still works.
+        }
+      }
+
+      // The row keys of an outliner: Tab and Shift-Tab indent and outdent,
+      // as do the macOS-style Cmd-] and Cmd-[ (Ctrl off a Mac).
+      // Alt-Up and Alt-Down move among siblings, Up and Down move focus.
+      const command = (e: KeyboardEvent) => e.metaKey || e.ctrlKey
+      const plain = (e: KeyboardEvent) => !command(e) && !e.altKey
+
+      const bracket = (e: KeyboardEvent, key: "[" | "]") => command(e) && !e.altKey && e.key === key
+
+      const moves: Record<string, (event: KeyboardEvent) => boolean> = {
+        "outline-indent": (e) => (plain(e) && e.key === "Tab" && !e.shiftKey) || bracket(e, "]"),
+        "outline-outdent": (e) => (plain(e) && e.key === "Tab" && e.shiftKey) || bracket(e, "["),
+        "outline-up": (e) => e.altKey && !command(e) && e.key === "ArrowUp",
+        "outline-down": (e) => e.altKey && !command(e) && e.key === "ArrowDown",
+      }
+
+      export default class extends ViewHook<HTMLUListElement> {
+        focusId: string | null = null
+
+        onKeydown = (event: KeyboardEvent) => {
+          if (!(event.target instanceof HTMLElement)) return
+          const row = event.target.closest<HTMLElement>(".task-row")
+          const id = row?.dataset.inspectId
+          if (!row || !id) return
+
+          const move = Object.keys(moves).find((name) => moves[name]?.(event))
+          if (move) {
+            event.preventDefault()
+            this.focusId = id
+            this.pushEvent(move, {id})
+            return
+          }
+
+          if (!plain(event) || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) return
+          const rows = Array.from(this.el.querySelectorAll<HTMLElement>(":scope > .task-row"))
+          const next = rows[rows.indexOf(row) + (event.key === "ArrowUp" ? -1 : 1)]
+          if (!next) return
+          event.preventDefault()
+          next.querySelector<HTMLElement>("button.select")?.focus()
+        }
+
+        mounted() {
+          if (!this.el.hasAttribute("data-outline")) return
+          this.el.addEventListener("keydown", this.onKeydown)
+          this.handleEvent("outline-collapsed", ({ids}: {ids: string[]}) => save(ids))
+          const ids = load()
+          if (ids.length) this.pushEvent("outline-collapsed", {ids})
+        }
+
+        // A move can re-create the row, so focus goes back to it by id.
+        updated() {
+          if (!this.focusId) return
+          const title = this.el.querySelector<HTMLElement>(`#task-${CSS.escape(this.focusId)} button.select`)
+          if (title && document.activeElement !== title) title.focus()
+          this.focusId = null
+        }
+
+        destroyed() {
+          this.el.removeEventListener("keydown", this.onKeydown)
+        }
+      }
+    </script>
     """
   end
 
@@ -325,10 +496,44 @@ defmodule MarskalWeb.TaskComponents do
   def parse_location(value) when value in ["none", ""], do: :none
   def parse_location(project_id) when is_binary(project_id), do: project_id
 
-  # Each task with the dates it goes by: its own, or inherited from the
-  # task or project above (`Marskal.Tasks.effective_dates/2`). A task
-  # missing from `dates` goes by its own.
-  defp with_dates(tasks, dates), do: Enum.map(tasks, &{&1, Map.get(dates, &1.id, &1)})
+  # One row per task shown, with the dates it goes by: its own, or those
+  # inherited from the task or project above
+  # (`Marskal.Tasks.effective_dates/2`). A flat list keeps the given order.
+  # An outline puts each subtask under its parent, siblings by rank, and
+  # skips what a collapsed task holds. A task whose parent is not in the
+  # list starts at the top.
+  defp rows(%{outline: false} = assigns),
+    do: Enum.map(assigns.tasks, &row(&1, assigns.dates, 0, false))
+
+  defp rows(assigns) do
+    ids = MapSet.new(assigns.tasks, & &1.id)
+
+    children =
+      Enum.group_by(assigns.tasks, fn task ->
+        if MapSet.member?(ids, task.parent_id), do: task.parent_id, else: :top
+      end)
+
+    walk(children, :top, 0, assigns)
+  end
+
+  defp walk(children, key, depth, assigns) do
+    children
+    |> Map.get(key, [])
+    |> Enum.sort_by(&{&1.rank, &1.id})
+    |> Enum.flat_map(fn task ->
+      children? = Map.has_key?(children, task.id)
+
+      below =
+        if children? and not MapSet.member?(assigns.collapsed, task.id),
+          do: walk(children, task.id, depth + 1, assigns),
+          else: []
+
+      [row(task, assigns.dates, depth, children?) | below]
+    end)
+  end
+
+  defp row(task, dates, depth, children?),
+    do: %{task: task, dates: Map.get(dates, task.id, task), depth: depth, children?: children?}
 
   defp inherited?(task, dates, field),
     do: is_nil(Map.get(task, field)) and Map.get(dates, field) != nil

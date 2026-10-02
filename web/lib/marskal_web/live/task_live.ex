@@ -54,6 +54,9 @@ defmodule MarskalWeb.TaskLive do
         />
         <button type="submit">Save</button>
       </.form>
+      <p :if={@resolved_above} class="lede" id="task-resolved-above">
+        Resolved along with the task or project above. Reopen that to bring this back.
+      </p>
       <p class="actions">
         <button :if={@task.state == :to_do} type="button" phx-click="complete">Done</button>
         <button :if={@task.state == :to_do} type="button" phx-click="drop">Drop</button>
@@ -120,6 +123,10 @@ defmodule MarskalWeb.TaskLive do
     socket
     |> assign(:page_title, task.title)
     |> assign(:task, task)
+    |> assign(
+      :resolved_above,
+      task.state == :to_do and MapSet.member?(Tasks.resolved_ids(user, [task.id]), task.id)
+    )
     |> assign(:projects, Projects.list_open(user))
     |> assign(
       :form,

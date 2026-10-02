@@ -12,6 +12,7 @@ defmodule MarskalWeb.InboxLive do
     {:ok,
      socket
      |> assign(:page_title, "Inbox")
+     |> MarskalWeb.Outline.attach()
      |> assign(:command_id, Ecto.UUID.generate())
      |> assign(:form, to_form(%{"title" => ""}, as: "task"))
      |> assign_tasks(Tasks.list_inbox(user))}
@@ -55,6 +56,10 @@ defmodule MarskalWeb.InboxLive do
         unavailable={@task_tags.unavailable}
         deferred={@task_tags.deferred}
         dates={@task_tags.dates}
+        resolved={@task_tags.resolved}
+        parents={@task_tags.parents}
+        outline
+        collapsed={@collapsed}
         zone={@current_scope.user.timezone}
         empty="Nothing in the inbox."
         actions={[:complete]}

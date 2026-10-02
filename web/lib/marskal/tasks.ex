@@ -220,6 +220,48 @@ defmodule Marskal.Tasks do
     end)
   end
 
+  @doc "Swaps the task with the sibling above it."
+  def move_task_up(%User{} = user, task_id, command_id) do
+    Changes.apply(user, command_id, "task", fn ->
+      with %Task{} = task <- get_task(user, task_id) || {:error, :not_found},
+           %Task{} = above <- Outline.previous_sibling(user, task) || {:error, :first} do
+        before = Outline.previous_sibling(user, above)
+        place(user, command_id, task, task.parent_id, before && before.id)
+      end
+    end)
+  end
+
+  @doc "Swaps the task with the sibling below it."
+  def move_task_down(%User{} = user, task_id, command_id) do
+    Changes.apply(user, command_id, "task", fn ->
+      with %Task{} = task <- get_task(user, task_id) || {:error, :not_found},
+           %Task{} = below <- Outline.next_sibling(user, task) || {:error, :last} do
+        place(user, command_id, task, task.parent_id, below.id)
+      end
+    end)
+  end
+
+  @doc """
+  Which of these tasks are resolved, by their own state or by a resolved
+  task or project above them (see `where_open/2`).
+  """
+  def resolved_ids(%User{} = user, ids) do
+    open =
+      Task
+      |> where_open(user)
+      |> where([t], t.id in ^ids)
+      |> select([t], t.id)
+      |> Repo.all()
+      |> MapSet.new()
+
+    Task
+    |> where([t], t.user_id == ^user.id and t.id in ^ids and is_nil(t.discarded_at))
+    |> select([t], t.id)
+    |> Repo.all()
+    |> MapSet.new()
+    |> MapSet.difference(open)
+  end
+
   @doc """
   Discards the task and its subtasks. Later patches to them are ignored
   and they leave every view; Done and Dropped are how work normally ends

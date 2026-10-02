@@ -91,6 +91,8 @@ defmodule MarskalWeb.TagLive do
         unavailable={@task_tags.unavailable}
         deferred={@task_tags.deferred}
         dates={@task_tags.dates}
+        resolved={@task_tags.resolved}
+        parents={@task_tags.parents}
         zone={@zone}
         mark_inbox
         empty="No tasks carry this tag itself."
@@ -166,13 +168,22 @@ defmodule MarskalWeb.TagLive do
         |> assign(:state, Tree.state(tree, root.tag.id) || root.tag.state)
         |> assign(:ancestors, ancestors(tree, root.tag))
         |> assign(:outline, outline)
-        |> assign(:task_tags, %{
-          tags: outline.effective,
-          unavailable: outline.unavailable,
-          deferred: Tasks.deferred_ids(user, node_tasks(outline.root)),
-          dates: Tasks.effective_dates(user, node_tasks(outline.root))
-        })
+        |> assign(:task_tags, annotate(user, outline))
     end
+  end
+
+  # The outline already has the tag annotations; the rest are per task.
+  defp annotate(user, outline) do
+    tasks = node_tasks(outline.root)
+
+    %{
+      tags: outline.effective,
+      unavailable: outline.unavailable,
+      deferred: Tasks.deferred_ids(user, tasks),
+      dates: Tasks.effective_dates(user, tasks),
+      resolved: Tasks.resolved_ids(user, Enum.map(tasks, & &1.id)),
+      parents: TaskList.parents(user, tasks)
+    }
   end
 
   # Done and dropped tasks stay in their groups until the user leaves

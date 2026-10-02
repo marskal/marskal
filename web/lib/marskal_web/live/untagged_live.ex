@@ -32,6 +32,8 @@ defmodule MarskalWeb.UntaggedLive do
         unavailable={@task_tags.unavailable}
         deferred={@task_tags.deferred}
         dates={@task_tags.dates}
+        resolved={@task_tags.resolved}
+        parents={@task_tags.parents}
         zone={@current_scope.user.timezone}
         mark_inbox
         empty="Every task has a tag."
