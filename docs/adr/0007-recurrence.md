@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted; amended 2026-10-02 (projects, date offsets, open cap)
 
 ## Context
 
@@ -31,7 +31,7 @@ Each series has a **recurrence mode**:
 
 | Mode | Behavior |
 |------|----------|
-| **Regular** | A new instance is created on the schedule **whether or not** the previous one was resolved. Missed work can accumulate (multiple open occurrences) unless the product later adds catch-up policies. Timeline is driven by the anchor schedule (prior scheduled anchor + interval / calendar rules). |
+| **Regular** | A new instance is created on the schedule **whether or not** the previous one was resolved. Missed work accumulates (multiple open occurrences), up to a cap on open occurrences (see Building it). Timeline is driven by the anchor schedule (prior scheduled anchor + interval / calendar rules). |
 | **On completion** | The next instance is created when the current one is **resolved** — not merely because the clock passed. **Resolved** means state **Done** or **Dropped** (ADR 0008). Both count as completion for spawning the next occurrence. The next anchor is computed from the **resolution** moment (then apply interval + weekday/month limits). **To-Do** does not spawn the next on its own. |
 
 - Mode is user-visible and first-class on the series.
@@ -49,9 +49,8 @@ Recurrence is **based on exactly one** of the three task date fields (ADR 0006):
 | **Due** | Next **Due** instant is computed from the rule |
 
 - The anchor is part of the series definition (user-chosen).
-- Non-anchor date fields on an occurrence are **not** auto-advanced unless product
-  behavior is explicitly defined later (default: only the anchor field is driven by
-  the series).
+- The other two date fields keep their offset from the anchor (amended 2026-10-02;
+  see Building it). The rule drives only the anchor.
 - **Regular:** next anchor from the schedule (previous scheduled anchor + rule).  
   **On completion:** next anchor from **Done/Dropped resolution time** + rule.
 
@@ -131,6 +130,74 @@ Task states: ADR 0008. For recurrence:
   weekday mask, monthly selectors, end_at, end_count, …) — **not** opaque RRULE-only storage.
 - RRULE export/import is optional later if needed for calendar interop.
 
+## Building it (2026-10-02)
+
+Settled before the schema slice. Where this differs from the text above, this
+section wins.
+
+### A series repeats a task or a project
+
+- `recurrence_series` is its own synced entity (ADR 0014): owner, the rule
+  (mode, anchor, interval, frequency, weekdays, monthly selectors, end date,
+  end count), `kind` (task | project), and `stopped_at`. Stopping a series
+  keeps it, so its occurrences keep their history.
+- Tasks and projects both carry `series_id` and `occurrence_for`. A series has
+  occurrences of its own kind only. The first build repeats tasks; projects
+  follow without a schema change.
+- The series holds no title, notes, location, or tags. Those come from the
+  occurrences.
+
+### The occurrence
+
+- `occurrence_for` is the anchor the rule produced: "the occurrence for
+  Friday 17:00". It is set on insert and no client may patch it. Moving this
+  occurrence's Due to Saturday leaves `occurrence_for` on Friday. It is not
+  "scheduled": that word reads as Planned. `(series_id, occurrence_for)` is
+  unique.
+- A rule-created id is UUIDv5 of the series and `occurrence_for` (ADR 0014). The
+  task a rule is added to stays the first occurrence, with its own v7 id and
+  `occurrence_for` set to its anchor field, which must have a value.
+- A generated id that already exists is never created again, discarded or
+  not. Deleting an occurrence does not bring it back.
+
+### The next occurrence copies the latest
+
+- The latest occurrence is the one with the greatest `occurrence_for`. The next
+  copies its title, notes, location, parent task, and tags, sits right after
+  it among its siblings, and starts To-Do.
+- The anchor field gets the new `occurrence_for`. Each other date that is set
+  keeps its distance from the latest's anchor field on the user's zone clock
+  (same days, same local time), so "defer 2 days before due" holds across a
+  DST change. The offset is part of the pure function and its fixtures.
+- A task's subtasks are not copied in the first build.
+- A project occurrence will copy the latest project with its task tree, every
+  task To-Do. Copied task ids are UUIDv5 of the new project id and the source
+  task id, so both sides mint the same tree.
+- A rule change applies from the next generated slot. Existing occurrences
+  keep their `occurrence_for`.
+
+### Regular mode and the open cap
+
+- A series always has one occurrence scheduled after now. When its slot
+  passes, the generator creates the following one. Earlier occurrences stay
+  open until resolved.
+- A series has at most **10** open (To-Do) occurrences. At the cap the
+  generator creates nothing. The number is fixed, not a user setting.
+- When the series drops below the cap again, generation resumes at the first
+  slot after now. Missed slots are skipped: they never become rows and do not
+  count toward the end count.
+- Only the server creates the occurrence that resumes after a skip, because
+  "after now" depends on whose clock. Otherwise either side may create the
+  next, as ADR 0014 says.
+
+### History
+
+There is no completions table. A series' occurrences are its history:
+`occurrence_for`, `resolved_at`, and Done or Dropped. Synced rows are never
+hard-deleted (ADR 0014), so streaks, completion rates, and lateness can be
+worked out from them later. Skipped slots show as gaps between
+`occurrence_for` values.
+
 ## Consequences
 
 - Phase 3 is a major product surface, not a bolt-on “repeat every week” checkbox.
@@ -142,6 +209,8 @@ Task states: ADR 0008. For recurrence:
 - Tests should cover: each frequency; both modes; weekly/monthly limits; end date;
   **end count = N generated**; both ends together; on-completion spawns on **Done and
   Dropped**; anchor ∈ {Defer, Planned, Due}; regular mode creating the next instance
-  even when the previous is still open.
+  even when the previous is still open; other dates keeping their offset across a
+  DST change; the open cap and the slots skipped after it; a discarded occurrence
+  not coming back.
 - Structured rules first; mode resolves schedule-vs-resolution advancement; count and
   Done/Dropped-as-resolution are fixed as above. States detailed in ADR 0008.

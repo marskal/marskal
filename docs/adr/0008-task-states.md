@@ -37,7 +37,7 @@ Every **task** and every **project** has exactly one of three states:
 - Stalled detection (e.g. no next action) applies to **To-Do** projects that are **not**
   currently deferred (including not indefinitely deferred).
 
-### Recurrence (tasks only; see ADR 0007)
+### Recurrence (tasks and projects; see ADR 0007)
 
 For **on completion** mode, **Done** and **Dropped** both **resolve** the current
 occurrence and each **generates the next** (until end date/count). **To-Do** does not.
@@ -45,6 +45,8 @@ occurrence and each **generates the next** (until end date/count). **To-Do** doe
 **Regular** mode schedules regardless; Done/Dropped only close that instance.
 
 **Count** = N **generated** instances, not N Dones.
+
+A recurring project resolves the same way (ADR 0007, amended 2026-10-02).
 
 ### Non-goals
 

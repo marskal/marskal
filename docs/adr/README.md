@@ -15,7 +15,7 @@ This directory holds **ADRs** — durable decisions and their context.
 | [0004](0004-hosting-vps-nix.md) | VPS hosting (Nix); local = development | Accepted |
 | [0005](0005-soft-gtd-nested-tags.md) | Soft-GTD and nested tags | Accepted |
 | [0006](0006-task-defer-planned-due.md) | Defer, Planned, Due (tasks & projects) | Accepted |
-| [0007](0007-recurrence.md) | Recurrence (anchor + interval rules) | Accepted |
+| [0007](0007-recurrence.md) | Recurrence (anchor + interval rules) | Accepted; amended 2026-10-02 |
 | [0008](0008-task-states.md) | Task & project states (To-Do, Done, Dropped) | Accepted |
 | [0009](0009-structure-outliner-and-folders.md) | Nested tasks, flat projects, project folders | Accepted |
 | [0010](0010-task-lists-and-phase1-defaults.md) | Task model, inbox boolean, Phase 1 defaults | Accepted; inbox amended by [0017](0017-inbox-location.md) |
