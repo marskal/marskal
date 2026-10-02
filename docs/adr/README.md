@@ -22,7 +22,7 @@ This directory holds **ADRs** — durable decisions and their context.
 | [0011](0011-uuidv7-primary-keys.md) | UUIDv7 primary keys | Accepted |
 | [0012](0012-viewcomponent-scoped-css.md) | ViewComponent widgets with CSS `@scope` | Accepted; widgets superseded at the port by [0016](0016-elixir-phoenix-web.md) |
 | [0013](0013-import-framework.md) | Import framework (file and Todoist OAuth) | Accepted |
-| [0014](0014-offline-sync.md) | Offline sync (field patches, change feed) | Accepted; client set amended by [0018](0018-rust-client-sync-library.md); wire format in [0019](0019-sync-api-and-oauth-sign-in.md) |
+| [0014](0014-offline-sync.md) | Offline sync (field patches, change feed) | Accepted; client set amended by [0018](0018-rust-client-sync-library.md); wire format in [0019](0019-sync-api-and-oauth-sign-in.md); recurrence amended 2026-10-03 |
 | [0015](0015-repository-layout.md) | Repository layout (web app, future clients) | Accepted; sharing amended by [0018](0018-rust-client-sync-library.md) |
 | [0016](0016-elixir-phoenix-web.md) | Elixir and Phoenix for the web app | Accepted |
 | [0017](0017-inbox-location.md) | The inbox is a location beside projects | Accepted |

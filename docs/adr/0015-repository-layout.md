@@ -9,7 +9,7 @@ sync library and do not share a UI.
 ## Context
 
 The web app will be joined by an offline iOS client (ADR 0014). Those two
-programs share a contract, the recurrence fixture vectors, and nothing else.
+programs share a contract, the fixture vectors, and nothing else.
 Separate repositories would let that contract drift. An empty client tree, or a
 directory named `server/` that also holds the LiveView, would obscure which
 program is which.
@@ -28,7 +28,7 @@ One repository. The root is the product, not the web app.
 ```text
 docs/adr/          # product decisions
 web/               # the web app, including devenv.nix
-sync/fixtures/     # recurrence and merge vectors — create with that work, not before
+sync/fixtures/     # vectors both Elixir and Rust run — create with that work, not before
 sync/core/         # Rust client sync library — create with the first offline client (ADR 0018)
 clients/ios/       # SwiftUI shell — create when that work starts
 ```
