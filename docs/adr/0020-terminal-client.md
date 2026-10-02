@@ -68,7 +68,8 @@ in-process, by path. There is no root Cargo workspace.
 - The refresh token is kept in the OS keychain. Where there is none (a
   headless server, a container), it is kept in a file readable only by the
   user, in the state directory. The access token is stored beside it until it
-  expires, so a short command does not refresh.
+  expires, so a short command does not refresh. `MARSKAL_NO_KEYCHAIN=1` uses
+  the file even where there is a keychain.
 - The command line and the terminal UI share one grant, so they share its
   refresh token. Refresh rotates it (ADR 0019), and two processes refreshing
   at once would look like reuse and revoke the grant. A process takes a lock
