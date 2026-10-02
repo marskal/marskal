@@ -33,6 +33,7 @@ defmodule MarskalWeb.Router do
     pipe_through :api_auth
 
     get "/sync/pull", SyncController, :pull
+    post "/sync/push", SyncController, :push
   end
 
   # Hydra serves the OAuth metadata (ADR 0021); this points there.

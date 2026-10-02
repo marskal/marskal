@@ -186,6 +186,82 @@ defmodule Marskal.Tags do
     end)
   end
 
+  @doc """
+  A client's tag insert (ADR 0014). A name already used under the same
+  parent is not an error: the new tag is stored discarded, merged into the
+  one already there. A merged parent stands for the tag it went into.
+  """
+  def insert_client_tag(%User{} = user, attrs, command_id) when is_map(attrs) do
+    Changes.apply(user, command_id, "tag", fn ->
+      changeset =
+        Tag.create_changeset(%Tag{}, user, resolve_parent(user, attrs), &next_rank(user, &1))
+
+      changeset =
+        case clash(user, changeset, nil) do
+          nil ->
+            changeset
+
+          twin ->
+            Ecto.Changeset.change(changeset,
+              discarded_at: DateTime.utc_now(:second),
+              merged_into_id: twin.id
+            )
+        end
+
+      case Repo.insert(changeset) do
+        {:ok, tag} -> {:ok, tag, changeset}
+        {:error, changeset} -> {:error, changeset}
+      end
+    end)
+  end
+
+  @doc """
+  A client's tag patch. A rename or move onto a name already used there
+  merges this tag into that one (ADR 0014).
+  """
+  def patch_client_tag(%User{} = user, id, attrs, command_id) when is_map(attrs) do
+    Changes.apply(user, command_id, "tag", fn ->
+      with %Tag{} = tag <- get_tag(user, id) || {:error, :not_found} do
+        changeset =
+          Tag.update_changeset(tag, user, resolve_parent(user, attrs), &next_rank(user, &1))
+
+        case clash(user, changeset, tag.id) do
+          nil ->
+            write_tag(user, tag, resolve_parent(user, attrs))
+
+          twin ->
+            with :ok <- validate_merge(tag, twin), do: merge(user, command_id, tag, twin)
+        end
+      end
+    end)
+  end
+
+  defp resolve_parent(user, attrs) do
+    case Map.fetch(attrs, "parent_id") do
+      {:ok, id} when is_binary(id) ->
+        case resolve_tag(user, id) do
+          %Tag{id: resolved} -> Map.put(attrs, "parent_id", resolved)
+          nil -> attrs
+        end
+
+      _ ->
+        attrs
+    end
+  end
+
+  # The live tag, other than `self_id`, that this changeset's name and
+  # parent would collide with.
+  defp clash(_user, %Ecto.Changeset{valid?: false}, _self_id), do: nil
+
+  defp clash(user, changeset, self_id) do
+    name = Ecto.Changeset.get_field(changeset, :name)
+
+    case find_tag(user, Ecto.Changeset.get_field(changeset, :parent_id), name) do
+      %Tag{id: ^self_id} -> nil
+      twin -> twin
+    end
+  end
+
   def rename_tag(user, id, name, command_id),
     do: update_tag(user, id, %{name: name}, command_id)
 

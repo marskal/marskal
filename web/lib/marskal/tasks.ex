@@ -189,6 +189,28 @@ defmodule Marskal.Tasks do
   end
 
   @doc """
+  A client's field patch (ADR 0019): the fields of `update_task/5`, plus
+  `parent_id` and `rank` as the client placed them. A new parent brings its
+  location along. Without a rank, a task that changes group goes where a
+  new one would.
+  """
+  def patch_task(%User{} = user, task_id, attrs, command_id, opts \\ []) when is_map(attrs) do
+    {outline, attrs} = Map.split(attrs, ["parent_id", "rank"])
+
+    if outline == %{} do
+      update_task(user, task_id, attrs, command_id, opts)
+    else
+      Changes.apply(user, command_id, "task", fn ->
+        with %Task{} = task <- get_task(user, task_id) || {:error, :not_found},
+             changeset = Task.update_changeset(task, attrs, opts),
+             {:ok, place} <- client_place(user, task, changeset, outline) do
+          write_with_subtree(user, command_id, Task.place_changeset(changeset, place))
+        end
+      end)
+    end
+  end
+
+  @doc """
   Places a task in the outline: under `parent_id` (`nil` for the top of its
   location), right after the sibling `after_id` (`nil` for first). At the
   top, the task stays in its location unless `after_id` names a task in
@@ -352,6 +374,46 @@ defmodule Marskal.Tasks do
         if Outline.within?(parent, task.id),
           do: {:error, :cycle},
           else: {:ok, Outline.children_of(parent)}
+    end
+  end
+
+  defp client_place(user, task, changeset, outline) do
+    moved = Ecto.Changeset.apply_changes(changeset)
+    parent_id = Map.get(outline, "parent_id", task.parent_id)
+
+    with {:ok, location} <- client_location(user, task, moved, parent_id) do
+      group = Map.put(location, :parent_id, parent_id)
+
+      case Map.fetch(outline, "rank") do
+        {:ok, rank} when is_binary(rank) ->
+          {:ok, Map.put(group, :rank, rank)}
+
+        {:ok, _rank} ->
+          {:error, :invalid_rank}
+
+        :error ->
+          rank =
+            if group == Outline.group(task),
+              do: task.rank,
+              else: Outline.default_rank(user, group, task.id)
+
+          {:ok, Map.put(group, :rank, rank)}
+      end
+    end
+  end
+
+  defp client_location(_user, _task, moved, nil),
+    do: {:ok, %{inbox: moved.inbox, project_id: moved.project_id}}
+
+  defp client_location(user, task, _moved, parent_id) do
+    case get_task(user, parent_id) do
+      nil ->
+        {:error, :not_found}
+
+      parent ->
+        if Outline.within?(parent, task.id),
+          do: {:error, :cycle},
+          else: {:ok, Map.take(parent, [:inbox, :project_id])}
     end
   end
 

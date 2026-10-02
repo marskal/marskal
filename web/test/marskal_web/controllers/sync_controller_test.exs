@@ -52,4 +52,39 @@ defmodule MarskalWeb.SyncControllerTest do
              |> json_response(403) == %{"error" => "insufficient_scope"}
     end
   end
+
+  describe "POST /api/v1/sync/push" do
+    test "applies commands and answers one result each", %{authed: authed, user: user} do
+      id = Ecto.UUID.generate()
+      command = Ecto.UUID.generate()
+
+      body = %{
+        "commands" => [
+          %{
+            "id" => command,
+            "entity" => "task",
+            "entity_id" => id,
+            "op" => "insert",
+            "fields" => %{"title" => "Bread"}
+          }
+        ]
+      }
+
+      assert authed |> post(~p"/api/v1/sync/push", body) |> json_response(200) ==
+               %{"results" => [%{"id" => command, "status" => "applied"}]}
+
+      assert Tasks.get_task(user, id).title == "Bread"
+    end
+
+    test "needs sync:write, and a list of commands", %{conn: conn, user: user, authed: authed} do
+      read_only = signed_in_device(user, %{"scope" => "sync:read"})
+
+      assert conn
+             |> put_req_header("authorization", "Bearer " <> read_only.access_token)
+             |> post(~p"/api/v1/sync/push", %{"commands" => []})
+             |> json_response(403)
+
+      assert authed |> post(~p"/api/v1/sync/push", %{}) |> json_response(400)
+    end
+  end
 end
