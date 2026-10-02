@@ -24,6 +24,24 @@ pub fn data_dir() -> PathBuf {
     base("XDG_DATA_HOME", ".local/share").join("marskal")
 }
 
+/// Create `data_dir()`, readable by the user alone: the databases hold
+/// every task. The parents it creates get the umask, as usual. A directory
+/// that already exists keeps its mode.
+pub fn create_data_dir() -> std::io::Result<PathBuf> {
+    let dir = data_dir();
+    if let Some(parent) = dir.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    let mut builder = std::fs::DirBuilder::new();
+    #[cfg(unix)]
+    std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o700);
+    match builder.create(&dir) {
+        Err(e) if e.kind() != std::io::ErrorKind::AlreadyExists => Err(e),
+        _ => Ok(dir),
+    }
+}
+
 /// `$XDG_STATE_HOME/marskal`: the token file where there is no keychain,
 /// and the refresh lock.
 pub fn state_dir() -> PathBuf {

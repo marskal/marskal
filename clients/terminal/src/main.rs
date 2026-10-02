@@ -283,16 +283,17 @@ impl Context {
 
     fn open_with(server: Option<String>, db: Option<PathBuf>, offline: bool) -> Result<Context> {
         let path = match (&db, &server) {
-            (Some(path), _) => path.clone(),
+            (Some(path), _) => {
+                if let Some(dir) = path.parent() {
+                    std::fs::create_dir_all(dir)?;
+                }
+                path.clone()
+            }
             (None, Some(server)) => {
-                paths::data_dir().join(format!("{}.db", paths::server_slug(server)))
+                paths::create_data_dir()?.join(format!("{}.db", paths::server_slug(server)))
             }
             (None, None) => return Err(CliError::not_signed_in()),
         };
-
-        if let Some(dir) = path.parent() {
-            std::fs::create_dir_all(dir)?;
-        }
 
         Ok(Context {
             store: Store::open(&path)?,
