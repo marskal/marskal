@@ -273,8 +273,7 @@ The repository root is the product, not the web app (ADR 0015).
   browser offline cache. Writes go through `Marskal.Changes.apply/4`; a patch
   with no changes appends nothing. Offline clients share one Rust engine
   (ADR 0018) instead of porting it per shell. Not built yet, and due before
-  that crate: OAuth sign-in, the pull and push endpoints (ADR 0019), the
-  `resolved_at` skew clamp, and `discarded_at` on project folders.
+  that crate: the push endpoint (ADR 0019).
 - **Sync API (ADR 0019):** `/api/v1`, bearer tokens from Ory Hydra (ADR 0021).
   Do not write OAuth protocol code in the web app: Hydra runs it, and the web
   app is its login, consent, and device verification UI over the admin API,

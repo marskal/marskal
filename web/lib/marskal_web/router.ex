@@ -24,6 +24,17 @@ defmodule MarskalWeb.Router do
     get "/up", HealthController, :show
   end
 
+  pipeline :api_auth do
+    plug :accepts, ["json"]
+    plug MarskalWeb.APIAuth
+  end
+
+  scope "/api/v1", MarskalWeb do
+    pipe_through :api_auth
+
+    get "/sync/pull", SyncController, :pull
+  end
+
   # Hydra serves the OAuth metadata (ADR 0021); this points there.
   scope "/", MarskalWeb do
     pipe_through :api

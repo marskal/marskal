@@ -177,6 +177,16 @@ The current row, not the patch, because the client's merge needs only the
 server value per field (ADR 0014), and replaying patches would make the client
 re-run cascades the server already ran.
 
+A cursor is only safe if no change below it can still commit. The server
+appends a user's changes one transaction at a time, under a per-user lock, so
+their ids commit in order. Sharing, which makes the feed span users,
+revisits this.
+
+A snapshot reads the cursor first and the rows after, and a page ends where
+it ends. So a row may arrive before a row it refers to: a task before its
+project, or a row newer than the cursor. The client keeps such references
+as they are, and the next pull fills them in.
+
 A cursor the server can no longer serve, because the feed was purged past it
 (ADR 0014), gets `410 Gone`. The client discards its rows, keeps its outbox,
 and takes a snapshot.
