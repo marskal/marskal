@@ -1,0 +1,41 @@
+{
+  "links": [
+    {
+      "id": "bfef3e89-bf09-576c-8e60-050685bca890",
+      "kind": "task",
+      "owner_id": "0192f0a0-0000-7000-8000-000000000001",
+      "tag_id": "0192f0a0-0000-7000-8000-0000000000aa"
+    },
+    {
+      "id": "da4b67be-3445-5d0e-b157-d38e19c2d27f",
+      "kind": "task",
+      "owner_id": "0192F0A0-1111-7000-8000-000000000002",
+      "tag_id": "0192f0a0-2222-7000-8000-0000000000bb"
+    },
+    {
+      "id": "dd1c288f-417e-5f83-aa9f-44f22479ff0e",
+      "kind": "task",
+      "owner_id": "00000000-0000-0000-0000-000000000000",
+      "tag_id": "ffffffff-ffff-ffff-ffff-ffffffffffff"
+    },
+    {
+      "id": "87253df2-9fcc-515e-8b5a-2e2c68d4ef0b",
+      "kind": "project",
+      "owner_id": "0192f0a0-0000-7000-8000-000000000001",
+      "tag_id": "0192f0a0-0000-7000-8000-0000000000aa"
+    },
+    {
+      "id": "2d7ea950-6e4b-5bb7-95aa-e243e57fa331",
+      "kind": "project",
+      "owner_id": "0192F0A0-1111-7000-8000-000000000002",
+      "tag_id": "0192f0a0-2222-7000-8000-0000000000bb"
+    },
+    {
+      "id": "314fff03-0c7f-54cd-8ee8-0c25ce5a4b68",
+      "kind": "project",
+      "owner_id": "00000000-0000-0000-0000-000000000000",
+      "tag_id": "ffffffff-ffff-ffff-ffff-ffffffffffff"
+    }
+  ],
+  "namespace": "a5c0ffee-0005-5000-8000-000000000005"
+}

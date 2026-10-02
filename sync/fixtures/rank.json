@@ -1,0 +1,287 @@
+{
+  "valid": [
+    {
+      "valid": true,
+      "rank": "V"
+    },
+    {
+      "valid": true,
+      "rank": "0V"
+    },
+    {
+      "valid": true,
+      "rank": "zz"
+    },
+    {
+      "valid": true,
+      "rank": "a1"
+    },
+    {
+      "valid": false,
+      "rank": ""
+    },
+    {
+      "valid": false,
+      "rank": "V0"
+    },
+    {
+      "valid": false,
+      "rank": "0"
+    },
+    {
+      "valid": false,
+      "rank": "a-b"
+    },
+    {
+      "valid": false,
+      "rank": "é"
+    }
+  ],
+  "between": [
+    {
+      "rank": "V",
+      "before": null,
+      "later": null
+    },
+    {
+      "rank": "l",
+      "before": "V",
+      "later": null
+    },
+    {
+      "rank": "t",
+      "before": "l",
+      "later": null
+    },
+    {
+      "rank": "G",
+      "before": null,
+      "later": "V"
+    },
+    {
+      "rank": "d",
+      "before": "V",
+      "later": "l"
+    },
+    {
+      "rank": "VV",
+      "before": "V",
+      "later": "W"
+    },
+    {
+      "rank": "Vl",
+      "before": "VV",
+      "later": "W"
+    },
+    {
+      "rank": "W",
+      "before": "V",
+      "later": "W1"
+    },
+    {
+      "rank": "0V",
+      "before": null,
+      "later": "1"
+    },
+    {
+      "rank": "00V",
+      "before": null,
+      "later": "01"
+    },
+    {
+      "rank": "zV",
+      "before": "z",
+      "later": null
+    },
+    {
+      "rank": "zzV",
+      "before": "zz",
+      "later": null
+    },
+    {
+      "rank": "yV",
+      "before": "y",
+      "later": "z"
+    },
+    {
+      "rank": "AV",
+      "before": "A",
+      "later": "B"
+    },
+    {
+      "rank": "AzV",
+      "before": "Az",
+      "later": "B"
+    },
+    {
+      "rank": "0l",
+      "before": "0V",
+      "later": "1"
+    },
+    {
+      "rank": "a0V",
+      "before": "a",
+      "later": "a1"
+    },
+    {
+      "rank": "aG",
+      "before": "a",
+      "later": "aV"
+    },
+    {
+      "rank": "VlV",
+      "before": "Vl",
+      "later": "Vm"
+    },
+    {
+      "rank": "GG",
+      "before": "G",
+      "later": "GV"
+    },
+    {
+      "rank": "000V",
+      "before": null,
+      "later": "001"
+    }
+  ],
+  "spread": [
+    {
+      "count": 0,
+      "ranks": []
+    },
+    {
+      "count": 1,
+      "ranks": [
+        "V"
+      ]
+    },
+    {
+      "count": 3,
+      "ranks": [
+        "F",
+        "U",
+        "j"
+      ]
+    },
+    {
+      "count": 10,
+      "ranks": [
+        "5",
+        "A",
+        "F",
+        "K",
+        "P",
+        "U",
+        "Z",
+        "e",
+        "j",
+        "o"
+      ]
+    },
+    {
+      "count": 100,
+      "ranks": [
+        "0c",
+        "1E",
+        "1q",
+        "2S",
+        "34",
+        "3g",
+        "4I",
+        "4u",
+        "5W",
+        "68",
+        "6k",
+        "7M",
+        "7y",
+        "8a",
+        "9C",
+        "9o",
+        "AQ",
+        "B2",
+        "Be",
+        "CG",
+        "Cs",
+        "DU",
+        "E6",
+        "Ei",
+        "FK",
+        "Fw",
+        "GY",
+        "HA",
+        "Hm",
+        "IO",
+        "J",
+        "Jc",
+        "KE",
+        "Kq",
+        "LS",
+        "M4",
+        "Mg",
+        "NI",
+        "Nu",
+        "OW",
+        "P8",
+        "Pk",
+        "QM",
+        "Qy",
+        "Ra",
+        "SC",
+        "So",
+        "TQ",
+        "U2",
+        "Ue",
+        "VG",
+        "Vs",
+        "WU",
+        "X6",
+        "Xi",
+        "YK",
+        "Yw",
+        "ZY",
+        "aA",
+        "am",
+        "bO",
+        "c",
+        "cc",
+        "dE",
+        "dq",
+        "eS",
+        "f4",
+        "fg",
+        "gI",
+        "gu",
+        "hW",
+        "i8",
+        "ik",
+        "jM",
+        "jy",
+        "ka",
+        "lC",
+        "lo",
+        "mQ",
+        "n2",
+        "ne",
+        "oG",
+        "os",
+        "pU",
+        "q6",
+        "qi",
+        "rK",
+        "rw",
+        "sY",
+        "tA",
+        "tm",
+        "uO",
+        "v",
+        "vc",
+        "wE",
+        "wq",
+        "xS",
+        "y4",
+        "yg",
+        "zI"
+      ]
+    }
+  ]
+}
