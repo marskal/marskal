@@ -12,6 +12,9 @@ Amends [ADR 0015](0015-repository-layout.md): those clients share a Rust
 library. They still do not share a UI, and the web app does not call the
 library.
 
+Shells amended by [ADR 0020](0020-terminal-client.md): the terminal client is
+one program, `clients/terminal`, not `clients/tui`.
+
 ## Context
 
 ADR 0014 specifies offline sync and assumed one native client, an iOS app,
