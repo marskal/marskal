@@ -197,9 +197,10 @@ always empty.
 
 ### Push
 
-`POST /sync/push` takes a list of commands. The server applies them **in
-order**, each in its own transaction through `Marskal.Changes.apply/4`, and
-stops at the first one that fails for a reason other than its content.
+`POST /sync/push` takes a list of at most **1000** commands; more is `413`.
+The server applies them **in order**, each in its own transaction through
+`Marskal.Changes.apply/4`, and stops at the first one that fails for a
+reason other than its content.
 
 ```json
 {

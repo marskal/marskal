@@ -272,15 +272,14 @@ The repository root is the product, not the web app (ADR 0015).
   UUIDv5 from the series id and the anchor. The web app stays online — no
   browser offline cache. Writes go through `Marskal.Changes.apply/4`; a patch
   with no changes appends nothing. Offline clients share one Rust engine
-  (ADR 0018) instead of porting it per shell. Not built yet, and due before
-  that crate: the push endpoint (ADR 0019).
+  (ADR 0018) instead of porting it per shell.
 - **Sync API (ADR 0019):** `/api/v1`, bearer tokens from Ory Hydra (ADR 0021).
   Do not write OAuth protocol code in the web app: Hydra runs it, and the web
   app is its login, consent, and device verification UI over the admin API,
   and introspects tokens. The admin port is never exposed. Scopes
   `offline_access`, `sync:read`, `sync:write`; one device per consent. Pull returns current rows after a cursor, or a snapshot. Push applies
   commands in order; each entity has an allow-list of client-writable fields
-  in its context. A rejected command is not retried.
+  (`client_fields/1` beside its changeset), dispatched by `Marskal.Sync.Push`. A rejected command is not retried.
 - Tests: state transitions; user isolation; defer/planned/due; outliner/folder structure;
   **recurrence** matrix (ADR 0007); tag inheritance in Phase 2+; sync merge,
   command replay, tombstones, and occurrence-id vectors (ADR 0014).

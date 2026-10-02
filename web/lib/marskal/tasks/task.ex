@@ -29,6 +29,18 @@ defmodule Marskal.Tasks.Task do
     timestamps(type: :utc_datetime)
   end
 
+  @doc """
+  The fields a client may write, by op (ADR 0019). Any other field rejects
+  the command. A patch of `discarded_at` is a delete.
+  """
+  def client_fields(:insert),
+    do:
+      ~w(title notes project_id parent_id rank inbox state defer_until deferred_indefinitely planned_at due_at)
+
+  def client_fields(:patch),
+    do:
+      ~w(title notes project_id parent_id rank inbox state defer_until deferred_indefinitely planned_at due_at discarded_at)
+
   def title_max, do: @title_max
 
   @doc """

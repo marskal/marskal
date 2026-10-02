@@ -25,6 +25,18 @@ defmodule Marskal.Projects.Project do
     timestamps(type: :utc_datetime)
   end
 
+  @doc """
+  The fields a client may write, by op (ADR 0019). Any other field rejects
+  the command. A patch of `discarded_at` is a delete.
+  """
+  def client_fields(:insert),
+    do:
+      ~w(title notes project_folder_id state defer_until deferred_indefinitely planned_at due_at)
+
+  def client_fields(:patch),
+    do:
+      ~w(title notes project_folder_id state defer_until deferred_indefinitely planned_at due_at discarded_at)
+
   def create_changeset(project, user, attrs, opts \\ []) do
     project
     |> cast(attrs, [

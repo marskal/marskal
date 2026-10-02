@@ -13,4 +13,11 @@ defmodule Marskal.Tags.TaskTag do
 
     timestamps(type: :utc_datetime)
   end
+
+  @doc """
+  The fields a client may write, by op (ADR 0019). Any other field rejects
+  the command. `discarded_at` untags, and null tags again.
+  """
+  def client_fields(:insert), do: ~w(task_id tag_id)
+  def client_fields(:patch), do: ~w(discarded_at)
 end

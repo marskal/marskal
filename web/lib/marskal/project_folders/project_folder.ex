@@ -18,6 +18,13 @@ defmodule Marskal.ProjectFolders.ProjectFolder do
     timestamps(type: :utc_datetime)
   end
 
+  @doc """
+  The fields a client may write, by op (ADR 0019). Any other field rejects
+  the command. A patch of `discarded_at` is a delete.
+  """
+  def client_fields(:insert), do: ~w(name parent_id state)
+  def client_fields(:patch), do: ~w(name parent_id state discarded_at)
+
   def create_changeset(folder, user, attrs) do
     folder
     |> cast(attrs, [:id, :name, :parent_id, :state])
