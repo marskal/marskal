@@ -4,6 +4,10 @@
 
 Accepted
 
+Sign-in is replaced by [ADR 0021](0021-ory-hydra-authorization-server.md):
+Ory Hydra is the authorization server, and the web app its login, consent,
+and device verification UI. The sync API below is unchanged.
+
 Specifies the wire format and the client credentials that
 [ADR 0014](0014-offline-sync.md) leaves open. The merge rules there are
 unchanged. The engine that calls this API is the Rust library of
