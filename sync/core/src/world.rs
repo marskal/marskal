@@ -127,12 +127,12 @@ impl World {
         self.tag_index.get(&id).map(|&i| &self.tags[i])
     }
 
-    /// A live task by id or unique id prefix, as with git.
+    /// A live task by id, or a unique start or end of it (see `ids::short`).
     pub fn find_task(&self, key: &str) -> Result<&Task> {
         find(&self.tasks, key, "task", |t| t.id, |_| None)
     }
 
-    /// A live project by id, id prefix, or its exact title (ignoring case).
+    /// A live project by id, a unique start or end of it, or its exact title (ignoring case).
     pub fn find_project(&self, key: &str) -> Result<&Project> {
         find(
             &self.projects,
@@ -463,17 +463,23 @@ fn find<'a, T>(
             .ok_or_else(|| not_found(entity, key));
     }
 
-    let by_prefix: Vec<&T> =
-        if lower.len() >= 4 && lower.chars().all(|c| c.is_ascii_hexdigit() || c == '-') {
-            rows.iter()
-                .filter(|row| id(row).to_string().starts_with(&lower))
-                .collect()
-        } else {
-            Vec::new()
-        };
+    // A UUIDv7 starts with its timestamp, so rows made in the same minute
+    // share a prefix. The short id people see is the random end
+    // (`ids::short`); either end matches.
+    let hex: String = lower.chars().filter(|c| *c != '-').collect();
+    let by_id: Vec<&T> = if hex.len() >= 4 && hex.chars().all(|c| c.is_ascii_hexdigit()) {
+        rows.iter()
+            .filter(|row| {
+                let simple = id(row).simple().to_string();
+                simple.ends_with(&hex) || simple.starts_with(&hex)
+            })
+            .collect()
+    } else {
+        Vec::new()
+    };
 
-    if !by_prefix.is_empty() {
-        return one(by_prefix, entity, key);
+    if !by_id.is_empty() {
+        return one(by_id, entity, key);
     }
 
     let by_name: Vec<&T> = rows

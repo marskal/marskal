@@ -542,5 +542,9 @@ fn ids_resolve_by_prefix() {
     let id = capture(&mut store, "Bread");
     let world = store.world().unwrap();
     assert_eq!(world.find_task(&id.to_string()[..8]).unwrap().id, id);
+    assert_eq!(
+        world.find_task(&marskal_sync::ids::short(&id)).unwrap().id,
+        id
+    );
     assert!(world.find_task("zzzz").is_err());
 }

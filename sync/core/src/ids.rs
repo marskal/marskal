@@ -11,6 +11,14 @@ pub fn new_id() -> Uuid {
     Uuid::now_v7()
 }
 
+/// The id people see and type: the last eight hex digits. A UUIDv7 starts
+/// with its timestamp, so its start is shared by rows made together; its
+/// end is random.
+pub fn short(id: &Uuid) -> String {
+    let simple = id.simple().to_string();
+    simple[simple.len() - 8..].to_string()
+}
+
 /// What a link row links: a task or a project.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LinkKind {
