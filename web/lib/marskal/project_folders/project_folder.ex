@@ -9,6 +9,7 @@ defmodule Marskal.ProjectFolders.ProjectFolder do
     field :name, :string
     field :parent_path, {:array, :string}, default: []
     field :state, Ecto.Enum, values: [:active, :dropped], default: :active
+    field :discarded_at, :utc_datetime
 
     belongs_to :user, Marskal.Accounts.User
     belongs_to :parent, __MODULE__
@@ -48,6 +49,8 @@ defmodule Marskal.ProjectFolders.ProjectFolder do
     end
   end
 
+  def discard_changeset(folder), do: Marskal.Dates.discard(folder)
+
   defp validate_parent(changeset, user, self_id) do
     case get_field(changeset, :parent_id) do
       nil ->
@@ -58,6 +61,9 @@ defmodule Marskal.ProjectFolders.ProjectFolder do
 
       parent_id ->
         case Marskal.Repo.get_by(__MODULE__, id: parent_id, user_id: user.id) do
+          %{discarded_at: %DateTime{}} ->
+            add_error(changeset, :parent_id, "must belong to you")
+
           nil ->
             add_error(changeset, :parent_id, "must belong to you")
 

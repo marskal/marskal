@@ -37,7 +37,7 @@ defmodule Marskal.Tasks.Task do
   may give its own `rank`; `Marskal.Tasks` places the task when it does
   not, and moves a subtask to where its parent is.
   """
-  def create_changeset(task, user, attrs) do
+  def create_changeset(task, user, attrs, opts \\ []) do
     task
     |> cast(attrs, [
       :id,
@@ -56,7 +56,7 @@ defmodule Marskal.Tasks.Task do
     |> default_inbox()
     |> put_location()
     |> Dates.put_defer()
-    |> Dates.put_resolved_at()
+    |> Dates.put_resolved_at(opts[:at])
     |> assoc_constraint(:user)
     |> owned_project_constraint()
     |> date_constraints()
@@ -65,14 +65,14 @@ defmodule Marskal.Tasks.Task do
   end
 
   @doc "Any subset of the editable fields. Only fields that differ reach the patch."
-  def update_changeset(task, attrs) do
+  def update_changeset(task, attrs, opts \\ []) do
     task
     |> cast(attrs, [:title, :notes, :project_id, :inbox, :state | Dates.fields()])
     |> validate_required([:title, :inbox, :state])
     |> validate_length(:title, max: @title_max)
     |> put_location()
     |> Dates.put_defer()
-    |> Dates.put_resolved_at()
+    |> Dates.put_resolved_at(opts[:at])
     |> owned_project_constraint()
     |> date_constraints()
   end

@@ -272,8 +272,7 @@ The repository root is the product, not the web app (ADR 0015).
   browser offline cache. Writes go through `Marskal.Changes.apply/4`; a patch
   with no changes appends nothing. Offline clients share one Rust engine
   (ADR 0018) instead of porting it per shell. Not built yet, and due before
-  that crate: OAuth sign-in, the pull and push endpoints (ADR 0019), the
-  `resolved_at` skew clamp, and `discarded_at` on project folders.
+  that crate: OAuth sign-in and the pull and push endpoints (ADR 0019).
 - **Sync API (ADR 0019):** `/api/v1`. The web app is an OAuth 2.1
   authorization server: device grant now, authorization code + PKCE and client
   registration only when a client needs them. Opaque hashed tokens, rotating
