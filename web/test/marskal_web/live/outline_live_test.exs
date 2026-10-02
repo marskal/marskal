@@ -46,6 +46,29 @@ defmodule MarskalWeb.OutlineLiveTest do
     refute render(view) =~ "Could not move"
   end
 
+  test "a drop places the task under its parent, after its sibling", ctx do
+    [a, b, c] = add(ctx, ["A", "B", "C"])
+    child = add(ctx, "Child", a)
+    {:ok, view, _html} = live(ctx.conn, ~p"/projects/#{ctx.project.id}")
+
+    render_hook(view, "outline-place", %{
+      "id" => c.id,
+      "parent_id" => a.id,
+      "after_id" => child.id
+    })
+
+    assert rows(view) == [a.id, child.id, c.id, b.id]
+    assert has_element?(view, "#task-#{c.id}[data-depth='1']")
+
+    render_hook(view, "outline-place", %{"id" => a.id, "parent_id" => nil, "after_id" => b.id})
+    assert rows(view) == [b.id, a.id, child.id, c.id]
+
+    # Under its own subtask is refused, and says so.
+    render_hook(view, "outline-place", %{"id" => a.id, "parent_id" => c.id, "after_id" => nil})
+    assert render(view) =~ "Could not move that task there."
+    assert rows(view) == [b.id, a.id, child.id, c.id]
+  end
+
   test "collapsing hides the subtasks and tells the browser what to keep", ctx do
     [a] = add(ctx, ["Paint"])
     child = add(ctx, "Buy paint", a)

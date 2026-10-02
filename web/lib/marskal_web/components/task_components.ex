@@ -223,6 +223,41 @@ defmodule MarskalWeb.TaskComponents do
           outline-offset: 1px;
         }
 
+        .drag-handle {
+          flex: 0 0 1rem;
+          align-self: center;
+          margin-inline: -0.5rem -0.6rem;
+          color: var(--muted);
+          cursor: grab;
+          opacity: 0;
+          touch-action: none;
+          transition: opacity 0.12s ease;
+        }
+
+        .drag-handle .icon {
+          width: 1rem;
+          height: 1rem;
+        }
+
+        :scope:is(:hover, :focus-within) .drag-handle {
+          opacity: 1;
+        }
+
+        @media (hover: none) {
+          .drag-handle {
+            opacity: 1;
+          }
+        }
+
+        :scope.is-drag-hidden {
+          display: none;
+        }
+
+        :scope.is-drag-ghost {
+          opacity: 0.4;
+          border-style: dashed;
+        }
+
         .crumb {
           color: var(--muted);
           font-size: 0.85em;
@@ -274,6 +309,17 @@ defmodule MarskalWeb.TaskComponents do
         phx-value-type="task"
         phx-value-id={task.id}
       >
+        <%!-- The keys move a row too; this is for pointers. Its own no-op
+             click keeps a grab from opening the inspector. --%>
+        <span
+          :if={@outline}
+          class="drag-handle"
+          aria-hidden="true"
+          title="Drag to move"
+          phx-click={JS.dispatch("outline:noop")}
+        >
+          <Lucideicons.grip_vertical class="icon" />
+        </span>
         <span :if={@outline} class="disclosure">
           <button
             :if={children?}
@@ -378,6 +424,7 @@ defmodule MarskalWeb.TaskComponents do
     </ul>
     <script :type={Phoenix.LiveView.ColocatedHook} name=".Outline" extension="ts">
       import {ViewHook} from "phoenix_live_view"
+      import Sortable from "sortablejs"
 
       // Collapsed tasks are kept per browser. The server renders the
       // outline, so it is told the saved set on mount and tells the hook
@@ -416,8 +463,111 @@ defmodule MarskalWeb.TaskComponents do
         "outline-down": (e) => e.altKey && !command(e) && e.key === "ArrowDown",
       }
 
+      type Row = {id: string; depth: number}
+      type Place = {parent_id: string | null; after_id: string | null}
+
+      const depthOf = (el: HTMLElement) => Number(el.dataset.depth ?? 0)
+
+      // Where a row put at `index` of `rows`, at `depth`, lands: under the
+      // nearest shallower row above it, after the nearest row above at the
+      // same depth before that.
+      function placeAt(rows: Row[], index: number, depth: number): Place {
+        let after: string | null = null
+        for (let i = index - 1; i >= 0; i--) {
+          const row = rows[i]!
+          if (row.depth < depth) return {parent_id: row.id, after_id: after}
+          if (row.depth === depth && after === null) after = row.id
+        }
+        return {parent_id: null, after_id: after}
+      }
+
+      // The depth a drop can take: at most one below the row above, and at
+      // least that of the row below, so the row below keeps its parent.
+      function clampDepth(rows: Row[], index: number, depth: number) {
+        const above = rows[index - 1]
+        const below = rows[index]
+        const max = above ? above.depth + 1 : 0
+        const min = below ? Math.min(below.depth, max) : 0
+        return Math.max(min, Math.min(max, depth))
+      }
+
       export default class extends ViewHook<HTMLUListElement> {
         focusId: string | null = null
+        sortable: Sortable | null = null
+        drag: {
+          el: HTMLElement
+          next: Node | null
+          style: string | null
+          depth: number
+          startX: number
+          hidden: HTMLElement[]
+          from: Place
+        } | null = null
+        pointerX = 0
+
+        onPointerDown = (event: PointerEvent) => {
+          this.pointerX = event.clientX
+        }
+
+        onPointerMove = (event: PointerEvent) => {
+          this.pointerX = event.clientX
+          if (this.drag) this.project()
+        }
+
+        // The rows as they stand mid-drag, without the dragged one and the
+        // subtree it carries, and where the dragged one sits among them.
+        rowsNow(): {rows: Row[]; index: number} {
+          const rows: Row[] = []
+          let index = 0
+          for (const el of this.el.querySelectorAll<HTMLElement>(":scope > .task-row")) {
+            if (el === this.drag?.el) index = rows.length
+            else if (!el.classList.contains("is-drag-hidden"))
+              rows.push({id: el.dataset.inspectId!, depth: depthOf(el)})
+          }
+          return {rows, index}
+        }
+
+        // The depth the pointer asks for: one level per indent moved right
+        // or left since the grab, within what the neighbors allow.
+        project(): {place: Place; depth: number} {
+          const drag = this.drag!
+          const indent = parseFloat(getComputedStyle(document.documentElement).fontSize) * 1.75
+          const {rows, index} = this.rowsNow()
+          const wanted = drag.depth + Math.round((this.pointerX - drag.startX) / indent)
+          const depth = clampDepth(rows, index, wanted)
+          drag.el.style.setProperty("--depth", String(depth))
+          return {place: placeAt(rows, index, depth), depth}
+        }
+
+        startDrag(el: HTMLElement) {
+          const depth = depthOf(el)
+          const hidden: HTMLElement[] = []
+          for (let next = el.nextElementSibling; next instanceof HTMLElement; next = next.nextElementSibling) {
+            if (!next.classList.contains("task-row") || depthOf(next) <= depth) break
+            next.classList.add("is-drag-hidden")
+            hidden.push(next)
+          }
+          this.drag = {el, next: el.nextSibling, style: el.getAttribute("style"), depth, startX: this.pointerX, hidden, from: {parent_id: null, after_id: null}}
+          const {rows, index} = this.rowsNow()
+          this.drag.from = placeAt(rows, index, depth)
+        }
+
+        // The server re-renders the list in its new order, so the DOM goes
+        // back as it was first; a refused move then leaves nothing stale.
+        endDrag() {
+          const drag = this.drag
+          if (!drag) return
+          const {place} = this.project()
+          this.el.insertBefore(drag.el, drag.next)
+          if (drag.style === null) drag.el.removeAttribute("style")
+          else drag.el.setAttribute("style", drag.style)
+          for (const el of drag.hidden) el.classList.remove("is-drag-hidden")
+          this.drag = null
+
+          if (place.parent_id === drag.from.parent_id && place.after_id === drag.from.after_id) return
+          this.focusId = drag.el.dataset.inspectId!
+          this.pushEvent("outline-place", {id: this.focusId, ...place})
+        }
 
         onKeydown = (event: KeyboardEvent) => {
           if (!(event.target instanceof HTMLElement)) return
@@ -444,6 +594,22 @@ defmodule MarskalWeb.TaskComponents do
         mounted() {
           if (!this.el.hasAttribute("data-outline")) return
           this.el.addEventListener("keydown", this.onKeydown)
+          this.el.addEventListener("pointerdown", this.onPointerDown)
+          document.addEventListener("pointermove", this.onPointerMove)
+
+          // The fallback drag, rather than native drag and drop, reports the
+          // pointer throughout and works the same on touch.
+          this.sortable = Sortable.create(this.el, {
+            handle: ".drag-handle",
+            draggable: ".task-row",
+            filter: ".is-drag-hidden",
+            forceFallback: true,
+            fallbackOnBody: true,
+            animation: 120,
+            ghostClass: "is-drag-ghost",
+            onStart: (event) => this.startDrag(event.item),
+            onEnd: () => this.endDrag(),
+          })
           this.handleEvent("outline-collapsed", ({ids}: {ids: string[]}) => save(ids))
           const ids = load()
           if (ids.length) this.pushEvent("outline-collapsed", {ids})
@@ -459,6 +625,9 @@ defmodule MarskalWeb.TaskComponents do
 
         destroyed() {
           this.el.removeEventListener("keydown", this.onKeydown)
+          this.el.removeEventListener("pointerdown", this.onPointerDown)
+          document.removeEventListener("pointermove", this.onPointerMove)
+          this.sortable?.destroy()
         }
       }
     </script>

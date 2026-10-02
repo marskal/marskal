@@ -62,5 +62,15 @@ defmodule MarskalWeb.Outline do
     end
   end
 
+  # A drop: under `parent_id`, after `after_id` (either may be nil).
+  defp handle_event("outline-place", %{"id" => id} = params, socket) do
+    user = socket.assigns.current_scope.user
+
+    case Tasks.place_task(user, id, params["parent_id"], params["after_id"], Ecto.UUID.generate()) do
+      {:ok, _task} -> {:halt, socket}
+      {:error, _} -> {:halt, put_flash(socket, :error, "Could not move that task there.")}
+    end
+  end
+
   defp handle_event(_event, _params, socket), do: {:cont, socket}
 end
