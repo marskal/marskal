@@ -15,10 +15,13 @@ cargo build --release
 marskal login --server https://tasks.example.com
 ```
 
-`login` shows a code and opens the browser at `/device`, where you approve
-it while signed in to the web app (ADR 0019). `--read-only` asks for read
-access only. `--no-browser` only prints the link. `logout` signs the device
-out on the server; `logout --forget` also deletes the local data.
+`login` shows a code and opens the browser, where you confirm the code,
+name the device, and allow it, signed in to the web app. The server's OAuth
+is Ory Hydra (ADR 0021); `marskal` finds it from the server's metadata, so
+only the server's URL is configured. `--read-only` asks for read access
+only. `--no-browser` only prints the link. `logout` signs the device out on
+the server; `logout --forget` also deletes the local data. Settings in the
+web app lists devices and signs them out too.
 
 ## Commands
 

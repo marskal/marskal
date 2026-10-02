@@ -168,15 +168,9 @@ impl TokenStore {
 
 /// The device grant: show a code, let the user approve it in the browser,
 /// and poll until they do.
-pub fn login(
-    api: &Api,
-    store: &TokenStore,
-    scope: &str,
-    device_name: &str,
-    open_browser: bool,
-) -> Result<Tokens> {
+pub fn login(api: &Api, store: &TokenStore, scope: &str, open_browser: bool) -> Result<Tokens> {
     let device = api
-        .device_code(scope, device_name)
+        .device_code(scope)
         .map_err(|e| CliError::network(format!("Could not start signing in: {e}")))?;
 
     let link = device
@@ -186,6 +180,7 @@ pub fn login(
 
     eprintln!("To sign in, open {}", device.verification_uri);
     eprintln!("and enter the code {}", device.user_code);
+    eprintln!("You will name this device there.");
     if open_browser {
         open(&link);
     }

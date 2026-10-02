@@ -62,9 +62,6 @@ enum Command {
         /// Allow reading only.
         #[arg(long)]
         read_only: bool,
-        /// The name the server shows for this device.
-        #[arg(long)]
-        name: Option<String>,
         /// Print the link without opening a browser.
         #[arg(long)]
         no_browser: bool,
@@ -377,7 +374,6 @@ fn run(cli: Cli, output: &Output) -> Result<()> {
     match &cli.command {
         Command::Login {
             read_only,
-            name,
             no_browser,
         } => {
             let server = match &cli.server {
@@ -389,19 +385,14 @@ fn run(cli: Cli, output: &Output) -> Result<()> {
 
             let api = Api::new(&server);
             let tokens = TokenStore::new(&server);
+            // offline_access is what earns a refresh token (ADR 0021).
             let scope = if *read_only {
-                "sync:read"
+                "offline_access sync:read"
             } else {
-                "sync:read sync:write"
+                "offline_access sync:read sync:write"
             };
-            let device = name.clone().unwrap_or_else(|| {
-                format!(
-                    "marskal on {}",
-                    gethostname::gethostname().to_string_lossy()
-                )
-            });
 
-            let signed_in = auth::login(&api, &tokens, scope, &device, !no_browser)?;
+            let signed_in = auth::login(&api, &tokens, scope, !no_browser)?;
 
             let mut config = Config::load()?;
             config.server = Some(server.clone());

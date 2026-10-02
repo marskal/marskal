@@ -1,6 +1,8 @@
-//! HTTP to the server: OAuth (ADR 0019) and the sync API. The shell owns
-//! this; the sync library does no HTTP (ADR 0018).
+//! HTTP to the server: OAuth through Ory Hydra (ADR 0021) and the sync API
+//! (ADR 0019). The shell owns this; the sync library does no HTTP
+//! (ADR 0018).
 
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use marskal_sync::{Command, PullResponse, PushResult};
@@ -8,11 +10,22 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use ureq::Agent;
 
-pub const CLIENT_ID: &str = "marskal";
+/// This application's OAuth client (ADR 0021). Every install shares it.
+pub const CLIENT_ID: &str = "marskal-terminal";
 
 pub struct Api {
     server: String,
     agent: Agent,
+    endpoints: OnceLock<Endpoints>,
+}
+
+/// Where the OAuth endpoints are, from the server's metadata (RFC 8414).
+/// Only the server's URL is configured; Hydra may sit behind it or beside it.
+#[derive(Clone, Debug, Deserialize)]
+struct Endpoints {
+    device_authorization_endpoint: String,
+    token_endpoint: String,
+    revocation_endpoint: String,
 }
 
 /// What the server or the network said.
@@ -80,49 +93,70 @@ impl Api {
         Api {
             server: server.to_string(),
             agent,
+            endpoints: OnceLock::new(),
         }
+    }
+
+    fn endpoints(&self) -> Result<&Endpoints, ApiError> {
+        if let Some(endpoints) = self.endpoints.get() {
+            return Ok(endpoints);
+        }
+        let response = self
+            .agent
+            .get(self.url("/.well-known/oauth-authorization-server"))
+            .call();
+        let endpoints: Endpoints = json_or_error(response)?;
+        Ok(self.endpoints.get_or_init(|| endpoints))
     }
 
     fn url(&self, path: &str) -> String {
         format!("{}{path}", self.server)
     }
 
-    pub fn device_code(&self, scope: &str, device_name: &str) -> Result<DeviceCode, ApiError> {
+    pub fn device_code(&self, scope: &str) -> Result<DeviceCode, ApiError> {
         let response = self
             .agent
-            .post(self.url("/oauth/device_authorization"))
-            .send_form([
-                ("client_id", CLIENT_ID),
-                ("scope", scope),
-                ("device_name", device_name),
-            ]);
+            .post(&self.endpoints()?.device_authorization_endpoint)
+            .send_form([("client_id", CLIENT_ID), ("scope", scope)]);
         json_or_error(response)
     }
 
     pub fn poll_token(&self, device_code: &str) -> Result<TokenResponse, ApiError> {
-        let response = self.agent.post(self.url("/oauth/token")).send_form([
-            ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
-            ("client_id", CLIENT_ID),
-            ("device_code", device_code),
-        ]);
+        let response = self
+            .agent
+            .post(&self.endpoints()?.token_endpoint)
+            .send_form([
+                ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
+                ("client_id", CLIENT_ID),
+                ("device_code", device_code),
+            ]);
         json_or_error(response)
     }
 
     pub fn refresh(&self, refresh_token: &str) -> Result<TokenResponse, ApiError> {
-        let response = self.agent.post(self.url("/oauth/token")).send_form([
-            ("grant_type", "refresh_token"),
-            ("client_id", CLIENT_ID),
-            ("refresh_token", refresh_token),
-        ]);
+        let response = self
+            .agent
+            .post(&self.endpoints()?.token_endpoint)
+            .send_form([
+                ("grant_type", "refresh_token"),
+                ("client_id", CLIENT_ID),
+                ("refresh_token", refresh_token),
+            ]);
         json_or_error(response)
     }
 
+    /// Revokes a token and its chain (RFC 7009). The answer has no body.
     pub fn revoke(&self, token: &str) -> Result<(), ApiError> {
         let response = self
             .agent
-            .post(self.url("/oauth/revoke"))
-            .send_form([("client_id", CLIENT_ID), ("token", token)]);
-        json_or_error::<Value>(response).map(|_| ())
+            .post(&self.endpoints()?.revocation_endpoint)
+            .send_form([("client_id", CLIENT_ID), ("token", token)])
+            .map_err(|e| ApiError::Network(e.to_string()))?;
+
+        match response.status().as_u16() {
+            200..=299 => Ok(()),
+            status => Err(ApiError::Http(status, String::new())),
+        }
     }
 
     pub fn pull(&self, access_token: &str, cursor: Option<i64>) -> Result<PullResponse, ApiError> {
