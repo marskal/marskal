@@ -10,7 +10,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use ureq::Agent;
 
-/// This application's OAuth client (ADR 0021). Every install shares it.
+/// This program's OAuth client (ADR 0021). Every copy of `marskal` signs in as it.
 pub const CLIENT_ID: &str = "marskal-terminal";
 
 pub struct Api {
