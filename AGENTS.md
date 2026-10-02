@@ -27,6 +27,8 @@ This file is **short and actionable**. Rationale and history live in
 | Import framework | [0013](docs/adr/0013-import-framework.md) |
 | Sync, offline clients | [0014](docs/adr/0014-offline-sync.md) |
 | Client sync library (Rust) | [0018](docs/adr/0018-rust-client-sync-library.md) |
+| Sync API, OAuth sign-in | [0019](docs/adr/0019-sync-api-and-oauth-sign-in.md) |
+| Terminal client (`marskal`) | [0020](docs/adr/0020-terminal-client.md) |
 | Repository layout | [0015](docs/adr/0015-repository-layout.md) |
 
 ---
@@ -163,6 +165,10 @@ The repository root is the product, not the web app (ADR 0015).
 - **`docs/`** — ADRs, at the root.
 - Do not add a root `devenv.nix`. Do not create `clients/`, `sync/core/`, or
   `sync/fixtures/` until that work starts.
+- The first shell is `clients/terminal`: one `marskal` binary with subcommands,
+  `--json` for agents, and later `marskal tui` (ADR 0020). XDG base
+  directories on every platform, macOS included. Each Rust program
+  has its own `devenv.nix`; no root Cargo workspace.
 - Offline clients link one Rust library, `sync/core` (ADR 0018). Do not
   reimplement that engine in a shell. The Phoenix app does not call it.
 
@@ -266,8 +272,14 @@ The repository root is the product, not the web app (ADR 0015).
   browser offline cache. Writes go through `Marskal.Changes.apply/4`; a patch
   with no changes appends nothing. Offline clients share one Rust engine
   (ADR 0018) instead of porting it per shell. Not built yet, and due before
-  that crate: the pull endpoint, the `resolved_at` skew clamp, and
-  `discarded_at` on project folders.
+  that crate: OAuth sign-in, the pull and push endpoints (ADR 0019), the
+  `resolved_at` skew clamp, and `discarded_at` on project folders.
+- **Sync API (ADR 0019):** `/api/v1`. The web app is an OAuth 2.1
+  authorization server: device grant now, authorization code + PKCE and client
+  registration only when a client needs them. Opaque hashed tokens, rotating
+  refresh tokens, scopes `sync:read` and `sync:write`. Pull returns current rows after a cursor, or a snapshot. Push applies
+  commands in order; each entity has an allow-list of client-writable fields
+  in its context. A rejected command is not retried.
 - Tests: state transitions; user isolation; defer/planned/due; outliner/folder structure;
   **recurrence** matrix (ADR 0007); tag inheritance in Phase 2+; sync merge,
   command replay, tombstones, and occurrence-id vectors (ADR 0014).
