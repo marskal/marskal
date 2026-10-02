@@ -24,10 +24,12 @@ defmodule MarskalWeb.Router do
     get "/up", HealthController, :show
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", MarskalWeb do
-  #   pipe_through :api
-  # end
+  # Hydra serves the OAuth metadata (ADR 0021); this points there.
+  scope "/", MarskalWeb do
+    pipe_through :api
+
+    get "/.well-known/oauth-authorization-server", OAuthController, :metadata
+  end
 
   # Enable Swoosh mailbox preview in development
   if Application.compile_env(:marskal, :dev_routes) do
@@ -49,6 +51,9 @@ defmodule MarskalWeb.Router do
   scope "/", MarskalWeb do
     pipe_through [:browser, :require_authenticated_user]
 
+    # Hydra's login endpoint (ADR 0021).
+    get "/oauth/login", OAuthController, :login
+
     post "/imports", ImportBatchController, :create
     get "/imports/todoist", ImportBatchController, :todoist
     get "/imports/todoist/callback", ImportBatchController, :todoist_callback
@@ -67,6 +72,10 @@ defmodule MarskalWeb.Router do
       live "/tags/untagged", UntaggedLive, :index
       live "/tags/:id", TagLive, :show
       live "/tasks/:id", TaskLive, :show
+      live "/device", DeviceLive, :verify
+      live "/device/done", DeviceLive, :done
+      live "/oauth/error", DeviceLive, :error
+      live "/oauth/consent", ConsentLive, :show
       live "/users/settings", UserLive.Settings, :edit
       live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email
     end

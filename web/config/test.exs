@@ -39,6 +39,12 @@ config :marskal, Marskal.Imports.Todoist,
   redirect_uri: "http://www.example.com/imports/todoist/callback",
   req_options: [plug: {Req.Test, Marskal.Imports.Todoist}]
 
+# Hydra's admin API is stubbed (Marskal.HydraFixtures).
+config :marskal, Marskal.Hydra,
+  admin_url: "http://hydra-admin.test",
+  public_url: "http://hydra.test",
+  req_options: [plug: {Req.Test, Marskal.Hydra}]
+
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
 

@@ -1,6 +1,8 @@
 /**
-  NixOS module for Marskal: the release, a local Postgres database, and an
-  nginx vhost with ACME.
+  NixOS module for Marskal: the release, Ory Hydra as its OAuth server
+  (ADR 0021), a local Postgres database for each, and an nginx vhost with
+  ACME. Hydra listens on localhost only; nginx proxies its public API, and
+  its admin API stays private.
 
   The host picks the Postgres major (`services.postgresql.package`); it
   must be 18 or later. The app reaches Postgres over the unix socket with
@@ -33,6 +35,35 @@ let
   };
 
   release = lib.getExe cfg.package;
+
+  # Ory Hydra, the OAuth server (ADR 0021). Its public port sits behind
+  # nginx on the same host; its admin port is only ever on localhost.
+  hydra = cfg.hydra;
+  hydraExe = lib.getExe hydra.package;
+  hydraStateDir = "/var/lib/marskal-hydra";
+  hydraEnvironment = {
+    DSN = "postgres://marskal_hydra@/marskal_hydra?host=/run/postgresql&sslmode=disable";
+  };
+  hydraConfig = pkgs.writeText "hydra.json" (
+    builtins.toJSON (
+      import ./hydra-config.nix {
+        inherit (cfg) host;
+        inherit (hydra) publicPort adminPort;
+      }
+    )
+  );
+  hydraServiceConfig = {
+    User = "marskal_hydra";
+    Group = "marskal_hydra";
+    EnvironmentFile = hydra.secretsFile;
+    StateDirectory = "marskal-hydra";
+    StateDirectoryMode = "0750";
+    NoNewPrivileges = true;
+    PrivateTmp = true;
+    PrivateDevices = true;
+    ProtectSystem = "strict";
+    ProtectHome = true;
+  };
 
   adminCommand = pkgs.writeShellScriptBin "marskal" ''
     set -a
@@ -75,6 +106,36 @@ in
         `TODOIST_REDIRECT_URI`) can be added to the same file.
       '';
     };
+
+    hydra = {
+      package = lib.mkOption {
+        type = lib.types.package;
+        default = pkgs.ory-hydra;
+        defaultText = lib.literalExpression "pkgs.ory-hydra";
+        description = "Ory Hydra, the OAuth server (ADR 0021).";
+      };
+
+      publicPort = lib.mkOption {
+        type = lib.types.port;
+        default = 4444;
+        description = "Loopback port of Hydra's public API, behind nginx.";
+      };
+
+      adminPort = lib.mkOption {
+        type = lib.types.port;
+        default = 4445;
+        description = "Loopback port of Hydra's admin API. Never proxied.";
+      };
+
+      secretsFile = lib.mkOption {
+        type = lib.types.path;
+        default = "${hydraStateDir}/secrets.env";
+        description = ''
+          Environment file with Hydra's `SECRETS_SYSTEM`. Created with a
+          random value when missing. Changing it invalidates every token.
+        '';
+      };
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -93,17 +154,93 @@ in
     };
     users.groups.marskal = { };
 
+    # Named like its database, so peer auth and ensureDBOwnership line up.
+    users.users.marskal_hydra = {
+      isSystemUser = true;
+      group = "marskal_hydra";
+      home = hydraStateDir;
+    };
+    users.groups.marskal_hydra = { };
+
     environment.systemPackages = [ adminCommand ];
 
     services.postgresql = {
       enable = true;
-      ensureDatabases = [ "marskal" ];
+      ensureDatabases = [
+        "marskal"
+        "marskal_hydra"
+      ];
       ensureUsers = [
         {
           name = "marskal";
           ensureDBOwnership = true;
         }
+        {
+          name = "marskal_hydra";
+          ensureDBOwnership = true;
+        }
       ];
+    };
+
+    systemd.services.marskal-hydra-secrets = {
+      description = "Generate Hydra secrets";
+      unitConfig.ConditionPathExists = "!${hydra.secretsFile}";
+      path = [ pkgs.openssl ];
+      script = ''
+        umask 077
+        tmp="$(mktemp ${lib.escapeShellArg hydra.secretsFile}.XXXXXX)"
+        echo "SECRETS_SYSTEM=$(openssl rand -hex 32)" > "$tmp"
+        mv "$tmp" ${lib.escapeShellArg hydra.secretsFile}
+      '';
+      serviceConfig = {
+        Type = "oneshot";
+        User = "marskal_hydra";
+        Group = "marskal_hydra";
+        StateDirectory = "marskal-hydra";
+        StateDirectoryMode = "0750";
+      };
+    };
+
+    systemd.services.marskal-hydra = {
+      description = "Ory Hydra for Marskal";
+      wantedBy = [ "multi-user.target" ];
+      requires = [
+        "postgresql.target"
+        "marskal-hydra-secrets.service"
+      ];
+      after = [
+        "network.target"
+        "postgresql.target"
+        "marskal-hydra-secrets.service"
+      ];
+      environment = hydraEnvironment;
+      serviceConfig = hydraServiceConfig // {
+        ExecStartPre = "${hydraExe} migrate sql up --read-from-env --yes";
+        ExecStart = "${hydraExe} serve all --config ${hydraConfig}";
+        Restart = "on-failure";
+        RestartSec = 5;
+      };
+    };
+
+    # Hydra does not prune its own tables.
+    systemd.services.marskal-hydra-janitor = {
+      description = "Prune expired Hydra tokens and requests";
+      requires = [ "postgresql.target" ];
+      after = [ "postgresql.target" ];
+      environment = hydraEnvironment;
+      serviceConfig = hydraServiceConfig // {
+        Type = "oneshot";
+        ExecStart = "${hydraExe} janitor --read-from-env --tokens --requests --grants";
+      };
+    };
+
+    systemd.timers.marskal-hydra-janitor = {
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "daily";
+        RandomizedDelaySec = "1h";
+        Persistent = true;
+      };
     };
 
     systemd.services.marskal-secrets = {
@@ -134,13 +271,18 @@ in
       requires = [
         "postgresql.target"
         "marskal-secrets.service"
+        "marskal-hydra.service"
       ];
       after = [
         "network.target"
         "postgresql.target"
         "marskal-secrets.service"
+        "marskal-hydra.service"
       ];
-      inherit environment;
+      environment = environment // {
+        HYDRA_ADMIN_URL = "http://127.0.0.1:${toString hydra.adminPort}";
+        HYDRA_PUBLIC_URL = "https://${cfg.host}";
+      };
       serviceConfig = {
         User = "marskal";
         Group = "marskal";
@@ -149,7 +291,10 @@ in
         StateDirectoryMode = "0750";
         RuntimeDirectory = "marskal";
         WorkingDirectory = stateDir;
-        ExecStartPre = ''${release} eval "Marskal.Release.migrate()"'';
+        ExecStartPre = [
+          ''${release} eval "Marskal.Release.migrate()"''
+          ''${release} eval "Marskal.Release.ensure_oauth_clients()"''
+        ];
         ExecStart = "${release} start";
         Restart = "on-failure";
         RestartSec = 5;
@@ -181,6 +326,13 @@ in
           proxyPass = "http://127.0.0.1:${toString cfg.port}";
           proxyWebsockets = true;
         };
+        # Hydra's public API (ADR 0021). Its admin API is never proxied.
+        locations."/oauth2/".proxyPass = "http://127.0.0.1:${toString hydra.publicPort}";
+        locations."= /.well-known/oauth-authorization-server".proxyPass =
+          "http://127.0.0.1:${toString hydra.publicPort}";
+        locations."= /.well-known/openid-configuration".proxyPass =
+          "http://127.0.0.1:${toString hydra.publicPort}";
+        locations."= /.well-known/jwks.json".proxyPass = "http://127.0.0.1:${toString hydra.publicPort}";
       };
     };
   };

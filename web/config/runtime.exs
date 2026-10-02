@@ -46,6 +46,21 @@ if config_env() != :test do
     req_options: todoist[:req_options] || []
 end
 
+# Ory Hydra (ADR 0021). Development uses the devenv process; production
+# reaches the admin API on localhost and serves the public one on PHX_HOST.
+if config_env() != :test do
+  config :marskal, Marskal.Hydra,
+    admin_url:
+      System.get_env("HYDRA_ADMIN_URL") ||
+        if(config_env() == :prod, do: "http://127.0.0.1:4445", else: "http://127.0.0.1:8277"),
+    public_url:
+      System.get_env("HYDRA_PUBLIC_URL") ||
+        if(config_env() == :prod,
+          do: "https://#{System.get_env("PHX_HOST") || "marskal.example"}",
+          else: "http://localhost:8276"
+        )
+end
+
 default_port = if config_env() == :dev, do: "8275", else: "4000"
 
 config :marskal, MarskalWeb.Endpoint,

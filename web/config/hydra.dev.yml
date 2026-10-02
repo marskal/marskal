@@ -1,0 +1,45 @@
+# Ory Hydra for development (ADR 0021). Public on 8276, admin on 8277;
+# Phoenix on 8275 is the login, consent, and device verification UI.
+serve:
+  public:
+    port: 8276
+    host: 127.0.0.1
+  admin:
+    port: 8277
+    host: 127.0.0.1
+  cookies:
+    same_site_mode: Lax
+
+urls:
+  self:
+    issuer: http://localhost:8276
+    public: http://localhost:8276
+  login: http://marskal.localhost:8275/oauth/login
+  consent: http://marskal.localhost:8275/oauth/consent
+  logout: http://marskal.localhost:8275/users/log-out
+  error: http://marskal.localhost:8275/oauth/error
+  device:
+    verification: http://marskal.localhost:8275/device
+    success: http://marskal.localhost:8275/device/done
+
+secrets:
+  system:
+    - development-only-secret-not-for-production-use
+
+strategies:
+  access_token: opaque
+
+ttl:
+  access_token: 1h
+  refresh_token: 2160h
+  device_user_code: 10m
+
+oauth2:
+  grant:
+    refresh_token:
+      # The command line and the terminal UI share a grant (ADR 0020).
+      rotation_grace_period: 30s
+  device_authorization:
+    token_polling_interval: 5s
+    user_code:
+      entropy_preset: medium
