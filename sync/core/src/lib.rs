@@ -29,7 +29,10 @@ mod world;
 pub use clock::{Clock, SystemClock};
 pub use entity::Entity;
 pub use error::{Error, Result};
-pub use model::{Folder, Link, Project, ProjectState, Rejection, Tag, TagState, Task, TaskState};
+pub use model::{
+    Anchor, DayKind, Folder, Frequency, Link, Mode, Project, ProjectState, Rejection, Series,
+    SeriesKind, Tag, TagState, Task, TaskState,
+};
 pub use ops::{Location, NewProject, NewTask, TaskPatch};
 pub use pull::{Gone, PullResponse, PullUser};
 pub use push::{Command, Op, PushResult, PushStatus, PushSummary};

@@ -24,8 +24,9 @@ pub(crate) fn from_sql(column: Column, value: ValueRef<'_>) -> Value {
     match (value, column.kind) {
         (ValueRef::Null, _) => Value::Null,
         (ValueRef::Integer(i), Kind::Bool) => Value::Bool(i != 0),
-        (ValueRef::Integer(i), Kind::Text) => Value::from(i),
+        (ValueRef::Integer(i), _) => Value::from(i),
         (ValueRef::Real(f), _) => Value::from(f),
+        (ValueRef::Text(t), Kind::Json) => serde_json::from_slice(t).unwrap_or(Value::Null),
         (ValueRef::Text(t), _) => Value::String(String::from_utf8_lossy(t).into_owned()),
         (ValueRef::Blob(_), _) => Value::Null,
     }

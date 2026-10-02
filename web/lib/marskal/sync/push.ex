@@ -18,6 +18,8 @@ defmodule Marskal.Sync.Push do
   alias Marskal.ProjectFolders.ProjectFolder
   alias Marskal.Projects
   alias Marskal.Projects.Project
+  alias Marskal.Recurrence
+  alias Marskal.Recurrence.Series
   alias Marskal.Repo
   alias Marskal.Tags
   alias Marskal.Tags.Link
@@ -33,6 +35,7 @@ defmodule Marskal.Sync.Push do
     "task" => Task,
     "project" => Project,
     "project_folder" => ProjectFolder,
+    "recurrence_series" => Series,
     "tag" => Tag,
     "task_tag" => TaskTag,
     "project_tag" => ProjectTag
@@ -207,6 +210,9 @@ defmodule Marskal.Sync.Push do
   defp insert(user, "project_folder", attrs, command),
     do: ProjectFolders.create_folder(user, attrs, command.id)
 
+  defp insert(user, "recurrence_series", attrs, command),
+    do: Recurrence.create_series(user, attrs, command.id)
+
   defp insert(user, "tag", attrs, command),
     do: Tags.insert_client_tag(user, attrs, command.id)
 
@@ -224,6 +230,9 @@ defmodule Marskal.Sync.Push do
 
   defp patch(user, "project_folder", id, fields, command),
     do: ProjectFolders.update_folder(user, id, fields, command.id)
+
+  defp patch(user, "recurrence_series", id, fields, command),
+    do: Recurrence.update_series(user, id, fields, command.id)
 
   defp patch(user, "tag", id, fields, command),
     do: Tags.patch_client_tag(user, id, fields, command.id)
@@ -249,6 +258,9 @@ defmodule Marskal.Sync.Push do
 
   defp delete(user, "project_folder", id, command_id),
     do: ProjectFolders.delete_folder(user, id, command_id)
+
+  defp delete(user, "recurrence_series", id, command_id),
+    do: Recurrence.delete_series(user, id, command_id)
 
   defp delete(user, "tag", id, command_id), do: Tags.delete_tag(user, id, command_id)
 

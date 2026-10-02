@@ -9,7 +9,8 @@ use rusqlite::Connection;
 
 use crate::error::Result;
 
-const MIGRATIONS: &[&str] = &[r#"
+const MIGRATIONS: &[&str] = &[
+    r#"
 CREATE TABLE meta (
   key TEXT PRIMARY KEY,
   value TEXT
@@ -119,7 +120,36 @@ CREATE TABLE rejections (
   rejected_at TEXT NOT NULL,
   seen INTEGER NOT NULL DEFAULT 0
 );
-"#];
+"#,
+    r#"
+-- ADR 0007. weekdays and month_days are JSON arrays.
+CREATE TABLE recurrence_series (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL,
+  mode TEXT NOT NULL,
+  anchor TEXT NOT NULL,
+  interval INTEGER NOT NULL,
+  frequency TEXT NOT NULL,
+  weekdays TEXT NOT NULL DEFAULT '[]',
+  month_days TEXT NOT NULL DEFAULT '[]',
+  month_ordinal INTEGER,
+  month_day_kind TEXT,
+  ends_at TEXT,
+  end_count INTEGER,
+  stopped_at TEXT,
+  discarded_at TEXT,
+  inserted_at TEXT,
+  updated_at TEXT
+);
+
+ALTER TABLE tasks ADD COLUMN series_id TEXT;
+ALTER TABLE tasks ADD COLUMN occurrence_for TEXT;
+ALTER TABLE projects ADD COLUMN series_id TEXT;
+ALTER TABLE projects ADD COLUMN occurrence_for TEXT;
+
+CREATE INDEX tasks_series_id ON tasks (series_id);
+"#,
+];
 
 /// Brings the database to the latest schema. `user_version` counts the
 /// migrations applied.

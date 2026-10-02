@@ -18,9 +18,12 @@ defmodule Marskal.Projects.Project do
     field :due_at, :utc_datetime
     field :resolved_at, :utc_datetime
     field :discarded_at, :utc_datetime
+    # Read-only until projects repeat (ADR 0007).
+    field :occurrence_for, :utc_datetime
 
     belongs_to :user, Marskal.Accounts.User
     belongs_to :project_folder, Marskal.ProjectFolders.ProjectFolder
+    belongs_to :series, Marskal.Recurrence.Series
 
     timestamps(type: :utc_datetime)
   end

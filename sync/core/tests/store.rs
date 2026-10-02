@@ -3,8 +3,8 @@ use std::sync::{Arc, Mutex};
 
 use jiff::Timestamp;
 use marskal_sync::{
-    Clock, Entity, Location, NewTask, Op, PullResponse, PullUser, PushResult, PushStatus, Store,
-    TaskFilter, TaskPatch, TaskState,
+    Anchor, Clock, Entity, Frequency, Location, Mode, NewTask, Op, PullResponse, PullUser,
+    PushResult, PushStatus, Store, TaskFilter, TaskPatch, TaskState,
 };
 use serde_json::{Map, Value, json};
 use uuid::Uuid;
@@ -547,4 +547,64 @@ fn ids_resolve_by_prefix() {
         id
     );
     assert!(world.find_task("zzzz").is_err());
+}
+
+#[test]
+fn a_pulled_series_and_its_occurrence_read_back() {
+    let (mut store, _clock) = store();
+    let series = Uuid::now_v7();
+    let task = Uuid::now_v7();
+
+    let row = json!({
+        "id": series.to_string(),
+        "kind": "task",
+        "mode": "regular",
+        "anchor": "due",
+        "interval": 2,
+        "frequency": "weeks",
+        "weekdays": [2, 5],
+        "month_days": [],
+        "month_ordinal": null,
+        "month_day_kind": null,
+        "ends_at": null,
+        "end_count": 10,
+        "stopped_at": null,
+        "discarded_at": null,
+        "inserted_at": "2026-10-01T08:00:00Z",
+        "updated_at": "2026-10-01T08:00:00Z"
+    });
+
+    let occurrence = task_row(
+        task,
+        "Trash",
+        json!({
+            "due_at": "2026-10-09T15:00:00Z",
+            "series_id": series.to_string(),
+            "occurrence_for": "2026-10-09T15:00:00Z"
+        }),
+    );
+
+    store
+        .apply_pull(&pull(
+            1,
+            true,
+            vec![
+                ("recurrence_series", row.as_object().unwrap().clone()),
+                ("task", occurrence),
+            ],
+        ))
+        .unwrap();
+
+    let world = store.world().unwrap();
+    let read = world.series(series).unwrap();
+    assert_eq!(read.mode, Mode::Regular);
+    assert_eq!(read.anchor, Anchor::Due);
+    assert_eq!(read.frequency, Frequency::Weeks);
+    assert_eq!((read.interval, read.end_count), (2, Some(10)));
+    assert_eq!(read.weekdays, vec![2, 5]);
+    assert!(read.month_days.is_empty());
+
+    let read = world.task(task).unwrap();
+    assert_eq!(read.series_id, Some(series));
+    assert_eq!(read.occurrence_for.as_deref(), Some("2026-10-09T15:00:00Z"));
 }

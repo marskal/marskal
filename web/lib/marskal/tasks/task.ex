@@ -21,10 +21,12 @@ defmodule Marskal.Tasks.Task do
     field :resolved_at, :utc_datetime
     field :discarded_at, :utc_datetime
     field :rank, :string
+    field :occurrence_for, :utc_datetime
 
     belongs_to :user, Marskal.Accounts.User
     belongs_to :project, Marskal.Projects.Project
     belongs_to :parent, __MODULE__
+    belongs_to :series, Marskal.Recurrence.Series
 
     timestamps(type: :utc_datetime)
   end
@@ -35,11 +37,11 @@ defmodule Marskal.Tasks.Task do
   """
   def client_fields(:insert),
     do:
-      ~w(title notes project_id parent_id rank inbox state defer_until deferred_indefinitely planned_at due_at)
+      ~w(title notes project_id parent_id rank inbox state defer_until deferred_indefinitely planned_at due_at series_id occurrence_for)
 
   def client_fields(:patch),
     do:
-      ~w(title notes project_id parent_id rank inbox state defer_until deferred_indefinitely planned_at due_at discarded_at)
+      ~w(title notes project_id parent_id rank inbox state defer_until deferred_indefinitely planned_at due_at series_id occurrence_for discarded_at)
 
   def title_max, do: @title_max
 
@@ -60,6 +62,8 @@ defmodule Marskal.Tasks.Task do
       :rank,
       :inbox,
       :state,
+      :series_id,
+      :occurrence_for,
       :resolved_at | Dates.fields()
     ])
     |> validate_required([:title])
@@ -72,14 +76,26 @@ defmodule Marskal.Tasks.Task do
     |> assoc_constraint(:user)
     |> owned_project_constraint()
     |> date_constraints()
+    |> Marskal.Recurrence.validate_occurrence(user.id, :task)
     |> validate_rank()
     |> outline_constraints()
   end
 
-  @doc "Any subset of the editable fields. Only fields that differ reach the patch."
+  @doc """
+  Any subset of the editable fields. Only fields that differ reach the
+  patch. `series_id` and `occurrence_for` join a series, once.
+  """
   def update_changeset(task, attrs, opts \\ []) do
     task
-    |> cast(attrs, [:title, :notes, :project_id, :inbox, :state | Dates.fields()])
+    |> cast(attrs, [
+      :title,
+      :notes,
+      :project_id,
+      :inbox,
+      :state,
+      :series_id,
+      :occurrence_for | Dates.fields()
+    ])
     |> validate_required([:title, :inbox, :state])
     |> validate_length(:title, max: @title_max)
     |> put_location()
@@ -87,6 +103,7 @@ defmodule Marskal.Tasks.Task do
     |> Dates.put_resolved_at(opts[:at])
     |> owned_project_constraint()
     |> date_constraints()
+    |> Marskal.Recurrence.validate_occurrence(task.user_id, :task)
   end
 
   @doc """

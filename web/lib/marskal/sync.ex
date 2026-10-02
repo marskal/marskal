@@ -18,12 +18,16 @@ defmodule Marskal.Sync do
   @page 1000
 
   @entities [
+    {"recurrence_series", Marskal.Recurrence.Series,
+     ~w(id kind mode anchor interval frequency weekdays month_days month_ordinal month_day_kind
+        ends_at end_count stopped_at discarded_at inserted_at updated_at)a},
     {"task", Marskal.Tasks.Task,
      ~w(id title notes state inbox project_id parent_id rank defer_until deferred_indefinitely
-        planned_at due_at resolved_at discarded_at inserted_at updated_at)a},
+        planned_at due_at series_id occurrence_for resolved_at discarded_at inserted_at
+        updated_at)a},
     {"project", Marskal.Projects.Project,
      ~w(id title notes state project_folder_id defer_until deferred_indefinitely planned_at
-        due_at resolved_at discarded_at inserted_at updated_at)a},
+        due_at series_id occurrence_for resolved_at discarded_at inserted_at updated_at)a},
     {"project_folder", Marskal.ProjectFolders.ProjectFolder,
      ~w(id name parent_id state discarded_at inserted_at updated_at)a},
     {"tag", Marskal.Tags.Tag,
