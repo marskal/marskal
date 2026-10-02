@@ -62,7 +62,8 @@ XDG base directories, on macOS too:
 | `$XDG_STATE_HOME/marskal/` | The refresh lock; the token file where there is no keychain |
 
 Tokens go to the OS keychain. `MARSKAL_NO_KEYCHAIN=1` keeps them in the
-token file (mode 0600) instead. `MARSKAL_SERVER` and `MARSKAL_DB` set
+token file (mode 0600) instead. `marskal` creates `$XDG_DATA_HOME/marskal`
+as mode 0700. `MARSKAL_SERVER` and `MARSKAL_DB` set
 `--server` and `--db`.
 
 ## For agents: `--json`
