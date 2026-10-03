@@ -246,6 +246,9 @@ defmodule Marskal.Imports.ApplierTest do
     food = Repo.get_by!(ImportItem, user_id: user.id, source: "todoist", source_id: "tag:l1")
     assert food.tag_id == existing.id
 
+    editor = Repo.get_by!(Task, user_id: user.id, title: "Ask editor")
+    assert editor.url == "https://chat.example/editor"
+
     # Days with no time take the default time in the user's zone (CEST here).
     assert milk.planned_at == ~U[2026-09-28 07:00:00Z]
     assert milk.due_at == ~U[2026-10-01 15:00:00Z]

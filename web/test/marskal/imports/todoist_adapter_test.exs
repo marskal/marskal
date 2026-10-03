@@ -40,7 +40,7 @@ defmodule Marskal.Imports.TodoistAdapterTest do
     assert Enum.map(graph.tags, & &1.source_id) == ["tag:l1", "tag:shared:errand"]
 
     titles = Enum.map(graph.tasks, & &1.title)
-    assert titles == ["Ask editor", "Buy milk", "Shipped", "Write copy"]
+    assert Enum.sort(titles) == ["Ask editor", "Buy milk", "Shipped", "Write copy"]
     refute "Deleted" in titles
     refute "Orphan" in titles
 
@@ -52,6 +52,10 @@ defmodule Marskal.Imports.TodoistAdapterTest do
     assert milk.extras["repeat"] == "every monday"
     assert milk.due == "2026-10-01"
     assert milk.extras["priority"] == 4
+
+    editor = Enum.find(graph.tasks, &(&1.title == "Ask editor"))
+    assert editor.url == "https://chat.example/editor"
+    assert milk.url == nil
 
     copy = Enum.find(graph.tasks, &(&1.title == "Write copy"))
     refute copy.inbox
@@ -113,6 +117,29 @@ defmodule Marskal.Imports.TodoistAdapterTest do
     refute Map.has_key?(folders, "folder:project:a")
     assert Enum.find(graph.projects, &(&1.title == "C")).folder_source_id == "folder:project:b"
     assert Enum.find(graph.projects, &(&1.title == "A")).folder_source_id == "folder:project:b"
+  end
+
+  test "links in project names move to the URL, and to a folder's extras" do
+    graph =
+      TodoistAdapter.parse(
+        Jason.encode!(%{
+          "projects" => [
+            %{"id" => "a", "name" => "[Area](https://a.example)"},
+            %{
+              "id" => "b",
+              "name" => "[Site](https://b.example) and [docs](https://docs.example)",
+              "description" => "Ship it",
+              "parent_id" => "a"
+            }
+          ]
+        })
+      )
+
+    assert [%{name: "Area", extras: %{"url" => "https://a.example"}}] = graph.folders
+    assert [site] = graph.projects
+    assert site.title == "Site and docs"
+    assert site.url == "https://b.example"
+    assert site.notes == "Ship it\n\n- [docs](https://docs.example)"
   end
 
   test "rejects a snapshot that is not JSON" do

@@ -9,7 +9,8 @@ defmodule Marskal.Imports.TodoistAdapter do
   still form a tree. Sections, subtask parents, a Todoist due date
   (planned), a deadline (due), and the recurrence text stay in extras:
   those columns do not exist yet. Labels become tags. Completed-task
-  history is not in the snapshot.
+  history is not in the snapshot. Titles are Markdown: their links move
+  to the URL (`Marskal.Imports.TitleLinks`).
 
   Source ids are prefixed with their kind so a project id cannot collide
   with a task id in `import_items`.
@@ -21,6 +22,7 @@ defmodule Marskal.Imports.TodoistAdapter do
   alias Marskal.Imports.ProjectNode
   alias Marskal.Imports.TagNode
   alias Marskal.Imports.TaskNode
+  alias Marskal.Imports.TitleLinks
 
   def parse(payload) when is_binary(payload) do
     snapshot =
@@ -117,15 +119,17 @@ defmodule Marskal.Imports.TodoistAdapter do
     id = string_id(row["id"])
     state = project_state(row)
     tasks? = MapSet.member?(with_tasks, id)
+    {name, url, _more} = row["name"] |> blank("Untitled") |> TitleLinks.split()
 
     %Folder{
       source_id: project_folder_id(id),
-      name: blank(row["name"], "Untitled"),
+      name: name,
       parent_source_id: placed_folder(id, row, parents),
       dropped: state == "dropped",
       extras:
         %{}
         |> put_extra("order_key", row["order_key"])
+        |> put_extra("url", if(not tasks?, do: url))
         |> put_extra("notes", if(not tasks?, do: text(row["description"])))
         |> put_extra("defer", if(not tasks? && row["status"] == "PAUSED", do: "indefinite"))
         |> put_flag("shared", not tasks? && row["shared"] == true)
@@ -135,7 +139,8 @@ defmodule Marskal.Imports.TodoistAdapter do
 
   defp project_node(row, containers, parents, with_tasks) do
     id = string_id(row["id"])
-    name = blank(row["name"], "Untitled")
+    {name, url, more} = row["name"] |> blank("Untitled") |> TitleLinks.split()
+    notes = TitleLinks.notes(text(row["description"]), more)
     container? = MapSet.member?(containers, id)
 
     cond do
@@ -147,7 +152,8 @@ defmodule Marskal.Imports.TodoistAdapter do
           %ProjectNode{
             source_id: source_id("project", id),
             title: tasks_title(name),
-            notes: text(row["description"]),
+            notes: notes,
+            url: url,
             folder_source_id: project_folder_id(id),
             state: project_state(row),
             extras: project_extras(row)
@@ -159,7 +165,8 @@ defmodule Marskal.Imports.TodoistAdapter do
           %ProjectNode{
             source_id: source_id("project", id),
             title: name,
-            notes: text(row["description"]),
+            notes: notes,
+            url: url,
             folder_source_id: placed_folder(id, row, parents),
             state: project_state(row),
             extras: project_extras(row)
@@ -250,11 +257,13 @@ defmodule Marskal.Imports.TodoistAdapter do
   defp task(row, inbox?, project_source_id, section_names, label_ids, limits) do
     parent = source_id("task", row["parent_id"])
     names = row |> Map.get("labels", []) |> List.wrap() |> Enum.filter(&is_binary/1)
+    {title, url, more} = row["content"] |> blank("Untitled") |> TitleLinks.split()
 
     %TaskNode{
       source_id: source_id("task", row["id"]),
-      title: blank(row["content"], "Untitled"),
-      notes: clip(text(row["description"]), limits.notes_chars),
+      title: title,
+      notes: row["description"] |> text() |> TitleLinks.notes(more) |> clip(limits.notes_chars),
+      url: url,
       inbox: inbox?,
       project_source_id: project_source_id,
       parent_source_id: parent,

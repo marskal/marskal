@@ -52,7 +52,12 @@ defmodule TodoistSnapshot do
           "section_id" => "s1",
           "checked" => false
         },
-        %{"id" => "t3", "content" => "Ask editor", "project_id" => "p1", "parent_id" => "t2"},
+        %{
+          "id" => "t3",
+          "content" => "[Ask editor](https://chat.example/editor)",
+          "project_id" => "p1",
+          "parent_id" => "t2"
+        },
         %{"id" => "t4", "content" => "Shipped", "project_id" => "p1", "checked" => true},
         %{"id" => "t5", "content" => "Deleted", "project_id" => "p1", "is_deleted" => true},
         %{"id" => "t6", "content" => "Orphan", "project_id" => "p5"}
