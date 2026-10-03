@@ -15,6 +15,7 @@ use crate::local;
 use crate::model::TaskState;
 use crate::push::{Command, Op, enqueue};
 use crate::store::Store;
+use crate::url;
 
 /// Where a task lives: the inbox, no project, or a project (ADR 0017).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -40,6 +41,8 @@ impl Location {
 pub struct NewTask {
     pub title: String,
     pub notes: Option<String>,
+    /// Absolute, as [`crate::url::valid`] checks it. Blank means none.
+    pub url: Option<String>,
     pub location: Option<Location>,
     /// A subtask lives where its parent does, whatever `location` says.
     pub parent_id: Option<Uuid>,
@@ -55,6 +58,8 @@ pub struct NewTask {
 pub struct TaskPatch {
     pub title: Option<String>,
     pub notes: Option<Option<String>>,
+    /// `Some("")` or `Some(None)` clears it.
+    pub url: Option<Option<String>>,
     pub planned_at: Option<Option<Timestamp>>,
     pub due_at: Option<Option<Timestamp>>,
     /// Defer until an instant, or `Some(None)` to stop deferring.
@@ -68,6 +73,7 @@ pub struct TaskPatch {
 pub struct NewProject {
     pub title: String,
     pub notes: Option<String>,
+    pub url: Option<String>,
     pub folder_id: Option<Uuid>,
 }
 
@@ -83,6 +89,7 @@ impl Store {
     /// Captures a task. Returns its id.
     pub fn add_task(&mut self, new: NewTask) -> Result<Uuid> {
         let title = title(&new.title)?;
+        let url = new.url.as_deref().map(url::clean).transpose()?.flatten();
         let id = new_id();
 
         self.write(|tx, now| {
@@ -115,6 +122,9 @@ impl Store {
             if let Some(notes) = &new.notes {
                 fields.insert("notes".into(), notes.clone().into());
             }
+            if let Some(url) = &url {
+                fields.insert("url".into(), url.clone().into());
+            }
             put_time(&mut fields, "planned_at", new.planned_at);
             put_time(&mut fields, "due_at", new.due_at);
             if new.deferred_indefinitely {
@@ -129,7 +139,7 @@ impl Store {
         Ok(id)
     }
 
-    /// Changes a task's title, notes, or dates.
+    /// Changes a task's title, notes, URL, or dates.
     pub fn edit_task(&mut self, id: Uuid, patch: TaskPatch) -> Result<()> {
         let mut fields = Map::new();
 
@@ -138,6 +148,10 @@ impl Store {
         }
         if let Some(notes) = &patch.notes {
             fields.insert("notes".into(), notes.clone().into());
+        }
+        if let Some(new_url) = &patch.url {
+            let new_url = new_url.as_deref().map(url::clean).transpose()?.flatten();
+            fields.insert("url".into(), new_url.into());
         }
         if let Some(planned) = patch.planned_at {
             fields.insert("planned_at".into(), planned.map(stamp).into());
@@ -205,12 +219,14 @@ impl Store {
     /// Creates a project. Returns its id.
     pub fn add_project(&mut self, new: NewProject) -> Result<Uuid> {
         let title = title(&new.title)?;
+        let url = new.url.as_deref().map(url::clean).transpose()?.flatten();
         let id = new_id();
 
         self.write(|tx, now| {
             let fields = object(json!({
                 "title": title,
                 "notes": new.notes,
+                "url": url,
                 "project_folder_id": new.folder_id.map(|f| f.to_string()),
             }));
             run(tx, now, Entity::Project, id, Op::Insert, fields)

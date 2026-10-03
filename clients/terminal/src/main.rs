@@ -88,8 +88,10 @@ enum Command {
     Drop { tasks: Vec<String> },
     /// Mark tasks To-Do again.
     Reopen { tasks: Vec<String> },
-    /// Change a task's title, notes, or dates.
+    /// Change a task's title, notes, URL, or dates.
     Edit(EditArgs),
+    /// Open a task's URL with the system's opener: files too.
+    Open { task: String },
     /// Move a task: to the inbox, out of every project, or into one.
     Move {
         task: String,
@@ -124,6 +126,9 @@ enum ProjectAction {
         /// The folder to file it in.
         #[arg(long)]
         folder: Option<String>,
+        /// A page, file, or ticket: https://…, file:///…
+        #[arg(long, short)]
+        url: Option<String>,
     },
     /// Mark a project Done.
     Done { project: String },
@@ -184,6 +189,9 @@ struct AddArgs {
     parent: Option<String>,
     #[arg(long, short)]
     note: Option<String>,
+    /// A page, file, or ticket: https://…, file:///…
+    #[arg(long, short)]
+    url: Option<String>,
     /// Planned day: today, tomorrow, fri, +3d, 2026-10-05, optionally with a time.
     #[arg(long)]
     planned: Option<String>,
@@ -230,6 +238,10 @@ struct EditArgs {
     note: Option<String>,
     #[arg(long, conflicts_with = "note")]
     no_note: bool,
+    #[arg(long, short)]
+    url: Option<String>,
+    #[arg(long, conflicts_with = "url")]
+    no_url: bool,
     #[arg(long)]
     planned: Option<String>,
     #[arg(long, conflicts_with = "planned")]
@@ -482,6 +494,7 @@ fn run(cli: Cli, output: &Output) -> Result<()> {
             let id = context.store.add_task(NewTask {
                 title: args.title.join(" "),
                 notes: args.note.clone(),
+                url: args.url.clone(),
                 location: args.place.location(&context.store)?,
                 parent_id,
                 defer_until: when(&args.defer, DateField::Defer)?,
@@ -536,6 +549,20 @@ fn run(cli: Cli, output: &Output) -> Result<()> {
             Ok(())
         }
 
+        Command::Open { task } => {
+            let mut context = Context::open(&cli)?;
+            let unsynced = context.refresh();
+            let world = context.store.world()?;
+            match world.find_task(task)?.url.as_deref() {
+                Some(url) if marskal_sync::url::valid(url) => {
+                    auth::open(url);
+                    output.opened(url, unsynced.as_deref());
+                    Ok(())
+                }
+                _ => Err(CliError::new("no_url", 3, "That task has no URL.")),
+            }
+        }
+
         Command::Done { tasks } => set_state(&cli, output, tasks, TaskState::Done, "Done"),
         Command::Drop { tasks } => set_state(&cli, output, tasks, TaskState::Dropped, "Dropped"),
         Command::Reopen { tasks } => set_state(&cli, output, tasks, TaskState::ToDo, "Reopened"),
@@ -562,6 +589,11 @@ fn run(cli: Cli, output: &Output) -> Result<()> {
                         Some(None)
                     } else {
                         args.note.clone().map(Some)
+                    },
+                    url: if args.no_url {
+                        Some(None)
+                    } else {
+                        args.url.clone().map(Some)
                     },
                     planned_at: clear_or(args.no_planned, &args.planned, DateField::Planned)?,
                     due_at: clear_or(args.no_due, &args.due, DateField::Due)?,
@@ -653,7 +685,7 @@ fn run(cli: Cli, output: &Output) -> Result<()> {
                     let unsynced = context.refresh();
                     output.projects(&context.store.world()?, unsynced.as_deref());
                 }
-                Some(ProjectAction::Add { title, folder }) => {
+                Some(ProjectAction::Add { title, folder, url }) => {
                     context.check_writable()?;
                     let folder_id = match folder {
                         Some(folder) => Some(context.store.world()?.find_folder(folder)?.id),
@@ -662,6 +694,7 @@ fn run(cli: Cli, output: &Output) -> Result<()> {
                     let id = context.store.add_project(NewProject {
                         title: title.join(" "),
                         notes: None,
+                        url: url.clone(),
                         folder_id,
                     })?;
                     let unsynced = context.try_sync();

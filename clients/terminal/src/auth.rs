@@ -231,7 +231,7 @@ pub fn login(api: &Api, store: &TokenStore, scope: &str, open_browser: bool) -> 
     }
 }
 
-fn open(url: &str) {
+pub fn open(url: &str) {
     let opener = if cfg!(target_os = "macos") {
         "open"
     } else {
