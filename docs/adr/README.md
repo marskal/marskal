@@ -30,6 +30,7 @@ This directory holds **ADRs** — durable decisions and their context.
 | [0019](0019-sync-api-and-oauth-sign-in.md) | Sync API and OAuth sign-in | Accepted; sign-in replaced by [0021](0021-ory-hydra-authorization-server.md) |
 | [0020](0020-terminal-client.md) | Terminal client | Accepted |
 | [0021](0021-ory-hydra-authorization-server.md) | Ory Hydra as the authorization server | Accepted |
+| [0022](0022-task-and-project-url.md) | A URL on tasks and projects | Accepted |
 
 ## When to add an ADR
 

@@ -30,6 +30,7 @@ This file is **short and actionable**. Rationale and history live in
 | Sync API, OAuth sign-in | [0019](docs/adr/0019-sync-api-and-oauth-sign-in.md) |
 | Terminal client (`marskal`) | [0020](docs/adr/0020-terminal-client.md) |
 | OAuth server (Ory Hydra) | [0021](docs/adr/0021-ory-hydra-authorization-server.md) |
+| URL on tasks & projects | [0022](docs/adr/0022-task-and-project-url.md) |
 | Repository layout | [0015](docs/adr/0015-repository-layout.md) |
 
 ---
@@ -84,7 +85,7 @@ Default home: **Open tasks** stream. Timezone is stored per user, default
   the rule and `kind` (task | project). Occurrences are tasks or projects with
   `series_id` and an immutable `occurrence_for`. The first build repeats tasks only.
 - The next occurrence copies the latest (greatest `occurrence_for`): title, notes,
-  location, parent, tags. In the first build a task's subtasks are not copied.
+  URL, location, parent, tags. In the first build a task's subtasks are not copied.
   Other dates keep their offset from the anchor on the user's zone clock.
 - Occurrences are the history; no completions table. A generated id that exists,
   discarded or not, is never created again.
@@ -273,6 +274,9 @@ The repository root is the product, not the web app (ADR 0015).
 - Prefer explicit state fields. UTC storage; display in user zone (default zone OK early).
 - Task and project state: same **3** values (ADR 0008); **Defer** (until | indefinite) /
   Planned / Due on both (ADR 0006).
+- Tasks and projects have one optional `url` (ADR 0022). Titles stay plain
+  text; an import moves a title's link there. `javascript:`, `data:` and
+  `vbscript:` are refused.
 - Structure: `tasks.parent_id`, `project_folders` tree, `projects.project_folder_id`;
   no project-to-project parent (ADR 0009). Prevent parent cycles.
   A subtask lives where its parent does; a move to another location leaves the

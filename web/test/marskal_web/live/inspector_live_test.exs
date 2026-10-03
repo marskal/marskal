@@ -19,6 +19,23 @@ defmodule MarskalWeb.InspectorLiveTest do
     assert html =~ "app-inspector"
   end
 
+  test "the inspector sets a task's URL, and says why it refuses one", %{conn: conn, user: user} do
+    {:ok, task} = Tasks.create_task(user, %{"title" => "Fix", "inbox" => false}, command())
+
+    {:ok, view, _html} = live(conn, ~p"/")
+    view |> element("#open-tasks li.task-row", "Fix") |> render_click()
+
+    view |> form("#inspector-task", task: %{url: "https://jira.example/X-1"}) |> render_change()
+
+    assert Tasks.get_task(user, task.id).url == "https://jira.example/X-1"
+    assert has_element?(view, "#open-tasks a.url-link[href='https://jira.example/X-1']")
+
+    view |> form("#inspector-task", task: %{url: "javascript:alert(1)"}) |> render_change()
+
+    assert render(view) =~ "URL cannot use that scheme."
+    assert Tasks.get_task(user, task.id).url == "https://jira.example/X-1"
+  end
+
   test "a task can be edited from the list and the inspector closed", %{conn: conn, user: user} do
     {:ok, task} = Tasks.create_task(user, %{"title" => "Milk", "inbox" => false}, command())
 

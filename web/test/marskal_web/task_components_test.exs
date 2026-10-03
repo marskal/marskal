@@ -56,6 +56,22 @@ defmodule MarskalWeb.TaskComponentsTest do
     refute own =~ "mark--inherited"
   end
 
+  test "a row with a URL links to it in a new tab" do
+    html =
+      render_row(%Task{id: id(), title: "Fix", state: :to_do, url: "https://jira.example/X-1"})
+
+    assert html =~ ~s(href="https://jira.example/X-1")
+    assert html =~ ~s(target="_blank")
+    assert html =~ ~s(rel="noopener noreferrer")
+  end
+
+  test "a refused scheme is never a link" do
+    html = render_row(%Task{id: id(), title: "Fix", state: :to_do, url: "javascript:alert(1)"})
+
+    refute html =~ "javascript:"
+    refute html =~ "url-link"
+  end
+
   defp render_row(task, dates \\ %{}) do
     render_component(&MarskalWeb.TaskComponents.list/1, %{
       id: "tasks",

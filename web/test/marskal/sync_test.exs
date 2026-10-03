@@ -64,6 +64,18 @@ defmodule Marskal.SyncTest do
       end
     end
 
+    test "carries the URL of tasks and projects", %{user: user} do
+      {:ok, _} =
+        Tasks.create_task(user, %{title: "Fix", url: "https://jira.example/X-1"}, command())
+
+      {:ok, _} =
+        Projects.create_project(user, %{title: "Site", url: "file:///srv/site"}, command())
+
+      rows = Sync.pull(user, nil).rows
+      assert [%{"url" => "https://jira.example/X-1"}] = rows["task"]
+      assert [%{"url" => "file:///srv/site"}] = rows["project"]
+    end
+
     test "values are encoded as the feed encodes them", %{user: user} do
       {:ok, task} = Tasks.create_task(user, %{title: "Call"}, command())
       {:ok, _} = Tasks.complete_task(user, task.id, command())

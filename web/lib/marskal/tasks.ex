@@ -164,7 +164,7 @@ defmodule Marskal.Tasks do
   end
 
   @doc """
-  Patch any of title, notes, project_id, inbox, state, and the dates in one
+  Patch any of title, notes, url, project_id, inbox, state, and the dates in one
   command. Fields equal to the stored value are left out of the patch,
   except that a move always carries both inbox and project_id (ADR 0017),
   and a Defer change both of its fields (ADR 0006).
