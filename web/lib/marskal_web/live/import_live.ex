@@ -94,6 +94,17 @@ defmodule MarskalWeb.ImportLive do
         }
       }
 
+      @scope (.import-kept) {
+        :scope ul {
+          margin: 0 0 1.25rem;
+          padding-left: 1.25rem;
+        }
+
+        .fields {
+          color: var(--muted);
+        }
+      }
+
       @scope (.backup-drop) {
         :scope {
           display: flex;
@@ -383,9 +394,6 @@ defmodule MarskalWeb.ImportLive do
               <div>
                 <dt>Tasks</dt><dd>{stat(@batch, "tasks")}</dd>
               </div>
-              <div :if={@batch.source == "todoist"}>
-                <dt>Tags</dt><dd>{stat(@batch, "tags")}</dd>
-              </div>
               <div>
                 <dt>Inbox</dt><dd>{stat(@batch, "inbox")}</dd>
               </div>
@@ -418,9 +426,30 @@ defmodule MarskalWeb.ImportLive do
                 <dt>Created tags</dt><dd>{created(@batch, "tags")}</dd>
               </div>
               <div>
-                <dt>Skipped</dt><dd>{skipped_total(@batch)}</dd>
+                <dt>Updated</dt><dd>{total(@batch, "updated")}</dd>
+              </div>
+              <div>
+                <dt>Kept your edits</dt><dd>{stat(@batch, "kept")}</dd>
+              </div>
+              <div>
+                <dt>Unchanged</dt><dd>{total(@batch, "skipped")}</dd>
               </div>
             </dl>
+            <p :if={stat(@batch, "recreated") > 0} class="lede" id="import-recreated">
+              {stat(@batch, "recreated")} you had deleted here came back as new items, since {source_label(
+                @batch.source
+              )} still has them.
+            </p>
+            <div :if={kept_samples(@batch) != []} id="import-kept" class="import-kept">
+              <p class="lede">
+                Changed in {source_label(@batch.source)} and by you. Your version stays:
+              </p>
+              <ul>
+                <li :for={sample <- kept_samples(@batch)}>
+                  {sample["title"]} <span class="fields">({Enum.join(sample["fields"], ", ")})</span>
+                </li>
+              </ul>
+            </div>
             <p class="actions">
               <.link navigate={~p"/inbox"} class="btn btn-primary">Inbox</.link>
               <.link navigate={~p"/"} class="btn">Open</.link>
@@ -491,11 +520,11 @@ defmodule MarskalWeb.ImportLive do
   defp reading_label(_batch), do: "Reading the backup…"
 
   defp preview_note(%{source: "todoist"}) do
-    "Already-imported Todoist items are skipped. Labels become tags. Dates, sections, subtasks, and recurrence are kept for later and not applied yet. Completed history is not included."
+    "Already-imported items are updated with what changed in Todoist, except where you changed the same thing here. Items you deleted here come back. Labels become tags. Sections, subtasks, and recurrence are kept for later and not applied yet. Completed history is not included."
   end
 
   defp preview_note(_batch) do
-    "Already-imported OmniFocus items are skipped. Tags whose name is already used at the same place are reused. Dates are stored for later; they are not applied yet."
+    "Already-imported items are updated with what changed in OmniFocus, except where you changed the same thing here. Items you deleted here come back. Tags whose name is already used at the same place are reused."
   end
 
   defp format_when(%DateTime{} = datetime), do: Calendar.strftime(datetime, "%Y-%m-%d %H:%M")
@@ -504,10 +533,20 @@ defmodule MarskalWeb.ImportLive do
   defp stat(batch, key), do: (batch.stats || %{})[key] || 0
   defp created(batch, key), do: get_in(batch.stats || %{}, ["created", key]) || 0
 
-  defp skipped_total(batch) do
-    case (batch.stats || %{})["skipped"] do
-      %{} = skipped -> skipped |> Map.values() |> Enum.sum()
+  defp total(batch, key) do
+    case (batch.stats || %{})[key] do
+      %{} = counts -> counts |> Map.values() |> Enum.sum()
       _ -> 0
+    end
+  end
+
+  defp kept_samples(batch) do
+    case (batch.stats || %{})["kept_samples"] do
+      list when is_list(list) ->
+        Enum.filter(list, &match?(%{"title" => _, "fields" => [_ | _]}, &1))
+
+      _ ->
+        []
     end
   end
 
