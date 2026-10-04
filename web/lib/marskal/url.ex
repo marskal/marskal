@@ -36,6 +36,9 @@ defmodule Marskal.Url do
     end
   end
 
+  @doc "Whether `url` would pass `validate/2` as it is."
+  def valid?(url), do: safe?(url) and String.length(url) <= @max
+
   @doc "Whether `url` may be a link's `href`."
   def safe?(url) when is_binary(url) do
     case Regex.run(@shape, url) do
