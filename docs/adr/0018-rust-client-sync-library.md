@@ -29,8 +29,8 @@ implementation loses a check-off or mints a duplicate occurrence. Four ports
 is a different cost from the one Swift port ADR 0014 accepted.
 
 The server is not one of those ports. It is the authority, it has no outbox,
-and LiveView calls the Elixir domain in-process. The pure rules — recurrence
-and the occurrence ids — still have to agree across that boundary.
+and LiveView calls the Elixir domain in-process. The pure rules the clients
+use, such as ranks and link ids, still have to agree across that boundary.
 
 ## Decision
 
@@ -48,8 +48,9 @@ owns:
   first-write.
 - **Fractional rank**, tag `merged_into_id`, and the derived fields
   (`parent_path`, effective tags), recomputed after applying patches.
-- **Recurrence** and the **UUIDv5** occurrence ids, including a provisional
-  next occurrence that is shown locally and never pushed.
+- **Recurrence series** and their occurrences, as stored rows. The server
+  creates every occurrence (ADR 0014, amended 2026-10-03); the library does
+  not spawn, so it has no calendar math to keep in step.
 
 The exported API is coarse and synchronous: open the database, apply a
 command, apply a pull response, read tasks. The library does not perform HTTP,
@@ -100,13 +101,13 @@ The iOS app is not an Elixir umbrella. There is no shared UI core.
 - Do not create `sync/core`, `sync/fixtures`, or `clients/` until that work
   starts. The pull endpoint, the `resolved_at` skew clamp, and `discarded_at`
   on project folders still come before the crate (ADR 0014).
-- Recurrence and merge fixtures are written for two runners, Elixir and Rust,
-  not for every shell.
+- Shared fixtures are written for two runners, Elixir and Rust, not for
+  every shell.
 - When the crate exists, its toolchain is not a root `devenv.nix` that wraps
   `web/` (ADR 0015).
 - Library tests cover the client rules against those fixtures: dirty-field
-  pull merge, discard, `resolved_at`, a rank between two neighbors, occurrence
-  ids, and a provisional row that is not pushed.
+  pull merge, discard, `resolved_at`, a rank between two neighbors, and link
+  ids.
 - The web app stays online. It does not gain an offline cache (ADR 0014).
 - Versions stay independent. The library has its own version. An App Store
   build number is still not a git tag.

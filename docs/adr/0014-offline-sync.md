@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted. The protocol stands. The client set, and where the client engine
+Accepted; recurrence across a disconnect amended 2026-10-03 (the server
+creates every occurrence). The protocol stands. The client set, and where the client engine
 lives, are amended by [ADR 0018](0018-rust-client-sync-library.md): desktop,
 Android, iOS, and an optional terminal client share one Rust library.
 
@@ -162,17 +163,26 @@ applying patches. A client value for them is not authoritative.
 
 ### Recurrence across a disconnect
 
+Amended 2026-10-03: **the server creates every occurrence**. Clients do not
+spawn, even provisionally; they get new occurrences on pull.
+
 The rule stays structured data on the series (ADR 0007). "Next anchor" is a
 **pure function** of the rule, the mode, the previous anchor, the resolution
-time (on completion only), and the user's timezone. Elixir and the client
-library must produce the same answers for a shared set of fixture vectors.
-The library is Rust, and a shell does not reimplement it
-([ADR 0018](0018-rust-client-sync-library.md)). Do not bury the calendar math
-inside a controller, a LiveView, or a shell.
+time (on completion only), and the user's timezone. It lives in Elixir only.
+Do not bury the calendar math inside a controller or a LiveView.
+
+Offline, this costs little. A regular series always has one occurrence
+scheduled after now (ADR 0007), so the client already holds the next one. An
+on-completion series' next occurrence appears at the first sync after the
+completion; it is usually dated days ahead. In return no client row is ever
+replaced or lost, and only the server writes rule-created rows.
+
+A client may still join a task to a series as its first occurrence. That is
+the user's act, not the rule's, and the task keeps its v7 id.
 
 **Occurrence ids for rows the rule creates are UUIDv5**, not v7. This is the
-one exception to ADR 0011's "new domain keys are v7." Both sides must mint the
-same id or a disconnect creates duplicates.
+one exception to ADR 0011's "new domain keys are v7." A generator run and a
+completion that reach the same slot at once name the same row.
 
 - **Namespace:** `a5c0ffee-0014-5000-8000-000000000014`
 - **Name (UTF-8):** `{series_id}|{anchor}`
@@ -180,16 +190,11 @@ same id or a disconnect creates duplicates.
 - `anchor` is UTC, `YYYY-MM-DDTHH:MM:SS.ffffffZ`, fractional seconds always six
   digits.
 
-**On completion.** The phone may show a **provisional** next occurrence from its
-own clock so the list is not missing a row in the shop. That row is local only:
-it is not pushed. The server's clamped `resolved_at` is canonical. After sync
-the phone drops the provisional row and upserts the occurrence whose id the
-rule produced. **End count** counts distinct occurrence ids, so a provisional
-row and its confirmed replacement are one generated occurrence, not two.
+**On completion.** The next anchor comes from the server's clamped
+`resolved_at`, applied when the completion syncs.
 
-**Regular.** The next id depends on the series and the schedule, not on who
-noticed that it was due. The phone or the server may insert it first. The other
-side upserts.
+**Regular.** The server's generator creates each occurrence when the previous
+slot passes.
 
 ### Timezone
 
@@ -219,15 +224,13 @@ not; the rows an import created sync as ordinary entities.
   and `users.timezone` (not null, default `Europe/Copenhagen`).
 - `parent_path` stays as a cache maintained in application code. It is not a
   column the client may correct.
-- Recurrence work includes the pure function and the fixture file in the same
-  change as the schema. The Rust client library is the second implementation
-  and runs those fixtures unchanged (ADR 0018). A further shell does not add
-  a third.
+- Recurrence math has one implementation, in Elixir. The Rust client library
+  stores series and occurrences and does not spawn (amended 2026-10-03).
 - Tests that lock this ADR: different fields merge; same field, later command
   wins; command replay is a no-op; discard beats a stale patch; `resolved_at`
   stays on the first resolve and clamps outside the skew window; a client
   UUIDv7 round-trips; a rank can be allocated between two neighbors;
-  occurrence ids match the vectors; a provisional occurrence is not pushed;
+  an occurrence id is v5 of its series and slot;
   pull leaves dirty local fields alone; pull uses visibility, not
   `user_id = viewer`.
 - The acceptance scenario: while the phone is offline it checks one item off

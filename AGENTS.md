@@ -88,6 +88,8 @@ Default home: **Open tasks** stream. Timezone is stored per user, default
   Other dates keep their offset from the anchor on the user's zone clock.
 - Occurrences are the history; no completions table. A generated id that exists,
   discarded or not, is never created again.
+- The server creates every occurrence after the first; a client only joins a task
+  as a series' first. Reopening an occurrence keeps the one its completion made.
 - **Mode:** **regular** (next on schedule even if previous open, at most 10 open;
   slots missed at the cap are skipped) or **on completion**.
 - **On completion:** both **Done** and **Dropped** resolve the instance and **spawn next**
@@ -280,8 +282,9 @@ The repository root is the product, not the web app (ADR 0015).
 - **Sync (ADR 0014):** writes are field patches with a command id, appended to a
   server change feed. Clients may supply UUIDv7 ids. Task sibling order is a
   fractional rank. Do not sync derived fields (`parent_path`, effective tags).
-  Recurrence spawning is a pure function; rule-created occurrence ids are
-  UUIDv5 from the series id and the anchor. The web app stays online — no
+  Only the server spawns occurrences, with a pure function in Elixir; clients
+  get them on pull. Rule-created occurrence ids are UUIDv5 from the series id
+  and the slot. The web app stays online — no
   browser offline cache. Writes go through `Marskal.Changes.apply/4`; a patch
   with no changes appends nothing. Offline clients share one Rust engine
   (ADR 0018) instead of porting it per shell.
@@ -294,7 +297,7 @@ The repository root is the product, not the web app (ADR 0015).
   (`client_fields/1` beside its changeset), dispatched by `Marskal.Sync.Push`. A rejected command is not retried.
 - Tests: state transitions; user isolation; defer/planned/due; outliner/folder structure;
   **recurrence** matrix (ADR 0007); tag inheritance in Phase 2+; sync merge,
-  command replay, tombstones, and occurrence-id vectors (ADR 0014).
+  command replay, tombstones, and the shared fixture vectors (ADR 0014).
 
 ### Agent behavior
 

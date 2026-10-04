@@ -12,6 +12,7 @@ defmodule Marskal.Changes do
   alias Marskal.Changes.Change
   alias Marskal.ProjectFolders.ProjectFolder
   alias Marskal.Projects.Project
+  alias Marskal.Recurrence.Series
   alias Marskal.Repo
   alias Marskal.Tags.ProjectTag
   alias Marskal.Tags.Tag
@@ -116,6 +117,7 @@ defmodule Marskal.Changes do
   defp fetch(user, "task", id), do: Repo.get_by(Task, id: id, user_id: user.id)
   defp fetch(user, "project", id), do: Repo.get_by(Project, id: id, user_id: user.id)
   defp fetch(user, "project_folder", id), do: Repo.get_by(ProjectFolder, id: id, user_id: user.id)
+  defp fetch(user, "recurrence_series", id), do: Repo.get_by(Series, id: id, user_id: user.id)
   defp fetch(user, "tag", id), do: Repo.get_by(Tag, id: id, user_id: user.id)
   defp fetch(user, "task_tag", id), do: Repo.get_by(TaskTag, id: id, user_id: user.id)
   defp fetch(user, "project_tag", id), do: Repo.get_by(ProjectTag, id: id, user_id: user.id)

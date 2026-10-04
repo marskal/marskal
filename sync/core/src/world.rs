@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 use crate::entity::Entity;
 use crate::error::{Error, Result};
-use crate::model::{Folder, Link, Project, Tag, TagState, Task, TaskState};
+use crate::model::{Folder, Link, Project, Series, Tag, TagState, Task, TaskState};
 use crate::value::from_sql;
 
 /// Which tasks to list.
@@ -72,12 +72,14 @@ pub struct World {
     pub projects: Vec<Project>,
     pub folders: Vec<Folder>,
     pub tags: Vec<Tag>,
+    pub series: Vec<Series>,
     pub task_tags: Vec<Link>,
     pub project_tags: Vec<Link>,
     now: Timestamp,
     task_index: HashMap<Uuid, usize>,
     project_index: HashMap<Uuid, usize>,
     tag_index: HashMap<Uuid, usize>,
+    series_index: HashMap<Uuid, usize>,
     children: HashMap<Uuid, Vec<usize>>,
 }
 
@@ -87,6 +89,7 @@ impl World {
         let projects: Vec<Project> = load(conn, Entity::Project)?;
         let folders: Vec<Folder> = load(conn, Entity::ProjectFolder)?;
         let tags: Vec<Tag> = load(conn, Entity::Tag)?;
+        let series: Vec<Series> = load(conn, Entity::RecurrenceSeries)?;
 
         let task_index = index(&tasks, |t| t.id);
         let mut children: HashMap<Uuid, Vec<usize>> = HashMap::new();
@@ -102,11 +105,13 @@ impl World {
             task_index,
             project_index: index(&projects, |p| p.id),
             tag_index: index(&tags, |t| t.id),
+            series_index: index(&series, |s| s.id),
             children,
             tasks,
             projects,
             folders,
             tags,
+            series,
             now,
         })
     }
@@ -121,6 +126,11 @@ impl World {
 
     pub fn project(&self, id: Uuid) -> Option<&Project> {
         self.project_index.get(&id).map(|&i| &self.projects[i])
+    }
+
+    /// A live recurrence series.
+    pub fn series(&self, id: Uuid) -> Option<&Series> {
+        self.series_index.get(&id).map(|&i| &self.series[i])
     }
 
     pub fn tag(&self, id: Uuid) -> Option<&Tag> {

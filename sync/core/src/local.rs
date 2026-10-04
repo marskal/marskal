@@ -290,7 +290,8 @@ fn discard(conn: &Connection, entity: Entity, id: &str, now: &str) -> Result<()>
                 )?;
             }
         }
-        Entity::TaskTag | Entity::ProjectTag => {}
+        // Its occurrences stay, as ordinary tasks (ADR 0007).
+        Entity::RecurrenceSeries | Entity::TaskTag | Entity::ProjectTag => {}
     }
 
     mark_discarded(conn, entity, id, now)

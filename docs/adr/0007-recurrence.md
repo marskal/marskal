@@ -141,6 +141,9 @@ section wins.
   (mode, anchor, interval, frequency, weekdays, monthly selectors, end date,
   end count), `kind` (task | project), and `stopped_at`. Stopping a series
   keeps it, so its occurrences keep their history.
+- A change to any part of the rule patches the whole rule, so two offline
+  edits leave one of the two rules, never a mix that does not fit together
+  (as Defer does, ADR 0006).
 - Tasks and projects both carry `series_id` and `occurrence_for`. A series has
   occurrences of its own kind only. The first build repeats tasks; projects
   follow without a schema change.
@@ -175,6 +178,8 @@ section wins.
   task id, so both sides mint the same tree.
 - A rule change applies from the next generated slot. Existing occurrences
   keep their `occurrence_for`.
+- Reopening an occurrence does not undo the one its completion created. Both
+  stay, and both count toward the end count.
 
 ### Regular mode and the open cap
 
@@ -186,9 +191,9 @@ section wins.
 - When the series drops below the cap again, generation resumes at the first
   slot after now. Missed slots are skipped: they never become rows and do not
   count toward the end count.
-- Only the server creates the occurrence that resumes after a skip, because
-  "after now" depends on whose clock. Otherwise either side may create the
-  next, as ADR 0014 says.
+- The server creates every occurrence after the first (ADR 0014, amended
+  2026-10-03). A client joins a task to a series only as its first
+  occurrence.
 
 ### History
 

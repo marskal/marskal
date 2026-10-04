@@ -60,6 +60,8 @@ pub struct Task {
     pub deferred_indefinitely: bool,
     pub planned_at: Option<String>,
     pub due_at: Option<String>,
+    pub series_id: Option<Uuid>,
+    pub occurrence_for: Option<String>,
     pub resolved_at: Option<String>,
     pub discarded_at: Option<String>,
     pub inserted_at: Option<String>,
@@ -77,7 +79,84 @@ pub struct Project {
     pub deferred_indefinitely: bool,
     pub planned_at: Option<String>,
     pub due_at: Option<String>,
+    pub series_id: Option<Uuid>,
+    pub occurrence_for: Option<String>,
     pub resolved_at: Option<String>,
+    pub discarded_at: Option<String>,
+    pub inserted_at: Option<String>,
+    pub updated_at: Option<String>,
+}
+
+/// What a series repeats (ADR 0007).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SeriesKind {
+    Task,
+    Project,
+}
+
+/// Regular: on the schedule, open or not. On completion: when the last
+/// one is Done or Dropped.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Mode {
+    Regular,
+    OnCompletion,
+}
+
+/// The date field the rule advances.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Anchor {
+    Defer,
+    Planned,
+    Due,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Frequency {
+    Minutes,
+    Hours,
+    Days,
+    Weeks,
+    Months,
+    Years,
+}
+
+/// The day an nth-weekday month rule counts.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DayKind {
+    Monday,
+    Tuesday,
+    Wednesday,
+    Thursday,
+    Friday,
+    Saturday,
+    Sunday,
+    WorkDay,
+    WeekendDay,
+}
+
+/// A recurrence rule and the identity its occurrences share (ADR 0007).
+/// `weekdays` are ISO numbers, 1 for Monday. `month_days` are 1-31, and -1
+/// for the last day; `month_ordinal` is 1-5, and -1 for the last.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Series {
+    pub id: Uuid,
+    pub kind: SeriesKind,
+    pub mode: Mode,
+    pub anchor: Anchor,
+    pub interval: u32,
+    pub frequency: Frequency,
+    pub weekdays: Vec<u8>,
+    pub month_days: Vec<i8>,
+    pub month_ordinal: Option<i8>,
+    pub month_day_kind: Option<DayKind>,
+    pub ends_at: Option<String>,
+    pub end_count: Option<u32>,
+    pub stopped_at: Option<String>,
     pub discarded_at: Option<String>,
     pub inserted_at: Option<String>,
     pub updated_at: Option<String>,

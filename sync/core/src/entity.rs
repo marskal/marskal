@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Entity {
+    RecurrenceSeries,
     ProjectFolder,
     Project,
     Tag,
@@ -17,6 +18,8 @@ pub enum Entity {
 pub(crate) enum Kind {
     Text,
     Bool,
+    /// An array, stored as its JSON text.
+    Json,
 }
 
 /// A synced field. The names are the server's.
@@ -40,6 +43,32 @@ const fn boolean(name: &'static str) -> Column {
     }
 }
 
+const fn json(name: &'static str) -> Column {
+    Column {
+        name,
+        kind: Kind::Json,
+    }
+}
+
+const RECURRENCE_SERIES: &[Column] = &[
+    text("id"),
+    text("kind"),
+    text("mode"),
+    text("anchor"),
+    text("interval"),
+    text("frequency"),
+    json("weekdays"),
+    json("month_days"),
+    text("month_ordinal"),
+    text("month_day_kind"),
+    text("ends_at"),
+    text("end_count"),
+    text("stopped_at"),
+    text("discarded_at"),
+    text("inserted_at"),
+    text("updated_at"),
+];
+
 const TASK: &[Column] = &[
     text("id"),
     text("title"),
@@ -53,6 +82,8 @@ const TASK: &[Column] = &[
     boolean("deferred_indefinitely"),
     text("planned_at"),
     text("due_at"),
+    text("series_id"),
+    text("occurrence_for"),
     text("resolved_at"),
     text("discarded_at"),
     text("inserted_at"),
@@ -69,6 +100,8 @@ const PROJECT: &[Column] = &[
     boolean("deferred_indefinitely"),
     text("planned_at"),
     text("due_at"),
+    text("series_id"),
+    text("occurrence_for"),
     text("resolved_at"),
     text("discarded_at"),
     text("inserted_at"),
@@ -118,7 +151,8 @@ const PROJECT_TAG: &[Column] = &[
 impl Entity {
     /// Every type, in the order rows are applied: containers first, so a
     /// row usually arrives after the row it refers to.
-    pub const ALL: [Entity; 6] = [
+    pub const ALL: [Entity; 7] = [
+        Entity::RecurrenceSeries,
         Entity::ProjectFolder,
         Entity::Project,
         Entity::Tag,
@@ -130,6 +164,7 @@ impl Entity {
     /// The name on the wire.
     pub fn as_str(self) -> &'static str {
         match self {
+            Entity::RecurrenceSeries => "recurrence_series",
             Entity::ProjectFolder => "project_folder",
             Entity::Project => "project",
             Entity::Tag => "tag",
@@ -147,6 +182,7 @@ impl Entity {
 
     pub(crate) fn table(self) -> &'static str {
         match self {
+            Entity::RecurrenceSeries => "recurrence_series",
             Entity::ProjectFolder => "project_folders",
             Entity::Project => "projects",
             Entity::Tag => "tags",
@@ -158,6 +194,7 @@ impl Entity {
 
     pub(crate) fn columns(self) -> &'static [Column] {
         match self {
+            Entity::RecurrenceSeries => RECURRENCE_SERIES,
             Entity::ProjectFolder => PROJECT_FOLDER,
             Entity::Project => PROJECT,
             Entity::Tag => TAG,
