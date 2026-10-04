@@ -108,6 +108,9 @@ impl Output {
             if view.effective.deferred_indefinitely {
                 println!("  deferred indefinitely");
             }
+            if let Some(url) = task.url.as_deref() {
+                println!("  url      {url}");
+            }
             if let Some(notes) = task.notes.as_deref().filter(|n| !n.is_empty()) {
                 println!();
                 for note in notes.lines() {
@@ -115,6 +118,14 @@ impl Output {
                 }
             }
         }
+        self.note_unsynced(unsynced);
+    }
+
+    pub fn opened(&self, url: &str, unsynced: Option<&str>) {
+        if self.json {
+            return self.emit(json!({ "action": "opened", "url": url }), unsynced);
+        }
+        println!("Opened {url}");
         self.note_unsynced(unsynced);
     }
 

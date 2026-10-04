@@ -608,3 +608,89 @@ fn a_pulled_series_and_its_occurrence_read_back() {
     assert_eq!(read.series_id, Some(series));
     assert_eq!(read.occurrence_for.as_deref(), Some("2026-10-09T15:00:00Z"));
 }
+
+#[test]
+fn a_task_carries_a_url() {
+    let (mut store, _clock) = store();
+    let id = store
+        .add_task(NewTask {
+            title: "Fix".into(),
+            url: Some(" https://jira.example/X-1 ".into()),
+            ..NewTask::default()
+        })
+        .unwrap();
+
+    assert_eq!(
+        store.pending(10).unwrap()[0].fields["url"],
+        "https://jira.example/X-1"
+    );
+    let world = store.world().unwrap();
+    assert_eq!(
+        world.task(id).unwrap().url.as_deref(),
+        Some("https://jira.example/X-1")
+    );
+
+    store
+        .edit_task(
+            id,
+            TaskPatch {
+                url: Some(None),
+                ..TaskPatch::default()
+            },
+        )
+        .unwrap();
+    assert_eq!(store.world().unwrap().task(id).unwrap().url, None);
+
+    let refused = store.edit_task(
+        id,
+        TaskPatch {
+            url: Some(Some("javascript:alert(1)".into())),
+            ..TaskPatch::default()
+        },
+    );
+    assert!(refused.is_err());
+    assert_eq!(store.pending(10).unwrap().len(), 2);
+}
+
+#[test]
+fn a_pulled_url_is_kept() {
+    let (mut store, _clock) = store();
+    let id = Uuid::now_v7();
+    let row = task_row(id, "Read", json!({ "url": "file:///tmp/plan.md" }));
+    store
+        .apply_pull(&pull(1, true, vec![("task", row)]))
+        .unwrap();
+
+    let world = store.world().unwrap();
+    assert_eq!(
+        world.task(id).unwrap().url.as_deref(),
+        Some("file:///tmp/plan.md")
+    );
+}
+
+#[test]
+fn a_database_from_before_urls_asks_for_a_snapshot() {
+    let dir = std::env::temp_dir().join(format!("marskal-sync-{}", Uuid::now_v7()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("marskal.db");
+
+    let mut store = Store::open(&path).unwrap();
+    store.apply_pull(&pull(7, true, vec![])).unwrap();
+    assert_eq!(store.pull_cursor().unwrap(), Some(7));
+    drop(store);
+
+    // Back to the schema a client built before URLs left.
+    let conn = rusqlite::Connection::open(&path).unwrap();
+    conn.execute_batch(
+        "ALTER TABLE tasks DROP COLUMN url;
+         ALTER TABLE projects DROP COLUMN url;
+         PRAGMA user_version = 2;",
+    )
+    .unwrap();
+    drop(conn);
+
+    let store = Store::open(&path).unwrap();
+    assert_eq!(store.pull_cursor().unwrap(), None);
+
+    std::fs::remove_dir_all(dir).unwrap();
+}

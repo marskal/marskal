@@ -149,6 +149,13 @@ ALTER TABLE projects ADD COLUMN occurrence_for TEXT;
 
 CREATE INDEX tasks_series_id ON tasks (series_id);
 "#,
+    // ADR 0022. Rows pulled before this have no URL, so the next pull is a
+    // snapshot.
+    r#"
+ALTER TABLE projects ADD COLUMN url TEXT;
+ALTER TABLE tasks ADD COLUMN url TEXT;
+INSERT OR REPLACE INTO meta (key, value) VALUES ('needs_snapshot', '1');
+"#,
 ];
 
 /// Brings the database to the latest schema. `user_version` counts the

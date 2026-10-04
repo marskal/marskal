@@ -23,6 +23,7 @@ mod push;
 pub mod rank;
 mod schema;
 mod store;
+pub mod url;
 mod value;
 mod world;
 
