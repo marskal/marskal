@@ -35,6 +35,7 @@ defmodule MarskalWeb.ProjectLive do
         <.link navigate={MarskalWeb.NavComponents.record_path(:folder, @folder.id)}>{@folder.name}</.link>
       </p>
       <h1>{@project.title}</h1>
+      <p :if={@project.url} class="lede"><MarskalWeb.UrlLink.link url={@project.url} text /></p>
       <MarskalWeb.FormattedNotes.block text={@project.notes} class="lede notes" />
       <p class="actions">
         <button type="button" phx-click="complete">Done</button>

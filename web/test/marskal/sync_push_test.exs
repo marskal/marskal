@@ -49,6 +49,24 @@ defmodule Marskal.SyncPushTest do
     end
   end
 
+  test "a client sets and clears a URL", %{user: user} do
+    id = uuid()
+
+    assert [%{status: "applied"}, %{status: "applied"}] =
+             Push.push(user, [
+               insert("task", id, %{"title" => "Read", "url" => "https://a.example"}),
+               patch("task", id, %{"url" => "https://b.example"})
+             ])
+
+    assert Tasks.get_task(user, id).url == "https://b.example"
+
+    assert [%{status: "rejected"}] =
+             Push.push(user, [patch("task", id, %{"url" => "javascript:x"})])
+
+    assert [%{status: "applied"}] = Push.push(user, [patch("task", id, %{"url" => nil})])
+    assert Tasks.get_task(user, id).url == nil
+  end
+
   describe "rejected" do
     test "a field outside the allow-list", %{user: user} do
       id = uuid()

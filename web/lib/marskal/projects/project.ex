@@ -11,6 +11,7 @@ defmodule Marskal.Projects.Project do
   schema "projects" do
     field :title, :string
     field :notes, :string
+    field :url, :string
     field :state, Ecto.Enum, values: @states, default: :to_do
     field :defer_until, :utc_datetime
     field :deferred_indefinitely, :boolean, default: false
@@ -34,11 +35,11 @@ defmodule Marskal.Projects.Project do
   """
   def client_fields(:insert),
     do:
-      ~w(title notes project_folder_id state defer_until deferred_indefinitely planned_at due_at)
+      ~w(title notes url project_folder_id state defer_until deferred_indefinitely planned_at due_at)
 
   def client_fields(:patch),
     do:
-      ~w(title notes project_folder_id state defer_until deferred_indefinitely planned_at due_at discarded_at)
+      ~w(title notes url project_folder_id state defer_until deferred_indefinitely planned_at due_at discarded_at)
 
   def create_changeset(project, user, attrs, opts \\ []) do
     project
@@ -46,12 +47,14 @@ defmodule Marskal.Projects.Project do
       :id,
       :title,
       :notes,
+      :url,
       :project_folder_id,
       :state,
       :resolved_at | Dates.fields()
     ])
     |> validate_required([:title])
     |> validate_length(:title, max: Marskal.Tasks.Task.title_max())
+    |> Marskal.Url.validate("projects")
     |> put_change(:user_id, user.id)
     |> Dates.put_defer()
     |> Dates.put_resolved_at(opts[:at])
@@ -63,9 +66,10 @@ defmodule Marskal.Projects.Project do
   @doc "Any subset of the editable fields. Only fields that differ reach the patch."
   def update_changeset(project, attrs, opts \\ []) do
     project
-    |> cast(attrs, [:title, :notes, :project_folder_id, :state | Dates.fields()])
+    |> cast(attrs, [:title, :notes, :url, :project_folder_id, :state | Dates.fields()])
     |> validate_required([:title, :state])
     |> validate_length(:title, max: Marskal.Tasks.Task.title_max())
+    |> Marskal.Url.validate("projects")
     |> Dates.put_defer()
     |> Dates.put_resolved_at(opts[:at])
     |> owned_folder_constraint()

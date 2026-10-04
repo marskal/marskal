@@ -379,6 +379,7 @@ defmodule MarskalWeb.TaskComponents do
             </span>
             {task.title}
           </button>
+          <MarskalWeb.UrlLink.link url={task.url} />
           <span
             :if={
               (@mark_inbox and task.inbox) or d.planned_at != nil or d.due_at != nil or

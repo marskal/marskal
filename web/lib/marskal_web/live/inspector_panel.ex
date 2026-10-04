@@ -331,6 +331,22 @@ defmodule MarskalWeb.InspectorPanel do
           />
         </div>
         <div class="field">
+          <label for="inspector-task-url">URL</label>
+          <input
+            id="inspector-task-url"
+            class="input"
+            type="text"
+            inputmode="url"
+            name="task[url]"
+            value={@record.url}
+            placeholder="https://… or file://…"
+            autocomplete="off"
+            spellcheck="false"
+            phx-debounce="300"
+          />
+          <MarskalWeb.UrlLink.link url={@record.url} text />
+        </div>
+        <div class="field">
           <label for="inspector-task-notes">Notes</label>
           <textarea
             id="inspector-task-notes"
@@ -427,6 +443,22 @@ defmodule MarskalWeb.InspectorPanel do
             autocomplete="off"
             phx-debounce="300"
           />
+        </div>
+        <div class="field">
+          <label for="inspector-project-url">URL</label>
+          <input
+            id="inspector-project-url"
+            class="input"
+            type="text"
+            inputmode="url"
+            name="project[url]"
+            value={@record.url}
+            placeholder="https://… or file://…"
+            autocomplete="off"
+            spellcheck="false"
+            phx-debounce="300"
+          />
+          <MarskalWeb.UrlLink.link url={@record.url} text />
         </div>
         <div class="field">
           <label for="inspector-project-notes">Notes</label>
@@ -716,7 +748,7 @@ defmodule MarskalWeb.InspectorPanel do
   def handle_event("save", %{"task" => params}, socket) do
     attrs =
       params
-      |> Map.take(["title", "notes", "state"])
+      |> Map.take(["title", "notes", "url", "state"])
       |> Map.merge(location_params(params))
       |> Map.reject(fn {_key, value} -> value == nil end)
       |> Map.merge(date_params(params, socket))
@@ -727,7 +759,7 @@ defmodule MarskalWeb.InspectorPanel do
   def handle_event("save", %{"project" => params}, socket) do
     attrs =
       params
-      |> Map.take(["title", "notes", "project_folder_id", "state"])
+      |> Map.take(["title", "notes", "url", "project_folder_id", "state"])
       |> Map.merge(date_params(params, socket))
 
     save(socket, &Projects.update_project(&1, &2, drop_blank_title(attrs, "title"), &3))
@@ -816,8 +848,11 @@ defmodule MarskalWeb.InspectorPanel do
 
   defp error_message(changeset) do
     {field, error} = hd(changeset.errors)
-    "#{Phoenix.Naming.humanize(field)} #{translate_error(error)}."
+    "#{field_label(field)} #{translate_error(error)}."
   end
+
+  defp field_label(:url), do: "URL"
+  defp field_label(field), do: Phoenix.Naming.humanize(field)
 
   defp suggestions(socket, query) do
     %{tree: tree, direct: direct} = socket.assigns.tagging

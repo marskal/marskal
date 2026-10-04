@@ -38,6 +38,17 @@ defmodule MarskalWeb.TaskLive do
           required
         />
         <p :for={error <- @form[:title].errors} class="field-error">{translate_error(error)}</p>
+        <label for={@form[:url].id}>URL</label>
+        <input
+          type="text"
+          inputmode="url"
+          name={@form[:url].name}
+          id={@form[:url].id}
+          value={@form[:url].value}
+          placeholder="https://… or file://…"
+          spellcheck="false"
+        />
+        <p :for={error <- @form[:url].errors} class="field-error">{translate_error(error)}</p>
         <label for={@form[:notes].id}>Notes</label>
         <textarea
           name={@form[:notes].name}
@@ -91,7 +102,7 @@ defmodule MarskalWeb.TaskLive do
 
     attrs =
       params
-      |> Map.take(["title", "notes"])
+      |> Map.take(["title", "notes", "url"])
       |> Map.merge(Map.new(Tasks.location_attrs(location), fn {k, v} -> {to_string(k), v} end))
 
     case Tasks.update_task(user, socket.assigns.task.id, attrs, Ecto.UUID.generate()) do
@@ -133,7 +144,8 @@ defmodule MarskalWeb.TaskLive do
       to_form(
         %{
           "title" => task.title,
-          "notes" => task.notes
+          "notes" => task.notes,
+          "url" => task.url
         },
         as: "task"
       )
