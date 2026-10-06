@@ -287,9 +287,10 @@ The repository root is the product, not the web app (ADR 0015).
 - **Sync (ADR 0014):** writes are field patches with a command id, appended to a
   server change feed. Clients may supply UUIDv7 ids. Task sibling order is a
   fractional rank. Do not sync derived fields (`parent_path`, effective tags).
-  Only the server spawns occurrences, with a pure function in Elixir; clients
-  get them on pull. Rule-created occurrence ids are UUIDv5 from the series id
-  and the slot. The web app stays online — no
+  Only the server spawns occurrences. `Marskal.Recurrence.Schedule` is the
+  pure function of the rule, the instant it steps from, and the user's
+  timezone; clients get occurrences on pull. Rule-created occurrence ids are
+  UUIDv5 from the series id and the slot. The web app stays online — no
   browser offline cache. Writes go through `Marskal.Changes.apply/4`; a patch
   with no changes appends nothing. Offline clients share one Rust engine
   (ADR 0018) instead of porting it per shell.
