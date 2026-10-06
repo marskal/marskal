@@ -27,7 +27,8 @@ without a second pipeline. Competing formats differ; Marskal’s model does not
   only. Todoist OAuth is a later adapter + fetcher, not a new framework.
 - **`import_batches`** (per user, source, channel, status, stats) own the upload.
   **`import_items`** map `(user, source, source_id)` → Marskal rows (explicit FKs,
-  not polymorphic). Re-import **skips** existing source ids (does not overwrite).
+  not polymorphic). Re-import **updates** existing source ids by a three-way
+  merge (see below).
 - Unmapped Phase 2/3 fields (defer/planned/due, parent, repeat, flagged) go in
   **`import_items.extras` jsonb**, not notes.
 - When a field gains a Marskal home, the adapter maps it and it leaves
@@ -51,6 +52,39 @@ without a second pipeline. Competing formats differ; Marskal’s model does not
   inside the folder. Sections, subtask parent, a Todoist due date (planned),
   a deadline (due), and the recurrence text stay in `extras`. Completed-task
   history is not in the sync snapshot and is not imported.
+
+### Re-import updates (amended 2026-10-04)
+
+Importing the same source again updates what was imported before, so a
+source keeps being useful while the user moves over, and adapters can be
+tried again as they learn more fields.
+
+- **Base:** `import_items.fields` holds, per merged field, what the source
+  said at the last import, plus the tag ids it set. Items imported before
+  the column existed take the import's insert from the change feed (it is
+  the item's first change), over the defaults it left out. Their tag base is
+  the source's tags the item has now.
+- **Merge, per field:** a field the source changed since the base is
+  written, unless the user changed it too. Then the user's value stays, and
+  the batch reports it as kept. Fields that move together merge as one: a
+  task's location (`inbox` + `project_id`, ADR 0017) and Defer (ADR 0006).
+  Tags merge as a set: the source's additions and removals since the base,
+  leaving the tags the user added or removed alone. The base then becomes
+  what the source says now.
+- Each update is an ordinary command through `Marskal.Changes`, so it syncs.
+  An unchanged source writes nothing.
+- An item the user **deleted** while the source still has it is imported
+  **again, as a new record**, and its item row points at that. Deleting is
+  for mistakes (ADR 0014), and tombstones are invisible, so keeping it
+  deleted would look like an item that fails to import. The tombstone stays
+  as it was, so clients see one delete and one insert. The batch counts
+  these, and the result page says so. To keep something out, Drop it.
+- An item missing from the source is left alone: a Todoist snapshot leaves
+  out completed tasks, so missing does not mean deleted.
+- A tag the import **reused** (the user's own, same name and place) is never
+  updated. A change that would not validate, such as a folder move into its
+  own subtree or a tag rename onto a taken name, is kept as the user has it.
+- The whole apply stays one transaction.
 
 ## Consequences
 

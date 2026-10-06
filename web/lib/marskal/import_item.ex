@@ -10,6 +10,8 @@ defmodule Marskal.ImportItem do
     field :kind, Ecto.Enum, values: [:folder, :project, :task, :tag]
     field :source_id, :string
     field :extras, :map, default: %{}
+    # What the source said last, per merged field (Marskal.Imports.Merge).
+    field :fields, :map
 
     belongs_to :import_batch, Marskal.ImportBatch
     belongs_to :user, Marskal.Accounts.User
@@ -30,6 +32,7 @@ defmodule Marskal.ImportItem do
       :kind,
       :source_id,
       :extras,
+      :fields,
       :project_folder_id,
       :project_id,
       :task_id,
