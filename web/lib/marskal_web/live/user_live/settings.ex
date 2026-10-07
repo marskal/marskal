@@ -75,6 +75,20 @@ defmodule MarskalWeb.UserLive.Settings do
 
       <div class="divider" />
 
+      <.form for={@preferences_form} id="preferences_form" phx-change="update_preferences">
+        <.input
+          field={@preferences_form[:week_start]}
+          type="select"
+          label="Week starts on"
+          options={[{"Monday", 1}, {"Saturday", 6}, {"Sunday", 7}]}
+        />
+        <p>
+          Repeats every few weeks keep the day they were made with.
+        </p>
+      </.form>
+
+      <div class="divider" />
+
       <style :type={MarskalWeb.ColocatedCSS}>
         @scope (.device-list) {
           ul {
@@ -158,6 +172,7 @@ defmodule MarskalWeb.UserLive.Settings do
       |> assign(:current_email, user.email)
       |> assign(:email_form, to_form(email_changeset))
       |> assign(:password_form, to_form(password_changeset))
+      |> assign(:preferences_form, preferences_form(Accounts.preferences(user)))
       |> assign(:trigger_submit, false)
       |> assign(:devices, Devices.list(user))
 
@@ -210,6 +225,23 @@ defmodule MarskalWeb.UserLive.Settings do
     {:noreply, assign(socket, password_form: password_form)}
   end
 
+  def handle_event("update_preferences", %{"preferences" => params}, socket) do
+    scope = socket.assigns.current_scope
+
+    case Accounts.update_preferences(scope.user, params, Ecto.UUID.generate()) do
+      {:ok, preferences} ->
+        {:noreply,
+         socket
+         |> assign(:current_scope, %{scope | user: %{scope.user | preferences: preferences}})
+         |> assign(:preferences_form, preferences_form(preferences))
+         |> put_flash(:info, "UserPreferences saved.")}
+
+      {:error, changeset} ->
+        {:noreply,
+         assign(socket, :preferences_form, to_form(changeset, as: :preferences, action: :update))}
+    end
+  end
+
   def handle_event("sign_out_device", %{"id" => id}, socket) do
     user = socket.assigns.current_scope.user
     _ = Devices.sign_out(user, id)
@@ -233,7 +265,10 @@ defmodule MarskalWeb.UserLive.Settings do
   defp last_used(%{last_used_at: nil}, _user), do: "not used yet"
 
   defp last_used(device, user) do
-    {date, _time} = Marskal.Dates.to_local(device.last_used_at, user.timezone)
+    {date, _time} = Marskal.Dates.to_local(device.last_used_at, Accounts.timezone(user))
     "last used " <> Calendar.strftime(date, "%-d %b %Y")
   end
+
+  defp preferences_form(preferences),
+    do: preferences |> Accounts.change_preferences() |> to_form(as: :preferences)
 end

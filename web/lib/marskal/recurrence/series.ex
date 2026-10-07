@@ -20,7 +20,8 @@ defmodule Marskal.Recurrence.Series do
     :month_ordinal,
     :month_day_kind,
     :ends_at,
-    :end_count
+    :end_count,
+    :week_start
   ]
 
   @day_kinds [
@@ -50,6 +51,7 @@ defmodule Marskal.Recurrence.Series do
     field :month_day_kind, Ecto.Enum, values: @day_kinds
     field :ends_at, :utc_datetime
     field :end_count, :integer
+    field :week_start, :integer, default: 1
     field :stopped_at, :utc_datetime
     field :discarded_at, :utc_datetime
 
@@ -79,6 +81,7 @@ defmodule Marskal.Recurrence.Series do
     # Recurring projects come with copying a project's task tree (ADR 0007).
     |> validate_inclusion(:kind, [:task], message: "projects do not repeat yet")
     |> put_change(:user_id, user.id)
+    |> put_week_start(user)
     |> validate_rule()
   end
 
@@ -98,16 +101,37 @@ defmodule Marskal.Recurrence.Series do
       else: changeset
   end
 
+  # A series keeps the week start the user had when it was made, so a
+  # later change to the setting does not move its slots (ADR 0007). It is
+  # always in the insert's patch, even when it is the default.
+  defp put_week_start(changeset, user) do
+    week_start =
+      if Map.has_key?(changeset.params, "week_start"),
+        do: get_field(changeset, :week_start),
+        else: Marskal.Accounts.preferences(user).week_start
+
+    force_change(changeset, :week_start, week_start)
+  end
+
   def discard_changeset(series), do: Marskal.Dates.discard(series)
 
   defp validate_rule(changeset) do
     changeset
-    |> validate_required([:mode, :anchor, :interval, :frequency, :weekdays, :month_days])
+    |> validate_required([
+      :mode,
+      :anchor,
+      :interval,
+      :frequency,
+      :weekdays,
+      :month_days,
+      :week_start
+    ])
     |> validate_number(:interval, greater_than: 0)
     |> validate_number(:end_count, greater_than: 0)
     |> normalize(:weekdays)
     |> normalize(:month_days)
     |> validate_subset(:weekdays, 1..7)
+    |> validate_inclusion(:week_start, 1..7)
     |> validate_subset(:month_days, [-1 | Enum.to_list(1..31)])
     |> validate_inclusion(:month_ordinal, [-1, 1, 2, 3, 4, 5])
     |> only_for(:weeks, :weekdays, [])
@@ -120,6 +144,7 @@ defmodule Marskal.Recurrence.Series do
     |> check_constraint(:weekdays, name: :recurrence_series_weekdays)
     |> check_constraint(:month_days, name: :recurrence_series_month_days)
     |> check_constraint(:month_ordinal, name: :recurrence_series_month_weekday)
+    |> check_constraint(:week_start, name: :recurrence_series_week_start)
   end
 
   # Sorted and without repeats, so the same days are the same value.

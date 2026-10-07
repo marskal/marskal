@@ -94,7 +94,7 @@ defmodule Marskal.Tasks do
   `unavailable: true`, as in `list_open/2`.
   """
   def list_planned(%User{} = user, %Date{} = date, opts \\ []) do
-    {from, until} = Dates.day_bounds(date, user.timezone)
+    {from, until} = Dates.day_bounds(date, Marskal.Accounts.timezone(user))
 
     tasks =
       Task

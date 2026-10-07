@@ -276,7 +276,7 @@ defmodule Marskal.DatesTest do
           command_id()
         )
 
-      today = Dates.today(user.timezone)
+      today = Dates.today(Marskal.Accounts.timezone(user))
       assert Tasks.list_planned(user, today) == []
       assert titles(Tasks.list_planned(user, today, unavailable: true)) == ["Deferred"]
     end

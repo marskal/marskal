@@ -114,6 +114,9 @@ defmodule Marskal.Changes do
     end
   end
 
+  defp fetch(user, "user_preferences", id),
+    do: Repo.get_by(Marskal.Accounts.UserPreferences, id: id, user_id: user.id)
+
   defp fetch(user, "task", id), do: Repo.get_by(Task, id: id, user_id: user.id)
   defp fetch(user, "project", id), do: Repo.get_by(Project, id: id, user_id: user.id)
   defp fetch(user, "project_folder", id), do: Repo.get_by(ProjectFolder, id: id, user_id: user.id)

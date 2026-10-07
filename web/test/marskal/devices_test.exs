@@ -15,8 +15,11 @@ defmodule Marskal.DevicesTest do
     test "a live token of a signed-in device gives its user, device, and scopes", %{user: user} do
       tokens = signed_in_device(user, %{"scope" => "offline_access sync:read"})
 
-      assert {:ok, ^user, device, ["offline_access", "sync:read"]} =
+      assert {:ok, authenticated, device, ["offline_access", "sync:read"]} =
                Devices.authenticate(tokens.access_token)
+
+      assert authenticated.id == user.id
+      assert authenticated.preferences.timezone == "Europe/Copenhagen"
 
       assert device.id == tokens.device.id
       assert %DateTime{} = device.last_used_at

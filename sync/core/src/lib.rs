@@ -32,7 +32,7 @@ pub use entity::Entity;
 pub use error::{Error, Result};
 pub use model::{
     Anchor, DayKind, Folder, Frequency, Link, Mode, Project, ProjectState, Rejection, Series,
-    SeriesKind, Tag, TagState, Task, TaskState,
+    SeriesKind, Tag, TagState, Task, TaskState, UserPreferences,
 };
 pub use ops::{Location, NewProject, NewTask, TaskPatch};
 pub use pull::{Gone, PullResponse, PullUser};

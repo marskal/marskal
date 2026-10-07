@@ -31,6 +31,7 @@ This directory holds **ADRs** — durable decisions and their context.
 | [0020](0020-terminal-client.md) | Terminal client | Accepted |
 | [0021](0021-ory-hydra-authorization-server.md) | Ory Hydra as the authorization server | Accepted |
 | [0022](0022-task-and-project-url.md) | A URL on tasks and projects | Accepted |
+| [0023](0023-user-preferences.md) | User preferences | Accepted |
 
 ## When to add an ADR
 

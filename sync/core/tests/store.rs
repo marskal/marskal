@@ -568,6 +568,7 @@ fn a_pulled_series_and_its_occurrence_read_back() {
         "month_day_kind": null,
         "ends_at": null,
         "end_count": 10,
+        "week_start": 7,
         "stopped_at": null,
         "discarded_at": null,
         "inserted_at": "2026-10-01T08:00:00Z",
@@ -602,11 +603,41 @@ fn a_pulled_series_and_its_occurrence_read_back() {
     assert_eq!(read.frequency, Frequency::Weeks);
     assert_eq!((read.interval, read.end_count), (2, Some(10)));
     assert_eq!(read.weekdays, vec![2, 5]);
+    assert_eq!(read.week_start, 7);
     assert!(read.month_days.is_empty());
 
     let read = world.task(task).unwrap();
     assert_eq!(read.series_id, Some(series));
     assert_eq!(read.occurrence_for.as_deref(), Some("2026-10-09T15:00:00Z"));
+}
+
+#[test]
+fn pulled_preferences_read_back() {
+    let (mut store, _clock) = store();
+    assert_eq!(store.preferences().unwrap(), None);
+
+    let user = Uuid::now_v7();
+    let row = json!({
+        "id": user.to_string(),
+        "timezone": "America/New_York",
+        "week_start": 7,
+        "discarded_at": null,
+        "inserted_at": "2026-10-01T08:00:00Z",
+        "updated_at": "2026-10-01T08:00:00Z"
+    });
+
+    store
+        .apply_pull(&pull(
+            1,
+            true,
+            vec![("user_preferences", row.as_object().unwrap().clone())],
+        ))
+        .unwrap();
+
+    let preferences = store.preferences().unwrap().unwrap();
+    assert_eq!(preferences.id, user);
+    assert_eq!(preferences.timezone, "America/New_York");
+    assert_eq!(preferences.week_start, 7);
 }
 
 #[test]
@@ -684,6 +715,8 @@ fn a_database_from_before_urls_asks_for_a_snapshot() {
     conn.execute_batch(
         "ALTER TABLE tasks DROP COLUMN url;
          ALTER TABLE projects DROP COLUMN url;
+         ALTER TABLE recurrence_series DROP COLUMN week_start;
+         DROP TABLE user_preferences;
          PRAGMA user_version = 2;",
     )
     .unwrap();

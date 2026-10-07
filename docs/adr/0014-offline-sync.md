@@ -198,8 +198,8 @@ slot passes.
 
 ### Timezone
 
-Store an IANA timezone on the user. Default **`Europe/Copenhagen`** until they
-change it.
+Store an IANA timezone on the user, among their preferences (ADR 0023).
+Default **`Europe/Copenhagen`** until they change it.
 
 - Recurrence calendar math uses the **stored** zone, so a weekly rule does not
   follow the phone across a travel day.
@@ -209,7 +209,8 @@ change it.
 ### What syncs
 
 Tasks (including occurrences), projects, project folders, tags, tag join rows,
-recurrence series, and the user timezone. Sessions do not. Import batches do
+recurrence series, and the user's preferences, timezone included (ADR 0023).
+Sessions do not. Import batches do
 not; the rows an import created sync as ordinary entities.
 
 ## Consequences
@@ -221,7 +222,8 @@ not; the rows an import created sync as ordinary entities.
   unique command id),
   `discarded_at` on synced domain tables (tags and their link rows first, with
   the tags slice), a fractional rank on task siblings,
-  and `users.timezone` (not null, default `Europe/Copenhagen`).
+  and the user's timezone (not null, default `Europe/Copenhagen`; in
+  `user_preferences` since ADR 0023).
 - `parent_path` stays as a cache maintained in application code. It is not a
   column the client may correct.
 - Recurrence math has one implementation, in Elixir. The Rust client library

@@ -156,6 +156,23 @@ ALTER TABLE projects ADD COLUMN url TEXT;
 ALTER TABLE tasks ADD COLUMN url TEXT;
 INSERT OR REPLACE INTO meta (key, value) VALUES ('needs_snapshot', '1');
 "#,
+    // ADR 0007, ADR 0023. Series pulled before this were all made with
+    // weeks starting on Monday. The preferences row came before any change
+    // a cursor covers, so the next pull is a snapshot.
+    r#"
+ALTER TABLE recurrence_series ADD COLUMN week_start INTEGER NOT NULL DEFAULT 1;
+
+CREATE TABLE user_preferences (
+  id TEXT PRIMARY KEY,
+  timezone TEXT NOT NULL,
+  week_start INTEGER NOT NULL DEFAULT 1,
+  discarded_at TEXT,
+  inserted_at TEXT,
+  updated_at TEXT
+);
+
+INSERT OR REPLACE INTO meta (key, value) VALUES ('needs_snapshot', '1');
+"#,
 ];
 
 /// Brings the database to the latest schema. `user_version` counts the

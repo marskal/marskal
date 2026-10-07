@@ -36,6 +36,25 @@ defmodule Marskal.RecurrenceTest do
                Recurrence.get_series(user, series.id)
     end
 
+    test "takes the user's week start unless it is given one", %{user: user} do
+      {:ok, _} = Marskal.Accounts.update_preferences(user, %{week_start: 7}, command())
+      rule = %{kind: :task, mode: :regular, anchor: :due, interval: 2, frequency: :weeks}
+
+      {:ok, series} = Recurrence.create_series(user, rule, command())
+      assert series.week_start == 7
+
+      {:ok, series} = Recurrence.create_series(user, Map.put(rule, :week_start, 1), command())
+      assert series.week_start == 1
+
+      {:ok, _} = Marskal.Accounts.update_preferences(user, %{week_start: 6}, command())
+      assert Recurrence.get_series(user, series.id).week_start == 1
+
+      assert {:error, changeset} =
+               Recurrence.create_series(user, Map.put(rule, :week_start, 8), command())
+
+      assert "is invalid" in errors_on(changeset).week_start
+    end
+
     test "rejects a rule that does not fit together", %{user: user} do
       base = %{kind: :task, mode: :regular, anchor: :due, interval: 1, frequency: :days}
 

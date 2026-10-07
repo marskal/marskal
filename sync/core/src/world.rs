@@ -518,7 +518,10 @@ fn not_found(entity: &'static str, key: &str) -> Error {
     }
 }
 
-fn load<T: serde::de::DeserializeOwned>(conn: &Connection, entity: Entity) -> Result<Vec<T>> {
+pub(crate) fn load<T: serde::de::DeserializeOwned>(
+    conn: &Connection,
+    entity: Entity,
+) -> Result<Vec<T>> {
     let columns = entity.columns();
     let names: Vec<&str> = columns.iter().map(|c| c.name).collect();
     let sql = format!(

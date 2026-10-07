@@ -85,10 +85,12 @@ defmodule Marskal.SyncTest do
       assert {:ok, _, 0} = DateTime.from_iso8601(row["resolved_at"])
     end
 
-    test "is empty with cursor 0 for a new user", %{user: user} do
+    test "holds only the preferences, with cursor 0, for a new user", %{user: user} do
       pull = Sync.pull(user, nil)
       assert pull.cursor == 0
-      assert Enum.all?(pull.rows, fn {_type, rows} -> rows == [] end)
+      {[preferences], rest} = Map.pop(pull.rows, "user_preferences")
+      assert preferences["id"] == user.id
+      assert Enum.all?(rest, fn {_type, rows} -> rows == [] end)
       assert Map.keys(pull.rows) |> Enum.sort() == Enum.sort(Sync.entity_types())
     end
   end

@@ -14,8 +14,8 @@ defmodule MarskalWeb.DatesLiveTest do
   end
 
   test "the agenda shows today's plans and earlier open ones", %{conn: conn, user: user} do
-    today = Dates.today(user.timezone)
-    at = fn date -> Dates.from_local(date, nil, :planned_at, user.timezone) end
+    today = Dates.today(Marskal.Accounts.timezone(user))
+    at = fn date -> Dates.from_local(date, nil, :planned_at, Marskal.Accounts.timezone(user)) end
 
     {:ok, _} = Tasks.create_task(user, %{title: "Today", planned_at: at.(today)}, command())
 

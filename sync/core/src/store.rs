@@ -5,8 +5,9 @@ use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 use serde::Serialize;
 
 use crate::clock::{Clock, SystemClock, stamp};
+use crate::entity::Entity;
 use crate::error::Result;
-use crate::model::Rejection;
+use crate::model::{Rejection, UserPreferences};
 use crate::schema;
 use crate::world::World;
 
@@ -98,6 +99,14 @@ impl Store {
     /// agenda. A device's own "today" uses the device zone (ADR 0014).
     pub fn timezone(&self) -> Result<Option<String>> {
         meta(&self.conn, "timezone")
+    }
+
+    /// The user's preferences from the last pull, if a pull has brought
+    /// them (ADR 0023).
+    pub fn preferences(&self) -> Result<Option<UserPreferences>> {
+        Ok(crate::world::load(&self.conn, Entity::UserPreferences)?
+            .into_iter()
+            .next())
     }
 
     /// Records a finished push and pull.

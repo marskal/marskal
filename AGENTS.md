@@ -31,6 +31,7 @@ This file is **short and actionable**. Rationale and history live in
 | Terminal client (`marskal`) | [0020](docs/adr/0020-terminal-client.md) |
 | OAuth server (Ory Hydra) | [0021](docs/adr/0021-ory-hydra-authorization-server.md) |
 | URL on tasks & projects | [0022](docs/adr/0022-task-and-project-url.md) |
+| User preferences | [0023](docs/adr/0023-user-preferences.md) |
 | Repository layout | [0015](docs/adr/0015-repository-layout.md) |
 
 ---
@@ -77,7 +78,7 @@ project; `CHECK (NOT inbox OR project_id IS NULL)`. One picker moves a task,
 and a move patches `inbox` and `project_id` together. Tags do not affect it.
 New captures: `inbox=true`, `state=to_do`. No Clarify action. **No** `list` column.
 Default home: **Open tasks** stream. Timezone is stored per user, default
-**Europe/Copenhagen** (ADR 0014).
+**Europe/Copenhagen** (ADR 0014), in `user_preferences` (ADR 0023).
 
 ### Recurrence (ADR 0007 — product differentiator)
 
@@ -98,7 +99,8 @@ Default home: **Open tasks** stream. Timezone is stored per user, default
   no day limits yet). To-Do does not.
 - Anchor on **one of** Defer / Planned / Due; that field is what the rule advances.
 - **Interval** = number + frequency: minutes | hours | days | weeks | months | years.
-- **Weekly:** optional weekday set; the week starts on Monday. **Monthly:** day-of-month
+- **Weekly:** optional weekday set; the week starts on the series' `week_start`,
+  copied from the user's preference when the series is made. **Monthly:** day-of-month
   (incl. last) and/or an nth weekday (1st–5th/last × Mon–Sun | work day | weekend day).
   Set together, they are one set of days. Regular mode only; it expands as
   RFC 5545 does, so a day the month lacks is skipped; see ADR 0007.
@@ -304,6 +306,10 @@ The repository root is the product, not the web app (ADR 0015).
   `offline_access`, `sync:read`, `sync:write`; one device per consent. Pull returns current rows after a cursor, or a snapshot. Push applies
   commands in order; each entity has an allow-list of client-writable fields
   (`client_fields/1` beside its changeset), dispatched by `Marskal.Sync.Push`. A rejected command is not retried.
+- **Preferences (ADR 0023):** one `user_preferences` row per user, keyed by
+  `user_id`, made by a trigger, synced as an entity whose id is the user id.
+  One typed column per preference. Read with `Accounts.preferences/1`; do not
+  add preference columns to `users`.
 - Tests: state transitions; user isolation; defer/planned/due; outliner/folder structure;
   **recurrence** matrix (ADR 0007); tag inheritance in Phase 2+; sync merge,
   command replay, tombstones, and the shared fixture vectors (ADR 0014).
