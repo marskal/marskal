@@ -94,11 +94,13 @@ Default home: **Open tasks** stream. Timezone is stored per user, default
 - **Mode:** **regular** (next on schedule even if previous open, at most 10 open;
   slots missed at the cap are skipped) or **on completion**.
 - **On completion:** both **Done** and **Dropped** resolve the instance and **spawn next**
-  (from resolution time + rule). To-Do does not.
+  (the next instance of the rule after the resolution time). To-Do does not.
 - Anchor on **one of** Defer / Planned / Due; that field is what the rule advances.
 - **Interval** = number + frequency: minutes | hours | days | weeks | months | years.
-- **Weekly:** optional weekday set. **Monthly:** day-of-month (incl. last) and/or
-  nth weekday (1st–5th/last × Mon–Sun | work day | weekend day).
+- **Weekly:** optional weekday set; the week starts on Monday. **Monthly:** day-of-month
+  (incl. last) and/or an nth weekday (1st–5th/last × Mon–Sun | work day | weekend day).
+  Both have to match when both are set. A day the month lacks is skipped.
+  Both modes use this expansion (RFC 5545); see ADR 0007.
 - **End:** none, **end date**, **count = N generated** (not N Dones), or both (whichever first).
 - Structured rule storage (not RRULE-primary). Overdue open items stay visible.
 

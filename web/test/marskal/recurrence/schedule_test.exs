@@ -66,24 +66,34 @@ defmodule Marskal.Recurrence.ScheduleTest do
     end
 
     test "every week on Mon, Wed, and Fri takes the next of those days" do
-      rule = %{frequency: :weeks, weekdays: [1, 3, 5]}
+      for mode <- [:regular, :on_completion] do
+        rule = %{mode: mode, frequency: :weeks, weekdays: [1, 3, 5]}
 
-      assert slot(rule, ~D[2026-10-05]) == at(~D[2026-10-07])
-      assert slot(rule, ~D[2026-10-07]) == at(~D[2026-10-09])
-      assert slot(rule, ~D[2026-10-09]) == at(~D[2026-10-12])
+        assert slot(rule, ~D[2026-10-05]) == at(~D[2026-10-07])
+        assert slot(rule, ~D[2026-10-07]) == at(~D[2026-10-09])
+        assert slot(rule, ~D[2026-10-09]) == at(~D[2026-10-12])
+      end
     end
 
     test "every 2 weeks on Tue and Thu stays on that week's grid" do
-      rule = %{frequency: :weeks, interval: 2, weekdays: [2, 4]}
+      for mode <- [:regular, :on_completion] do
+        rule = %{mode: mode, frequency: :weeks, interval: 2, weekdays: [2, 4]}
 
-      assert slot(rule, ~D[2026-10-06]) == at(~D[2026-10-08])
-      assert slot(rule, ~D[2026-10-08]) == at(~D[2026-10-20])
+        assert slot(rule, ~D[2026-10-06]) == at(~D[2026-10-08])
+        assert slot(rule, ~D[2026-10-07]) == at(~D[2026-10-08])
+        assert slot(rule, ~D[2026-10-08]) == at(~D[2026-10-20])
+      end
     end
 
     test "a first slot that is not a listed day waits for the next grid week" do
-      rule = %{frequency: :weeks, interval: 2, weekdays: [2, 4]}
+      for mode <- [:regular, :on_completion] do
+        rule = %{mode: mode, frequency: :weeks, interval: 2, weekdays: [2, 4]}
 
-      assert slot(rule, ~D[2026-10-09]) == at(~D[2026-10-20])
+        assert slot(rule, ~D[2026-10-09]) == at(~D[2026-10-20])
+
+        mondays = %{mode: mode, frequency: :weeks, interval: 2, weekdays: [1]}
+        assert slot(mondays, ~D[2026-10-11]) == at(~D[2026-10-19])
+      end
     end
   end
 
@@ -91,15 +101,11 @@ defmodule Marskal.Recurrence.ScheduleTest do
     test "keeps the day of the month, and skips a month that lacks it" do
       for mode <- [:regular, :on_completion] do
         assert slot(%{mode: mode, frequency: :months}, ~D[2026-01-15]) == at(~D[2026-02-15])
+        assert slot(%{mode: mode, frequency: :months}, ~D[2026-01-31]) == at(~D[2026-03-31])
 
         assert slot(%{mode: mode, frequency: :months, interval: 2}, ~D[2026-01-31]) ==
                  at(~D[2026-03-31])
       end
-
-      assert slot(%{frequency: :months}, ~D[2026-01-31]) == at(~D[2026-03-31])
-
-      assert slot(%{mode: :on_completion, frequency: :months}, ~D[2026-01-31]) ==
-               at(~D[2026-02-28])
     end
 
     test "listed days, including the last day, are the set the slot lands on" do
@@ -155,71 +161,70 @@ defmodule Marskal.Recurrence.ScheduleTest do
              ) == at(~D[2026-05-31])
     end
 
-    test "a calendar day and an nth day together are one set" do
-      rule = %{
-        frequency: :months,
-        month_days: [20],
-        month_ordinal: 1,
-        month_day_kind: :monday
-      }
+    test "a calendar day and an nth day both have to match" do
+      for mode <- [:regular, :on_completion] do
+        first_monday = %{
+          mode: mode,
+          frequency: :months,
+          month_days: [5, 20],
+          month_ordinal: 1,
+          month_day_kind: :monday
+        }
 
-      assert slot(rule, ~D[2026-01-01]) == at(~D[2026-01-05])
-      assert slot(rule, ~D[2026-01-05]) == at(~D[2026-01-20])
-      assert slot(rule, ~D[2026-01-20]) == at(~D[2026-02-02])
+        assert slot(first_monday, ~D[2026-01-01]) == at(~D[2026-01-05])
+        assert slot(first_monday, ~D[2026-01-05]) == at(~D[2026-10-05])
+        assert slot(first_monday, ~D[2026-01-20]) == at(~D[2026-10-05])
+
+        friday_the_13th = %{
+          mode: mode,
+          frequency: :months,
+          month_days: [13],
+          month_ordinal: 2,
+          month_day_kind: :friday
+        }
+
+        assert slot(friday_the_13th, ~D[2026-01-01]) == at(~D[2026-02-13])
+        assert slot(friday_the_13th, ~D[2026-02-13]) == at(~D[2026-03-13])
+
+        # May's last work day is the 29th, which is neither the 15th nor the
+        # last calendar day. June 30 is a Tuesday, so it is both.
+        last_work_day = %{
+          mode: mode,
+          frequency: :months,
+          month_days: [-1, 15],
+          month_ordinal: -1,
+          month_day_kind: :work_day
+        }
+
+        assert slot(last_work_day, ~D[2026-05-01]) == at(~D[2026-06-30])
+      end
+    end
+
+    test "the 15th after a 31st is the 15th of the next month" do
+      for mode <- [:regular, :on_completion] do
+        rule = %{mode: mode, frequency: :months, month_days: [15]}
+
+        assert slot(rule, ~D[2026-01-10]) == at(~D[2026-01-15])
+        assert slot(rule, ~D[2026-01-20]) == at(~D[2026-02-15])
+        assert slot(rule, ~D[2026-01-31]) == at(~D[2026-02-15])
+
+        every_two = %{mode: mode, frequency: :months, interval: 2, month_days: [15]}
+        assert slot(every_two, ~D[2026-01-10]) == at(~D[2026-01-15])
+        assert slot(every_two, ~D[2026-01-20]) == at(~D[2026-03-15])
+      end
     end
   end
 
   describe "years" do
-    test "keeps the month and day, and a regular rule skips a year that lacks it" do
+    test "keeps the month and day, and skips a year that lacks it" do
       for mode <- [:regular, :on_completion] do
         assert slot(%{mode: mode, frequency: :years}, ~D[2026-03-01]) == at(~D[2027-03-01])
+
+        assert slot(%{mode: mode, frequency: :years}, ~D[2024-02-29]) == at(~D[2028-02-29])
 
         assert slot(%{mode: mode, frequency: :years, interval: 4}, ~D[2024-02-29]) ==
                  at(~D[2028-02-29])
       end
-
-      assert slot(%{frequency: :years}, ~D[2024-02-29]) == at(~D[2028-02-29])
-
-      assert slot(%{mode: :on_completion, frequency: :years}, ~D[2024-02-29]) ==
-               at(~D[2025-02-28])
-    end
-  end
-
-  describe "on completion" do
-    test "weekly limits apply after the interval, so one completion makes one slot" do
-      rule = %{mode: :on_completion, frequency: :weeks, weekdays: [1, 3, 5]}
-
-      assert slot(rule, ~D[2026-10-05]) == at(~D[2026-10-12])
-    end
-
-    test "every 2 weeks on Tue and Thu lands on the grid week the interval reaches" do
-      rule = %{mode: :on_completion, frequency: :weeks, interval: 2, weekdays: [2, 4]}
-
-      assert slot(rule, ~D[2026-10-07]) == at(~D[2026-10-22])
-    end
-
-    test "a listed day before the interval in that week waits for the next grid week" do
-      rule = %{mode: :on_completion, frequency: :weeks, interval: 2, weekdays: [1]}
-
-      assert slot(rule, ~D[2026-10-11]) == at(~D[2026-11-02])
-    end
-
-    test "monthly limits apply after the interval" do
-      on_the_15th = %{mode: :on_completion, frequency: :months, month_days: [15]}
-
-      assert slot(on_the_15th, ~D[2026-01-10]) == at(~D[2026-02-15])
-      assert slot(on_the_15th, ~D[2026-01-20]) == at(~D[2026-03-15])
-
-      every_two = %{mode: :on_completion, frequency: :months, interval: 2, month_days: [15]}
-
-      assert slot(every_two, ~D[2026-01-10]) == at(~D[2026-03-15])
-      assert slot(every_two, ~D[2026-01-20]) == at(~D[2026-05-15])
-    end
-
-    test "a short month clamps before the limit is applied" do
-      rule = %{mode: :on_completion, frequency: :months, month_days: [15]}
-
-      assert slot(rule, ~D[2026-01-31]) == at(~D[2026-03-15])
     end
   end
 
