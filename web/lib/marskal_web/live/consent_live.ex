@@ -13,7 +13,7 @@ defmodule MarskalWeb.ConsentLive do
 
   @scopes %{
     "sync:read" => "Read your tasks, projects, folders, and tags",
-    "sync:write" => "Add and change them",
+    "sync:write" => "Add and change your tasks, projects, folders, and tags",
     "offline_access" => "Stay signed in until you sign it out"
   }
 

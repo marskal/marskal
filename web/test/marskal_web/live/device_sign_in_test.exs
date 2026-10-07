@@ -107,7 +107,7 @@ defmodule MarskalWeb.DeviceSignInTest do
          %{conn: conn, user: user} do
       {:ok, lv, html} = live(conn, ~p"/oauth/consent?consent_challenge=cc1")
       assert html =~ "Allow Marskal for the terminal?"
-      assert html =~ "Add and change them"
+      assert html =~ "Add and change your tasks"
 
       assert {:error, {:redirect, %{to: "http://hydra.test/next"}}} =
                lv |> form("#consent-form", %{"name" => "Laptop"}) |> render_submit()

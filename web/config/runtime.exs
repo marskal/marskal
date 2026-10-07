@@ -57,7 +57,7 @@ if config_env() != :test do
       System.get_env("HYDRA_PUBLIC_URL") ||
         if(config_env() == :prod,
           do: "https://#{System.get_env("PHX_HOST") || "marskal.example"}",
-          else: "http://localhost:8276"
+          else: "http://marskal.localhost:8276"
         )
 end
 
