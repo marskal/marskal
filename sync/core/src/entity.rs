@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Entity {
+    UserPreferences,
     RecurrenceSeries,
     ProjectFolder,
     Project,
@@ -50,6 +51,14 @@ const fn json(name: &'static str) -> Column {
     }
 }
 
+const USER_PREFERENCES: &[Column] = &[
+    text("id"),
+    text("timezone"),
+    text("week_start"),
+    text("inserted_at"),
+    text("updated_at"),
+];
+
 const RECURRENCE_SERIES: &[Column] = &[
     text("id"),
     text("kind"),
@@ -63,6 +72,7 @@ const RECURRENCE_SERIES: &[Column] = &[
     text("month_day_kind"),
     text("ends_at"),
     text("end_count"),
+    text("week_start"),
     text("stopped_at"),
     text("discarded_at"),
     text("inserted_at"),
@@ -153,7 +163,8 @@ const PROJECT_TAG: &[Column] = &[
 impl Entity {
     /// Every type, in the order rows are applied: containers first, so a
     /// row usually arrives after the row it refers to.
-    pub const ALL: [Entity; 7] = [
+    pub const ALL: [Entity; 8] = [
+        Entity::UserPreferences,
         Entity::RecurrenceSeries,
         Entity::ProjectFolder,
         Entity::Project,
@@ -166,6 +177,7 @@ impl Entity {
     /// The name on the wire.
     pub fn as_str(self) -> &'static str {
         match self {
+            Entity::UserPreferences => "user_preferences",
             Entity::RecurrenceSeries => "recurrence_series",
             Entity::ProjectFolder => "project_folder",
             Entity::Project => "project",
@@ -184,6 +196,7 @@ impl Entity {
 
     pub(crate) fn table(self) -> &'static str {
         match self {
+            Entity::UserPreferences => "user_preferences",
             Entity::RecurrenceSeries => "recurrence_series",
             Entity::ProjectFolder => "project_folders",
             Entity::Project => "projects",
@@ -196,6 +209,7 @@ impl Entity {
 
     pub(crate) fn columns(self) -> &'static [Column] {
         match self {
+            Entity::UserPreferences => USER_PREFERENCES,
             Entity::RecurrenceSeries => RECURRENCE_SERIES,
             Entity::ProjectFolder => PROJECT_FOLDER,
             Entity::Project => PROJECT,

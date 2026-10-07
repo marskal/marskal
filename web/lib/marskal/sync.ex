@@ -18,9 +18,11 @@ defmodule Marskal.Sync do
   @page 1000
 
   @entities [
+    {"user_preferences", Marskal.Accounts.UserPreferences,
+     ~w(id timezone week_start inserted_at updated_at)a},
     {"recurrence_series", Marskal.Recurrence.Series,
      ~w(id kind mode anchor interval frequency weekdays month_days month_ordinal month_day_kind
-        ends_at end_count stopped_at discarded_at inserted_at updated_at)a},
+        ends_at end_count week_start stopped_at discarded_at inserted_at updated_at)a},
     {"task", Marskal.Tasks.Task,
      ~w(id title notes url state inbox project_id parent_id rank defer_until deferred_indefinitely
         planned_at due_at series_id occurrence_for resolved_at discarded_at inserted_at
@@ -65,7 +67,8 @@ defmodule Marskal.Sync do
       Map.new(@entities, fn {type, schema, fields} ->
         {type,
          schema
-         |> where([r], r.user_id == ^user.id and is_nil(r.discarded_at))
+         |> where([r], r.user_id == ^user.id)
+         |> live()
          |> order_by([r], asc: r.id)
          |> Repo.all()
          |> Enum.map(&encode(&1, fields))}
@@ -118,16 +121,27 @@ defmodule Marskal.Sync do
   end
 
   # Visibility is the owner until sharing, so nothing is ever gone yet
-  # (ADR 0019).
+  # (ADR 0019). The user's timezone is also in the preferences row; it
+  # stays here for clients from before that row (ADR 0023).
   defp response(user, cursor, snapshot, more, rows) do
     %{
       cursor: cursor,
       snapshot: snapshot,
       more: more,
-      user: %{id: user.id, timezone: user.timezone},
+      user: %{id: user.id, timezone: Marskal.Accounts.timezone(user)},
       rows: rows,
       gone: []
     }
+  end
+
+  # A row without discarded_at, such as the preferences, lives as long as
+  # its user.
+  defp live(query) do
+    %{from: %{source: {_table, schema}}} = query
+
+    if :discarded_at in schema.__schema__(:fields),
+      do: where(query, [r], is_nil(r.discarded_at)),
+      else: query
   end
 
   defp encode(record, fields) do

@@ -12,6 +12,8 @@ defmodule Marskal.Sync.Push do
   require Logger
 
   import Ecto.Query
+  alias Marskal.Accounts
+  alias Marskal.Accounts.UserPreferences
   alias Marskal.Accounts.User
   alias Marskal.Changes.Change
   alias Marskal.ProjectFolders
@@ -32,6 +34,7 @@ defmodule Marskal.Sync.Push do
   @max_commands 1000
 
   @schemas %{
+    "user_preferences" => UserPreferences,
     "task" => Task,
     "project" => Project,
     "project_folder" => ProjectFolder,
@@ -201,6 +204,9 @@ defmodule Marskal.Sync.Push do
   defp exists?(%{entity: entity, entity_id: id}),
     do: Repo.exists?(from r in Map.fetch!(@schemas, entity), where: r.id == ^id)
 
+  # The row comes with the user.
+  defp insert(_user, "user_preferences", _attrs, _command), do: {:error, :invalid}
+
   defp insert(user, "task", attrs, command),
     do: Tasks.create_task(user, attrs, command.id, at: command.at)
 
@@ -221,6 +227,9 @@ defmodule Marskal.Sync.Push do
 
   defp insert(user, "project_tag", attrs, command),
     do: link(user, :project, attrs["project_id"], attrs["tag_id"], :tag, command)
+
+  defp patch(user, "user_preferences", id, fields, command),
+    do: Accounts.update_preferences(user, id, fields, command.id)
 
   defp patch(user, "task", id, fields, command),
     do: Tasks.patch_task(user, id, fields, command.id, at: command.at)

@@ -10,8 +10,9 @@ defmodule Marskal.Accounts.User do
     field :hashed_password, :string, redact: true
     field :confirmed_at, :utc_datetime
     field :authenticated_at, :utc_datetime, virtual: true
-    field :timezone, :string, default: "Europe/Copenhagen"
     field :superuser, :boolean, default: false
+
+    has_one :preferences, Marskal.Accounts.UserPreferences, foreign_key: :user_id
 
     timestamps(type: :utc_datetime)
   end

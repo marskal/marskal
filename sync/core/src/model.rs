@@ -141,9 +141,22 @@ pub enum DayKind {
     WeekendDay,
 }
 
+/// The user's preferences, one row keyed by the user id (ADR 0023).
+/// `week_start` is the ISO day weeks start on, 1 for Monday.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct UserPreferences {
+    pub id: Uuid,
+    pub timezone: String,
+    pub week_start: u8,
+    pub inserted_at: Option<String>,
+    pub updated_at: Option<String>,
+}
+
 /// A recurrence rule and the identity its occurrences share (ADR 0007).
 /// `weekdays` are ISO numbers, 1 for Monday. `month_days` are 1-31, and -1
 /// for the last day; `month_ordinal` is 1-5, and -1 for the last.
+/// `week_start` is the ISO day weeks start on, kept from when the series
+/// was made.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Series {
     pub id: Uuid,
@@ -158,6 +171,7 @@ pub struct Series {
     pub month_day_kind: Option<DayKind>,
     pub ends_at: Option<String>,
     pub end_count: Option<u32>,
+    pub week_start: u8,
     pub stopped_at: Option<String>,
     pub discarded_at: Option<String>,
     pub inserted_at: Option<String>,

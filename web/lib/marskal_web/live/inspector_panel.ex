@@ -263,7 +263,7 @@ defmodule MarskalWeb.InspectorPanel do
       </p>
       <.task_form
         :if={match?(%Tasks.Task{}, @record)}
-        zone={@user.timezone}
+        zone={Marskal.Accounts.timezone(@user)}
         myself={@myself}
         record={@record}
         options={@options}
@@ -274,7 +274,7 @@ defmodule MarskalWeb.InspectorPanel do
       />
       <.project_form
         :if={match?(%Projects.Project{}, @record)}
-        zone={@user.timezone}
+        zone={Marskal.Accounts.timezone(@user)}
         myself={@myself}
         record={@record}
         options={@options}
@@ -1015,7 +1015,7 @@ defmodule MarskalWeb.InspectorPanel do
   # elsewhere, without them, leaves the dates alone.
   defp date_params(%{"due_date" => _} = params, socket) do
     %{user: user, record: record} = socket.assigns
-    MarskalWeb.DateFields.params_to_attrs(params, record, user.timezone)
+    MarskalWeb.DateFields.params_to_attrs(params, record, Marskal.Accounts.timezone(user))
   end
 
   defp date_params(_params, _socket), do: %{}

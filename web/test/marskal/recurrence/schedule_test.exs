@@ -89,6 +89,25 @@ defmodule Marskal.Recurrence.ScheduleTest do
       mondays = %{frequency: :weeks, interval: 2, weekdays: [1]}
       assert slot(mondays, ~D[2026-10-11]) == at(~D[2026-10-19])
     end
+
+    test "the series' week start decides which days share a week" do
+      rule = %{frequency: :weeks, interval: 2, weekdays: [1, 7]}
+
+      assert slot(rule, ~D[2026-10-05]) == at(~D[2026-10-11])
+      assert slot(rule, ~D[2026-10-11]) == at(~D[2026-10-19])
+
+      sunday = Map.put(rule, :week_start, 7)
+      assert slot(sunday, ~D[2026-10-04]) == at(~D[2026-10-05])
+      assert slot(sunday, ~D[2026-10-05]) == at(~D[2026-10-18])
+    end
+
+    test "the week start changes nothing every single week" do
+      rule = %{frequency: :weeks, weekdays: [1, 7]}
+
+      for week_start <- 1..7 do
+        assert slot(Map.put(rule, :week_start, week_start), ~D[2026-10-05]) == at(~D[2026-10-11])
+      end
+    end
   end
 
   describe "months" do

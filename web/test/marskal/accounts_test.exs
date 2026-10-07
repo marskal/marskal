@@ -83,7 +83,7 @@ defmodule Marskal.AccountsTest do
       {:ok, user} = Accounts.register_user(valid_user_attributes(email: email))
       assert user.email == email
       assert user.hashed_password
-      assert user.timezone == "Europe/Copenhagen"
+      assert Accounts.timezone(user) == "Europe/Copenhagen"
       assert is_nil(user.confirmed_at)
       assert is_nil(user.password)
     end

@@ -18,7 +18,7 @@ defmodule MarskalWeb.AgendaLive do
   # new view, so kept rows go.
   @impl true
   def handle_params(params, _uri, socket) do
-    zone = socket.assigns.current_scope.user.timezone
+    zone = Marskal.Accounts.timezone(socket.assigns.current_scope.user)
     today = Dates.today(zone)
 
     date =
@@ -82,7 +82,7 @@ defmodule MarskalWeb.AgendaLive do
         dates={@task_tags.dates}
         resolved={@task_tags.resolved}
         parents={@task_tags.parents}
-        zone={@current_scope.user.timezone}
+        zone={Marskal.Accounts.timezone(@current_scope.user)}
         mark_inbox
         empty="Nothing planned."
         actions={[:complete]}

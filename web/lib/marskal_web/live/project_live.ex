@@ -67,7 +67,7 @@ defmodule MarskalWeb.ProjectLive do
         parents={@task_tags.parents}
         outline
         collapsed={@collapsed}
-        zone={@current_scope.user.timezone}
+        zone={Marskal.Accounts.timezone(@current_scope.user)}
         empty="No open tasks in this project."
         actions={[:complete]}
         inspector={@inspector}

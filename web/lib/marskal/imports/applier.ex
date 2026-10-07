@@ -538,7 +538,7 @@ defmodule Marskal.Imports.Applier do
   # that does not parse is left out; the item keeps its source row. An
   # indefinite defer wins over a defer date (ADR 0006).
   defp dates(node, user) do
-    zone = user.timezone
+    zone = Marskal.Accounts.timezone(user)
 
     %{
       "deferred_indefinitely" => node.deferred_indefinitely == true,

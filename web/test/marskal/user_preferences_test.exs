@@ -1,0 +1,78 @@
+defmodule Marskal.UserPreferencesTest do
+  use Marskal.DataCase, async: true
+
+  alias Marskal.Accounts
+  alias Marskal.Accounts.UserPreferences
+  alias Marskal.AccountsFixtures
+  alias Marskal.Sync
+  alias Marskal.Sync.Push
+
+  setup do
+    %{user: AccountsFixtures.user_fixture(), other: AccountsFixtures.user_fixture()}
+  end
+
+  test "every user has one row, made with the user", %{user: user} do
+    assert %UserPreferences{timezone: "Europe/Copenhagen", week_start: 1} =
+             Accounts.preferences(user)
+
+    assert Repo.aggregate(where(UserPreferences, user_id: ^user.id), :count) == 1
+  end
+
+  test "a change goes through the change feed, and a bad value is refused", %{user: user} do
+    {:ok, preferences} =
+      Accounts.update_preferences(user, %{timezone: "America/New_York", week_start: 7}, command())
+
+    assert [%{"id" => id, "timezone" => "America/New_York", "week_start" => 7}] =
+             Sync.pull(user, 0).rows["user_preferences"]
+
+    assert id == preferences.id
+    assert Sync.pull(user, 0).user.timezone == "America/New_York"
+
+    assert {:error, changeset} =
+             Accounts.update_preferences(
+               user,
+               %{timezone: "Mars/Olympus", week_start: 8},
+               command()
+             )
+
+    assert "is not a known time zone" in errors_on(changeset).timezone
+    assert "is invalid" in errors_on(changeset).week_start
+  end
+
+  test "a client patches its own row, and cannot insert or delete one", %{
+    user: user,
+    other: other
+  } do
+    [%{"id" => id}] = Sync.pull(user, nil).rows["user_preferences"]
+    theirs = Accounts.preferences(other).id
+
+    assert [
+             %{status: "applied"},
+             %{status: "rejected", reason: "not_found"},
+             %{status: "rejected", reason: "field_not_allowed"},
+             %{status: "rejected", reason: "field_not_allowed"},
+             %{status: "rejected", reason: "invalid"}
+           ] =
+             Push.push(user, [
+               push(id, "patch", %{"week_start" => 6}),
+               push(theirs, "patch", %{"week_start" => 6}),
+               push(id, "patch", %{"discarded_at" => "2026-10-08T10:00:00Z"}),
+               push(Ecto.UUID.generate(), "insert", %{"week_start" => 6}),
+               push(Ecto.UUID.generate(), "insert", %{})
+             ])
+
+    assert Accounts.preferences(user).week_start == 6
+    assert Accounts.preferences(other).week_start == 1
+  end
+
+  defp push(id, op, fields),
+    do: %{
+      "id" => command(),
+      "entity" => "user_preferences",
+      "entity_id" => id,
+      "op" => op,
+      "fields" => fields
+    }
+
+  defp command, do: Ecto.UUID.generate()
+end

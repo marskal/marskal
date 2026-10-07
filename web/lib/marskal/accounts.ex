@@ -6,7 +6,8 @@ defmodule Marskal.Accounts do
   import Ecto.Query, warn: false
   alias Marskal.Repo
 
-  alias Marskal.Accounts.{User, UserToken, UserNotifier}
+  alias Marskal.Accounts.{User, UserPreferences, UserToken, UserNotifier}
+  alias Marskal.Changes
 
   ## Database getters
 
@@ -177,6 +178,44 @@ defmodule Marskal.Accounts do
     end
   end
 
+  ## Preferences
+
+  @doc """
+  The user's preferences (ADR 0023): the loaded ones, else read.
+  """
+  def preferences(%User{preferences: %UserPreferences{} = preferences}), do: preferences
+  def preferences(%User{} = user), do: Repo.get_by!(UserPreferences, user_id: user.id)
+
+  @doc "The zone the user's days are in."
+  def timezone(%User{} = user), do: preferences(user).timezone
+
+  def change_preferences(%UserPreferences{} = preferences, attrs \\ %{}),
+    do: UserPreferences.changeset(preferences, attrs)
+
+  @doc """
+  Patches the user's preferences, through the change feed. `id` is the
+  row's, as a client knows it from a pull; nil is the user's own.
+  """
+  def update_preferences(%User{} = user, id \\ nil, attrs, command_id) when is_map(attrs) do
+    Changes.apply(user, command_id, "user_preferences", fn ->
+      case fetch_preferences(user, id) do
+        nil ->
+          {:error, :not_found}
+
+        preferences ->
+          changeset = UserPreferences.changeset(preferences, attrs)
+
+          case Repo.update(changeset) do
+            {:ok, preferences} -> {:ok, preferences, changeset}
+            {:error, changeset} -> {:error, changeset}
+          end
+      end
+    end)
+  end
+
+  defp fetch_preferences(user, nil), do: Repo.get_by(UserPreferences, user_id: user.id)
+  defp fetch_preferences(user, id), do: Repo.get_owned(UserPreferences, user, id)
+
   ## Session
 
   @doc """
@@ -195,7 +234,11 @@ defmodule Marskal.Accounts do
   """
   def get_user_by_session_token(token) do
     {:ok, query} = UserToken.verify_session_token_query(token)
-    Repo.one(query)
+
+    case Repo.one(query) do
+      {user, inserted_at} -> {Repo.preload(user, :preferences), inserted_at}
+      nil -> nil
+    end
   end
 
   @doc """

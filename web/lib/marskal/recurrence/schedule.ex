@@ -9,8 +9,7 @@ defmodule Marskal.Recurrence.Schedule do
 
   `from` is the previous occurrence's slot in regular mode, and the
   resolution time in on-completion mode. Regular mode expands the rule as
-  RFC 5545 does, with the week starting on Monday: `from` starts the
-  rule, and the result is the next instance strictly after it. On
+  RFC 5545 does: `from` starts the rule, and the result is the next instance strictly after it. On
   completion adds the interval to `from`, and a short month or year
   clamps to its last day, since that day came from the resolution time.
   On completion has no day limits.
@@ -22,7 +21,9 @@ defmodule Marskal.Recurrence.Schedule do
 
   Weekly limits are ISO weekdays (Monday is 1). Every 2 weeks on Tue and
   Thu lands on both days of the start's week, then those days again two
-  weeks later.
+  weeks later. The week starts on the series' `week_start` (RFC 5545's
+  WKST), so every 2 weeks on Sun and Mon is two days in a row when weeks
+  start on Sunday, and six days apart when they start on Monday.
 
   Monthly limits are calendar days (1–31, and −1 for the last) and one
   nth weekday, work day, or weekend day. A work day is Monday to Friday.
@@ -118,18 +119,23 @@ defmodule Marskal.Recurrence.Schedule do
   end
 
   # The week grid starts at `date`'s week, and the search the day after it.
-  defp next_week(date, %Series{interval: interval, weekdays: weekdays}) do
-    origin_week = Date.beginning_of_week(date, :monday)
+  defp next_week(date, %Series{interval: interval, weekdays: weekdays} = series) do
+    week_start = week_start(series)
+    origin_week = Date.beginning_of_week(date, week_start)
 
     Enum.find_value(1..(interval * 7 + 6), fn offset ->
       candidate = Date.add(date, offset)
-      week = Date.beginning_of_week(candidate, :monday)
+      week = Date.beginning_of_week(candidate, week_start)
       weeks = div(Date.diff(week, origin_week), 7)
 
       if rem(weeks, interval) == 0 and Date.day_of_week(candidate, :monday) in weekdays do
         candidate
       end
     end)
+  end
+
+  defp week_start(%Series{week_start: day}) do
+    Enum.find_value(@weekday, fn {name, number} -> if number == day, do: name end)
   end
 
   defp next_month(date, %Series{month_days: [], month_ordinal: nil} = series) do

@@ -16,6 +16,16 @@ defmodule MarskalWeb.UserLive.SettingsTest do
       assert html =~ "Save Password"
     end
 
+    test "sets the day the week starts on", %{conn: conn} do
+      user = user_fixture()
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/users/settings")
+
+      assert lv |> form("#preferences_form", preferences: %{week_start: "7"}) |> render_change() =~
+               "UserPreferences saved."
+
+      assert Accounts.preferences(Accounts.get_user!(user.id)).week_start == 7
+    end
+
     test "redirects if user is not logged in", %{conn: conn} do
       assert {:error, redirect} = live(conn, ~p"/users/settings")
 

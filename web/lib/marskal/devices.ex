@@ -65,7 +65,7 @@ defmodule Marskal.Devices do
          %{"sub" => user_id, "ext" => %{"device_id" => device_id}} <- info,
          {:ok, device_id} <- Ecto.UUID.cast(device_id),
          %Device{} = device <- Repo.get_by(Device, id: device_id, user_id: user_id) do
-      device = Repo.preload(device, :user) |> touch(now)
+      device = Repo.preload(device, user: :preferences) |> touch(now)
       {:ok, device.user, device, String.split(info["scope"] || "")}
     else
       _ -> :error

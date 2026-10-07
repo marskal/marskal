@@ -60,7 +60,7 @@ defmodule MarskalWeb.InboxLive do
         parents={@task_tags.parents}
         outline
         collapsed={@collapsed}
-        zone={@current_scope.user.timezone}
+        zone={Marskal.Accounts.timezone(@current_scope.user)}
         empty="Nothing in the inbox."
         actions={[:complete]}
         inspector={@inspector}

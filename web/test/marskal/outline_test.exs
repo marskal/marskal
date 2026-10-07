@@ -258,7 +258,7 @@ defmodule Marskal.OutlineTest do
 
       {:ok, tag} = Marskal.Tags.create_tag(user, %{"name" => "Home"}, command_id())
       {:ok, _} = Marskal.Tags.tag_task(user, child.id, tag.id, command_id())
-      today = Marskal.Dates.today(user.timezone)
+      today = Marskal.Dates.today(Marskal.Accounts.timezone(user))
 
       assert child.id in ids(Tasks.list_open(user))
       assert child.id in ids(Tasks.list_planned(user, today))
@@ -290,7 +290,7 @@ defmodule Marskal.OutlineTest do
       user: user,
       project: project
     } do
-      today = Marskal.Dates.today(user.timezone)
+      today = Marskal.Dates.today(Marskal.Accounts.timezone(user))
       tomorrow = Date.add(today, 1)
       [a] = add(user, project, ["A"])
       {:ok, _} = Tasks.update_task(user, a.id, %{planned_at: noon(user, today)}, command_id())
@@ -412,7 +412,10 @@ defmodule Marskal.OutlineTest do
   defp ids(tasks), do: Enum.map(tasks, & &1.id)
 
   defp noon(user, date),
-    do: date |> DateTime.new!(~T[12:00:00], user.timezone) |> DateTime.shift_zone!("Etc/UTC")
+    do:
+      date
+      |> DateTime.new!(~T[12:00:00], Marskal.Accounts.timezone(user))
+      |> DateTime.shift_zone!("Etc/UTC")
 
   defp command_id, do: Ecto.UUID.generate()
 end

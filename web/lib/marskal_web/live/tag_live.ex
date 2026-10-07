@@ -56,7 +56,7 @@ defmodule MarskalWeb.TagLive do
         root_id={@tag.id}
         task_tags={@task_tags}
         inspector={@inspector}
-        zone={@current_scope.user.timezone}
+        zone={Marskal.Accounts.timezone(@current_scope.user)}
       />
 
       <.form for={@tag_form} id="new-child-tag" phx-submit="create-tag" class="capture">

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted; amended 2026-10-02 (projects, date offsets, open cap); amended 2026-10-07 (regular mode follows RFC 5545; monthly days are one set; on completion is an interval)
+Accepted; amended 2026-10-02 (projects, date offsets, open cap); amended 2026-10-07 (regular mode follows RFC 5545; monthly days are one set; on completion is an interval); amended 2026-10-08 (the week start is the series')
 
 ## Context
 
@@ -72,8 +72,13 @@ Examples: every **3 days**, every **36 hours**, every **2 weeks**, every **1 mon
 When frequency is **weeks**:
 
 - Optional **set of weekdays** the occurrence may land on (e.g. Mon/Wed/Fri).
-  Weekdays are ISO (Monday is 1) and the week starts on Monday, the iCalendar
-  default.
+  Weekdays are ISO (Monday is 1). The week starts on the series'
+  `week_start` (an ISO day, RFC 5545's WKST), copied from the user's
+  preference (ADR 0023) when the series is made, so changing the preference
+  later does not move an existing series' slots. It matters only with an
+  interval above 1 and more than one weekday: every 2 weeks on Sun and Mon
+  is two days in a row when weeks start on Sunday, and six days apart when
+  they start on Monday.
 - With weekdays set, the next slot is the next listed weekday strictly after
   the start, in a week whose distance from the start's week is a multiple of
   `interval`. Every 2 weeks on Tue and Thu hits both days of the start's week,
@@ -243,7 +248,7 @@ section wins.
   they start.
 - Minutes and hours add elapsed UTC time.
 - Days, weeks, months, and years step on the user's zone calendar and keep the
-  local time. The week starts on Monday.
+  local time. The week starts on the series' `week_start`.
 - A local time the zone skips, or that occurs twice, resolves through
   `Marskal.Dates.from_local/4`, the same instant a date entered on that wall
   clock gets.
