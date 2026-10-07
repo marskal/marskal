@@ -8,6 +8,8 @@ defmodule Marskal.Recurrence do
 
   A client joins a task to a series only as its first occurrence. The
   server creates every later one; clients get them on pull (ADR 0014).
+  `Marskal.Recurrence.Schedule` names the next slot and the dates that
+  move with it. Creating the task for that slot comes after.
   """
 
   import Ecto.Changeset

@@ -49,6 +49,14 @@ defmodule Marskal.RecurrenceTest do
             {%{frequency: :months, month_ordinal: 1}, :month_day_kind},
             {%{frequency: :months, month_day_kind: :work_day}, :month_ordinal},
             {%{frequency: :months, month_ordinal: 6, month_day_kind: :friday}, :month_ordinal},
+            {%{mode: :on_completion, frequency: :weeks, weekdays: [1]}, :weekdays},
+            {%{mode: :on_completion, frequency: :months, month_days: [15]}, :month_days},
+            {%{
+               mode: :on_completion,
+               frequency: :months,
+               month_ordinal: 1,
+               month_day_kind: :monday
+             }, :month_ordinal},
             {%{mode: nil}, :mode},
             {%{kind: :project}, :kind}
           ] do
@@ -65,7 +73,7 @@ defmodule Marskal.RecurrenceTest do
                  user,
                  %{
                    kind: :task,
-                   mode: :on_completion,
+                   mode: :regular,
                    anchor: :planned,
                    interval: 1,
                    frequency: :months,

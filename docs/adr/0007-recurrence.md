@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted; amended 2026-10-02 (projects, date offsets, open cap)
+Accepted; amended 2026-10-02 (projects, date offsets, open cap); amended 2026-10-07 (regular mode follows RFC 5545; monthly days are one set; on completion is an interval)
 
 ## Context
 
@@ -32,7 +32,7 @@ Each series has a **recurrence mode**:
 | Mode | Behavior |
 |------|----------|
 | **Regular** | A new instance is created on the schedule **whether or not** the previous one was resolved. Missed work accumulates (multiple open occurrences), up to a cap on open occurrences (see Building it). Timeline is driven by the anchor schedule (prior scheduled anchor + interval / calendar rules). |
-| **On completion** | The next instance is created when the current one is **resolved** — not merely because the clock passed. **Resolved** means state **Done** or **Dropped** (ADR 0008). Both count as completion for spawning the next occurrence. The next anchor is computed from the **resolution** moment (then apply interval + weekday/month limits). **To-Do** does not spawn the next on its own. |
+| **On completion** | The next instance is created when the current one is **resolved** — not merely because the clock passed. **Resolved** means state **Done** or **Dropped** (ADR 0008). Both count as completion for spawning the next occurrence. The next anchor is `interval` after the **resolution** moment (see Expansion). **To-Do** does not spawn the next on its own. |
 
 - Mode is user-visible and first-class on the series.
 - **Regular** ≈ fixed schedule (rent, trash day). **On completion** ≈ “every 3 days after I last finished or dropped it.”
@@ -51,8 +51,11 @@ Recurrence is **based on exactly one** of the three task date fields (ADR 0006):
 - The anchor is part of the series definition (user-chosen).
 - The other two date fields keep their offset from the anchor (amended 2026-10-02;
   see Building it). The rule drives only the anchor.
-- **Regular:** next anchor from the schedule (previous scheduled anchor + rule).  
-  **On completion:** next anchor from **Done/Dropped resolution time** + rule.
+- **Regular:** the previous occurrence's `occurrence_for` starts the rule, and
+  the next anchor is the next instance strictly after it.
+- **On completion:** the next anchor is `interval` after the **Done/Dropped
+  resolution time**.
+- See Expansion for how the two differ.
 
 ### Interval
 
@@ -66,16 +69,22 @@ Examples: every **3 days**, every **36 hours**, every **2 weeks**, every **1 mon
 
 ### Weekly limits
 
-When frequency is **weeks** (and for week-based patterns generally):
+When frequency is **weeks**:
 
 - Optional **set of weekdays** the occurrence may land on (e.g. Mon/Wed/Fri).
-- If set, advancement picks the next valid weekday consistent with the interval and
-  anchor timeline (define edge cases in tests: “every 2 weeks on Tue+Thu”, etc.).
+  Weekdays are ISO (Monday is 1) and the week starts on Monday, the iCalendar
+  default.
+- With weekdays set, the next slot is the next listed weekday strictly after
+  the start, in a week whose distance from the start's week is a multiple of
+  `interval`. Every 2 weeks on Tue and Thu hits both days of the start's week,
+  then those days two weeks later. With no weekdays, the slot is `interval`
+  weeks ahead.
+- Regular mode only (see Expansion).
 
 ### Monthly limits
 
-When frequency is **months**, the user may constrain the day-of-month pattern using
-one of these styles (or a clear single chosen style per series):
+When frequency is **months**, the user may constrain which day of the month the
+slot lands on:
 
 1. **Calendar days of month**  
    Specific days: 1st, 22nd, … and **last** day of month.
@@ -90,10 +99,22 @@ one of these styles (or a clear single chosen style per series):
 
 Examples: “first Monday”, “last work day”, “third Friday”, “last day of month”.
 
-Exactly how multiple monthly constraints combine (if more than one day is selected)
-should follow a simple rule: e.g. **set of matching days in the month**, next
-occurrence = soonest match after “now”/after previous, stepping by `interval` months
-from the series month grid. Specify in code with tests; keep UX obvious.
+Regular mode only (see Expansion). Calendar days and an nth day may both be
+set. Months step by `interval` from the start's month, and the slot is the
+soonest match strictly after the start.
+
+- With neither, the slot keeps the start's day of the month. A month that lacks
+  that day is skipped, and the interval is kept, so January's 31st is followed
+  by March's.
+- Calendar days alone are the days the slot may land on. A listed day the month
+  does not have is skipped.
+- An nth day alone is that day of the month. A fifth weekday the month does not
+  have is skipped.
+- With both, the calendar days and the nth day together are the days the slot
+  may land on: the 15th and the last work day gives two slots a month. A
+  picker reads that way, each choice adding days, and no pair can leave a rule
+  that never fires. RFC 5545 would instead let `BYDAY` limit `BYMONTHDAY`; as
+  an RRULE this is two rules on one event, which RFC 5545 unions.
 
 ### End condition
 
@@ -121,7 +142,8 @@ Task states: ADR 0008. For recurrence:
   **completion for recurrence purposes** under on-completion mode.
 - **Dropped** is the product name for what was informally called “skip”; it also
   applies to non-recurring tasks (cancel without doing).
-- Next anchor (on completion) = **time of transition to Done or Dropped** + rule.
+- Next anchor (on completion) = `interval` after the **time of transition to Done
+  or Dropped**.
 - Overdue open occurrences stay visible; do not silent-drop or mass-auto-complete.
 
 ### Representation
@@ -202,6 +224,34 @@ There is no completions table. A series' occurrences are its history:
 hard-deleted (ADR 0014), so streaks, completion rates, and lateness can be
 worked out from them later. Skipped slots show as gaps between
 `occurrence_for` values.
+
+## Expansion (2026-10-07)
+
+Regular mode follows RFC 5545 recurrence rules, so a rule a calendar user
+already knows lands on the same days. The series stays structured columns. An
+RRULE string is not the store. Where an earlier paragraph disagrees, this
+section wins.
+
+- **Regular:** the previous occurrence's `occurrence_for` starts the rule. The
+  result is the next instance strictly after it.
+- **On completion:** the interval is added to the resolution time on the
+  calendar. That day is not one the user chose, so a short month or year
+  clamps to its last day: every month, finished on January 31, gives
+  February 28. There are no weekday or monthly limits in this mode yet; the
+  series changeset refuses them. Things, TickTick, and Amazing Marvin offer
+  none either. Limits here may come later, with their own rule for where
+  they start.
+- Minutes and hours add elapsed UTC time.
+- Days, weeks, months, and years step on the user's zone calendar and keep the
+  local time. The week starts on Monday.
+- A local time the zone skips, or that occurs twice, resolves through
+  `Marskal.Dates.from_local/4`, the same instant a date entered on that wall
+  clock gets.
+- In regular mode, a date the month or year does not have is skipped. It is not
+  generated, and it does not count toward the end count.
+- `ends_at` is inclusive: a slot at that instant is kept.
+- End count is N generated, including the first, which is what RFC 5545 `COUNT`
+  does. The generator enforces it, along with the open cap.
 
 ## Consequences
 
