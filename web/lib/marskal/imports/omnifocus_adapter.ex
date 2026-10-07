@@ -5,6 +5,7 @@ defmodule Marskal.Imports.OmnifocusAdapter do
   alias Marskal.Imports.Graph
   alias Marskal.Imports.Limits
   alias Marskal.Imports.OmnifocusNote
+  alias Marskal.Imports.Problems
   alias Marskal.Imports.ProjectNode
   alias Marskal.Imports.TagNode
   alias Marskal.Imports.TaskNode
@@ -59,6 +60,7 @@ defmodule Marskal.Imports.OmnifocusAdapter do
       tasks: task_nodes(stores.tasks, tag_ids),
       tags: tag_nodes(stores.tags)
     }
+    |> Problems.mark("OmniFocus")
   end
 
   defp zip?(bytes), do: String.starts_with?(bytes, "PK\x03\x04")
@@ -259,7 +261,8 @@ defmodule Marskal.Imports.OmnifocusAdapter do
   defp idref(nil), do: nil
   defp idref(element), do: Xml.attr(element, "idref")
 
-  defp parse_task(element, limits) do
+  # The title and notes are kept whole; `Problems` fits them.
+  defp parse_task(element, _limits) do
     parent =
       element
       |> Xml.children_named("task")
@@ -267,8 +270,8 @@ defmodule Marskal.Imports.OmnifocusAdapter do
 
     %{
       "id" => Xml.attr(element, "id"),
-      "name" => clip(text_at(element, "name"), limits.title_chars),
-      "notes" => notes_at(element, limits),
+      "name" => text_at(element, "name"),
+      "notes" => notes_at(element),
       "inbox" => inbox?(element),
       "parent_id" => parent && Xml.attr(parent, "idref"),
       "completed" => text_at(element, "completed"),
@@ -277,6 +280,10 @@ defmodule Marskal.Imports.OmnifocusAdapter do
       "planned" => text_at(element, "planned"),
       "flagged" => text_at(element, "flagged") == "true",
       "repeat" => text_at(element, "repeat") || text_at(element, "repetition-rule"),
+      "repeat_method" => text_at(element, "repetition-method"),
+      "repeat_schedule" => text_at(element, "repetition-schedule-type"),
+      "repeat_anchor" => text_at(element, "repetition-anchor-date"),
+      "repeat_catch_up" => text_at(element, "catch-up-automatically"),
       "project" => project_info(element),
       "tag_ids" => tag_ids(element)
     }
@@ -321,10 +328,10 @@ defmodule Marskal.Imports.OmnifocusAdapter do
     end
   end
 
-  defp notes_at(element, limits) do
+  defp notes_at(element) do
     case Xml.child(element, "note") do
       nil -> nil
-      note -> clip(OmnifocusNote.to_markdown(note), limits.notes_chars)
+      note -> OmnifocusNote.to_markdown(note)
     end
   end
 
@@ -410,7 +417,8 @@ defmodule Marskal.Imports.OmnifocusAdapter do
             due: row["due"],
             resolved_at: row["completed"],
             tag_source_ids: Map.get(tag_ids, row["id"], []),
-            extras: extras_for(row)
+            extras: extras_for(row),
+            problems: problems_for(row)
           }
         ]
       else
@@ -451,7 +459,8 @@ defmodule Marskal.Imports.OmnifocusAdapter do
             due: row["due"],
             resolved_at: row["completed"],
             tag_source_ids: Map.get(tag_ids, row["id"], []),
-            extras: extras_for(row) |> Map.put("parent_source_id", parent_id) |> compact()
+            extras: extras_for(row) |> Map.put("parent_source_id", parent_id) |> compact(),
+            problems: problems_for(row)
           }
         ]
       end
@@ -507,7 +516,41 @@ defmodule Marskal.Imports.OmnifocusAdapter do
       if row["flagged"], do: Map.put(extras, "flagged", true), else: extras
     end)
     |> put_extra("repeat", row["repeat"])
+    |> then(fn extras ->
+      if present?(row["repeat"]) do
+        extras
+        |> put_extra("repeat_method", row["repeat_method"])
+        |> put_extra("repeat_schedule", row["repeat_schedule"])
+        |> put_extra("repeat_anchor", row["repeat_anchor"])
+        |> put_extra("repeat_catch_up", row["repeat_catch_up"])
+      else
+        extras
+      end
+    end)
   end
+
+  # Marskal series are not made from an import yet (ADR 0007).
+  defp problems_for(row) do
+    if present?(row["repeat"]),
+      do: [{:missing_recurrence, "Repeat", repeat_text(row)}],
+      else: []
+  end
+
+  # The rule as OmniFocus stores it, with how it is scheduled.
+  defp repeat_text(row) do
+    details =
+      [
+        row["repeat_method"] && "method " <> row["repeat_method"],
+        row["repeat_schedule"] && "schedule " <> row["repeat_schedule"],
+        row["repeat_anchor"] && "based on " <> row["repeat_anchor"],
+        row["repeat_catch_up"] == "true" && "catch up automatically"
+      ]
+      |> Enum.filter(&present?/1)
+
+    if details == [], do: row["repeat"], else: "#{row["repeat"]} (#{Enum.join(details, ", ")})"
+  end
+
+  defp present?(value), do: is_binary(value) and value != ""
 
   defp put_extra(extras, _key, value) when value in [nil, ""], do: extras
   defp put_extra(extras, key, value), do: Map.put(extras, key, value)

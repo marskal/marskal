@@ -8,8 +8,7 @@ defmodule Marskal.Imports.Limits do
             zip_entries: 500,
             inner_zips: 150,
             records: 20_000,
-            title_chars: 500,
-            notes_chars: 32_768,
+            title_chars: Marskal.Tasks.Task.title_max(),
             imports_per_hour: 20,
             bundle_files: 200,
             read_chunk: 64 * 1024

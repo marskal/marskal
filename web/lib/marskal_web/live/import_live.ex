@@ -404,6 +404,7 @@ defmodule MarskalWeb.ImportLive do
             <p :if={samples(@batch) != []} class="lede">
               Includes: {Enum.join(samples(@batch), ", ")}
             </p>
+            <.import_problems batch={@batch} />
             <p class="lede">{preview_note(@batch)}</p>
             <form action={~p"/imports/#{@batch.id}/apply"} method="post">
               <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
@@ -440,6 +441,7 @@ defmodule MarskalWeb.ImportLive do
                 @batch.source
               )} still has them.
             </p>
+            <.import_problems batch={@batch} />
             <div :if={kept_samples(@batch) != []} id="import-kept" class="import-kept">
               <p class="lede">
                 Changed in {source_label(@batch.source)} and by you. Your version stays:
@@ -520,11 +522,40 @@ defmodule MarskalWeb.ImportLive do
   defp reading_label(_batch), do: "Reading the backup…"
 
   defp preview_note(%{source: "todoist"}) do
-    "Already-imported items are updated with what changed in Todoist, except where you changed the same thing here. Items you deleted here come back. Labels become tags. Sections, subtasks, and recurrence are kept for later and not applied yet. Completed history is not included."
+    "Already-imported items are updated with what changed in Todoist, except where you changed the same thing here. Items you deleted here come back. Labels become tags. Sections and recurrence cannot be brought over yet; those tasks are tagged Import problems. Completed history is not included."
   end
 
   defp preview_note(_batch) do
     "Already-imported items are updated with what changed in OmniFocus, except where you changed the same thing here. Items you deleted here come back. Tags whose name is already used at the same place are reused."
+  end
+
+  attr :batch, :map, required: true
+
+  # What did not fit: items carry a tag and a note; folders can do neither.
+  defp import_problems(assigns) do
+    ~H"""
+    <p :if={stat(@batch, "problems") > 0} class="lede" id="import-problems">
+      {stat(@batch, "problems")} {if stat(@batch, "problems") == 1, do: "item", else: "items"} could not be brought over in full. They are tagged Import problems, and their notes end with what is missing.
+    </p>
+    <div :if={folder_problems(@batch) != []} id="import-folder-problems" class="import-kept">
+      <p class="lede">Folders cannot hold these, so they are left out:</p>
+      <ul>
+        <li :for={folder <- folder_problems(@batch)}>
+          {folder["name"]} <span class="fields">({Enum.join(folder["fields"], ", ")})</span>
+        </li>
+      </ul>
+    </div>
+    """
+  end
+
+  defp folder_problems(batch) do
+    case (batch.stats || %{})["folder_problems"] do
+      list when is_list(list) ->
+        Enum.filter(list, &match?(%{"name" => _, "fields" => [_ | _]}, &1))
+
+      _ ->
+        []
+    end
   end
 
   defp format_when(%DateTime{} = datetime), do: Calendar.strftime(datetime, "%Y-%m-%d %H:%M")

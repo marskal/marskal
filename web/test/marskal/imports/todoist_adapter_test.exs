@@ -36,8 +36,17 @@ defmodule Marskal.Imports.TodoistAdapterTest do
     archive = Enum.find(graph.projects, &(&1.title == "Archive"))
     assert archive.state == "dropped"
 
-    assert Enum.map(graph.tags, & &1.name) == ["Food", "Errand"]
-    assert Enum.map(graph.tags, & &1.source_id) == ["tag:l1", "tag:shared:errand"]
+    assert Enum.map(graph.tags, & &1.name) ==
+             ["Food", "Errand", "Import problems", "Missing recurrence", "Missing section"]
+
+    assert Enum.map(graph.tags, & &1.source_id) ==
+             [
+               "tag:l1",
+               "tag:shared:errand",
+               "problem",
+               "problem:missing-recurrence",
+               "problem:missing-section"
+             ]
 
     titles = Enum.map(graph.tasks, & &1.title)
     assert Enum.sort(titles) == ["Ask editor", "Buy milk", "Shipped", "Write copy"]
@@ -47,7 +56,8 @@ defmodule Marskal.Imports.TodoistAdapterTest do
     milk = Enum.find(graph.tasks, &(&1.title == "Buy milk"))
     assert milk.inbox
     assert milk.project_source_id == nil
-    assert milk.tag_source_ids == ["tag:l1", "tag:shared:errand"]
+    assert milk.tag_source_ids == ["tag:l1", "tag:shared:errand", "problem:missing-recurrence"]
+    assert milk.notes =~ ~r"---\nImported from Todoist:\n- Repeat: every monday\z"
     assert milk.planned == "2026-09-28"
     assert milk.extras["repeat"] == "every monday"
     assert milk.due == "2026-10-01"
@@ -60,7 +70,8 @@ defmodule Marskal.Imports.TodoistAdapterTest do
     copy = Enum.find(graph.tasks, &(&1.title == "Write copy"))
     refute copy.inbox
     assert copy.project_source_id == "project:p1"
-    assert copy.notes == "Home page"
+    assert copy.notes == "Home page\n\n---\nImported from Todoist:\n- Section: Now"
+    assert "problem:missing-section" in copy.tag_source_ids
     assert copy.extras["section"] == "Now"
 
     ask = Enum.find(graph.tasks, &(&1.title == "Ask editor"))

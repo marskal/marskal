@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted; amended 2026-10-04 (re-import updates); amended 2026-10-07 (import problems)
 
 The framework stands and is ported to Elixir ([ADR 0016](0016-elixir-phoenix-web.md)):
 `Imports.Graph`, `Imports.OmnifocusAdapter`, and Oban jobs in place of Active
@@ -29,8 +29,9 @@ without a second pipeline. Competing formats differ; Marskal’s model does not
   **`import_items`** map `(user, source, source_id)` → Marskal rows (explicit FKs,
   not polymorphic). Re-import **updates** existing source ids by a three-way
   merge (see below).
-- Unmapped Phase 2/3 fields (defer/planned/due, parent, repeat, flagged) go in
-  **`import_items.extras` jsonb**, not notes.
+- Unmapped fields go in **`import_items.extras` jsonb**: structured data for
+  us, for mapping them later. What the user needs to fix an item by hand
+  goes in its notes, with a tag (see Import problems).
 - When a field gains a Marskal home, the adapter maps it and it leaves
   `extras`. Tags do so with the tags slice: the OmniFocus adapter parses tags
   and contexts into the graph as their own items (ADR 0005).
@@ -85,6 +86,31 @@ tried again as they learn more fields.
   updated. A change that would not validate, such as a folder move into its
   own subtree or a tag rename onto a taken name, is kept as the user has it.
 - The whole apply stays one transaction.
+
+### Import problems (amended 2026-10-07)
+
+What an import cannot carry over is easy to find and fix
+(`Marskal.Imports.Problems`).
+
+- The item gets a tag under **Import problems**, one per kind: Missing
+  recurrence, Missing section, Shortened title, Shortened notes. The tag view
+  then lists everything to fix, and the user removes the tag when done.
+- Its notes end with a block saying what is missing, e.g. the repeat rule as
+  the source stores it, or the rest of a title past the title limit:
+
+      ---
+      Imported from OmniFocus:
+      - Repeat: FREQ=WEEKLY;BYDAY=TU (schedule from-completion)
+
+- The block is never cut. Notes that do not fit beside it within the notes
+  limit are, and the item is tagged Shortened notes; that text is lost.
+- Tags and block come out the same on every import, so the three-way merge
+  keeps them away once the user removed them, and drops them from untouched
+  items once the adapter can map the field.
+- A folder has no tags or notes. What one cannot keep is listed on the import
+  page instead.
+- A source convention with no Marskal column (OmniFocus flagged, Todoist
+  priority) is not a problem; it stays in `extras` for now.
 
 ## Consequences
 

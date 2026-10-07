@@ -1,6 +1,8 @@
 defmodule Marskal.Imports.Folder do
   @moduledoc false
-  defstruct [:source_id, :name, :parent_source_id, :dropped, extras: %{}]
+  # problems names what a folder could not keep, for the import summary. A
+  # project or task lists `{problem, label, value}` (`Marskal.Imports.Problems`).
+  defstruct [:source_id, :name, :parent_source_id, :dropped, extras: %{}, problems: []]
 end
 
 defmodule Marskal.Imports.ProjectNode do
@@ -18,7 +20,8 @@ defmodule Marskal.Imports.ProjectNode do
     :resolved_at,
     deferred_indefinitely: false,
     tag_source_ids: [],
-    extras: %{}
+    extras: %{},
+    problems: []
   ]
 end
 
@@ -39,7 +42,8 @@ defmodule Marskal.Imports.TaskNode do
     :resolved_at,
     deferred_indefinitely: false,
     tag_source_ids: [],
-    extras: %{}
+    extras: %{},
+    problems: []
   ]
 end
 

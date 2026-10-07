@@ -116,6 +116,48 @@ defmodule Marskal.Imports.OmnifocusAdapterTest do
     assert Enum.map(assign.tag_source_ids, &names[&1]) == ["Hardware Store"]
   end
 
+  test "a repeat and a long title are marked for the user to fix" do
+    title = String.duplicate("a", 500) <> " and more"
+
+    xml = """
+    <?xml version="1.0" encoding="UTF-8"?>
+    <omnifocus>
+      <task id="taskRepeat00">
+        <inbox/>
+        <name>#{title}</name>
+        <note>Bring the bag</note>
+        <repetition-rule>FREQ=WEEKLY;BYDAY=TU</repetition-rule>
+        <repetition-method>fixed</repetition-method>
+        <repetition-schedule-type>from-completion</repetition-schedule-type>
+        <repetition-anchor-date>due-date</repetition-anchor-date>
+        <catch-up-automatically>false</catch-up-automatically>
+      </task>
+    </omnifocus>
+    """
+
+    graph = OmnifocusAdapter.parse(OmnifocusBackup.zip_with_xml(xml), filename: "x.zip")
+    [task] = graph.tasks
+
+    assert task.title == String.duplicate("a", 500)
+
+    assert task.notes ==
+             """
+             Bring the bag
+
+             ---
+             Imported from OmniFocus:
+             - Repeat: FREQ=WEEKLY;BYDAY=TU (method fixed, schedule from-completion, based on due-date)
+             - Title continued: and more\
+             """
+
+    assert task.tag_source_ids == ["problem:missing-recurrence", "problem:shortened-title"]
+    assert task.extras["repeat_schedule"] == "from-completion"
+    assert task.extras["repeat_anchor"] == "due-date"
+
+    assert Enum.map(graph.tags, & &1.name) ==
+             ["Import problems", "Missing recurrence", "Shortened title"]
+  end
+
   test "rejects zip-slip entries" do
     assert_raise ArgumentError, fn ->
       OmnifocusAdapter.parse(OmnifocusBackup.zip_slip_archive(), filename: "x.ofocus-backup")
