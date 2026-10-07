@@ -80,16 +80,19 @@ defmodule Marskal.Imports.OmnifocusNote do
 
   defp style_value(run, key) do
     case Xml.child(run, "style") do
-      nil ->
-        ""
-
-      style ->
-        style
-        |> Xml.children_named("value")
-        |> Enum.find_value("", fn value ->
-          if Xml.attr(value, "key") == key, do: String.trim(Xml.text(value) || "")
-        end)
+      nil -> ""
+      style -> style_named(style, key)
     end
+  end
+
+  defp style_named(style, key) do
+    style
+    |> Xml.children_named("value")
+    |> Enum.find_value("", &value_for_key(&1, key))
+  end
+
+  defp value_for_key(value, key) do
+    if Xml.attr(value, "key") == key, do: String.trim(Xml.text(value) || "")
   end
 
   defp truthy?(value), do: String.downcase(value) in ~w(true 1 yes)

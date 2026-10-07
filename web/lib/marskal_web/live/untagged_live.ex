@@ -1,10 +1,10 @@
 defmodule MarskalWeb.UntaggedLive do
   use MarskalWeb, :live_view
+  use MarskalWeb.TaskActions, reload: &load/1
 
   import MarskalWeb.TaskList, only: [assign_tasks: 2]
 
   alias Marskal.Tags
-  alias Marskal.Tasks
 
   @impl true
   def mount(_params, _session, socket) do
@@ -42,20 +42,6 @@ defmodule MarskalWeb.UntaggedLive do
       />
     </Layouts.app>
     """
-  end
-
-  @impl true
-  def handle_info({:marskal_change, _type, _id}, socket), do: {:noreply, load(socket)}
-
-  @impl true
-  def handle_event("complete", %{"id" => id}, socket), do: act(socket, id, &Tasks.complete_task/3)
-  def handle_event("reopen", %{"id" => id}, socket), do: act(socket, id, &Tasks.reopen_task/3)
-
-  defp act(socket, id, fun) do
-    case fun.(socket.assigns.current_scope.user, id, Ecto.UUID.generate()) do
-      {:ok, _task} -> {:noreply, load(socket)}
-      {:error, _} -> {:noreply, put_flash(socket, :error, "Could not update task.")}
-    end
   end
 
   defp load(socket) do

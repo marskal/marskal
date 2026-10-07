@@ -16,8 +16,8 @@ defmodule Marskal.Tags do
   alias Marskal.Repo
   alias Marskal.Tags.Link
   alias Marskal.Tags.ProjectTag
-  alias Marskal.Tags.Tag
   alias Marskal.Tags.Search
+  alias Marskal.Tags.Tag
   alias Marskal.Tags.TaskTag
   alias Marskal.Tags.Tree
   alias Marskal.Tasks
@@ -110,11 +110,7 @@ defmodule Marskal.Tags do
     tree = tree(user)
 
     with %Tag{} = tag <- Tree.get(tree, tag_id) do
-      include? =
-        if Tree.visible?(tree, tag.id),
-          do: &Tree.visible?(tree, &1.id),
-          else: fn _tag -> true end
-
+      include? = include_fun(tree, tag)
       ids = tree |> Tree.subtree(tag.id) |> Enum.filter(include?) |> Enum.map(& &1.id)
       tasks = to_do_tasks_tagged(user, ids)
       effective = effective_tags(user, tasks, tree)
@@ -221,19 +217,25 @@ defmodule Marskal.Tags do
   """
   def patch_client_tag(%User{} = user, id, attrs, command_id) when is_map(attrs) do
     Changes.apply(user, command_id, "tag", fn ->
-      with %Tag{} = tag <- get_tag(user, id) || {:error, :not_found} do
-        changeset =
-          Tag.update_changeset(tag, user, resolve_parent(user, attrs), &next_rank(user, &1))
-
-        case clash(user, changeset, tag.id) do
-          nil ->
-            write_tag(user, tag, resolve_parent(user, attrs))
-
-          twin ->
-            with :ok <- validate_merge(tag, twin), do: merge(user, command_id, tag, twin)
-        end
+      case get_tag(user, id) do
+        %Tag{} = tag -> patch_or_merge(user, command_id, tag, attrs)
+        _ -> {:error, :not_found}
       end
     end)
+  end
+
+  defp patch_or_merge(user, command_id, tag, attrs) do
+    attrs = resolve_parent(user, attrs)
+    changeset = Tag.update_changeset(tag, user, attrs, &next_rank(user, &1))
+
+    case clash(user, changeset, tag.id) do
+      nil -> write_tag(user, tag, attrs)
+      twin -> merge_if_valid(user, command_id, tag, twin)
+    end
+  end
+
+  defp merge_if_valid(user, command_id, tag, twin) do
+    with :ok <- validate_merge(tag, twin), do: merge(user, command_id, tag, twin)
   end
 
   defp resolve_parent(user, attrs) do
@@ -346,6 +348,12 @@ defmodule Marskal.Tags do
     |> Repo.all()
   end
 
+  defp include_fun(tree, tag) do
+    if Tree.visible?(tree, tag.id),
+      do: &Tree.visible?(tree, &1.id),
+      else: fn _tag -> true end
+  end
+
   defp outline_node(tree, tag, by_tag, include?) do
     children =
       tree
@@ -360,20 +368,9 @@ defmodule Marskal.Tags do
   ## Tags
 
   defp write_tag(user, tag, attrs) do
-    changeset = Tag.update_changeset(tag, user, attrs, &next_rank(user, &1))
-
-    case Repo.update(changeset) do
-      {:ok, updated} ->
-        if Ecto.Changeset.changed?(changeset, :name) or
-             Ecto.Changeset.changed?(changeset, :parent_id) do
-          refresh_descendants!(updated)
-        end
-
-        {:ok, updated, changeset}
-
-      {:error, changeset} ->
-        {:error, changeset}
-    end
+    tag
+    |> Tag.update_changeset(user, attrs, &next_rank(user, &1))
+    |> Changes.commit(&refresh_descendants!/1)
   end
 
   defp next_rank(user, parent_id) do
@@ -454,20 +451,24 @@ defmodule Marskal.Tags do
     end
 
     for child <- live_children(duplicate) do
-      case twin(target, child.name) do
-        nil ->
-          Changes.cascade(user, command_id, "tag", child.id, fn ->
-            write_tag(user, child, %{parent_id: target.id})
-          end)
-
-        twin ->
-          Changes.cascade(user, command_id, "tag", child.id, fn ->
-            merge(user, command_id, child, twin)
-          end)
-      end
+      merge_child(user, command_id, target, child)
     end
 
     discard(duplicate, target.id)
+  end
+
+  defp merge_child(user, command_id, target, child) do
+    case twin(target, child.name) do
+      nil ->
+        Changes.cascade(user, command_id, "tag", child.id, fn ->
+          write_tag(user, child, %{parent_id: target.id})
+        end)
+
+      twin ->
+        Changes.cascade(user, command_id, "tag", child.id, fn ->
+          merge(user, command_id, child, twin)
+        end)
+    end
   end
 
   # Names are citext; comparing through a text parameter would be

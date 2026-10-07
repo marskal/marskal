@@ -62,16 +62,8 @@ defmodule Marskal.Recurrence do
   def update_series(%User{} = user, id, attrs, command_id) when is_map(attrs) do
     Changes.apply(user, command_id, "recurrence_series", fn ->
       case get_series(user, id) do
-        nil ->
-          {:error, :not_found}
-
-        series ->
-          changeset = Series.update_changeset(series, attrs)
-
-          case Repo.update(changeset) do
-            {:ok, series} -> {:ok, series, changeset}
-            {:error, changeset} -> {:error, changeset}
-          end
+        nil -> {:error, :not_found}
+        series -> Changes.commit(Series.update_changeset(series, attrs))
       end
     end)
   end

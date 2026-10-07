@@ -116,15 +116,19 @@ defmodule Marskal.Tags.Tag do
         add_error(changeset, :parent_id, "would create a cycle")
 
       parent_id ->
-        case live_parent(user, parent_id) do
-          nil ->
-            add_error(changeset, :parent_id, "must belong to you")
+        parent_changeset(changeset, user, self_id, parent_id)
+    end
+  end
 
-          parent ->
-            if self_id && self_id in ancestor_ids(parent),
-              do: add_error(changeset, :parent_id, "would create a cycle"),
-              else: changeset
-        end
+  defp parent_changeset(changeset, user, self_id, parent_id) do
+    case live_parent(user, parent_id) do
+      nil ->
+        add_error(changeset, :parent_id, "must belong to you")
+
+      parent ->
+        if self_id && self_id in ancestor_ids(parent),
+          do: add_error(changeset, :parent_id, "would create a cycle"),
+          else: changeset
     end
   end
 

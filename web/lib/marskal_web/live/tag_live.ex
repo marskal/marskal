@@ -1,5 +1,6 @@
 defmodule MarskalWeb.TagLive do
   use MarskalWeb, :live_view
+  use MarskalWeb.TaskActions, reload: &load/1
 
   alias Marskal.Tags
   alias Marskal.Tags.Tree
@@ -111,13 +112,6 @@ defmodule MarskalWeb.TagLive do
     """
   end
 
-  @impl true
-  def handle_info({:marskal_change, _type, _id}, socket), do: {:noreply, load(socket)}
-
-  @impl true
-  def handle_event("complete", %{"id" => id}, socket), do: act(socket, id, &Tasks.complete_task/3)
-  def handle_event("reopen", %{"id" => id}, socket), do: act(socket, id, &Tasks.reopen_task/3)
-
   def handle_event("state", %{"state" => state}, socket)
       when state in ["active", "on_hold", "dropped"] do
     user = socket.assigns.current_scope.user
@@ -141,13 +135,6 @@ defmodule MarskalWeb.TagLive do
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Could not add tag.")}
-    end
-  end
-
-  defp act(socket, id, fun) do
-    case fun.(socket.assigns.current_scope.user, id, Ecto.UUID.generate()) do
-      {:ok, _task} -> {:noreply, load(socket)}
-      {:error, _} -> {:noreply, put_flash(socket, :error, "Could not update task.")}
     end
   end
 

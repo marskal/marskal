@@ -32,51 +32,9 @@ defmodule Marskal.Changes do
         # sees the first one's change row and replays it.
         Repo.query!("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [command_id])
 
-        case Repo.get_by(Change, command_id: command_id) do
-          %Change{} = change ->
-            {replay(user, change), false}
-
-          nil ->
-            case fun.() do
-              {:ok, %{id: id} = entity, changeset} ->
-                case encode_patch(changeset) do
-                  patch when patch == %{} ->
-                    {entity, false}
-
-                  patch ->
-                    # Change ids are allocated one writer at a time per user, so
-                    # they commit in id order and a pull cursor never passes
-                    # one still in flight (ADR 0019).
-                    Repo.query!("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
-                      "changes:" <> user.id
-                    ])
-
-                    %Change{}
-                    |> Change.record_changeset(%{
-                      command_id: command_id,
-                      user_id: user.id,
-                      entity_type: entity_type,
-                      entity_id: id,
-                      patch: patch
-                    })
-                    |> Repo.insert!()
-
-                    {entity, true}
-                end
-
-              {:error, reason} ->
-                Repo.rollback(reason)
-            end
-        end
+        take_or_insert(user, command_id, entity_type, fun)
       end)
-      |> case do
-        {:ok, {entity, changed?}} ->
-          if changed? and not nested?, do: broadcast(user, entity_type, entity.id)
-          {:ok, entity}
-
-        {:error, reason} ->
-          {:error, reason}
-      end
+      |> publish(user, entity_type, nested?)
     end
   end
 
@@ -105,7 +63,79 @@ defmodule Marskal.Changes do
     Phoenix.PubSub.broadcast(Marskal.PubSub, topic(user.id), {:marskal_change, entity_type, id})
   end
 
+  @doc """
+  Saves a changeset in the shape `apply/4` expects.
+
+  When the name or parent changed, `refresh` is called with the saved
+  record so a tree can rebuild the rows under it.
+  """
+  def commit(changeset), do: commit(changeset, fn _record -> :ok end)
+
+  def commit(changeset, refresh) when is_function(refresh, 1) do
+    case Repo.update(changeset) do
+      {:ok, record} ->
+        if name_or_parent_changed?(changeset), do: refresh.(record)
+        {:ok, record, changeset}
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
+  end
+
   defp topic(user_id), do: "changes:user:#{user_id}"
+
+  defp take_or_insert(user, command_id, entity_type, fun) do
+    case Repo.get_by(Change, command_id: command_id) do
+      %Change{} = change -> {replay(user, change), false}
+      nil -> insert_change(user, command_id, entity_type, fun.())
+    end
+  end
+
+  defp insert_change(_user, _command_id, _entity_type, {:error, reason}) do
+    Repo.rollback(reason)
+  end
+
+  defp insert_change(user, command_id, entity_type, {:ok, %{id: id} = entity, changeset}) do
+    case encode_patch(changeset) do
+      patch when patch == %{} ->
+        {entity, false}
+
+      patch ->
+        # Change ids are allocated one writer at a time per user, so
+        # they commit in id order and a pull cursor never passes
+        # one still in flight (ADR 0019).
+        Repo.query!("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
+          "changes:" <> user.id
+        ])
+
+        %Change{}
+        |> Change.record_changeset(%{
+          command_id: command_id,
+          user_id: user.id,
+          entity_type: entity_type,
+          entity_id: id,
+          patch: patch
+        })
+        |> Repo.insert!()
+
+        {entity, true}
+    end
+  end
+
+  defp publish({:ok, {entity, changed?}}, user, entity_type, nested?) do
+    if changed? and not nested?, do: broadcast(user, entity_type, entity.id)
+    {:ok, entity}
+  end
+
+  defp publish({:error, reason}, _user, _entity_type, _nested?), do: {:error, reason}
+
+  defp name_or_parent_changed?(changeset) do
+    field_changed?(changeset, :name) or field_changed?(changeset, :parent_id)
+  end
+
+  defp field_changed?(changeset, field) do
+    Map.has_key?(changeset.types, field) and Ecto.Changeset.changed?(changeset, field)
+  end
 
   defp replay(user, %Change{entity_type: type, entity_id: id}) do
     case fetch(user, type, id) do

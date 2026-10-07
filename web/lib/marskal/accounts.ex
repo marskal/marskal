@@ -6,7 +6,7 @@ defmodule Marskal.Accounts do
   import Ecto.Query, warn: false
   alias Marskal.Repo
 
-  alias Marskal.Accounts.{User, UserPreferences, UserToken, UserNotifier}
+  alias Marskal.Accounts.{User, UserNotifier, UserPreferences, UserToken}
   alias Marskal.Changes
 
   ## Database getters
@@ -199,16 +199,8 @@ defmodule Marskal.Accounts do
   def update_preferences(%User{} = user, id \\ nil, attrs, command_id) when is_map(attrs) do
     Changes.apply(user, command_id, "user_preferences", fn ->
       case fetch_preferences(user, id) do
-        nil ->
-          {:error, :not_found}
-
-        preferences ->
-          changeset = UserPreferences.changeset(preferences, attrs)
-
-          case Repo.update(changeset) do
-            {:ok, preferences} -> {:ok, preferences, changeset}
-            {:error, changeset} -> {:error, changeset}
-          end
+        nil -> {:error, :not_found}
+        preferences -> Changes.commit(UserPreferences.changeset(preferences, attrs))
       end
     end)
   end

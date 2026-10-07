@@ -1,4 +1,8 @@
 defmodule Marskal.Projects do
+  @moduledoc """
+  Projects and the commands that change them (ADR 0009).
+  """
+
   import Ecto.Query
   alias Marskal.Accounts.User
   alias Marskal.Changes
@@ -40,16 +44,8 @@ defmodule Marskal.Projects do
   def update_project(%User{} = user, id, attrs, command_id, opts \\ []) when is_map(attrs) do
     Changes.apply(user, command_id, "project", fn ->
       case get_project(user, id) do
-        nil ->
-          {:error, :not_found}
-
-        project ->
-          changeset = Project.update_changeset(project, attrs, opts)
-
-          case Repo.update(changeset) do
-            {:ok, project} -> {:ok, project, changeset}
-            {:error, changeset} -> {:error, changeset}
-          end
+        nil -> {:error, :not_found}
+        project -> Changes.commit(Project.update_changeset(project, attrs, opts))
       end
     end)
   end
@@ -62,21 +58,29 @@ defmodule Marskal.Projects do
   def delete_project(%User{} = user, id, command_id) do
     Changes.apply(user, command_id, "project", fn ->
       case get_project(user, id) do
-        nil ->
-          {:error, :not_found}
-
-        project ->
-          Task
-          |> where([t], t.project_id == ^project.id and is_nil(t.discarded_at))
-          |> Repo.all()
-          |> Enum.each(fn task ->
-            Changes.cascade(user, command_id, "task", task.id, fn -> Tasks.discard(task) end)
-          end)
-
-          changeset = Project.discard_changeset(project)
-          {:ok, Repo.update!(changeset), changeset}
+        nil -> {:error, :not_found}
+        project -> discard_project(user, command_id, project)
       end
     end)
+  end
+
+  defp discard_project(user, command_id, project) do
+    project
+    |> project_tasks()
+    |> Enum.each(&discard_project_task(user, command_id, &1))
+
+    changeset = Project.discard_changeset(project)
+    {:ok, Repo.update!(changeset), changeset}
+  end
+
+  defp project_tasks(project) do
+    Task
+    |> where([t], t.project_id == ^project.id and is_nil(t.discarded_at))
+    |> Repo.all()
+  end
+
+  defp discard_project_task(user, command_id, task) do
+    Changes.cascade(user, command_id, "task", task.id, fn -> Tasks.discard(task) end)
   end
 
   def rename_project(user, id, title, command_id),

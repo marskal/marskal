@@ -1,4 +1,8 @@
 defmodule Marskal.ProjectFolders do
+  @moduledoc """
+  Project folders, the nested containers projects are filed in (ADR 0009).
+  """
+
   import Ecto.Query
   alias Marskal.Accounts.User
   alias Marskal.Changes
@@ -47,20 +51,9 @@ defmodule Marskal.ProjectFolders do
           {:error, :not_found}
 
         folder ->
-          changeset = ProjectFolder.update_changeset(folder, user, attrs)
-
-          case Repo.update(changeset) do
-            {:ok, folder} ->
-              if Ecto.Changeset.changed?(changeset, :name) or
-                   Ecto.Changeset.changed?(changeset, :parent_id) do
-                refresh_descendants!(folder)
-              end
-
-              {:ok, folder, changeset}
-
-            {:error, changeset} ->
-              {:error, changeset}
-          end
+          folder
+          |> ProjectFolder.update_changeset(user, attrs)
+          |> Changes.commit(&refresh_descendants!/1)
       end
     end)
   end

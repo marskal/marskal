@@ -1,8 +1,12 @@
 defmodule Marskal.Accounts.UserNotifier do
+  @moduledoc """
+  Emails sent for account changes.
+  """
+
   import Swoosh.Email
 
-  alias Marskal.Mailer
   alias Marskal.Accounts.User
+  alias Marskal.Mailer
 
   # Delivers the email using the application mailer.
   defp deliver(recipient, subject, body) do

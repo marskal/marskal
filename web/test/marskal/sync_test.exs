@@ -125,7 +125,7 @@ defmodule Marskal.SyncTest do
 
       first = Sync.pull(user, 0, 2)
       assert first.more
-      assert length(first.rows["task"]) == 2
+      assert Enum.count(first.rows["task"]) == 2
 
       second = Sync.pull(user, first.cursor, 2)
       third = Sync.pull(user, second.cursor, 2)

@@ -173,20 +173,23 @@ defmodule MarskalWeb.DateFields do
   end
 
   defp instant(params, key, field, record, zone) do
-    with {:ok, date} <- Date.from_iso8601(params["#{key}_date"] || "") do
-      time =
-        case Time.from_iso8601(pad_seconds(params["#{key}_time"])) do
-          {:ok, time} -> time
-          {:error, _} -> nil
-        end
-
-      picked = Dates.from_local(date, time, field, zone)
-      stored = Map.fetch!(record, field)
-
-      if stored && same_minute?(stored, picked), do: stored, else: picked
-    else
-      _ -> nil
+    case Date.from_iso8601(params["#{key}_date"] || "") do
+      {:ok, date} -> picked_instant(date, params, key, field, record, zone)
+      {:error, _} -> nil
     end
+  end
+
+  defp picked_instant(date, params, key, field, record, zone) do
+    time =
+      case Time.from_iso8601(pad_seconds(params["#{key}_time"])) do
+        {:ok, time} -> time
+        {:error, _} -> nil
+      end
+
+    picked = Dates.from_local(date, time, field, zone)
+    stored = Map.fetch!(record, field)
+
+    if stored && same_minute?(stored, picked), do: stored, else: picked
   end
 
   defp pad_seconds(<<_::binary-size(5)>> = hh_mm), do: hh_mm <> ":00"
