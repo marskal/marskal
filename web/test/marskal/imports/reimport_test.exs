@@ -85,7 +85,7 @@ defmodule Marskal.Imports.ReimportTest do
     {:ok, _} =
       apply!(user, edit_items(TodoistSnapshot.small(), %{"t1" => %{"labels" => ["Food"]}}))
 
-    assert tag_names(user, milk) == ["Food", "Mine"]
+    assert tag_names(user, milk) == ["Food", "Mine", "Missing recurrence"]
 
     {:ok, _} =
       apply!(
@@ -93,7 +93,7 @@ defmodule Marskal.Imports.ReimportTest do
         edit_items(TodoistSnapshot.small(), %{"t1" => %{"labels" => ["Food", "Errand"]}})
       )
 
-    assert tag_names(user, milk) == ["Errand", "Food", "Mine"]
+    assert tag_names(user, milk) == ["Errand", "Food", "Mine", "Missing recurrence"]
   end
 
   test "an item the user deleted is imported again, as a new task", %{user: user} do
@@ -108,7 +108,7 @@ defmodule Marskal.Imports.ReimportTest do
     fresh = task!(user, "t1")
     assert fresh.id != milk.id
     assert fresh.title == "Buy oat milk"
-    assert tag_names(user, fresh) == ["Errand", "Food"]
+    assert tag_names(user, fresh) == ["Errand", "Food", "Missing recurrence"]
     assert again.stats["created"]["tasks"] == 1
     assert again.stats["recreated"] == 1
 
@@ -174,7 +174,41 @@ defmodule Marskal.Imports.ReimportTest do
     assert editor.title == "Ask editor"
     assert editor.url == "https://chat.example/editor"
     assert Repo.get!(Task, copy.id).notes == "My notes"
-    assert tag_names(user, task!(user, "t1")) == ["Errand", "Food"]
+    assert tag_names(user, task!(user, "t1")) == ["Errand", "Food", "Missing recurrence"]
+  end
+
+  test "an import problem the user fixed stays fixed", %{user: user} do
+    milk = task!(user, "t1")
+    assert milk.notes =~ "- Repeat: every monday"
+
+    problem = Enum.find(tags_of(user, milk), &(&1.name == "Missing recurrence"))
+    {:ok, _} = Tags.untag_task(user, milk.id, problem.id, uuid())
+    {:ok, _} = Tasks.set_notes(user, milk.id, nil, uuid())
+
+    {:ok, _} = apply!(user, TodoistSnapshot.small())
+
+    assert tag_names(user, milk) == ["Errand", "Food"]
+    assert Repo.get!(Task, milk.id).notes == nil
+  end
+
+  test "a problem the source no longer has goes away", %{user: user} do
+    milk = task!(user, "t1")
+
+    {:ok, _} =
+      apply!(
+        user,
+        edit_items(TodoistSnapshot.small(), %{"t1" => %{"due" => %{"date" => "2026-09-28"}}})
+      )
+
+    assert tag_names(user, milk) == ["Errand", "Food"]
+    assert Repo.get!(Task, milk.id).notes == nil
+  end
+
+  defp tags_of(user, task) do
+    user
+    |> Tags.effective_tags([task], Tags.tree(user))
+    |> Map.get(task.id, [])
+    |> Enum.map(& &1.tag)
   end
 
   defp apply!(user, snapshot) do

@@ -182,6 +182,26 @@ defmodule Marskal.TasksTest do
     end
   end
 
+  test "a title or notes over the limit is refused", %{user: user} do
+    long_title = String.duplicate("a", Task.title_max() + 1)
+    long_notes = String.duplicate("a", Task.notes_max() + 1)
+
+    assert {:error, changeset} = Tasks.create_task(user, %{"title" => long_title}, command_id())
+    assert errors_on(changeset).title
+
+    assert {:error, changeset} =
+             Tasks.create_task(user, %{"title" => "Milk", "notes" => long_notes}, command_id())
+
+    assert errors_on(changeset).notes
+
+    {:ok, task} = Tasks.create_task(user, %{"title" => "Milk"}, command_id())
+
+    assert {:error, changeset} =
+             Tasks.update_task(user, task.id, %{"notes" => long_notes}, command_id())
+
+    assert errors_on(changeset).notes
+  end
+
   test "a task can be created already resolved in one command", %{user: user} do
     {:ok, task} = Tasks.create_task(user, %{"title" => "Old", "state" => "done"}, command_id())
 

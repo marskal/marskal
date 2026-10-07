@@ -6,9 +6,10 @@ defmodule Marskal.Imports.TodoistAdapter do
   project becomes a folder. A parent with no tasks of its own is only that
   folder. A parent that also has tasks keeps them in a project named
   "<name> tasks" inside the folder. A parent cycle is cut so the folders
-  still form a tree. Sections, subtask parents, a Todoist due date
-  (planned), a deadline (due), and the recurrence text stay in extras:
-  those columns do not exist yet. Labels become tags. Completed-task
+  still form a tree. A Todoist due date is planned, and a deadline is
+  due. The section and the recurrence text have no column yet: they stay
+  in extras, and the task is marked for the user to fix
+  (`Marskal.Imports.Problems`). Labels become tags. Completed-task
   history is not in the snapshot. Titles are Markdown: their links move
   to the URL (`Marskal.Imports.TitleLinks`).
 
@@ -19,6 +20,7 @@ defmodule Marskal.Imports.TodoistAdapter do
   alias Marskal.Imports.Folder
   alias Marskal.Imports.Graph
   alias Marskal.Imports.Limits
+  alias Marskal.Imports.Problems
   alias Marskal.Imports.ProjectNode
   alias Marskal.Imports.TagNode
   alias Marskal.Imports.TaskNode
@@ -57,8 +59,9 @@ defmodule Marskal.Imports.TodoistAdapter do
         items
         |> Enum.reject(&deleted?/1)
         |> sort_by("child_order", "content")
-        |> Enum.flat_map(&task_node(&1, inbox, project_ids, section_names, label_ids, limits))
+        |> Enum.flat_map(&task_node(&1, inbox, project_ids, section_names, label_ids))
     }
+    |> Problems.mark("Todoist")
   end
 
   def parse(_payload), do: raise(ArgumentError, "This Todoist snapshot could not be read.")
@@ -135,6 +138,22 @@ defmodule Marskal.Imports.TodoistAdapter do
         |> put_flag("shared", not tasks? && row["shared"] == true)
         |> put_extra("state", if(not tasks? && state == "done", do: "done"))
     }
+    |> with_problems()
+  end
+
+  # What a folder cannot hold, named in the import summary.
+  defp with_problems(%Folder{extras: extras} = folder) do
+    problems =
+      for {key, label} <- [
+            {"notes", "Notes"},
+            {"url", "URL"},
+            {"defer", "Paused"},
+            {"state", "Completed"}
+          ],
+          Map.has_key?(extras, key),
+          do: label
+
+    %{folder | problems: problems}
   end
 
   defp project_node(row, containers, parents, with_tasks) do
@@ -238,31 +257,33 @@ defmodule Marskal.Imports.TodoistAdapter do
     end
   end
 
-  defp task_node(row, inbox, project_ids, section_names, label_ids, limits) do
+  defp task_node(row, inbox, project_ids, section_names, label_ids) do
     project_source_id = source_id("project", row["project_id"])
     inbox? = MapSet.member?(inbox, string_id(row["project_id"]))
 
     cond do
       inbox? ->
-        [task(row, true, nil, section_names, label_ids, limits)]
+        [task(row, true, nil, section_names, label_ids)]
 
       project_source_id in project_ids ->
-        [task(row, false, project_source_id, section_names, label_ids, limits)]
+        [task(row, false, project_source_id, section_names, label_ids)]
 
       true ->
         []
     end
   end
 
-  defp task(row, inbox?, project_source_id, section_names, label_ids, limits) do
+  defp task(row, inbox?, project_source_id, section_names, label_ids) do
     parent = source_id("task", row["parent_id"])
+    section = section_names[string_id(row["section_id"])]
+    repeat = repeat(row["due"])
     names = row |> Map.get("labels", []) |> List.wrap() |> Enum.filter(&is_binary/1)
     {title, url, more} = row["content"] |> blank("Untitled") |> TitleLinks.split()
 
     %TaskNode{
       source_id: source_id("task", row["id"]),
       title: title,
-      notes: row["description"] |> text() |> TitleLinks.notes(more) |> clip(limits.notes_chars),
+      notes: row["description"] |> text() |> TitleLinks.notes(more),
       url: url,
       inbox: inbox?,
       project_source_id: project_source_id,
@@ -276,11 +297,19 @@ defmodule Marskal.Imports.TodoistAdapter do
       extras:
         %{}
         |> put_extra("parent_source_id", parent)
-        |> put_extra("section", section_names[string_id(row["section_id"])])
+        |> put_extra("section", section)
         |> put_extra("order_key", row["order_key"])
         |> put_extra("planned_zone", get_in(row, ["due", "timezone"]))
-        |> put_extra("repeat", repeat(row["due"]))
-        |> put_priority(row["priority"])
+        |> put_extra("repeat", repeat)
+        |> put_priority(row["priority"]),
+      problems:
+        Enum.reject(
+          [
+            repeat && {:missing_recurrence, "Repeat", repeat},
+            section && {:missing_section, "Section", section}
+          ],
+          &(&1 in [nil, false])
+        )
     }
   end
 
@@ -429,9 +458,6 @@ defmodule Marskal.Imports.TodoistAdapter do
   end
 
   defp text(_value), do: nil
-
-  defp clip(nil, _max), do: nil
-  defp clip(value, max), do: String.slice(value, 0, max)
 
   defp present?(value) when is_binary(value), do: value != ""
   defp present?(_value), do: false

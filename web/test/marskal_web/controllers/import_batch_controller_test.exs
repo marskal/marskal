@@ -73,11 +73,13 @@ defmodule MarskalWeb.ImportBatchControllerTest do
     batch = Repo.reload!(batch)
     assert batch.status == :previewed
     assert batch.stats["tasks"] == 4
-    assert batch.stats["tags"] == 2
+    assert batch.stats["tags"] == 5
+    assert batch.stats["problems"] == 2
 
     conn = get(recycle(conn), ~p"/imports/#{batch.id}")
     html = html_response(conn, 200)
     assert html =~ "Labels become tags"
+    assert html =~ "2 items could not be brought over in full"
     assert html =~ "Buy milk"
   end
 

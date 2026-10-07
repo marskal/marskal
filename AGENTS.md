@@ -229,7 +229,9 @@ The repository root is the product, not the web app (ADR 0015).
   acquire bytes: an OmniFocus backup upload, or Todoist OAuth (API v1 sync,
   `data:read`, token not stored). Parse and apply run as Oban jobs; the
   payload is held in `import_batches.payload` only until apply, failure, or
-  expiry after 24 h. Park unmapped fields on `import_items.extras`. Re-import
+  expiry after 24 h. Park unmapped fields on `import_items.extras`; an item
+  that loses something the user must fix gets an "Import problems" tag and a
+  note block saying what (`Imports.Problems`). Re-import
   updates existing `(user, source, source_id)` items by a three-way merge
   against `import_items.fields`: the user's edits win, and an item the
   user deleted is imported again as a new record. Do not add competing-app libraries.

@@ -225,12 +225,12 @@ defmodule Marskal.Imports.ApplierTest do
 
     batch = preview_todoist!(user)
     assert batch.status == :previewed
-    assert batch.stats["tags"] == 2
+    assert batch.stats["tags"] == 5
     assert batch.external_account == "ada@example.com"
 
     assert {:ok, applied} = Applier.call(batch)
     assert applied.stats["created"]["tasks"] == 4
-    assert applied.stats["created"]["tags"] == 1
+    assert applied.stats["created"]["tags"] == 4
     assert applied.stats["skipped"]["tags"] == 1
     assert Imports.load_payload(applied).payload == nil
 
@@ -241,7 +241,7 @@ defmodule Marskal.Imports.ApplierTest do
     labels =
       user |> Tags.effective_tags([milk], tree) |> Map.fetch!(milk.id) |> Enum.map(& &1.tag.name)
 
-    assert Enum.sort(labels) == ["Errand", "Food"]
+    assert Enum.sort(labels) == ["Errand", "Food", "Missing recurrence"]
 
     food = Repo.get_by!(ImportItem, user_id: user.id, source: "todoist", source_id: "tag:l1")
     assert food.tag_id == existing.id
@@ -256,7 +256,7 @@ defmodule Marskal.Imports.ApplierTest do
     names =
       Tag |> where([t], t.user_id == ^user.id) |> Repo.all() |> Enum.map(& &1.name) |> Enum.sort()
 
-    assert names == ["Errand", "Food"]
+    assert names == ["Errand", "Food", "Import problems", "Missing recurrence", "Missing section"]
 
     again = preview_todoist!(user)
     assert {:ok, again} = Applier.call(again)

@@ -5,6 +5,7 @@ defmodule Marskal.Tasks.Task do
 
   @states [:to_do, :done, :dropped]
   @title_max 500
+  @notes_max 32_768
 
   @primary_key {:id, Ecto.UUID, autogenerate: false, read_after_writes: true}
   @foreign_key_type Ecto.UUID
@@ -46,6 +47,8 @@ defmodule Marskal.Tasks.Task do
 
   def title_max, do: @title_max
 
+  def notes_max, do: @notes_max
+
   @doc """
   A new task. `state` and `resolved_at` may be given so an import can create
   a resolved task, with its source's resolve time, in one command. A client
@@ -70,6 +73,7 @@ defmodule Marskal.Tasks.Task do
     ])
     |> validate_required([:title])
     |> validate_length(:title, max: @title_max)
+    |> validate_length(:notes, max: @notes_max)
     |> Marskal.Url.validate("tasks")
     |> put_change(:user_id, user.id)
     |> default_inbox()
@@ -102,6 +106,7 @@ defmodule Marskal.Tasks.Task do
     ])
     |> validate_required([:title, :inbox, :state])
     |> validate_length(:title, max: @title_max)
+    |> validate_length(:notes, max: @notes_max)
     |> Marskal.Url.validate("tasks")
     |> put_location()
     |> Dates.put_defer()
