@@ -8,10 +8,12 @@ defmodule Marskal.Recurrence.Schedule do
   a slot is a later step.
 
   `from` is the previous occurrence's slot in regular mode, and the
-  resolution time in on-completion mode. Both modes expand the rule the
-  same way. `from` starts the rule, and the result is the next instance
-  strictly after it. The day selection follows RFC 5545, with the week
-  starting on Monday.
+  resolution time in on-completion mode. Regular mode expands the rule as
+  RFC 5545 does, with the week starting on Monday: `from` starts the
+  rule, and the result is the next instance strictly after it. On
+  completion adds the interval to `from`, and a short month or year
+  clamps to its last day, since that day came from the resolution time.
+  On completion has no day limits.
 
   Minutes and hours are elapsed time. Days, weeks, months, and years step
   on the zone's calendar and keep the local time, so a weekly 17:00 stays
@@ -24,10 +26,9 @@ defmodule Marskal.Recurrence.Schedule do
 
   Monthly limits are calendar days (1–31, and −1 for the last) and one
   nth weekday, work day, or weekend day. A work day is Monday to Friday.
-  With neither, the slot keeps the day of the month and skips a month
-  that lacks it, so the month after a 31st is March. With both, the slot
-  is a day that is one of the calendar days and is that nth day. A fifth
-  weekday the month does not have is skipped. Months step by `interval`
+  Together they are the set of days the slot may land on. With neither,
+  the slot keeps the day of the month. A day the month does not have is
+  skipped, so the month after a 31st is March. Months step by `interval`
   from `from`'s month.
 
   The result is nil when the slot would fall after `ends_at`. A slot on
@@ -89,32 +90,39 @@ defmodule Marskal.Recurrence.Schedule do
 
   defp calendar(series, from, zone) do
     {date, time} = Dates.to_local(from, zone)
+    finish(next_date(date, series), time, zone, series.ends_at)
+  end
 
-    date =
-      case series.frequency do
-        :days -> Date.add(date, series.interval)
-        :weeks -> next_week(date, series)
-        :months -> next_month(date, series)
-        :years -> next_year(date, series)
-      end
+  # The resolution day is not one the user chose, so a short month or year
+  # clamps to its last day instead of being skipped.
+  defp next_date(date, %Series{mode: :on_completion, frequency: frequency, interval: interval}) do
+    case frequency do
+      :days -> Date.add(date, interval)
+      :weeks -> Date.add(date, interval * 7)
+      :months -> add_months(date, interval)
+      :years -> add_months(date, interval * 12)
+    end
+  end
 
-    finish(date, time, zone, series.ends_at)
+  defp next_date(date, %Series{mode: :regular} = series) do
+    case series.frequency do
+      :days -> Date.add(date, series.interval)
+      :weeks -> next_week(date, series)
+      :months -> next_month(date, series)
+      :years -> next_year(date, series.interval)
+    end
   end
 
   defp next_week(date, %Series{weekdays: []} = series) do
     Date.add(date, series.interval * 7)
   end
 
-  defp next_week(date, series) do
-    find_weekday(date, date, 1, series.interval, series.weekdays)
-  end
+  # The week grid starts at `date`'s week, and the search the day after it.
+  defp next_week(date, %Series{interval: interval, weekdays: weekdays}) do
+    origin_week = Date.beginning_of_week(date, :monday)
 
-  # `origin` anchors the week grid. The search starts the day after it.
-  defp find_weekday(origin, start, min_offset, interval, weekdays) do
-    origin_week = Date.beginning_of_week(origin, :monday)
-
-    Enum.find_value(min_offset..(interval * 7 + 6), fn offset ->
-      candidate = Date.add(start, offset)
+    Enum.find_value(1..(interval * 7 + 6), fn offset ->
+      candidate = Date.add(date, offset)
       week = Date.beginning_of_week(candidate, :monday)
       weeks = div(Date.diff(week, origin_week), 7)
 
@@ -129,54 +137,35 @@ defmodule Marskal.Recurrence.Schedule do
   end
 
   defp next_month(date, series) do
-    next_month_match(date, series)
-  end
-
-  defp next_month_match(origin, series) do
     Enum.find_value(0..480, fn step ->
-      {year, month} = shift_months(origin, step * series.interval)
+      {year, month} = shift_months(date, step * series.interval)
 
       series
       |> matching_days(year, month)
-      |> Enum.find(&Date.after?(&1, origin))
+      |> Enum.find(&Date.after?(&1, date))
     end)
   end
 
-  # Calendar days expand the month. An nth day expands it when no calendar
-  # days are set, and limits them when both are set (RFC 5545 Note 1):
-  # the slot is that nth day only in a month where it is also a listed day.
-  defp matching_days(%Series{month_ordinal: nil} = series, year, month) do
-    calendar_days(series.month_days, year, month)
-  end
-
-  defp matching_days(%Series{month_days: []} = series, year, month) do
-    start = Date.new!(year, month, 1)
-    List.wrap(nth_day(start, series.month_ordinal, series.month_day_kind))
-  end
-
+  # The calendar days and the nth day together are the days the slot may
+  # land on.
   defp matching_days(series, year, month) do
     start = Date.new!(year, month, 1)
-    days = calendar_days(series.month_days, year, month)
+    last = Date.days_in_month(start)
 
-    case nth_day(start, series.month_ordinal, series.month_day_kind) do
-      nil ->
-        []
+    numbered =
+      for day <- series.month_days,
+          date = calendar_day(year, month, day, last),
+          not is_nil(date),
+          do: date
 
-      day ->
-        if day in days, do: [day], else: []
-    end
-  end
-
-  defp calendar_days(days, year, month) do
-    last = Date.days_in_month(Date.new!(year, month, 1))
-
-    days
-    |> Enum.flat_map(fn day ->
-      case calendar_day(year, month, day, last) do
+    nth =
+      case series.month_ordinal do
         nil -> []
-        date -> [date]
+        ordinal -> List.wrap(nth_day(start, ordinal, series.month_day_kind))
       end
-    end)
+
+    numbered
+    |> Enum.concat(nth)
     |> Enum.uniq()
     |> Enum.sort(Date)
   end
@@ -216,9 +205,7 @@ defmodule Marskal.Recurrence.Schedule do
     end)
   end
 
-  defp next_year(date, %Series{interval: interval}) do
-    %Date{year: year, month: month, day: day} = date
-
+  defp next_year(%Date{year: year, month: month, day: day}, interval) do
     Enum.find_value(1..500, fn step ->
       case Date.new(year + step * interval, month, day) do
         {:ok, found} -> found
@@ -230,6 +217,12 @@ defmodule Marskal.Recurrence.Schedule do
   defp shift_months(%Date{year: year, month: month}, add) do
     index = year * 12 + (month - 1) + add
     {div(index, 12), rem(index, 12) + 1}
+  end
+
+  defp add_months(date, add) do
+    {year, month} = shift_months(date, add)
+    last = Date.days_in_month(Date.new!(year, month, 1))
+    Date.new!(year, month, min(date.day, last))
   end
 
   defp elapsed(from, seconds, ends_at) do

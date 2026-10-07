@@ -113,6 +113,9 @@ defmodule Marskal.Recurrence.Series do
     |> only_for(:weeks, :weekdays, [])
     |> only_for(:months, :month_days, [])
     |> only_for(:months, :month_ordinal, nil)
+    |> regular_only(:weekdays, [])
+    |> regular_only(:month_days, [])
+    |> regular_only(:month_ordinal, nil)
     |> validate_month_weekday()
     |> check_constraint(:weekdays, name: :recurrence_series_weekdays)
     |> check_constraint(:month_days, name: :recurrence_series_month_days)
@@ -133,6 +136,14 @@ defmodule Marskal.Recurrence.Series do
   defp only_for(changeset, frequency, field, empty) do
     if get_field(changeset, :frequency) != frequency and get_field(changeset, field) != empty,
       do: add_error(changeset, field, "only applies to a rule every so many #{frequency}"),
+      else: changeset
+  end
+
+  # On completion is an interval from the resolution, with no day limits
+  # yet (ADR 0007).
+  defp regular_only(changeset, field, empty) do
+    if get_field(changeset, :mode) == :on_completion and get_field(changeset, field) != empty,
+      do: add_error(changeset, field, "only applies to a regular rule"),
       else: changeset
   end
 
