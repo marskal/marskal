@@ -21,7 +21,6 @@ defmodule Marskal.Accounts.UserPreferences do
     field :timezone, :string, default: "Europe/Copenhagen"
     # The ISO day weeks start on, 1 for Monday. New series take it (ADR 0007).
     field :week_start, :integer, default: 1
-    field :discarded_at, :utc_datetime
     field :user_id, Ecto.UUID, source: :user_id
 
     timestamps(type: :utc_datetime)

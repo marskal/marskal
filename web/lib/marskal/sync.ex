@@ -19,7 +19,7 @@ defmodule Marskal.Sync do
 
   @entities [
     {"user_preferences", Marskal.Accounts.UserPreferences,
-     ~w(id timezone week_start discarded_at inserted_at updated_at)a},
+     ~w(id timezone week_start inserted_at updated_at)a},
     {"recurrence_series", Marskal.Recurrence.Series,
      ~w(id kind mode anchor interval frequency weekdays month_days month_ordinal month_day_kind
         ends_at end_count week_start stopped_at discarded_at inserted_at updated_at)a},
@@ -67,7 +67,8 @@ defmodule Marskal.Sync do
       Map.new(@entities, fn {type, schema, fields} ->
         {type,
          schema
-         |> where([r], r.user_id == ^user.id and is_nil(r.discarded_at))
+         |> where([r], r.user_id == ^user.id)
+         |> live()
          |> order_by([r], asc: r.id)
          |> Repo.all()
          |> Enum.map(&encode(&1, fields))}
@@ -131,6 +132,16 @@ defmodule Marskal.Sync do
       rows: rows,
       gone: []
     }
+  end
+
+  # A row without discarded_at, such as the preferences, lives as long as
+  # its user.
+  defp live(query) do
+    %{from: %{source: {_table, schema}}} = query
+
+    if :discarded_at in schema.__schema__(:fields),
+      do: where(query, [r], is_nil(r.discarded_at)),
+      else: query
   end
 
   defp encode(record, fields) do

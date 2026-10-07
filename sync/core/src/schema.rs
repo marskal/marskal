@@ -166,7 +166,6 @@ CREATE TABLE user_preferences (
   id TEXT PRIMARY KEY,
   timezone TEXT NOT NULL,
   week_start INTEGER NOT NULL DEFAULT 1,
-  discarded_at TEXT,
   inserted_at TEXT,
   updated_at TEXT
 );

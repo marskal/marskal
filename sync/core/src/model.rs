@@ -148,7 +148,6 @@ pub struct UserPreferences {
     pub id: Uuid,
     pub timezone: String,
     pub week_start: u8,
-    pub discarded_at: Option<String>,
     pub inserted_at: Option<String>,
     pub updated_at: Option<String>,
 }

@@ -2,8 +2,8 @@ defmodule Marskal.Repo.Migrations.CreateUserPreferences do
   use Ecto.Migration
 
   # ADR 0023. One row per user, keyed by the user and made with them, and
-  # synced like any other row. It is never discarded; discarded_at is there
-  # so pulls treat it like the rest.
+  # synced like any other row. It lives as long as the user, so it has no
+  # discarded_at.
   def up do
     execute """
     CREATE TABLE user_preferences (
@@ -11,7 +11,6 @@ defmodule Marskal.Repo.Migrations.CreateUserPreferences do
       timezone text NOT NULL DEFAULT 'Europe/Copenhagen',
       week_start smallint NOT NULL DEFAULT 1
         CONSTRAINT user_preferences_week_start CHECK (week_start BETWEEN 1 AND 7),
-      discarded_at timestamptz(0),
       inserted_at timestamp(0) NOT NULL DEFAULT (now() AT TIME ZONE 'utc'),
       updated_at timestamp(0) NOT NULL DEFAULT (now() AT TIME ZONE 'utc')
     )

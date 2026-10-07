@@ -24,8 +24,8 @@ same field patches, command ids, and change feed as every other row
   that change different preferences offline both land, field by field.
 - The row syncs as the entity **`user_preferences`**. Its `id` on the wire
   is the user id. A client only patches it (`timezone`, `week_start`); an
-  insert or a `discarded_at` patch is refused. It is never discarded;
-  `discarded_at` exists so pulls treat it like any other row.
+  insert or a `discarded_at` patch is refused. It lives as long as the
+  user, so it has no `discarded_at` and never needs a tombstone.
 - The pull's `user` block keeps `timezone`, read from the row, for clients
   from before it.
 - Server code reads them through `Marskal.Accounts.preferences/1` and

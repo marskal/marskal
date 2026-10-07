@@ -524,11 +524,12 @@ pub(crate) fn load<T: serde::de::DeserializeOwned>(
 ) -> Result<Vec<T>> {
     let columns = entity.columns();
     let names: Vec<&str> = columns.iter().map(|c| c.name).collect();
-    let sql = format!(
-        "SELECT {} FROM {} WHERE discarded_at IS NULL",
-        names.join(", "),
-        entity.table()
-    );
+    let live = if entity.column("discarded_at").is_some() {
+        " WHERE discarded_at IS NULL"
+    } else {
+        ""
+    };
+    let sql = format!("SELECT {} FROM {}{live}", names.join(", "), entity.table());
 
     let mut statement = conn.prepare(&sql)?;
     let mut rows = statement.query([])?;

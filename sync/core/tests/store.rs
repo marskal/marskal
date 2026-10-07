@@ -621,7 +621,6 @@ fn pulled_preferences_read_back() {
         "id": user.to_string(),
         "timezone": "America/New_York",
         "week_start": 7,
-        "discarded_at": null,
         "inserted_at": "2026-10-01T08:00:00Z",
         "updated_at": "2026-10-01T08:00:00Z"
     });
