@@ -102,7 +102,7 @@ defmodule Marskal.MixProject do
         "test",
         "credo --strict",
         "dialyzer",
-        "ex_dna --max-clones 0",
+        "ex_dna --max-clones 5",
         "reach.check --arch --smells"
       ],
       ci: [
@@ -111,7 +111,7 @@ defmodule Marskal.MixProject do
         "test",
         "credo --strict",
         "dialyzer",
-        "ex_dna --max-clones 0",
+        "ex_dna --max-clones 5",
         "reach.check --arch --smells"
       ]
     ]
