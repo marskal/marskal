@@ -34,7 +34,8 @@ defmodule Marskal.Recurrence.Schedule do
 
   The result is nil when the slot would fall after `ends_at`. A slot on
   `ends_at` is kept. The count of occurrences already generated, and the
-  cap on open ones, belong to the step that creates the task.
+  cap on open ones, belong to the step that creates the task
+  (`Marskal.Recurrence`).
   """
 
   alias Marskal.Dates
@@ -65,6 +66,22 @@ defmodule Marskal.Recurrence.Schedule do
       :minutes -> elapsed(from, series.interval * 60, series.ends_at)
       :hours -> elapsed(from, series.interval * 3600, series.ends_at)
       _frequency -> calendar(series, from, zone)
+    end
+  end
+
+  @doc """
+  The first slot strictly after `now`, stepping from `from` as
+  `next_slot/3` does, or nil when the rule ends first. The slots in
+  between are skipped.
+  """
+  def first_slot_after(%Series{} = series, %DateTime{} = from, %DateTime{} = now, zone) do
+    from = from |> DateTime.shift_zone!("Etc/UTC") |> DateTime.truncate(:second)
+    now = now |> DateTime.shift_zone!("Etc/UTC") |> DateTime.truncate(:second)
+
+    case series.frequency do
+      :minutes -> elapsed_after(from, now, series.interval * 60, series.ends_at)
+      :hours -> elapsed_after(from, now, series.interval * 3600, series.ends_at)
+      _frequency -> step_after(series, from, now, zone)
     end
   end
 
@@ -229,6 +246,20 @@ defmodule Marskal.Recurrence.Schedule do
     {year, month} = shift_months(date, add)
     last = Date.days_in_month(Date.new!(year, month, 1))
     Date.new!(year, month, min(date.day, last))
+  end
+
+  # Elapsed time jumps straight there, so an every-minute rule left for a
+  # month does not step through each one.
+  defp elapsed_after(from, now, seconds, ends_at) do
+    steps = if DateTime.after?(from, now), do: 0, else: div(DateTime.diff(now, from), seconds)
+    elapsed(DateTime.add(from, steps * seconds, :second), seconds, ends_at)
+  end
+
+  defp step_after(series, from, now, zone) do
+    case next_slot(series, from, zone) do
+      nil -> nil
+      slot -> if DateTime.after?(slot, now), do: slot, else: step_after(series, slot, now, zone)
+    end
   end
 
   defp elapsed(from, seconds, ends_at) do

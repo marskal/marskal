@@ -256,6 +256,45 @@ defmodule Marskal.Recurrence.ScheduleTest do
     end
   end
 
+  describe "first_slot_after/4" do
+    test "skips the slots up to now" do
+      now = at(~D[2026-10-15], ~T[12:00:00])
+
+      assert Schedule.first_slot_after(rule(%{}), at(~D[2026-10-09]), now, @zone) ==
+               at(~D[2026-10-15])
+
+      assert Schedule.first_slot_after(rule(%{}), at(~D[2026-10-09]), at(~D[2026-10-15]), @zone) ==
+               at(~D[2026-10-16])
+    end
+
+    test "jumps over elapsed time" do
+      from = ~U[2026-10-01 10:00:00Z]
+      rule = rule(%{frequency: :minutes, interval: 15})
+
+      assert Schedule.first_slot_after(rule, from, ~U[2026-11-01 10:07:00Z], @zone) ==
+               ~U[2026-11-01 10:15:00Z]
+
+      assert Schedule.first_slot_after(rule, from, ~U[2026-11-01 10:15:00Z], @zone) ==
+               ~U[2026-11-01 10:30:00Z]
+    end
+
+    test "is nil when the rule ends first" do
+      rule = rule(%{ends_at: at(~D[2026-10-12])})
+
+      assert Schedule.first_slot_after(rule, at(~D[2026-10-09]), at(~D[2026-10-13]), @zone) ==
+               nil
+
+      rule = rule(%{frequency: :hours, ends_at: ~U[2026-10-01 12:00:00Z]})
+
+      assert Schedule.first_slot_after(
+               rule,
+               ~U[2026-10-01 10:00:00Z],
+               ~U[2026-10-01 12:30:00Z],
+               @zone
+             ) == nil
+    end
+  end
+
   describe "other dates" do
     test "keep their distance from the anchor on the zone clock" do
       latest = %{

@@ -170,7 +170,8 @@ defmodule Marskal.Tasks do
   and a Defer change both of its fields (ADR 0006).
 
   A move to another location takes the task out from under its parent,
-  and its subtasks go with it.
+  and its subtasks go with it. Resolving the latest occurrence of an
+  on-completion series creates the next one (ADR 0007).
 
   `at:` is when a client says the user acted, for `resolved_at`
   (`Marskal.Dates.resolution_time/2`).
@@ -499,6 +500,10 @@ defmodule Marskal.Tasks do
         if Ecto.Changeset.changed?(changeset, :inbox) or
              Ecto.Changeset.changed?(changeset, :project_id) do
           relocate_subtree(user, command_id, task)
+        end
+
+        if Ecto.Changeset.changed?(changeset, :state) and task.state in [:done, :dropped] do
+          Marskal.Recurrence.occurrence_resolved(user, command_id, task)
         end
 
         {:ok, task, changeset}

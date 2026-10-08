@@ -85,7 +85,7 @@ Default home: **Open tasks** stream. Timezone is stored per user, default
 - Model **series** vs **occurrence**; not only “next due.” `recurrence_series` holds
   the rule and `kind` (task | project). Occurrences are tasks or projects with
   `series_id` and an immutable `occurrence_for`. The first build repeats tasks only.
-- The next occurrence copies the latest (greatest `occurrence_for`): title, notes,
+- The next occurrence copies the latest (the live one created last): title, notes,
   URL, location, parent, tags. In the first build a task's subtasks are not copied.
   Other dates keep their offset from the anchor on the user's zone clock.
 - Occurrences are the history; no completions table. A generated id that exists,
@@ -93,7 +93,8 @@ Default home: **Open tasks** stream. Timezone is stored per user, default
 - The server creates every occurrence after the first; a client only joins a task
   as a series' first. Reopening an occurrence keeps the one its completion made.
 - **Mode:** **regular** (next on schedule even if previous open, at most 10 open;
-  slots missed at the cap are skipped) or **on completion**.
+  a passed slot gets the first one after now, skipping those between) or
+  **on completion** (resolving the latest creates the next, in that command).
 - **On completion:** both **Done** and **Dropped** resolve the instance and **spawn next**
   (`interval` after the resolution time, clamped to a short month's last day;
   no day limits yet). To-Do does not.

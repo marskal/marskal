@@ -54,7 +54,11 @@ config :marskal, Oban,
   queues: [default: 10, imports: 2],
   plugins: [
     {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
-    {Oban.Plugins.Cron, crontab: [{"@hourly", Marskal.Imports.ExpireJob}]}
+    {Oban.Plugins.Cron,
+     crontab: [
+       {"@hourly", Marskal.Imports.ExpireJob},
+       {"* * * * *", Marskal.Recurrence.GenerateJob}
+     ]}
   ]
 
 # Configure esbuild (the version is required). The Nix build supplies its
