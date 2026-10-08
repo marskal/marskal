@@ -53,7 +53,8 @@ defmodule Marskal.Tasks.Task do
   A new task. `state` and `resolved_at` may be given so an import can create
   a resolved task, with its source's resolve time, in one command. A client
   may give its own `rank`; `Marskal.Tasks` places the task when it does
-  not, and moves a subtask to where its parent is.
+  not, and moves a subtask to where its parent is. `generated: true` is
+  for the occurrences `Marskal.Recurrence` creates.
   """
   def create_changeset(task, user, attrs, opts \\ []) do
     task
@@ -83,7 +84,7 @@ defmodule Marskal.Tasks.Task do
     |> assoc_constraint(:user)
     |> owned_project_constraint()
     |> date_constraints()
-    |> Marskal.Recurrence.validate_occurrence(user.id, :task)
+    |> Marskal.Recurrence.validate_occurrence(user.id, :task, generated: opts[:generated])
     |> validate_rank()
     |> outline_constraints()
   end

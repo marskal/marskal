@@ -258,6 +258,29 @@ section wins.
 - End count is N generated, including the first, which is what RFC 5545 `COUNT`
   does. The generator enforces it, along with the open cap.
 
+## Generating (2026-10-08)
+
+Settled with the generator. Where an earlier paragraph disagrees, this
+section wins.
+
+- **The latest occurrence is the live one created last**, not the one with
+  the greatest `occurrence_for`. In regular mode they are the same. On
+  completion they differ when a task is finished early: due Friday, every
+  day, done on Monday gives Tuesday. Tuesday's occurrence is the latest,
+  and finishing it repeats the series.
+- **On completion**, only resolving the latest occurrence creates the next,
+  in the same command, so replaying the command replays it. Resolving an
+  older or reopened one creates nothing.
+- **Regular:** once the greatest slot (deleted occurrences included) has
+  passed, the generator creates the first slot after now. Every slot
+  between is skipped, whether the series sat at the open cap, the server was
+  down, or the first occurrence was already in the past. A job runs it each
+  minute.
+- A series with no live occurrence has nothing to copy and creates nothing.
+- When the latest's parent task is gone, the next goes to the top level of
+  its location. Tags that were deleted are not copied; a merged tag copies
+  as the one it went into.
+
 ## Consequences
 
 - Phase 3 is a major product surface, not a bolt-on “repeat every week” checkbox.
