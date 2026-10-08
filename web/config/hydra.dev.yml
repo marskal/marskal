@@ -12,8 +12,10 @@ serve:
 
 urls:
   self:
-    issuer: http://localhost:8276
-    public: http://localhost:8276
+    # Phoenix's host, as in production, where Hydra sits behind it: a client
+    # given access to that host reaches both (ADR 0024).
+    issuer: http://marskal.localhost:8276
+    public: http://marskal.localhost:8276
   login: http://marskal.localhost:8275/oauth/login
   consent: http://marskal.localhost:8275/oauth/consent
   logout: http://marskal.localhost:8275/users/log-out

@@ -32,6 +32,7 @@ This file is **short and actionable**. Rationale and history live in
 | OAuth server (Ory Hydra) | [0021](docs/adr/0021-ory-hydra-authorization-server.md) |
 | URL on tasks & projects | [0022](docs/adr/0022-task-and-project-url.md) |
 | User preferences | [0023](docs/adr/0023-user-preferences.md) |
+| Thunderbird extension | [0024](docs/adr/0024-thunderbird-extension.md) |
 | Repository layout | [0015](docs/adr/0015-repository-layout.md) |
 
 ---
@@ -193,6 +194,9 @@ The repository root is the product, not the web app (ADR 0015).
   has its own `devenv.nix`; no root Cargo workspace.
 - Offline clients link one Rust library, `sync/core` (ADR 0018). Do not
   reimplement that engine in a shell. The Phoenix app does not call it.
+- `clients/thunderbird` is capture only (ADR 0024): it pushes inbox inserts
+  and never pulls, so it speaks the wire format itself. A client that shows
+  or edits tasks links the library.
 
 ### Environment
 

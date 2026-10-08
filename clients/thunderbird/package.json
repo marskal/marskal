@@ -1,0 +1,20 @@
+{
+  "name": "marskal-thunderbird",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.ts",
+    "check": "tsc",
+    "test": "node --test 'test/*.test.ts'",
+    "package": "node build.ts && cd dist && zip -qr ../marskal-thunderbird.xpi ."
+  },
+  "dependencies": {
+    "uuid": "^14.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.25.0",
+    "lucide-static": "^0.540.0",
+    "typescript": "^7.0.2"
+  }
+}

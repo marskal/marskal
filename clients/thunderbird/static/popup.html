@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Add to Marskal inbox</title>
+    <link rel="stylesheet" href="style.css" />
+    <script type="module" src="popup.js"></script>
+  </head>
+  <body class="popup">
+    <form id="capture" hidden>
+      <label>
+        Title
+        <input id="title" type="text" maxlength="500" required />
+      </label>
+      <label class="check">
+        <input id="with-text" type="checkbox" checked />
+        Put the message text in the notes
+      </label>
+      <button id="submit" type="submit">Add to inbox</button>
+    </form>
+    <p id="status" role="status"></p>
+    <button id="sign-in" type="button" hidden>Sign in</button>
+  </body>
+</html>
