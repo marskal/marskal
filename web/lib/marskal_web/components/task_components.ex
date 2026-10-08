@@ -1,4 +1,8 @@
 defmodule MarskalWeb.TaskComponents do
+  @moduledoc """
+  The task list and its rows.
+  """
+
   use MarskalWeb, :html
 
   attr :id, :string, required: true

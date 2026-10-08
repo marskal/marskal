@@ -1,4 +1,8 @@
 defmodule MarskalWeb.InspectorPanel do
+  @moduledoc """
+  The side panel for the open task, project, folder, or tag.
+  """
+
   use MarskalWeb, :live_component
 
   alias Marskal.ProjectFolders

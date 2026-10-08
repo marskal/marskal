@@ -1,10 +1,10 @@
 defmodule MarskalWeb.UserAuthTest do
   use MarskalWeb.ConnCase, async: true
 
-  alias Phoenix.LiveView
   alias Marskal.Accounts
   alias Marskal.Accounts.Scope
   alias MarskalWeb.UserAuth
+  alias Phoenix.LiveView
 
   import Marskal.AccountsFixtures
 

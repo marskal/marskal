@@ -1,4 +1,8 @@
 defmodule MarskalWeb.NavComponents do
+  @moduledoc """
+  The sidebar and the rest of the app navigation.
+  """
+
   use MarskalWeb, :html
 
   attr :nav, :any, required: true

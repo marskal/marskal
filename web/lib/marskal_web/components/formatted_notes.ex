@@ -1,4 +1,8 @@
 defmodule MarskalWeb.FormattedNotes do
+  @moduledoc """
+  Renders a task or project's notes.
+  """
+
   use MarskalWeb, :html
 
   attr :text, :string, default: nil

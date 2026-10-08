@@ -1,5 +1,6 @@
 defmodule MarskalWeb.AgendaLive do
   use MarskalWeb, :live_view
+  use MarskalWeb.TaskActions, reload: &load_tasks/1
 
   import MarskalWeb.TaskList, only: [assign_tasks: 2, reset_tasks: 1]
 
@@ -90,20 +91,6 @@ defmodule MarskalWeb.AgendaLive do
       />
     </Layouts.app>
     """
-  end
-
-  @impl true
-  def handle_info({:marskal_change, _type, _id}, socket), do: {:noreply, load_tasks(socket)}
-
-  @impl true
-  def handle_event("complete", %{"id" => id}, socket), do: act(socket, id, &Tasks.complete_task/3)
-  def handle_event("reopen", %{"id" => id}, socket), do: act(socket, id, &Tasks.reopen_task/3)
-
-  defp act(socket, id, fun) do
-    case fun.(socket.assigns.current_scope.user, id, Ecto.UUID.generate()) do
-      {:ok, _task} -> {:noreply, load_tasks(socket)}
-      {:error, _} -> {:noreply, put_flash(socket, :error, "Could not update task.")}
-    end
   end
 
   defp load_tasks(socket) do

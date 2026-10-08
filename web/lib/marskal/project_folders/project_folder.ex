@@ -67,18 +67,22 @@ defmodule Marskal.ProjectFolders.ProjectFolder do
         add_error(changeset, :parent_id, "would create a cycle")
 
       parent_id ->
-        case Marskal.Repo.get_by(__MODULE__, id: parent_id, user_id: user.id) do
-          %{discarded_at: %DateTime{}} ->
-            add_error(changeset, :parent_id, "must belong to you")
+        parent_changeset(changeset, user, self_id, parent_id)
+    end
+  end
 
-          nil ->
-            add_error(changeset, :parent_id, "must belong to you")
+  defp parent_changeset(changeset, user, self_id, parent_id) do
+    case Marskal.Repo.get_by(__MODULE__, id: parent_id, user_id: user.id) do
+      %{discarded_at: %DateTime{}} ->
+        add_error(changeset, :parent_id, "must belong to you")
 
-          parent ->
-            if cycle?(parent, self_id),
-              do: add_error(changeset, :parent_id, "would create a cycle"),
-              else: changeset
-        end
+      nil ->
+        add_error(changeset, :parent_id, "must belong to you")
+
+      parent ->
+        if cycle?(parent, self_id),
+          do: add_error(changeset, :parent_id, "would create a cycle"),
+          else: changeset
     end
   end
 

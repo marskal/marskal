@@ -13,8 +13,8 @@ defmodule Marskal.Sync.Push do
 
   import Ecto.Query
   alias Marskal.Accounts
-  alias Marskal.Accounts.UserPreferences
   alias Marskal.Accounts.User
+  alias Marskal.Accounts.UserPreferences
   alias Marskal.Changes.Change
   alias Marskal.ProjectFolders
   alias Marskal.ProjectFolders.ProjectFolder
@@ -91,16 +91,16 @@ defmodule Marskal.Sync.Push do
   end
 
   defp apply_one(user, command) do
-    with {:ok, command} <- validate(command) do
-      if recorded?(command.id) do
-        result(command.id, "replayed")
-      else
-        user
-        |> dispatch(command)
-        |> outcome(command)
-      end
-    else
-      {:error, reason} -> rejected(command, reason, %{})
+    case validate(command) do
+      {:ok, command} ->
+        if recorded?(command.id) do
+          result(command.id, "replayed")
+        else
+          user |> dispatch(command) |> outcome(command)
+        end
+
+      {:error, reason} ->
+        rejected(command, reason, %{})
     end
   end
 
@@ -292,8 +292,12 @@ defmodule Marskal.Sync.Push do
 
   defp result(id, status), do: %{id: id, status: status}
 
+  defp command_id(%{id: id}) when not is_nil(id), do: id
+  defp command_id(%{"id" => id}), do: id
+  defp command_id(_command), do: nil
+
   defp rejected(command, reason, errors) do
-    id = if is_map(command), do: command[:id] || command["id"]
+    id = command_id(command)
 
     %{id: id, status: "rejected", reason: reason}
     |> then(fn result -> if errors == %{}, do: result, else: Map.put(result, :errors, errors) end)

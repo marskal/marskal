@@ -25,7 +25,7 @@ defmodule Marskal.SyncPushTest do
       assert %Task{title: "Bread", inbox: true, state: :to_do} = Tasks.get_task(user, id)
 
       assert [%{status: "replayed"}] = Push.push(user, [add])
-      assert length(Tasks.list_inbox(user)) == 1
+      assert [_] = Tasks.list_inbox(user)
     end
 
     test "noop when nothing changes", %{user: user} do

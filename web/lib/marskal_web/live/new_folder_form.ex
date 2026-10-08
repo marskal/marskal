@@ -1,4 +1,8 @@
 defmodule MarskalWeb.NewFolderForm do
+  @moduledoc """
+  The form that creates a project folder.
+  """
+
   use MarskalWeb, :live_component
 
   alias Marskal.ProjectFolders

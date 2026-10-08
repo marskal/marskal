@@ -8,9 +8,9 @@ defmodule MarskalWeb.ImportBatchControllerTest do
   alias Marskal.ImportBatch
   alias Marskal.Imports
   alias Marskal.Imports.ApplyJob
-  alias Marskal.Imports.Todoist
   alias Marskal.Imports.Limits
   alias Marskal.Imports.ParseJob
+  alias Marskal.Imports.Todoist
   alias Marskal.Repo
   alias Marskal.Tasks.Task
 

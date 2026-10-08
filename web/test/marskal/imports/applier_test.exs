@@ -192,7 +192,7 @@ defmodule Marskal.Imports.ApplierTest do
         user |> preview!(OmnifocusBackup.tagged_backup(), "tagged.zip") |> Applier.call()
 
       assert second.stats["created"]["tags"] == 0
-      assert length(Tags.list_tags(user)) == 5
+      assert Enum.count(Tags.list_tags(user)) == 5
 
       names =
         Tags.effective_tags(user, [call], Tags.tree(user))[call.id] |> Enum.map(& &1.tag.name)

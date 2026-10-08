@@ -200,14 +200,18 @@ defmodule Marskal.Tasks do
     if outline == %{} do
       update_task(user, task_id, attrs, command_id, opts)
     else
-      Changes.apply(user, command_id, "task", fn ->
-        with %Task{} = task <- get_task(user, task_id) || {:error, :not_found},
-             changeset = Task.update_changeset(task, attrs, opts),
-             {:ok, place} <- client_place(user, task, changeset, outline) do
-          write_with_subtree(user, command_id, Task.place_changeset(changeset, place))
-        end
-      end)
+      apply_outline(user, task_id, attrs, command_id, opts, outline)
     end
+  end
+
+  defp apply_outline(user, task_id, attrs, command_id, opts, outline) do
+    Changes.apply(user, command_id, "task", fn ->
+      with %Task{} = task <- get_task(user, task_id) || {:error, :not_found},
+           changeset = Task.update_changeset(task, attrs, opts),
+           {:ok, place} <- client_place(user, task, changeset, outline) do
+        write_with_subtree(user, command_id, Task.place_changeset(changeset, place))
+      end
+    end)
   end
 
   @doc """
@@ -383,23 +387,27 @@ defmodule Marskal.Tasks do
 
     with {:ok, location} <- client_location(user, task, moved, parent_id) do
       group = Map.put(location, :parent_id, parent_id)
-
-      case Map.fetch(outline, "rank") do
-        {:ok, rank} when is_binary(rank) ->
-          {:ok, Map.put(group, :rank, rank)}
-
-        {:ok, _rank} ->
-          {:error, :invalid_rank}
-
-        :error ->
-          rank =
-            if group == Outline.group(task),
-              do: task.rank,
-              else: Outline.default_rank(user, group, task.id)
-
-          {:ok, Map.put(group, :rank, rank)}
-      end
+      resolve_rank(user, task, group, outline)
     end
+  end
+
+  defp resolve_rank(user, task, group, outline) do
+    case Map.fetch(outline, "rank") do
+      {:ok, rank} when is_binary(rank) ->
+        {:ok, Map.put(group, :rank, rank)}
+
+      {:ok, _rank} ->
+        {:error, :invalid_rank}
+
+      :error ->
+        {:ok, Map.put(group, :rank, kept_or_default_rank(user, task, group))}
+    end
+  end
+
+  defp kept_or_default_rank(user, task, group) do
+    if group == Outline.group(task),
+      do: task.rank,
+      else: Outline.default_rank(user, group, task.id)
   end
 
   defp client_location(_user, _task, moved, nil),
@@ -421,37 +429,46 @@ defmodule Marskal.Tasks do
   defp place_new(%Ecto.Changeset{valid?: false} = changeset, _user, _after_id), do: changeset
 
   defp place_new(changeset, user, after_id) do
-    changeset =
-      case Ecto.Changeset.get_field(changeset, :parent_id) do
-        nil ->
-          changeset
+    changeset
+    |> inherit_parent_location(user)
+    |> assign_rank(user, after_id)
+  end
 
-        parent_id ->
-          case get_task(user, parent_id) do
-            nil ->
-              Ecto.Changeset.add_error(changeset, :parent_id, "must be one of your tasks")
+  defp inherit_parent_location(changeset, user) do
+    case Ecto.Changeset.get_field(changeset, :parent_id) do
+      nil -> changeset
+      parent_id -> force_parent_location(changeset, user, parent_id)
+    end
+  end
 
-            parent ->
-              changeset
-              |> Ecto.Changeset.force_change(:inbox, parent.inbox)
-              |> Ecto.Changeset.force_change(:project_id, parent.project_id)
-          end
-      end
+  defp force_parent_location(changeset, user, parent_id) do
+    case get_task(user, parent_id) do
+      nil ->
+        Ecto.Changeset.add_error(changeset, :parent_id, "must be one of your tasks")
 
-    cond do
-      not changeset.valid? ->
+      parent ->
         changeset
+        |> Ecto.Changeset.force_change(:inbox, parent.inbox)
+        |> Ecto.Changeset.force_change(:project_id, parent.project_id)
+    end
+  end
 
-      Ecto.Changeset.get_change(changeset, :rank) ->
-        changeset
+  defp assign_rank(%{valid?: false} = changeset, _user, _after_id), do: changeset
 
-      true ->
-        group = Outline.group(Ecto.Changeset.apply_changes(changeset))
+  defp assign_rank(changeset, user, after_id) do
+    if Ecto.Changeset.get_change(changeset, :rank) do
+      changeset
+    else
+      put_new_rank(changeset, user, after_id)
+    end
+  end
 
-        case new_rank(user, group, after_id) do
-          {:ok, rank} -> Ecto.Changeset.put_change(changeset, :rank, rank)
-          {:error, _} -> Ecto.Changeset.add_error(changeset, :after_id, "must be a sibling")
-        end
+  defp put_new_rank(changeset, user, after_id) do
+    group = Outline.group(Ecto.Changeset.apply_changes(changeset))
+
+    case new_rank(user, group, after_id) do
+      {:ok, rank} -> Ecto.Changeset.put_change(changeset, :rank, rank)
+      {:error, _} -> Ecto.Changeset.add_error(changeset, :after_id, "must be a sibling")
     end
   end
 

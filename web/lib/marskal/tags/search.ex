@@ -32,15 +32,17 @@ defmodule Marskal.Tags.Search do
       tree
       |> Tree.all()
       |> Enum.filter(&Tree.visible?(tree, &1.id))
-      |> Enum.flat_map(fn tag ->
-        case match(tag, pieces) do
-          nil -> []
-          skipped -> [{rank(tag, whole, skipped, tree), tag}]
-        end
-      end)
+      |> Enum.flat_map(&ranked(tree, &1, pieces, whole))
       |> Enum.sort_by(&elem(&1, 0))
       |> Enum.take(limit)
       |> Enum.map(&elem(&1, 1))
+    end
+  end
+
+  defp ranked(tree, tag, pieces, whole) do
+    case match(tag, pieces) do
+      nil -> []
+      skipped -> [{rank(tag, whole, skipped, tree), tag}]
     end
   end
 
@@ -73,7 +75,7 @@ defmodule Marskal.Tags.Search do
     pieces
     |> Enum.reverse()
     |> Enum.reduce_while({Enum.reverse(parts), nil, nil}, fn piece, {remaining, _first, last} ->
-      case Enum.drop_while(remaining, fn {part, _} -> not prefix?(part, piece) end) do
+      case Enum.drop_while(remaining, &later_piece?(&1, piece)) do
         [] -> {:halt, :nomatch}
         [{_, index} | rest] -> {:cont, {rest, index, last || index}}
       end
@@ -83,6 +85,8 @@ defmodule Marskal.Tags.Search do
       :nomatch -> nil
     end
   end
+
+  defp later_piece?({part, _index}, piece), do: not prefix?(part, piece)
 
   defp prefix?(part, piece) do
     String.starts_with?(part, piece) or

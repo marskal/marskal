@@ -234,27 +234,25 @@ defmodule Marskal.Imports.TodoistAdapter do
   end
 
   defp visit_parent(id, proposed, accepted, done, stack) do
-    cond do
-      Map.has_key?(accepted, id) or MapSet.member?(done, id) ->
-        {accepted, done}
-
-      true ->
-        parent = Map.get(proposed, id)
-
-        {accepted, done} =
-          if is_binary(parent) and parent != id and not MapSet.member?(stack, parent) do
-            visit_parent(parent, proposed, accepted, done, MapSet.put(stack, id))
-          else
-            {accepted, done}
-          end
-
-        parent =
-          if is_binary(parent) and parent != id and not MapSet.member?(stack, parent),
-            do: parent,
-            else: nil
-
-        {Map.put(accepted, id, parent), MapSet.put(done, id)}
+    if Map.has_key?(accepted, id) or MapSet.member?(done, id) do
+      {accepted, done}
+    else
+      accept_parent(id, proposed, accepted, done, stack)
     end
+  end
+
+  defp accept_parent(id, proposed, accepted, done, stack) do
+    parent = Map.get(proposed, id)
+    valid? = is_binary(parent) and parent != id and not MapSet.member?(stack, parent)
+
+    {accepted, done} =
+      if valid? do
+        visit_parent(parent, proposed, accepted, done, MapSet.put(stack, id))
+      else
+        {accepted, done}
+      end
+
+    {Map.put(accepted, id, if(valid?, do: parent)), MapSet.put(done, id)}
   end
 
   defp task_node(row, inbox, project_ids, section_names, label_ids) do

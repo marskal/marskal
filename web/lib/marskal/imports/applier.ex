@@ -19,8 +19,8 @@ defmodule Marskal.Imports.Applier do
   alias Marskal.Dates
   alias Marskal.ImportItem
   alias Marskal.Imports
-  alias Marskal.Imports.OmnifocusAdapter
   alias Marskal.Imports.Merge
+  alias Marskal.Imports.OmnifocusAdapter
   alias Marskal.Imports.TodoistAdapter
   alias Marskal.ProjectFolders
   alias Marskal.ProjectFolders.ProjectFolder

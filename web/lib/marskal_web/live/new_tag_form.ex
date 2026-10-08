@@ -1,4 +1,8 @@
 defmodule MarskalWeb.NewTagForm do
+  @moduledoc """
+  The form that creates a tag.
+  """
+
   use MarskalWeb, :live_component
 
   alias Marskal.Tags

@@ -1,8 +1,8 @@
 defmodule Marskal.Imports.OmnifocusAdapterTest do
   use ExUnit.Case, async: true
 
-  alias Marskal.Imports.Limits
   alias Marskal.Imports.Graph
+  alias Marskal.Imports.Limits
   alias Marskal.Imports.OmnifocusAdapter
 
   test "sniffs ofocus-backup names" do
@@ -57,7 +57,7 @@ defmodule Marskal.Imports.OmnifocusAdapterTest do
     titles = Enum.map(graph.projects, & &1.title)
     assert "Get to know OmniFocus 4 for Mac" in titles
     assert "Brokkassen" in titles
-    assert length(graph.projects) == 2
+    assert Enum.count(graph.projects) == 2
 
     task_titles = Enum.map(graph.tasks, & &1.title)
     assert "Click this action" in task_titles

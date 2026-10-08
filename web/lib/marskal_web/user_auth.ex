@@ -1,4 +1,8 @@
 defmodule MarskalWeb.UserAuth do
+  @moduledoc """
+  Signs a user in and out, and loads the current session.
+  """
+
   use MarskalWeb, :verified_routes
 
   import Plug.Conn

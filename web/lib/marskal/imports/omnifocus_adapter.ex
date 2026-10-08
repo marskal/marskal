@@ -86,39 +86,46 @@ defmodule Marskal.Imports.OmnifocusAdapter do
     if length(list) > limits.zip_entries,
       do: raise(ArgumentError, "Backup has too many zip entries.")
 
-    {docs, _inflated, _inner} =
-      Enum.reduce(list, {[], 0, 0}, fn {name, data}, {docs, inflated, inner_zips} ->
-        assert_safe!(name)
-        base = Path.basename(name)
-
-        cond do
-          String.ends_with?(name, "/") or base =~ @merge_name or
-              String.ends_with?(base, ".client") ->
-            {docs, inflated, inner_zips}
-
-          base == "contents.xml" ->
-            xml = cap!(data, limits.xml_bytes, inflated, limits)
-            {[{sort_key(base), xml} | docs], inflated + byte_size(data), inner_zips}
-
-          base =~ @inner_zip ->
-            inner_zips = inner_zips + 1
-
-            if inner_zips > limits.inner_zips,
-              do: raise(ArgumentError, "Backup has too many nested zips.")
-
-            data = cap!(data, limits.entry_bytes, inflated, limits)
-
-            case xml_from_inner_zip(data, limits) do
-              nil -> {docs, inflated + byte_size(data), inner_zips}
-              xml -> {[{sort_key(base), xml} | docs], inflated + byte_size(data), inner_zips}
-            end
-
-          true ->
-            {docs, inflated, inner_zips}
-        end
-      end)
+    {docs, _inflated, _inner} = Enum.reduce(list, {[], 0, 0}, &collect_xml(&1, &2, limits))
 
     docs |> Enum.sort_by(&elem(&1, 0)) |> Enum.map(&elem(&1, 1))
+  end
+
+  defp collect_xml({name, data}, {docs, inflated, inner_zips}, limits) do
+    assert_safe!(name)
+    classify_entry(name, Path.basename(name), data, docs, inflated, inner_zips, limits)
+  end
+
+  defp classify_entry(name, base, data, docs, inflated, inner_zips, limits) do
+    cond do
+      String.ends_with?(name, "/") or base =~ @merge_name or
+          String.ends_with?(base, ".client") ->
+        {docs, inflated, inner_zips}
+
+      base == "contents.xml" ->
+        xml = cap!(data, limits.xml_bytes, inflated, limits)
+        {[{sort_key(base), xml} | docs], inflated + byte_size(data), inner_zips}
+
+      base =~ @inner_zip ->
+        take_inner_zip(base, data, docs, inflated, inner_zips, limits)
+
+      true ->
+        {docs, inflated, inner_zips}
+    end
+  end
+
+  defp take_inner_zip(base, data, docs, inflated, inner_zips, limits) do
+    inner_zips = inner_zips + 1
+
+    if inner_zips > limits.inner_zips,
+      do: raise(ArgumentError, "Backup has too many nested zips.")
+
+    data = cap!(data, limits.entry_bytes, inflated, limits)
+
+    case xml_from_inner_zip(data, limits) do
+      nil -> {docs, inflated + byte_size(data), inner_zips}
+      xml -> {[{sort_key(base), xml} | docs], inflated + byte_size(data), inner_zips}
+    end
   end
 
   defp xml_from_inner_zip(bytes, limits) do
@@ -127,19 +134,21 @@ defmodule Marskal.Imports.OmnifocusAdapter do
     if length(list) > limits.zip_entries,
       do: raise(ArgumentError, "Backup has too many zip entries.")
 
-    Enum.find_value(list, fn {name, data} ->
-      assert_safe!(name)
-
-      if Path.basename(name) == "contents.xml" do
-        if byte_size(data) > limits.xml_bytes,
-          do: raise(ArgumentError, "Backup XML is too large.")
-
-        data
-      end
-    end)
+    Enum.find_value(list, &inner_contents(&1, limits))
   rescue
     error in ArgumentError -> reraise error, __STACKTRACE__
     _ -> nil
+  end
+
+  defp inner_contents({name, data}, limits) do
+    assert_safe!(name)
+
+    if Path.basename(name) == "contents.xml" do
+      if byte_size(data) > limits.xml_bytes,
+        do: raise(ArgumentError, "Backup XML is too large.")
+
+      data
+    end
   end
 
   defp assert_safe!(name) do
@@ -212,13 +221,14 @@ defmodule Marskal.Imports.OmnifocusAdapter do
 
       _ ->
         incoming = parser.(element)
-
-        Map.update(store, id, incoming, fn old ->
-          Map.merge(old, incoming, fn _key, old_val, new_val ->
-            if is_nil(new_val), do: old_val, else: new_val
-          end)
-        end)
+        Map.update(store, id, incoming, &merge_record(&1, incoming))
     end
+  end
+
+  defp merge_record(old, incoming) do
+    Map.merge(old, incoming, fn _key, old_val, new_val ->
+      if is_nil(new_val), do: old_val, else: new_val
+    end)
   end
 
   defp parse_folder(element, limits) do

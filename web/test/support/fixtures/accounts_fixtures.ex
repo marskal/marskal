@@ -20,7 +20,7 @@ defmodule Marskal.AccountsFixtures do
   end
 
   def unconfirmed_user_fixture(attrs \\ %{}) do
-    email = attrs[:email] || attrs["email"] || unique_user_email()
+    email = email_from(attrs) || unique_user_email()
 
     {:ok, user} =
       %Accounts.User{}
@@ -29,6 +29,10 @@ defmodule Marskal.AccountsFixtures do
 
     user
   end
+
+  defp email_from(%{email: email}) when is_binary(email), do: email
+  defp email_from(%{"email" => email}) when is_binary(email), do: email
+  defp email_from(_attrs), do: nil
 
   def user_fixture(attrs \\ %{}) do
     user = unconfirmed_user_fixture(attrs)
