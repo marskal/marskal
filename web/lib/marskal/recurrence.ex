@@ -76,6 +76,87 @@ defmodule Marskal.Recurrence do
     end)
   end
 
+  @doc """
+  Makes `task` the first occurrence of a new series with the rule in
+  `attrs`, in one command. The task needs the date the rule anchors on,
+  and must not be in a series already.
+  """
+  def repeat_task(%User{} = user, task_id, attrs, command_id) when is_map(attrs) do
+    Changes.apply(user, command_id, "recurrence_series", fn ->
+      case Tasks.get_task(user, task_id) do
+        nil ->
+          {:error, :not_found}
+
+        %Task{series_id: nil} = task ->
+          start_series(user, task, attrs, command_id)
+
+        %Task{} ->
+          {:error, :already_repeating}
+      end
+    end)
+  end
+
+  defp start_series(user, task, attrs, command_id) do
+    changeset =
+      %Series{}
+      |> Series.create_changeset(user, Map.put(stringify(attrs), "kind", "task"))
+      |> require_anchor_date(task)
+
+    with {:ok, series} <- Repo.insert(changeset),
+         {:ok, _task} <- join_series(user, task, series, command_id) do
+      {:ok, series, changeset}
+    end
+  end
+
+  defp stringify(attrs), do: Map.new(attrs, fn {key, value} -> {to_string(key), value} end)
+
+  defp require_anchor_date(%Ecto.Changeset{valid?: false} = changeset, _task), do: changeset
+
+  defp require_anchor_date(changeset, task) do
+    series = apply_changes(changeset)
+
+    if Map.fetch!(task, Series.anchor_field(series)),
+      do: changeset,
+      else: add_error(changeset, :anchor, "needs the task's #{anchor_word(series.anchor)} date")
+  end
+
+  defp anchor_word(:defer), do: "Defer"
+  defp anchor_word(:planned), do: "Planned"
+  defp anchor_word(:due), do: "Due"
+
+  # The join follows from the series insert, with its own derived command.
+  defp join_series(user, task, series, command_id) do
+    Tasks.update_task(
+      user,
+      task.id,
+      %{series_id: series.id, occurrence_for: Map.fetch!(task, Series.anchor_field(series))},
+      Marskal.Uuid.v5(command_id, "task|#{task.id}")
+    )
+  end
+
+  @doc "Which of these tasks are in a live series that has not stopped."
+  def repeating_ids(%User{} = user, tasks) do
+    case for %Task{series_id: id} when is_binary(id) <- tasks, do: id do
+      [] ->
+        MapSet.new()
+
+      series_ids ->
+        live =
+          Repo.all(
+            from s in Series,
+              where: s.user_id == ^user.id and s.id in ^Enum.uniq(series_ids),
+              where: is_nil(s.stopped_at) and is_nil(s.discarded_at),
+              select: s.id
+          )
+          |> MapSet.new()
+
+        for %Task{series_id: id} = task <- tasks,
+            MapSet.member?(live, id),
+            into: MapSet.new(),
+            do: task.id
+    end
+  end
+
   @doc "Patch any part of the rule, or `stopped_at`, in one command."
   def update_series(%User{} = user, id, attrs, command_id) when is_map(attrs) do
     Changes.apply(user, command_id, "recurrence_series", fn ->

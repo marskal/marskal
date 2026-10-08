@@ -267,6 +267,8 @@ defmodule MarskalWeb.InspectorPanel do
       </p>
       <.task_form
         :if={match?(%Tasks.Task{}, @record)}
+        user={@user}
+        change_version={assigns[:change_version]}
         zone={Marskal.Accounts.timezone(@user)}
         myself={@myself}
         record={@record}
@@ -315,6 +317,9 @@ defmodule MarskalWeb.InspectorPanel do
   attr :outline, :map,
     default: %{},
     doc: "the task's parent, the dates it goes by, and whether it is resolved from above"
+
+  attr :user, :any, required: true
+  attr :change_version, :any, default: nil
 
   defp task_form(assigns) do
     ~H"""
@@ -410,6 +415,13 @@ defmodule MarskalWeb.InspectorPanel do
           <.link navigate={~p"/tasks/#{@record.id}"} class="open">Open task</.link>
         </div>
       </form>
+      <.live_component
+        module={MarskalWeb.RepeatPanel}
+        id="inspector-task-repeat"
+        user={@user}
+        task={@record}
+        change_version={@change_version}
+      />
       <.tag_picker id="inspector-task-tags" myself={@myself} tagging={@tagging} picker={@picker} />
       <.meta record={@record} zone={@zone} />
     </section>

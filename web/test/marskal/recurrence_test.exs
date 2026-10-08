@@ -270,6 +270,36 @@ defmodule Marskal.RecurrenceTest do
     end
   end
 
+  describe "repeat_task/4" do
+    test "makes a series with the task as its first occurrence", %{user: user} do
+      {:ok, task} = Tasks.create_task(user, %{title: "Trash", due_at: @friday}, command())
+      rule = %{"mode" => "regular", "anchor" => "due", "interval" => 1, "frequency" => "weeks"}
+
+      {:ok, series} = Recurrence.repeat_task(user, task.id, rule, command())
+
+      assert %Series{kind: :task, frequency: :weeks} = series
+      assert %Task{occurrence_for: @friday} = joined = Tasks.get_task(user, task.id)
+      assert joined.series_id == series.id
+      assert Recurrence.repeating_ids(user, [joined]) == MapSet.new([task.id])
+
+      assert {:error, :already_repeating} =
+               Recurrence.repeat_task(user, task.id, rule, command())
+
+      {:ok, _} = Recurrence.stop_series(user, series.id, command())
+      assert Recurrence.repeating_ids(user, [joined]) == MapSet.new()
+    end
+
+    test "needs the anchor date, and leaves nothing behind without it", %{user: user} do
+      {:ok, task} = Tasks.create_task(user, %{title: "Trash", due_at: @friday}, command())
+      rule = %{mode: :regular, anchor: :planned, interval: 1, frequency: :weeks}
+
+      assert {:error, changeset} = Recurrence.repeat_task(user, task.id, rule, command())
+      assert "needs the task's Planned date" in errors_on(changeset).anchor
+      assert Repo.aggregate(Series, :count) == 0
+      assert Tasks.get_task(user, task.id).series_id == nil
+    end
+  end
+
   describe "occurrence_id/2" do
     test "is v5 of the series and the instant, with six fractional digits" do
       series_id = "0192F0A0-0000-7000-8000-000000000001"

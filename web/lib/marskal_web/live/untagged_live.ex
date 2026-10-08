@@ -34,6 +34,7 @@ defmodule MarskalWeb.UntaggedLive do
         dates={@task_tags.dates}
         resolved={@task_tags.resolved}
         parents={@task_tags.parents}
+        repeating={@task_tags.repeating}
         zone={Marskal.Accounts.timezone(@current_scope.user)}
         mark_inbox
         empty="Every task has a tag."

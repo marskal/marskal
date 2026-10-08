@@ -58,6 +58,7 @@ defmodule MarskalWeb.InboxLive do
         dates={@task_tags.dates}
         resolved={@task_tags.resolved}
         parents={@task_tags.parents}
+        repeating={@task_tags.repeating}
         outline
         collapsed={@collapsed}
         zone={Marskal.Accounts.timezone(@current_scope.user)}
