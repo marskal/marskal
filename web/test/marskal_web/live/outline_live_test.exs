@@ -104,10 +104,41 @@ defmodule MarskalWeb.OutlineLiveTest do
   test "a flat list names a subtask's parent", ctx do
     [a] = add(ctx, ["Paint"])
     child = add(ctx, "Buy paint", a)
-    {:ok, view, _html} = live(ctx.conn, ~p"/")
+    {:ok, view, _html} = live(ctx.conn, ~p"/tags/untagged")
 
     assert view |> element("#task-#{child.id} .crumb") |> render() =~ "Paint"
     refute has_element?(view, "#task-#{a.id} .crumb")
+  end
+
+  test "open tasks nests subtasks under their parent, newest first on top", ctx do
+    [a, b] = add(ctx, ["Paint", "Tidy"])
+    first = add(ctx, "Buy paint", a)
+    second = add(ctx, "Sand", a)
+    {:ok, other} = Tasks.create_task(ctx.user, %{title: "Call", inbox: false}, command_id())
+
+    {:ok, view, _html} = live(ctx.conn, ~p"/")
+
+    assert rows(view, "#open-tasks") == [other.id, b.id, a.id, first.id, second.id]
+    assert has_element?(view, "#task-#{first.id}[data-depth='1']")
+    refute has_element?(view, "#task-#{first.id} .crumb")
+    refute has_element?(view, "#open-tasks .drag-handle")
+
+    render_hook(view, "outline-toggle", %{"id" => a.id})
+    assert rows(view, "#open-tasks") == [other.id, b.id, a.id]
+  end
+
+  test "open tasks shows a parent tag state hides above its subtask", ctx do
+    [a] = add(ctx, ["Paint"])
+    child = add(ctx, "Buy paint", a)
+    {:ok, tag} = Marskal.Tags.create_tag(ctx.user, %{name: "Later"}, command_id())
+    {:ok, _} = Marskal.Tags.update_tag(ctx.user, tag.id, %{state: :on_hold}, command_id())
+    {:ok, _} = Marskal.Tags.tag_task(ctx.user, a.id, tag.id, command_id())
+
+    {:ok, view, _html} = live(ctx.conn, ~p"/")
+
+    assert rows(view, "#open-tasks") == [a.id, child.id]
+    assert has_element?(view, "#task-#{a.id}.is-unavailable")
+    refute has_element?(view, "#task-#{child.id}.is-unavailable")
   end
 
   test "the inspector shows a subtask's parent and what it inherits", ctx do
@@ -142,11 +173,11 @@ defmodule MarskalWeb.OutlineLiveTest do
     task
   end
 
-  defp rows(view) do
+  defp rows(view, list \\ "#project-tasks") do
     view
     |> render()
     |> LazyHTML.from_fragment()
-    |> LazyHTML.query("#project-tasks li.task-row")
+    |> LazyHTML.query("#{list} li.task-row")
     |> LazyHTML.attribute("data-inspect-id")
   end
 
