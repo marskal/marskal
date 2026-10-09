@@ -242,7 +242,9 @@ The repository root is the product, not the web app (ADR 0015).
   note block saying what (`Imports.Problems`). Re-import
   updates existing `(user, source, source_id)` items by a three-way merge
   against `import_items.fields`: the user's edits win, and an item the
-  user deleted is imported again as a new record. Do not add competing-app libraries.
+  user deleted is imported again as a new record. A Todoist repeat in a form
+  `Imports.TodoistRecurrence` reads makes the task a series' first occurrence;
+  free-form repeats stay import problems. Do not add competing-app libraries.
 - **UI (ADR 0012, ADR 0016):** HEEx function components plus plain CSS `@scope`.
   No Tailwind, no daisyUI, no UI kit. Tokens stay on `:root`.
 - **Icons:** the `lucide_icons` package. Use `<Lucideicons.inbox class="icon" />`.

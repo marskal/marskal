@@ -9,6 +9,8 @@ defmodule Marskal.Imports.ReimportTest do
   alias Marskal.Imports.Applier
   alias Marskal.Imports.Parser
   alias Marskal.Projects
+  alias Marskal.Recurrence
+  alias Marskal.Recurrence.Series
   alias Marskal.Tags
   alias Marskal.Tasks
   alias Marskal.Tasks.Task
@@ -202,6 +204,64 @@ defmodule Marskal.Imports.ReimportTest do
 
     assert tag_names(user, milk) == ["Errand", "Food"]
     assert Repo.get!(Task, milk.id).notes == nil
+  end
+
+  describe "repeats" do
+    test "a repeat the importer reads makes the task a series' first occurrence", %{user: user} do
+      milk = task!(user, "t1")
+      assert milk.series_id == nil
+
+      {:ok, _} = apply!(user, repeat_t1("every monday"))
+
+      milk = Repo.get!(Task, milk.id)
+      assert milk.occurrence_for == milk.planned_at
+
+      assert %Series{mode: :regular, anchor: :planned, frequency: :weeks, weekdays: [1]} =
+               Recurrence.get_series(user, milk.series_id)
+
+      assert tag_names(user, milk) == ["Errand", "Food"]
+      assert milk.notes == nil
+    end
+
+    test "once it repeats, the source's dates and rule leave it alone", %{user: user} do
+      {:ok, _} = apply!(user, repeat_t1("every monday"))
+      milk = task!(user, "t1")
+
+      {:ok, _} = apply!(user, repeat_t1("every tuesday", "2026-10-06"))
+
+      again = Repo.get!(Task, milk.id)
+      assert again.planned_at == milk.planned_at
+      assert again.series_id == milk.series_id
+      assert Recurrence.get_series(user, milk.series_id).weekdays == [1]
+    end
+
+    test "a first import makes the series too, and every! repeats after completion" do
+      user = AccountsFixtures.user_fixture()
+      {:ok, _} = apply!(user, repeat_t1("every! 3 days"))
+
+      milk = task!(user, "t1")
+
+      assert %Series{mode: :on_completion, frequency: :days, interval: 3} =
+               Recurrence.get_series(user, milk.series_id)
+    end
+
+    test "a repeat with no date stays a problem", %{user: user} do
+      snapshot =
+        edit_items(TodoistSnapshot.small(), %{
+          "t1" => %{"due" => %{"string" => "every monday", "is_recurring" => true}}
+        })
+
+      {:ok, _} = apply!(user, snapshot)
+
+      assert task!(user, "t1").series_id == nil
+      assert "Missing recurrence" in tag_names(user, task!(user, "t1"))
+    end
+  end
+
+  defp repeat_t1(string, date \\ "2026-09-28") do
+    edit_items(TodoistSnapshot.small(), %{
+      "t1" => %{"due" => %{"date" => date, "string" => string, "is_recurring" => true}}
+    })
   end
 
   defp tags_of(user, task) do

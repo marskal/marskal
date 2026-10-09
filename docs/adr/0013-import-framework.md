@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted; amended 2026-10-04 (re-import updates); amended 2026-10-07 (import problems)
+Accepted; amended 2026-10-04 (re-import updates); amended 2026-10-07 (import problems); amended 2026-10-09 (Todoist repeats)
 
 The framework stands and is ported to Elixir ([ADR 0016](0016-elixir-phoenix-web.md)):
 `Imports.Graph`, `Imports.OmnifocusAdapter`, and Oban jobs in place of Active
@@ -111,6 +111,27 @@ What an import cannot carry over is easy to find and fix
   page instead.
 - A source convention with no Marskal column (OmniFocus flagged, Todoist
   priority) is not a problem; it stays in `extras` for now.
+
+### Todoist repeats (amended 2026-10-09)
+
+Todoist gives a repeat only as the words the user typed (`due.string`).
+`Marskal.Imports.TodoistRecurrence` reads the common forms into a rule
+(ADR 0007) on the planned date: every so many units, weekdays, days of the
+month and nth weekdays, days of the year, and `every!` as after completion.
+
+- The task becomes the first occurrence of a new series, on import or on
+  re-import, so tasks imported before this get their series too. A task
+  already in a series, or one the user stopped, keeps what it has.
+- Once a task is in a series, a re-import leaves its dates alone. Todoist
+  moves a repeating task's date when it is done there; in Marskal the series
+  makes the next occurrence instead.
+- A repeat with no date, or one in a form not read, stays a Missing
+  recurrence problem with its text in the notes block, as before.
+- Free-form text, such as "every other tuesday starting next month" or
+  "every 3rd workday until june", is not read yet. It could be later,
+  through Todoist's own date parser or a language model.
+- OmniFocus repeats stay problems. Its RRULE text maps more directly and
+  can follow the same way.
 
 ## Consequences
 

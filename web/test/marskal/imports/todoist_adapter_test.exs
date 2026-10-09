@@ -57,9 +57,12 @@ defmodule Marskal.Imports.TodoistAdapterTest do
     assert milk.inbox
     assert milk.project_source_id == nil
     assert milk.tag_source_ids == ["tag:l1", "tag:shared:errand", "problem:missing-recurrence"]
-    assert milk.notes =~ ~r"---\nImported from Todoist:\n- Repeat: every monday\z"
+
+    assert milk.notes =~
+             ~r"---\nImported from Todoist:\n- Repeat: every monday starting next week\z"
+
     assert milk.planned == "2026-09-28"
-    assert milk.extras["repeat"] == "every monday"
+    assert milk.extras["repeat"] == "every monday starting next week"
     assert milk.due == "2026-10-01"
     assert milk.extras["priority"] == 4
 

@@ -11,6 +11,12 @@ defmodule Marskal.Imports.Applier do
   again; its tasks get the existing tag (ADR 0005), and an import never
   updates it. The uploaded payload is dropped once the batch is applied or
   has failed.
+
+  A task whose source repeats in a form the adapter read becomes the
+  first occurrence of a new series (ADR 0007), on import or re-import,
+  unless it is in a series already. Once it is, the series owns its
+  dates: Todoist moves a repeating task's date when it is done there, and
+  a re-import does not carry that over.
   """
 
   import Ecto.Query
@@ -25,6 +31,8 @@ defmodule Marskal.Imports.Applier do
   alias Marskal.ProjectFolders
   alias Marskal.ProjectFolders.ProjectFolder
   alias Marskal.Projects
+  alias Marskal.Recurrence
+  alias Marskal.Recurrence.Series
   alias Marskal.Repo
   alias Marskal.Tags
   alias Marskal.Tasks
@@ -412,6 +420,7 @@ defmodule Marskal.Imports.Applier do
 
         tags = tag_all!(batch.user, :task, task.id, source_tags(node, acc))
         base = Merge.snapshot(:task, task) |> Map.put("tag_ids", Enum.sort(tags))
+        repeat!(batch.user, task, node)
 
         acc
         |> record!(batch, :task, node, %{task_id: task.id}, base)
@@ -442,12 +451,15 @@ defmodule Marskal.Imports.Applier do
     base = item.fields || base_from_feed(:task, task.id)
 
     {patch, kept} = Merge.fields(:task, base, Merge.snapshot(:task, task), incoming)
+    patch = series_dates(task, patch)
     {patch, kept} = applicable(:task, patch, kept, Tasks.Task.update_changeset(task, patch))
 
     if patch != %{} do
       {:ok, _} =
         Tasks.update_task(user, task.id, patch, Ecto.UUID.generate(), at: desired["resolved_at"])
     end
+
+    repeat!(user, Tasks.get_task(user, task.id), node)
 
     current_tags = live_tag_ids(Tags.TaskTag, :task_id, task.id)
     tags = source_tags(node, acc)
@@ -458,6 +470,30 @@ defmodule Marskal.Imports.Applier do
     acc
     |> store_base!(item, Map.put(incoming, "tag_ids", Enum.sort(tags)))
     |> outcome(node.title, "tasks", patch != %{} or add != [] or remove != [], kept)
+  end
+
+  @dates ~w(defer_until deferred_indefinitely planned_at due_at)
+
+  # The series moves an occurrence's dates, not the source.
+  defp series_dates(%Tasks.Task{series_id: nil}, patch), do: patch
+  defp series_dates(_task, patch), do: Map.drop(patch, @dates)
+
+  # The task becomes the first occurrence of the rule its source repeats
+  # by. A rule that would not take, such as one on a date the user has
+  # cleared, is left out: a failed command would undo the whole import.
+  defp repeat!(_user, _task, %{recurrence: nil}), do: :ok
+  defp repeat!(_user, %Tasks.Task{series_id: id}, _node) when is_binary(id), do: :ok
+  defp repeat!(_user, %Tasks.Task{state: state}, _node) when state != :to_do, do: :ok
+
+  defp repeat!(user, task, %{recurrence: rule}) do
+    changeset = Series.create_changeset(%Series{}, user, Map.put(rule, "kind", "task"))
+    series = Ecto.Changeset.apply_changes(changeset)
+
+    if changeset.valid? and Map.fetch!(task, Series.anchor_field(series)) do
+      {:ok, _series} = Recurrence.repeat_task(user, task.id, rule, Ecto.UUID.generate())
+    end
+
+    :ok
   end
 
   # The fields as the changeset would store them, so they compare with

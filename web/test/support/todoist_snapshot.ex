@@ -40,7 +40,11 @@ defmodule TodoistSnapshot do
           "project_id" => "in1",
           "labels" => ["Food", "Errand"],
           "priority" => 4,
-          "due" => %{"date" => "2026-09-28", "string" => "every monday", "is_recurring" => true},
+          "due" => %{
+            "date" => "2026-09-28",
+            "string" => "every monday starting next week",
+            "is_recurring" => true
+          },
           "deadline" => %{"date" => "2026-10-01"},
           "checked" => false
         },
