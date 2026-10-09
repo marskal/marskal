@@ -11,7 +11,11 @@ defmodule MarskalWeb.OpenTasksLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, socket |> assign(:page_title, "Open tasks") |> assign(:show_unavailable, nil)}
+    {:ok,
+     socket
+     |> MarskalWeb.Outline.attach()
+     |> assign(:page_title, "Open tasks")
+     |> assign(:show_unavailable, nil)}
   end
 
   # Tasks made unavailable by tag state (ADR 0005), and deferred ones
@@ -57,6 +61,8 @@ defmodule MarskalWeb.OpenTasksLive do
         parents={@task_tags.parents}
         repeating={@task_tags.repeating}
         zone={Marskal.Accounts.timezone(@current_scope.user)}
+        nested
+        collapsed={@collapsed}
         empty="No open tasks."
         actions={[:complete]}
         inspector={@inspector}
@@ -67,6 +73,12 @@ defmodule MarskalWeb.OpenTasksLive do
 
   defp load_tasks(socket) do
     user = socket.assigns.current_scope.user
-    assign_tasks(socket, Tasks.list_open(user, unavailable: socket.assigns.show_unavailable))
+    # Subtasks show under their parents (ADR 0009).
+    tasks =
+      user
+      |> Tasks.list_open(unavailable: socket.assigns.show_unavailable)
+      |> then(&Tasks.with_ancestors(user, &1))
+
+    assign_tasks(socket, tasks)
   end
 end

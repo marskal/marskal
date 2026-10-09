@@ -38,6 +38,12 @@ defmodule MarskalWeb.TaskComponents do
     default: false,
     doc: "show the tasks as their outline: subtasks under their parent, in rank order"
 
+  attr :nested, :boolean,
+    default: false,
+    doc:
+      "subtasks under their parent, in rank order, while the top level keeps the list's " <>
+        "order, newest first; rows collapse but do not move"
+
   attr :collapsed, :any, default: MapSet.new(), doc: "ids whose subtasks the outline hides"
 
   attr :zone, :string, default: "Europe/Copenhagen", doc: "the user's zone, for date labels"
@@ -302,7 +308,13 @@ defmodule MarskalWeb.TaskComponents do
       }
     </style>
     <p :if={@tasks == []} class="empty">{@empty}</p>
-    <ul id={@id} class="task-list" phx-hook=".Outline" data-outline={@outline}>
+    <ul
+      id={@id}
+      class="task-list"
+      phx-hook=".Outline"
+      data-outline={@outline}
+      data-nested={@nested}
+    >
       <li
         :for={%{task: task, dates: d, depth: depth, children?: children?} <- @rows}
         id={"task-#{task.id}"}
@@ -314,7 +326,7 @@ defmodule MarskalWeb.TaskComponents do
           (task.state != :to_do or MapSet.member?(@resolved, task.id)) && "is-resolved"
         ]}
         style={depth > 0 && "--depth: #{depth}"}
-        data-depth={@outline && depth}
+        data-depth={(@outline or @nested) && depth}
         data-inspect-type="task"
         data-inspect-id={task.id}
         aria-current={MarskalWeb.Inspector.selected?(:task, task.id, @inspector) && "true"}
@@ -333,7 +345,7 @@ defmodule MarskalWeb.TaskComponents do
         >
           <Lucideicons.grip_vertical class="icon" />
         </span>
-        <span :if={@outline} class="disclosure">
+        <span :if={@outline or @nested} class="disclosure">
           <button
             :if={children?}
             type="button"
@@ -387,7 +399,7 @@ defmodule MarskalWeb.TaskComponents do
             phx-value-type="task"
             phx-value-id={task.id}
           >
-            <span :if={!@outline && @parents[task.id]} class="crumb">
+            <span :if={!(@outline or @nested) && @parents[task.id]} class="crumb">
               {@parents[task.id].title}<span class="chevron" aria-hidden="true">›</span>
             </span>
             {task.title}
@@ -614,7 +626,14 @@ defmodule MarskalWeb.TaskComponents do
         }
 
         mounted() {
-          if (!this.el.hasAttribute("data-outline")) return
+          const outline = this.el.hasAttribute("data-outline")
+          if (!outline && !this.el.hasAttribute("data-nested")) return
+          this.handleEvent("outline-collapsed", ({ids}: {ids: string[]}) => save(ids))
+          const ids = load()
+          if (ids.length) this.pushEvent("outline-collapsed", {ids})
+
+          // A nested list only collapses; its rows do not move.
+          if (!outline) return
           this.el.addEventListener("keydown", this.onKeydown)
           this.el.addEventListener("pointerdown", this.onPointerDown)
           document.addEventListener("pointermove", this.onPointerMove)
@@ -632,9 +651,6 @@ defmodule MarskalWeb.TaskComponents do
             onStart: (event) => this.startDrag(event.item),
             onEnd: () => this.endDrag(),
           })
-          this.handleEvent("outline-collapsed", ({ids}: {ids: string[]}) => save(ids))
-          const ids = load()
-          if (ids.length) this.pushEvent("outline-collapsed", {ids})
         }
 
         // A move can re-create the row, so focus goes back to it by id.
@@ -692,8 +708,8 @@ defmodule MarskalWeb.TaskComponents do
   # (`Marskal.Tasks.effective_dates/2`). A flat list keeps the given order.
   # An outline puts each subtask under its parent, siblings by rank, and
   # skips what a collapsed task holds. A task whose parent is not in the
-  # list starts at the top.
-  defp rows(%{outline: false} = assigns),
+  # list starts at the top. A nested list keeps its top level as given.
+  defp rows(%{outline: false, nested: false} = assigns),
     do: Enum.map(assigns.tasks, &row(&1, assigns.dates, 0, false))
 
   defp rows(assigns) do
@@ -710,7 +726,7 @@ defmodule MarskalWeb.TaskComponents do
   defp walk(children, key, depth, assigns) do
     children
     |> Map.get(key, [])
-    |> Enum.sort_by(&{&1.rank, &1.id})
+    |> siblings(key == :top and assigns.nested)
     |> Enum.flat_map(fn task ->
       children? = Map.has_key?(children, task.id)
 
@@ -722,6 +738,9 @@ defmodule MarskalWeb.TaskComponents do
       [row(task, assigns.dates, depth, children?) | below]
     end)
   end
+
+  defp siblings(tasks, true = _as_given), do: tasks
+  defp siblings(tasks, _as_given), do: Enum.sort_by(tasks, &{&1.rank, &1.id})
 
   defp row(task, dates, depth, children?),
     do: %{task: task, dates: Map.get(dates, task.id, task), depth: depth, children?: children?}

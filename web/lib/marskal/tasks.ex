@@ -30,6 +30,33 @@ defmodule Marskal.Tasks do
     if Keyword.get(opts, :unavailable, false), do: tasks, else: available(user, tasks)
   end
 
+  @doc """
+  `tasks` with every task above them that is missing, newest first, as the
+  open stream orders. A subtask shows under its parent, so a parent that
+  tag state hides comes back as its context (ADR 0009).
+  """
+  def with_ancestors(%User{} = user, tasks) do
+    case missing_parents(tasks) do
+      [] ->
+        tasks
+
+      ids ->
+        user
+        |> get_tasks(ids)
+        |> then(&with_ancestors(user, tasks ++ &1))
+        |> Enum.sort_by(&{DateTime.to_unix(&1.inserted_at, :microsecond), &1.id}, :desc)
+    end
+  end
+
+  defp missing_parents(tasks) do
+    ids = MapSet.new(tasks, & &1.id)
+
+    tasks
+    |> Enum.map(& &1.parent_id)
+    |> Enum.reject(&(is_nil(&1) or MapSet.member?(ids, &1)))
+    |> Enum.uniq()
+  end
+
   defp available(user, tasks) do
     deferred = deferred_ids(user, tasks)
 
