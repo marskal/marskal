@@ -204,15 +204,25 @@ defmodule Marskal.Recurrence.NextOccurrenceTest do
       assert slot == DateTime.add(first.occurrence_for, 3, :day)
     end
 
-    test "only resolving the latest creates one", %{user: user} do
-      series = series_fixture(user, %{frequency: :days})
-      first = occurrence_fixture(user, series, hours_ago(1))
+    test "done by mistake, undone, and done again creates one", %{user: user} do
+      for due <- [hours_ago(1), DateTime.add(now(), 2, :day)] do
+        series = series_fixture(user, %{frequency: :days})
+        first = occurrence_fixture(user, series, due)
 
-      {:ok, _} = Tasks.complete_task(user, first.id, command())
-      {:ok, _} = Tasks.reopen_task(user, first.id, command())
-      {:ok, _} = Tasks.drop_task(user, first.id, command())
+        {:ok, _} = Tasks.complete_task(user, first.id, command())
+        [second] = later_occurrences(series, first)
+        {:ok, _} = Tasks.reopen_task(user, first.id, command())
+        assert later_occurrences(series, first) == [second]
 
-      assert [%Task{state: :to_do}] = later_occurrences(series, first)
+        # The second is the latest now, so finishing the first again, or
+        # dropping it, adds nothing.
+        {:ok, _} = Tasks.complete_task(user, first.id, command())
+        {:ok, _} = Tasks.reopen_task(user, first.id, command())
+        {:ok, _} = Tasks.drop_task(user, first.id, command())
+
+        assert [%Task{id: id, state: :to_do}] = later_occurrences(series, first)
+        assert id == second.id
+      end
     end
 
     test "not past the end count or the end date", %{user: user} do
