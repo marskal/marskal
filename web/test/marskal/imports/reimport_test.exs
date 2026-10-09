@@ -87,7 +87,7 @@ defmodule Marskal.Imports.ReimportTest do
     {:ok, _} =
       apply!(user, edit_items(TodoistSnapshot.small(), %{"t1" => %{"labels" => ["Food"]}}))
 
-    assert tag_names(user, milk) == ["Food", "Mine", "Missing recurrence"]
+    assert tag_names(user, milk) == ["Food", "Mine", "Missing repeat rule"]
 
     {:ok, _} =
       apply!(
@@ -95,7 +95,7 @@ defmodule Marskal.Imports.ReimportTest do
         edit_items(TodoistSnapshot.small(), %{"t1" => %{"labels" => ["Food", "Errand"]}})
       )
 
-    assert tag_names(user, milk) == ["Errand", "Food", "Mine", "Missing recurrence"]
+    assert tag_names(user, milk) == ["Errand", "Food", "Mine", "Missing repeat rule"]
   end
 
   test "an item the user deleted is imported again, as a new task", %{user: user} do
@@ -110,7 +110,7 @@ defmodule Marskal.Imports.ReimportTest do
     fresh = task!(user, "t1")
     assert fresh.id != milk.id
     assert fresh.title == "Buy oat milk"
-    assert tag_names(user, fresh) == ["Errand", "Food", "Missing recurrence"]
+    assert tag_names(user, fresh) == ["Errand", "Food", "Missing repeat rule"]
     assert again.stats["created"]["tasks"] == 1
     assert again.stats["recreated"] == 1
 
@@ -176,14 +176,14 @@ defmodule Marskal.Imports.ReimportTest do
     assert editor.title == "Ask editor"
     assert editor.url == "https://chat.example/editor"
     assert Repo.get!(Task, copy.id).notes == "My notes"
-    assert tag_names(user, task!(user, "t1")) == ["Errand", "Food", "Missing recurrence"]
+    assert tag_names(user, task!(user, "t1")) == ["Errand", "Food", "Missing repeat rule"]
   end
 
   test "an import problem the user fixed stays fixed", %{user: user} do
     milk = task!(user, "t1")
     assert milk.notes =~ "- Repeat: every monday"
 
-    problem = Enum.find(tags_of(user, milk), &(&1.name == "Missing recurrence"))
+    problem = Enum.find(tags_of(user, milk), &(&1.name == "Missing repeat rule"))
     {:ok, _} = Tags.untag_task(user, milk.id, problem.id, uuid())
     {:ok, _} = Tasks.set_notes(user, milk.id, nil, uuid())
 
@@ -254,7 +254,7 @@ defmodule Marskal.Imports.ReimportTest do
       {:ok, _} = apply!(user, snapshot)
 
       assert task!(user, "t1").series_id == nil
-      assert "Missing recurrence" in tag_names(user, task!(user, "t1"))
+      assert "Missing repeat rule" in tag_names(user, task!(user, "t1"))
     end
   end
 
