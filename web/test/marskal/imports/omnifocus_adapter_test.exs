@@ -155,7 +155,7 @@ defmodule Marskal.Imports.OmnifocusAdapterTest do
     assert task.extras["repeat_anchor"] == "due-date"
 
     assert Enum.map(graph.tags, & &1.name) ==
-             ["Import problems", "Missing recurrence", "Shortened title"]
+             ["Import problems", "Missing repeat", "Shortened title"]
   end
 
   test "rejects zip-slip entries" do

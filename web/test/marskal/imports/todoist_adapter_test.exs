@@ -37,7 +37,7 @@ defmodule Marskal.Imports.TodoistAdapterTest do
     assert archive.state == "dropped"
 
     assert Enum.map(graph.tags, & &1.name) ==
-             ["Food", "Errand", "Import problems", "Missing recurrence", "Missing section"]
+             ["Food", "Errand", "Import problems", "Missing repeat", "Missing section"]
 
     assert Enum.map(graph.tags, & &1.source_id) ==
              [

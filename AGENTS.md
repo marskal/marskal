@@ -49,6 +49,7 @@ This file is **short and actionable**. Rationale and history live in
 | **Tag** | Nested label on tasks/projects; project tags **inherit** to tasks (ADR 0005) |
 | **Waiting / Someday** | User **tag** conventions (not schema lists) — Phase 2+ |
 | **Series / occurrence** | Recurrence rule vs single instance (regular or on-completion mode) |
+| **Repeat** | The UI's word for recurrence ("Repeats weekly", Repeat, Stop). Code, schema, and sync keep *recurrence*, *series*, *occurrence* |
 | **To-Do** | Open (default for tasks and projects) |
 | **Done** | Terminal: finished / outcome achieved |
 | **Dropped** | Terminal: will not do / abandoned (task “skip”; also one-off cancel) |
