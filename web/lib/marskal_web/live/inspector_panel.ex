@@ -408,7 +408,7 @@ defmodule MarskalWeb.InspectorPanel do
             class="danger"
             phx-click="delete"
             phx-target={@myself}
-            data-confirm="Delete this task? To finish it or give it up, use Done or Dropped."
+            data-confirm={delete_task_confirm(@record)}
           >
             Delete
           </button>
@@ -1016,6 +1016,13 @@ defmodule MarskalWeb.InspectorPanel do
     do: datetime |> DateTime.shift_zone!(zone) |> Calendar.strftime("%Y-%m-%d %H:%M")
 
   defp stamp(_datetime, _zone), do: ""
+
+  # Deleting the open occurrence of a series ends the series (ADR 0007).
+  defp delete_task_confirm(%Tasks.Task{series_id: id, state: :to_do}) when is_binary(id),
+    do: "Delete this task and end its repeat? To skip only this one, use Dropped."
+
+  defp delete_task_confirm(_task),
+    do: "Delete this task? To finish it or give it up, use Done or Dropped."
 
   # A hidden "false" is always submitted. A checked box adds "true" after it.
   defp location_params(%{"location" => value}) do

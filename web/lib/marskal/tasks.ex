@@ -296,7 +296,8 @@ defmodule Marskal.Tasks do
   @doc """
   Discards the task and its subtasks. Later patches to them are ignored
   and they leave every view; Done and Dropped are how work normally ends
-  (ADR 0014).
+  (ADR 0014). Deleting a series' latest occurrence ends the series
+  (ADR 0007).
   """
   def delete_task(%User{} = user, task_id, command_id) do
     Changes.apply(user, command_id, "task", fn ->
@@ -532,6 +533,7 @@ defmodule Marskal.Tasks do
       end)
     end
 
+    Marskal.Recurrence.occurrence_deleted(user, command_id, task)
     discard(task)
   end
 

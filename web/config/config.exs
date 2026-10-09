@@ -56,8 +56,7 @@ config :marskal, Oban,
     {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
     {Oban.Plugins.Cron,
      crontab: [
-       {"@hourly", Marskal.Imports.ExpireJob},
-       {"* * * * *", Marskal.Recurrence.GenerateJob}
+       {"@hourly", Marskal.Imports.ExpireJob}
      ]}
   ]
 

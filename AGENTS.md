@@ -93,9 +93,11 @@ Default home: **Open tasks** stream. Timezone is stored per user, default
   discarded or not, is never created again.
 - The server creates every occurrence after the first; a client only joins a task
   as a series' first. Reopening an occurrence keeps the one its completion made.
-- **Mode:** **regular** (next on schedule even if previous open, at most 10 open;
-  a passed slot gets the first one after now, skipping those between) or
-  **on completion** (resolving the latest creates the next, in that command).
+- One occurrence at a time: resolving the latest (Done or Dropped) creates the
+  next, in that command. **Mode:** **regular** (the slot after the one resolved,
+  or the first after the resolution when that has passed, skipping those
+  between) or **on completion** (`interval` after the resolution). Deleting
+  the latest ends the series; Dropped skips one.
 - **On completion:** both **Done** and **Dropped** resolve the instance and **spawn next**
   (`interval` after the resolution time, clamped to a short month's last day;
   no day limits yet). To-Do does not.

@@ -180,7 +180,7 @@ defmodule MarskalWeb.RepeatLiveTest do
     task = task_fixture(user, %{due_at: @friday})
     rule = %{mode: :regular, anchor: :due, interval: 1, frequency: :days}
     {:ok, series} = Recurrence.repeat_task(user, task.id, rule, command())
-    Recurrence.generate(DateTime.add(@friday, 60, :second))
+    {:ok, _} = Tasks.complete_task(user, task.id, command())
     [next] = Enum.reject(Tasks.list_open(user), &(&1.id == task.id))
 
     {:ok, view, _html} = live(conn, ~p"/?task=#{next.id}")

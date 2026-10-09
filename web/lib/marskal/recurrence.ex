@@ -11,16 +11,18 @@ defmodule Marskal.Recurrence do
   `Marskal.Recurrence.Schedule` names the next slot and the dates that
   move with it; this module creates the task for it.
 
-  On completion, resolving the latest occurrence creates the next, in the
-  same command. A regular series gets the first slot after now once its
-  latest slot has passed (`generate/1`, run each minute by
-  `Marskal.Recurrence.GenerateJob`). Slots that passed in between are
-  skipped. Neither creates past the end date, the end count, or, in
-  regular mode, the cap of 10 open occurrences.
+  A series has one occurrence at a time: resolving the latest, Done or
+  Dropped, creates the next, in the same command. Regular mode takes the
+  slot after the one resolved, or, when that has passed, the first slot
+  after the resolution; the slots in between are skipped. On completion
+  counts the interval from the resolution. Neither creates past the end
+  date or the end count. Resuming a paused series whose latest was
+  resolved creates the next from then. Deleting the latest ends the
+  series; Dropped is how to skip one.
 
-  The latest occurrence is the one created last. In regular mode that is
-  also the greatest slot. On completion, finishing early can give the next
-  occurrence an earlier slot than the one finished.
+  The latest occurrence is the one created last. On completion,
+  finishing early can give the next occurrence an earlier slot than the
+  one finished.
   """
 
   import Ecto.Changeset
@@ -35,11 +37,9 @@ defmodule Marskal.Recurrence do
   alias Marskal.Tasks
   alias Marskal.Tasks.Task
 
-  @open_cap 10
-
   # A made-up constant fixed by ADR 0014 ("0014" is the ADR number).
-  # Changing it would give existing slots new ids, so the generator would
-  # create them again.
+  # Changing it would give existing slots new ids, so a slot already
+  # created could be created again.
   @namespace "a5c0ffee-0014-5000-8000-000000000014"
 
   @doc """
@@ -210,9 +210,16 @@ defmodule Marskal.Recurrence do
     Changes.apply(user, command_id, "recurrence_series", fn ->
       case get_series(user, id) do
         nil -> {:error, :not_found}
-        series -> Changes.commit(Series.update_changeset(series, attrs))
+        series -> commit_update(user, series, attrs, command_id)
       end
     end)
+  end
+
+  defp commit_update(user, series, attrs, command_id) do
+    with {:ok, updated, changeset} <- Changes.commit(Series.update_changeset(series, attrs)) do
+      if series.stopped_at && is_nil(updated.stopped_at), do: resumed(user, updated, command_id)
+      {:ok, updated, changeset}
+    end
   end
 
   def stop_series(user, id, command_id),
@@ -229,10 +236,14 @@ defmodule Marskal.Recurrence do
           {:error, :not_found}
 
         series ->
-          changeset = Series.discard_changeset(series)
-          {:ok, Repo.update!(changeset), changeset}
+          discard_series(series)
       end
     end)
+  end
+
+  defp discard_series(series) do
+    changeset = Series.discard_changeset(series)
+    {:ok, Repo.update!(changeset), changeset}
   end
 
   @doc """
@@ -315,66 +326,16 @@ defmodule Marskal.Recurrence do
   defp occurrences?(%Series{kind: :project, id: id}),
     do: Repo.exists?(from p in Marskal.Projects.Project, where: p.series_id == ^id)
 
-  ## Generating occurrences
-
-  @doc "The most open (To-Do) occurrences a regular series has (ADR 0007)."
-  def open_cap, do: @open_cap
-
-  @doc """
-  Gives each regular series whose latest slot is not after `now` the first
-  slot after it. Returns how many occurrences were created.
-  """
-  def generate(now \\ DateTime.utc_now(:second)) do
-    passed =
-      from s in Series,
-        join: t in Task,
-        on: t.series_id == s.id,
-        where: s.mode == :regular and s.kind == :task,
-        where: is_nil(s.stopped_at) and is_nil(s.discarded_at),
-        group_by: s.id,
-        having: max(t.occurrence_for) <= ^now,
-        select: s.id
-
-    passed
-    |> Repo.all()
-    |> Enum.count(fn series_id ->
-      case generate_series(series_id, now) do
-        # Created inside the transaction, so nothing was broadcast yet.
-        {:ok, {user, %Task{} = task}} -> Changes.broadcast(user, "task", task.id)
-        _ -> false
-      end
-    end)
-  end
-
-  defp generate_series(series_id, now) do
-    Repo.transaction(fn ->
-      with %Series{} = series <- lock_live(series_id),
-           user = Repo.get!(User, series.user_id),
-           %DateTime{} = from <- greatest_slot(series),
-           true <- not DateTime.after?(from, now),
-           true <- open_count(series) < @open_cap,
-           %Task{} = latest <- latest(series),
-           %DateTime{} = slot <-
-             Schedule.first_slot_after(series, from, now, Accounts.timezone(user)) do
-        id = occurrence_id(series.id, slot)
-        {user, create_occurrence(user, series, latest, slot, Marskal.Uuid.v5(id, "generate"))}
-      else
-        _ -> nil
-      end
-    end)
-  end
+  ## Creating occurrences
 
   @doc false
   # Called by `Marskal.Tasks` in the command that resolves `task`. The
   # next occurrence is part of that command, so a replay replays it too.
   def occurrence_resolved(%User{} = user, command_id, %Task{series_id: series_id} = task)
       when is_binary(series_id) do
-    with %Series{mode: :on_completion} = series <- lock_live(series_id),
-         %Task{id: id} when id == task.id <- latest(series),
-         %DateTime{} = slot <-
-           Schedule.next_slot(series, task.resolved_at, Accounts.timezone(user)) do
-      next_id = occurrence_id(series.id, slot)
-      create_occurrence(user, series, task, slot, Marskal.Uuid.v5(command_id, "task|#{next_id}"))
+    with %Series{} = series <- lock_live(series_id),
+         %Task{id: id} when id == task.id <- latest(series) do
+      create_next(user, series, task, task.resolved_at, command_id)
     end
 
     :ok
@@ -382,27 +343,71 @@ defmodule Marskal.Recurrence do
 
   def occurrence_resolved(_user, _command_id, _task), do: :ok
 
+  @doc false
+  # Called by `Marskal.Tasks` in the command that deletes `task`, before
+  # the discard. Deleting the latest occurrence ends its series, paused or
+  # not; the occurrences before it stay, as `delete_series/3` leaves them.
+  def occurrence_deleted(%User{} = user, command_id, %Task{series_id: series_id} = task)
+      when is_binary(series_id) do
+    with %Series{} = series <- lock_series(series_id),
+         %Task{id: id} when id == task.id <- latest(series) do
+      Changes.cascade(user, command_id, "recurrence_series", series.id, fn ->
+        discard_series(series)
+      end)
+    end
+
+    :ok
+  end
+
+  def occurrence_deleted(_user, _command_id, _task), do: :ok
+
+  # A series paused after its latest was resolved made nothing then. On
+  # resume it steps on from now.
+  defp resumed(user, series, command_id) do
+    with %Series{} = series <- lock_live(series.id),
+         %Task{state: state} = latest when state != :to_do <- latest(series) do
+      create_next(user, series, latest, DateTime.utc_now(:second), command_id)
+    end
+  end
+
+  # Regular mode steps on from the slot resolved, past any slot before
+  # `at`. On completion counts the interval from `at`.
+  defp create_next(user, series, latest, at, command_id) do
+    zone = Accounts.timezone(user)
+
+    slot =
+      case series.mode do
+        :regular -> Schedule.first_slot_after(series, latest.occurrence_for, at, zone)
+        :on_completion -> Schedule.next_slot(series, at, zone)
+      end
+
+    if slot do
+      next_id = occurrence_id(series.id, slot)
+
+      create_occurrence(
+        user,
+        series,
+        latest,
+        slot,
+        Marskal.Uuid.v5(command_id, "task|#{next_id}")
+      )
+    end
+  end
+
   # Live and not stopped, locked so two writers do not both create the
   # next occurrence.
   defp lock_live(series_id) do
+    case lock_series(series_id) do
+      %Series{stopped_at: nil} = series -> series
+      _ -> nil
+    end
+  end
+
+  defp lock_series(series_id) do
     Repo.one(
       from s in Series,
-        where: s.id == ^series_id and is_nil(s.stopped_at) and is_nil(s.discarded_at),
+        where: s.id == ^series_id and is_nil(s.discarded_at),
         lock: "FOR UPDATE"
-    )
-  end
-
-  # Discarded occurrences count: a deleted slot is not stepped from again.
-  defp greatest_slot(series) do
-    Repo.one(from t in Task, where: t.series_id == ^series.id, select: max(t.occurrence_for))
-  end
-
-  defp open_count(series) do
-    Repo.aggregate(
-      from(t in Task,
-        where: t.series_id == ^series.id and t.state == :to_do and is_nil(t.discarded_at)
-      ),
-      :count
     )
   end
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted; amended 2026-10-02 (projects, date offsets, open cap); amended 2026-10-07 (regular mode follows RFC 5545; monthly days are one set; on completion is an interval); amended 2026-10-08 (the week start is the series'); amended 2026-10-09 (monthly and yearly days are rows)
+Accepted; amended 2026-10-02 (projects, date offsets, open cap); amended 2026-10-07 (regular mode follows RFC 5545; monthly days are one set; on completion is an interval); amended 2026-10-08 (the week start is the series'); amended 2026-10-09 (monthly and yearly days are rows; one occurrence at a time)
 
 ## Context
 
@@ -31,7 +31,7 @@ Each series has a **recurrence mode**:
 
 | Mode | Behavior |
 |------|----------|
-| **Regular** | A new instance is created on the schedule **whether or not** the previous one was resolved. Missed work accumulates (multiple open occurrences), up to a cap on open occurrences (see Building it). Timeline is driven by the anchor schedule (prior scheduled anchor + interval / calendar rules). |
+| **Regular** | The next instance falls on the schedule: the slot after the one resolved, or the first slot after the resolution when that has passed. It is created when the current one is resolved, as on completion (see One at a time). Timeline is driven by the anchor schedule (prior scheduled anchor + interval / calendar rules). |
 | **On completion** | The next instance is created when the current one is **resolved** — not merely because the clock passed. **Resolved** means state **Done** or **Dropped** (ADR 0008). Both count as completion for spawning the next occurrence. The next anchor is `interval` after the **resolution** moment (see Expansion). **To-Do** does not spawn the next on its own. |
 
 - Mode is user-visible and first-class on the series.
@@ -140,7 +140,7 @@ Task states: ADR 0008. For recurrence:
 
 | Mode | Done | Dropped | To-Do |
 |------|------|---------|--------|
-| **Regular** | Closes this instance as done | Closes this instance as dropped | Open; schedule still creates further instances independently |
+| **Regular** | Resolves instance; **spawns next** on the schedule | Resolves instance; **spawns next** on the schedule | Does **not** spawn next |
 | **On completion** | Resolves instance; **spawns next** | Resolves instance; **spawns next** (same scheduling as Done) | Does **not** spawn next |
 
 - **Done** vs **Dropped** differ in history/meaning only for spawning: both are
@@ -208,7 +208,7 @@ section wins.
 - Reopening an occurrence does not undo the one its completion created. Both
   stay, and both count toward the end count.
 
-### Regular mode and the open cap
+### Regular mode and the open cap (superseded 2026-10-09, see One at a time)
 
 - A series always has one occurrence scheduled after now. When its slot
   passes, the generator creates the following one. Earlier occurrences stay
@@ -304,6 +304,31 @@ section wins.
   and without repeats. The database checks each row's shape.
 - Weekly days stay ISO weekday numbers.
 
+## One at a time (2026-10-09)
+
+Creating regular occurrences on the schedule while earlier ones were open
+cluttered every list after a few days away, cap or not. A series now has
+one occurrence at a time. Where an earlier paragraph disagrees, this
+section wins.
+
+- **Both modes spawn on resolution.** Resolving the latest occurrence, Done
+  or Dropped, creates the next in the same command. The modes differ only
+  in where the next slot comes from.
+- **Regular** steps on from the slot resolved: the next slot after it, or,
+  when that has passed by the resolution, the first slot after the
+  resolution. The slots between are skipped. Finishing early does not
+  move the schedule.
+- **On completion** is unchanged: `interval` after the resolution.
+- The open cap and the per-minute generator are gone. An occurrence left
+  open stays overdue and visible, and the series waits for it.
+- **Pause and resume.** A paused series creates nothing when its latest is
+  resolved. Resuming it, when the latest is resolved, creates the next as if
+  it were resolved at the resume.
+- **Deleting the latest occurrence ends the series**, paused or not: the
+  series is discarded in the same command, as Stop does, and the earlier
+  occurrences stay as history. Dropped is how to skip one occurrence.
+  Deleting an earlier occurrence leaves the series alone.
+
 ## Consequences
 
 - Phase 3 is a major product surface, not a bolt-on “repeat every week” checkbox.
@@ -314,9 +339,9 @@ section wins.
   (not Skip; no task On Hold — use Defer).
 - Tests should cover: each frequency; both modes; weekly/monthly limits; end date;
   **end count = N generated**; both ends together; on-completion spawns on **Done and
-  Dropped**; anchor ∈ {Defer, Planned, Due}; regular mode creating the next instance
-  even when the previous is still open; other dates keeping their offset across a
-  DST change; the open cap and the slots skipped after it; a discarded occurrence
-  not coming back.
+  Dropped**; anchor ∈ {Defer, Planned, Due}; regular mode stepping from the slot resolved
+  and skipping passed slots; other dates keeping their offset across a DST change;
+  resuming a paused series; deleting the latest ending the series; a discarded
+  occurrence not coming back.
 - Structured rules first; mode resolves schedule-vs-resolution advancement; count and
   Done/Dropped-as-resolution are fixed as above. States detailed in ADR 0008.
