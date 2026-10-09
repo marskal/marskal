@@ -172,6 +172,16 @@ CREATE TABLE user_preferences (
 
 INSERT OR REPLACE INTO meta (key, value) VALUES ('needs_snapshot', '1');
 "#,
+    // ADR 0007 (2026-10-09). A monthly or yearly rule's days are one list
+    // of rows. Series pulled before this have none, so the next pull is a
+    // snapshot.
+    r#"
+ALTER TABLE recurrence_series DROP COLUMN month_days;
+ALTER TABLE recurrence_series DROP COLUMN month_ordinal;
+ALTER TABLE recurrence_series DROP COLUMN month_day_kind;
+ALTER TABLE recurrence_series ADD COLUMN on_days TEXT NOT NULL DEFAULT '[]';
+INSERT OR REPLACE INTO meta (key, value) VALUES ('needs_snapshot', '1');
+"#,
 ];
 
 /// Brings the database to the latest schema. `user_version` counts the

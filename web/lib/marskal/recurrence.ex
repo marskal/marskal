@@ -78,17 +78,20 @@ defmodule Marskal.Recurrence do
 
   @doc """
   Makes `task` the first occurrence of a new series with the rule in
-  `attrs`, in one command. The task needs the date the rule anchors on,
-  and must not be in a series already.
+  `attrs`, in one command. The task must not be in a series already.
+
+  `starts_at:` sets the task's anchor date to that instant, as the first
+  slot. Without it, the task needs the anchor date already.
   """
-  def repeat_task(%User{} = user, task_id, attrs, command_id) when is_map(attrs) do
+  def repeat_task(%User{} = user, task_id, attrs, command_id, opts \\ [])
+      when is_map(attrs) do
     Changes.apply(user, command_id, "recurrence_series", fn ->
       case Tasks.get_task(user, task_id) do
         nil ->
           {:error, :not_found}
 
         %Task{series_id: nil} = task ->
-          start_series(user, task, attrs, command_id)
+          start_series(user, task, attrs, command_id, opts[:starts_at])
 
         %Task{} ->
           {:error, :already_repeating}
@@ -96,23 +99,26 @@ defmodule Marskal.Recurrence do
     end)
   end
 
-  defp start_series(user, task, attrs, command_id) do
+  defp start_series(user, task, attrs, command_id, starts_at) do
     changeset =
       %Series{}
       |> Series.create_changeset(user, Map.put(stringify(attrs), "kind", "task"))
-      |> require_anchor_date(task)
+      |> require_anchor_date(task, starts_at)
 
     with {:ok, series} <- Repo.insert(changeset),
-         {:ok, _task} <- join_series(user, task, series, command_id) do
+         {:ok, _task} <- join_series(user, task, series, starts_at, command_id) do
       {:ok, series, changeset}
     end
   end
 
   defp stringify(attrs), do: Map.new(attrs, fn {key, value} -> {to_string(key), value} end)
 
-  defp require_anchor_date(%Ecto.Changeset{valid?: false} = changeset, _task), do: changeset
+  defp require_anchor_date(%Ecto.Changeset{valid?: false} = changeset, _task, _starts_at),
+    do: changeset
 
-  defp require_anchor_date(changeset, task) do
+  defp require_anchor_date(changeset, _task, %DateTime{}), do: changeset
+
+  defp require_anchor_date(changeset, task, nil) do
     series = apply_changes(changeset)
 
     if Map.fetch!(task, Series.anchor_field(series)),
@@ -125,12 +131,54 @@ defmodule Marskal.Recurrence do
   defp anchor_word(:due), do: "Due"
 
   # The join follows from the series insert, with its own derived command.
-  defp join_series(user, task, series, command_id) do
-    Tasks.update_task(
-      user,
-      task.id,
-      %{series_id: series.id, occurrence_for: Map.fetch!(task, Series.anchor_field(series))},
-      Marskal.Uuid.v5(command_id, "task|#{task.id}")
+  defp join_series(user, task, series, starts_at, command_id) do
+    field = Series.anchor_field(series)
+    slot = DateTime.truncate(starts_at || Map.fetch!(task, field), :second)
+    attrs = %{field => slot, series_id: series.id, occurrence_for: slot}
+
+    attrs =
+      if field == :defer_until, do: Map.put(attrs, :deferred_indefinitely, false), else: attrs
+
+    Tasks.update_task(user, task.id, attrs, Marskal.Uuid.v5(command_id, "task|#{task.id}"))
+  end
+
+  @doc "The live occurrence of `task`'s series with the slot just before it."
+  def previous_occurrence(%User{} = user, %Task{series_id: id, occurrence_for: slot})
+      when is_binary(id) do
+    Repo.one(
+      from t in Task,
+        where: t.user_id == ^user.id and t.series_id == ^id and is_nil(t.discarded_at),
+        where: t.occurrence_for < ^slot,
+        order_by: [desc: t.occurrence_for],
+        limit: 1
+    )
+  end
+
+  def previous_occurrence(_user, _task), do: nil
+
+  @doc """
+  The next `count` slots after `from`, in regular mode. Fewer when the rule
+  ends first; none on completion, where they depend on when each is done.
+  """
+  def upcoming(%Series{mode: :regular} = series, %DateTime{} = from, zone, count) do
+    from
+    |> Stream.unfold(fn at ->
+      case Schedule.next_slot(series, at, zone) do
+        nil -> nil
+        slot -> {slot, slot}
+      end
+    end)
+    |> Enum.take(count)
+  end
+
+  def upcoming(_series, _from, _zone, _count), do: []
+
+  @doc "The greatest slot among the series' live occurrences."
+  def latest_slot(%Series{} = series) do
+    Repo.one(
+      from t in Task,
+        where: t.series_id == ^series.id and is_nil(t.discarded_at),
+        select: max(t.occurrence_for)
     )
   end
 

@@ -21,7 +21,7 @@ defmodule Marskal.Sync do
     {"user_preferences", Marskal.Accounts.UserPreferences,
      ~w(id timezone week_start inserted_at updated_at)a},
     {"recurrence_series", Marskal.Recurrence.Series,
-     ~w(id kind mode anchor interval frequency weekdays month_days month_ordinal month_day_kind
+     ~w(id kind mode anchor interval frequency weekdays on_days
         ends_at end_count week_start stopped_at discarded_at inserted_at updated_at)a},
     {"task", Marskal.Tasks.Task,
      ~w(id title notes url state inbox project_id parent_id rank defer_until deferred_indefinitely

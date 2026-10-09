@@ -13,7 +13,7 @@ defmodule Marskal.Recurrence.ScheduleTest do
     interval: 1,
     frequency: :days,
     weekdays: [],
-    month_days: []
+    on_days: []
   }
 
   describe "minutes and hours" do
@@ -118,54 +118,54 @@ defmodule Marskal.Recurrence.ScheduleTest do
     end
 
     test "listed days, including the last day, are the set the slot lands on" do
-      days = %{frequency: :months, month_days: [1, 15]}
+      days = %{frequency: :months, on_days: ["1:day", "15:day"]}
 
       assert slot(days, ~D[2026-01-10]) == at(~D[2026-01-15])
       assert slot(days, ~D[2026-01-15]) == at(~D[2026-02-01])
 
-      last = %{frequency: :months, month_days: [-1]}
+      last = %{frequency: :months, on_days: ["-1:day"]}
       assert slot(last, ~D[2026-01-31]) == at(~D[2026-02-28])
       assert slot(last, ~D[2026-02-28]) == at(~D[2026-03-31])
 
-      both = %{frequency: :months, month_days: [-1, 31]}
+      both = %{frequency: :months, on_days: ["-1:day", "31:day"]}
       assert slot(both, ~D[2026-01-31]) == at(~D[2026-02-28])
       assert slot(both, ~D[2026-02-28]) == at(~D[2026-03-31])
     end
 
     test "steps listed days by the interval, from the month it started in" do
-      rule = %{frequency: :months, interval: 2, month_days: [1, 15]}
+      rule = %{frequency: :months, interval: 2, on_days: ["1:day", "15:day"]}
 
       assert slot(rule, ~D[2026-01-10]) == at(~D[2026-01-15])
       assert slot(rule, ~D[2026-01-15]) == at(~D[2026-03-01])
     end
 
     test "an nth weekday, work day, or weekend day" do
-      third_friday = %{frequency: :months, month_ordinal: 3, month_day_kind: :friday}
+      third_friday = %{frequency: :months, on_days: ["3:friday"]}
       assert slot(third_friday, ~D[2026-10-01]) == at(~D[2026-10-16])
       assert slot(third_friday, ~D[2026-10-16]) == at(~D[2026-11-20])
 
-      fifth_monday = %{frequency: :months, month_ordinal: 5, month_day_kind: :monday}
+      fifth_monday = %{frequency: :months, on_days: ["5:monday"]}
       assert slot(fifth_monday, ~D[2026-01-15]) == at(~D[2026-03-30])
 
       assert slot(
-               %{frequency: :months, month_ordinal: 1, month_day_kind: :work_day},
+               %{frequency: :months, on_days: ["1:work_day"]},
                ~D[2026-08-20]
              ) ==
                at(~D[2026-09-01])
 
       assert slot(
-               %{frequency: :months, month_ordinal: -1, month_day_kind: :work_day},
+               %{frequency: :months, on_days: ["-1:work_day"]},
                ~D[2026-05-01]
              ) ==
                at(~D[2026-05-29])
 
       assert slot(
-               %{frequency: :months, month_ordinal: 1, month_day_kind: :weekend_day},
+               %{frequency: :months, on_days: ["1:weekend_day"]},
                ~D[2026-05-01]
              ) == at(~D[2026-05-02])
 
       assert slot(
-               %{frequency: :months, month_ordinal: -1, month_day_kind: :weekend_day},
+               %{frequency: :months, on_days: ["-1:weekend_day"]},
                ~D[2026-05-02]
              ) == at(~D[2026-05-31])
     end
@@ -173,9 +173,7 @@ defmodule Marskal.Recurrence.ScheduleTest do
     test "a calendar day and an nth day together are one set" do
       first_monday = %{
         frequency: :months,
-        month_days: [20],
-        month_ordinal: 1,
-        month_day_kind: :monday
+        on_days: ["20:day", "1:monday"]
       }
 
       assert slot(first_monday, ~D[2026-01-01]) == at(~D[2026-01-05])
@@ -184,9 +182,7 @@ defmodule Marskal.Recurrence.ScheduleTest do
 
       payday = %{
         frequency: :months,
-        month_days: [15],
-        month_ordinal: -1,
-        month_day_kind: :work_day
+        on_days: ["15:day", "-1:work_day"]
       }
 
       assert slot(payday, ~D[2026-05-01]) == at(~D[2026-05-15])
@@ -195,15 +191,42 @@ defmodule Marskal.Recurrence.ScheduleTest do
     end
 
     test "the 15th after a 31st is the 15th of the next month" do
-      rule = %{frequency: :months, month_days: [15]}
+      rule = %{frequency: :months, on_days: ["15:day"]}
 
       assert slot(rule, ~D[2026-01-10]) == at(~D[2026-01-15])
       assert slot(rule, ~D[2026-01-20]) == at(~D[2026-02-15])
       assert slot(rule, ~D[2026-01-31]) == at(~D[2026-02-15])
 
-      every_two = %{frequency: :months, interval: 2, month_days: [15]}
+      every_two = %{frequency: :months, interval: 2, on_days: ["15:day"]}
       assert slot(every_two, ~D[2026-01-10]) == at(~D[2026-01-15])
       assert slot(every_two, ~D[2026-01-20]) == at(~D[2026-03-15])
+    end
+
+    test "several nth weekdays are one set" do
+      rule = %{frequency: :months, on_days: ["2:tuesday", "-1:friday"]}
+
+      assert slot(rule, ~D[2026-10-01]) == at(~D[2026-10-13])
+      assert slot(rule, ~D[2026-10-13]) == at(~D[2026-10-30])
+      assert slot(rule, ~D[2026-10-30]) == at(~D[2026-11-10])
+    end
+  end
+
+  describe "years with days" do
+    test "each row is a day in its own month" do
+      rule = %{frequency: :years, on_days: ["10:14:day", "10:-1:monday", "4:14:day"]}
+
+      assert slot(rule, ~D[2026-10-07]) == at(~D[2026-10-14])
+      assert slot(rule, ~D[2026-10-14]) == at(~D[2026-10-26])
+      assert slot(rule, ~D[2026-10-26]) == at(~D[2027-04-14])
+      assert slot(rule, ~D[2027-04-14]) == at(~D[2027-10-14])
+    end
+
+    test "steps by the interval from the year it started in, and skips a missing day" do
+      rule = %{frequency: :years, interval: 2, on_days: ["2:29:day", "3:1:day"]}
+
+      assert slot(rule, ~D[2026-01-10]) == at(~D[2026-03-01])
+      assert slot(rule, ~D[2026-03-01]) == at(~D[2028-02-29])
+      assert slot(rule, ~D[2028-02-29]) == at(~D[2028-03-01])
     end
   end
 
@@ -245,12 +268,12 @@ defmodule Marskal.Recurrence.ScheduleTest do
 
     test "a month the rule skipped is not a slot that sneaks in before the end" do
       assert slot(
-               %{frequency: :months, month_days: [31], ends_at: at(~D[2026-02-28])},
+               %{frequency: :months, on_days: ["31:day"], ends_at: at(~D[2026-02-28])},
                ~D[2026-01-31]
              ) == nil
 
       assert slot(
-               %{frequency: :months, month_days: [31], ends_at: at(~D[2026-03-31])},
+               %{frequency: :months, on_days: ["31:day"], ends_at: at(~D[2026-03-31])},
                ~D[2026-01-31]
              ) == at(~D[2026-03-31])
     end
@@ -374,8 +397,8 @@ defmodule Marskal.Recurrence.ScheduleTest do
       %{frequency: :hours, interval: 36},
       %{frequency: :days, interval: 1},
       %{frequency: :weeks, interval: 2, weekdays: [2, 4]},
-      %{frequency: :months, interval: 1, month_days: [31]},
-      %{frequency: :months, interval: 1, month_ordinal: 5, month_day_kind: :monday},
+      %{frequency: :months, interval: 1, on_days: ["31:day"]},
+      %{frequency: :months, interval: 1, on_days: ["5:monday"]},
       %{frequency: :years, interval: 1},
       %{mode: :on_completion, frequency: :weeks, interval: 2},
       %{mode: :on_completion, frequency: :months, interval: 1}
