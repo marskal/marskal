@@ -40,6 +40,9 @@ defmodule Marskal.Imports.TaskNode do
     :planned,
     :due,
     :resolved_at,
+    # The series attrs of a repeat the source's rule was read into, if any
+    # (ADR 0007). The task becomes its first occurrence.
+    :recurrence,
     deferred_indefinitely: false,
     tag_source_ids: [],
     extras: %{},

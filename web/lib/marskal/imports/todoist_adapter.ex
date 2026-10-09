@@ -7,9 +7,10 @@ defmodule Marskal.Imports.TodoistAdapter do
   folder. A parent that also has tasks keeps them in a project named
   "<name> tasks" inside the folder. A parent cycle is cut so the folders
   still form a tree. A Todoist due date is planned, and a deadline is
-  due. The section and the recurrence text have no column yet: they stay
-  in extras, and the task is marked for the user to fix
-  (`Marskal.Imports.Problems`). Labels become tags. Completed-task
+  due. A repeat in a form `Marskal.Imports.TodoistRecurrence` reads
+  becomes a rule on the planned date. The section, and a repeat it cannot
+  read, have no column: they stay in extras, and the task is marked for
+  the user to fix (`Marskal.Imports.Problems`). Labels become tags. Completed-task
   history is not in the snapshot. Titles are Markdown: their links move
   to the URL (`Marskal.Imports.TitleLinks`).
 
@@ -25,6 +26,7 @@ defmodule Marskal.Imports.TodoistAdapter do
   alias Marskal.Imports.TagNode
   alias Marskal.Imports.TaskNode
   alias Marskal.Imports.TitleLinks
+  alias Marskal.Imports.TodoistRecurrence
 
   def parse(payload) when is_binary(payload) do
     snapshot =
@@ -275,6 +277,7 @@ defmodule Marskal.Imports.TodoistAdapter do
     parent = source_id("task", row["parent_id"])
     section = section_names[string_id(row["section_id"])]
     repeat = repeat(row["due"])
+    recurrence = recurrence(repeat, row["due"])
     names = row |> Map.get("labels", []) |> List.wrap() |> Enum.filter(&is_binary/1)
     {title, url, more} = row["content"] |> blank("Untitled") |> TitleLinks.split()
 
@@ -290,6 +293,7 @@ defmodule Marskal.Imports.TodoistAdapter do
       planned: date_value(row["due"]),
       due: date_value(row["deadline"]),
       resolved_at: if(done?(row), do: row["completed_at"]),
+      recurrence: recurrence,
       tag_source_ids:
         names |> Enum.map(&label_ids[tag_key(&1)]) |> Enum.reject(&is_nil/1) |> Enum.uniq(),
       extras:
@@ -303,7 +307,7 @@ defmodule Marskal.Imports.TodoistAdapter do
       problems:
         Enum.reject(
           [
-            repeat && {:missing_recurrence, "Repeat", repeat},
+            repeat && is_nil(recurrence) && {:missing_recurrence, "Repeat", repeat},
             section && {:missing_section, "Section", section}
           ],
           &(&1 in [nil, false])
@@ -400,6 +404,18 @@ defmodule Marskal.Imports.TodoistAdapter do
        do: string
 
   defp repeat(_due), do: nil
+
+  # A rule needs the date it moves; a repeat with no date stays a problem.
+  defp recurrence(nil, _due), do: nil
+
+  defp recurrence(repeat, due) do
+    with date when is_binary(date) <- date_value(due),
+         {:ok, rule} <- TodoistRecurrence.parse(repeat) do
+      rule
+    else
+      _ -> nil
+    end
+  end
 
   defp put_priority(extras, priority) when is_integer(priority) and priority > 1,
     do: Map.put(extras, "priority", priority)
