@@ -111,6 +111,11 @@ impl Output {
             if let Some(url) = task.url.as_deref() {
                 println!("  url      {url}");
             }
+            if task.flagged {
+                println!("  flagged");
+            } else if view.flagged {
+                println!("  flagged by its project");
+            }
             if let Some(notes) = task.notes.as_deref().filter(|n| !n.is_empty()) {
                 println!();
                 for note in notes.lines() {
@@ -162,10 +167,11 @@ impl Output {
 
         for project in projects {
             println!(
-                "{}  {} {}",
+                "{}  {} {}{}",
                 short(&project.id),
                 state_box(project.state),
-                project.title
+                project.title,
+                if project.flagged { "  (flagged)" } else { "" }
             );
         }
         self.note_unsynced(unsynced);
@@ -324,6 +330,9 @@ fn line(view: &TaskView) -> String {
         }
     } else if let Some(planned) = &view.effective.planned_at {
         text.push_str(&format!("  planned {}", day(planned)));
+    }
+    if view.flagged {
+        text.push_str("  (flagged)");
     }
     if view.deferred {
         text.push_str("  (deferred)");

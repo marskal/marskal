@@ -27,6 +27,10 @@ pub enum TaskFilter {
     Project(Uuid),
     /// Open tasks with the tag or one below it, newest first.
     Tag(Uuid),
+    /// Open tasks flagged by themselves or their project, inbox included,
+    /// newest first (ADR 0025). Deferred and unavailable tasks only with
+    /// `unavailable`.
+    Flagged { unavailable: bool },
     /// Every live task, resolved ones too, newest first.
     All,
 }
@@ -50,6 +54,8 @@ pub struct TaskView {
     pub available: bool,
     /// Done or Dropped, by its own state or one above it.
     pub resolved: bool,
+    /// Flagged by itself or its project (ADR 0025).
+    pub flagged: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -229,6 +235,11 @@ impl World {
                     !view.resolved && view.tags.iter().any(|tag| subtree.contains(&tag.id))
                 })
             }
+            TaskFilter::Flagged { unavailable } => self.newest_first(|view| {
+                view.flagged
+                    && !view.resolved
+                    && (unavailable || (view.available && !view.deferred))
+            }),
             TaskFilter::All => self.newest_first(|_| true),
         }
     }
@@ -258,6 +269,11 @@ impl World {
             depth: self.depth(task),
             available: self.available(&tags),
             resolved: self.resolved(task),
+            flagged: task.flagged
+                || task
+                    .project_id
+                    .and_then(|id| self.project(id))
+                    .is_some_and(|p| p.flagged),
             tags,
             effective,
             deferred,

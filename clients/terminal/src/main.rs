@@ -88,7 +88,7 @@ enum Command {
     Drop { tasks: Vec<String> },
     /// Mark tasks To-Do again.
     Reopen { tasks: Vec<String> },
-    /// Change a task's title, notes, URL, or dates.
+    /// Change a task's title, notes, URL, flag, or dates.
     Edit(EditArgs),
     /// Open a task's URL with the system's opener: files too.
     Open { task: String },
@@ -129,7 +129,14 @@ enum ProjectAction {
         /// A page, file, or ticket: https://…, file:///…
         #[arg(long, short)]
         url: Option<String>,
+        /// Flag it, which flags its tasks.
+        #[arg(long, short)]
+        flag: bool,
     },
+    /// Flag a project, which flags its tasks.
+    Flag { project: String },
+    /// Clear a project's flag.
+    Unflag { project: String },
     /// Mark a project Done.
     Done { project: String },
     /// Mark a project Dropped.
@@ -192,6 +199,9 @@ struct AddArgs {
     /// A page, file, or ticket: https://…, file:///…
     #[arg(long, short)]
     url: Option<String>,
+    /// Flag it.
+    #[arg(long, short)]
+    flag: bool,
     /// Planned day: today, tomorrow, fri, +3d, 2026-10-05, optionally with a time.
     #[arg(long)]
     planned: Option<String>,
@@ -210,22 +220,25 @@ struct AddArgs {
 }
 
 #[derive(Args)]
-#[group(multiple = false)]
+#[group(skip)]
 struct LsArgs {
     /// The inbox.
-    #[arg(long)]
+    #[arg(long, group = "list")]
     inbox: bool,
     /// A project's open tasks.
-    #[arg(long, short)]
+    #[arg(long, short, group = "list")]
     project: Option<String>,
     /// Open tasks with this tag or one below it.
-    #[arg(long, short)]
+    #[arg(long, short, group = "list")]
     tag: Option<String>,
+    /// Open tasks flagged by themselves or their project, inbox included.
+    #[arg(long, short, group = "list")]
+    flagged: bool,
     /// Every task, Done and Dropped included.
-    #[arg(long)]
+    #[arg(long, group = "list")]
     everything: bool,
-    /// In the open stream, include deferred and unavailable tasks.
-    #[arg(long, short)]
+    /// In the open stream or flagged, include deferred and unavailable tasks.
+    #[arg(long, short, conflicts_with_all = ["inbox", "project", "tag", "everything"])]
     all: bool,
 }
 
@@ -242,6 +255,10 @@ struct EditArgs {
     url: Option<String>,
     #[arg(long, conflicts_with = "url")]
     no_url: bool,
+    #[arg(long)]
+    flag: bool,
+    #[arg(long, conflicts_with = "flag")]
+    no_flag: bool,
     #[arg(long)]
     planned: Option<String>,
     #[arg(long, conflicts_with = "planned")]
@@ -495,6 +512,7 @@ fn run(cli: Cli, output: &Output) -> Result<()> {
                 title: args.title.join(" "),
                 notes: args.note.clone(),
                 url: args.url.clone(),
+                flagged: args.flag,
                 location: args.place.location(&context.store)?,
                 parent_id,
                 defer_until: when(&args.defer, DateField::Defer)?,
@@ -528,6 +546,10 @@ fn run(cli: Cli, output: &Output) -> Result<()> {
                 TaskFilter::Project(context.project_id(project)?)
             } else if let Some(tag) = &args.tag {
                 TaskFilter::Tag(context.tag_id(tag)?)
+            } else if args.flagged {
+                TaskFilter::Flagged {
+                    unavailable: args.all,
+                }
             } else if args.everything {
                 TaskFilter::All
             } else {
@@ -594,6 +616,13 @@ fn run(cli: Cli, output: &Output) -> Result<()> {
                         Some(None)
                     } else {
                         args.url.clone().map(Some)
+                    },
+                    flagged: if args.flag {
+                        Some(true)
+                    } else if args.no_flag {
+                        Some(false)
+                    } else {
+                        None
                     },
                     planned_at: clear_or(args.no_planned, &args.planned, DateField::Planned)?,
                     due_at: clear_or(args.no_due, &args.due, DateField::Due)?,
@@ -685,7 +714,12 @@ fn run(cli: Cli, output: &Output) -> Result<()> {
                     let unsynced = context.refresh();
                     output.projects(&context.store.world()?, unsynced.as_deref());
                 }
-                Some(ProjectAction::Add { title, folder, url }) => {
+                Some(ProjectAction::Add {
+                    title,
+                    folder,
+                    url,
+                    flag,
+                }) => {
                     context.check_writable()?;
                     let folder_id = match folder {
                         Some(folder) => Some(context.store.world()?.find_folder(folder)?.id),
@@ -695,6 +729,7 @@ fn run(cli: Cli, output: &Output) -> Result<()> {
                         title: title.join(" "),
                         notes: None,
                         url: url.clone(),
+                        flagged: *flag,
                         folder_id,
                     })?;
                     let unsynced = context.try_sync();
@@ -714,6 +749,15 @@ fn run(cli: Cli, output: &Output) -> Result<()> {
                     };
                     context.store.set_project_state(id, state)?;
                     let unsynced = context.try_sync();
+                    output.ids(verb, &[id], unsynced.as_deref());
+                }
+                Some(ProjectAction::Flag { project } | ProjectAction::Unflag { project }) => {
+                    context.check_writable()?;
+                    let id = context.project_id(project)?;
+                    let flag = matches!(action, Some(ProjectAction::Flag { .. }));
+                    context.store.set_project_flagged(id, flag)?;
+                    let unsynced = context.try_sync();
+                    let verb = if flag { "Flagged" } else { "Unflagged" };
                     output.ids(verb, &[id], unsynced.as_deref());
                 }
             }
