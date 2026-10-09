@@ -15,7 +15,7 @@ Product rules: **[AGENTS.md](AGENTS.md)**. Decisions: **[docs/adr/](docs/adr/)**
 starts ([ADR 0015](docs/adr/0015-repository-layout.md),
 [ADR 0018](docs/adr/0018-rust-client-sync-library.md)).
 
-## Web app
+## Web app and API server
 
 ```bash
 cd web
