@@ -64,7 +64,8 @@ defmodule Marskal.Imports.TodoistAdapterTest do
     assert milk.planned == "2026-09-28"
     assert milk.extras["repeat"] == "every monday starting next week"
     assert milk.due == "2026-10-01"
-    assert milk.extras["priority"] == 4
+    assert milk.flagged
+    refute Map.has_key?(milk.extras, "priority")
 
     editor = Enum.find(graph.tasks, &(&1.title == "Ask editor"))
     assert editor.url == "https://chat.example/editor"
@@ -154,6 +155,39 @@ defmodule Marskal.Imports.TodoistAdapterTest do
     assert site.title == "Site and docs"
     assert site.url == "https://b.example"
     assert site.notes == "Ship it\n\n- [docs](https://docs.example)"
+  end
+
+  test "P1 flags a task, and P2 and P3 become tags" do
+    items = [
+      %{"id" => "a", "content" => "P1", "project_id" => "p1", "priority" => 4},
+      %{"id" => "b", "content" => "P2", "project_id" => "p1", "priority" => 3},
+      %{"id" => "c", "content" => "P3", "project_id" => "p1", "priority" => 2},
+      %{
+        "id" => "d",
+        "content" => "P4",
+        "project_id" => "p1",
+        "priority" => 1,
+        "labels" => ["Food"]
+      }
+    ]
+
+    graph =
+      TodoistAdapter.parse(Jason.encode!(Map.put(TodoistSnapshot.small(), "items", items)))
+
+    tag_names = Map.new(graph.tags, &{&1.source_id, &1.name})
+
+    names =
+      Map.new(graph.tasks, &{&1.title, Enum.map(&1.tag_source_ids, fn id -> tag_names[id] end)})
+
+    assert Enum.map(graph.tasks, &{&1.title, &1.flagged}) ==
+             [{"P1", true}, {"P2", false}, {"P3", false}, {"P4", false}]
+
+    assert names == %{
+             "P1" => [],
+             "P2" => ["Priority 2"],
+             "P3" => ["Priority 3"],
+             "P4" => ["Food"]
+           }
   end
 
   test "rejects a snapshot that is not JSON" do

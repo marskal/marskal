@@ -206,6 +206,36 @@ defmodule Marskal.Imports.ReimportTest do
     assert Repo.get!(Task, milk.id).notes == nil
   end
 
+  describe "flags" do
+    test "a source flag is applied, and a flag the user cleared stays cleared", %{user: user} do
+      assert task!(user, "t1").flagged
+      refute task!(user, "t2").flagged
+
+      {:ok, _} = Tasks.update_task(user, task!(user, "t1").id, %{flagged: false}, uuid())
+
+      {:ok, again} =
+        apply!(user, edit_items(TodoistSnapshot.small(), %{"t2" => %{"priority" => 4}}))
+
+      refute task!(user, "t1").flagged
+      assert task!(user, "t2").flagged
+      assert again.stats["kept"] == 0
+    end
+
+    test "an item imported before flags merges from the default", %{user: user} do
+      item = Repo.get_by!(ImportItem, user_id: user.id, source_id: "task:t2")
+
+      item
+      |> ImportItem.changeset(%{fields: Map.delete(item.fields, "flagged")})
+      |> Repo.update!()
+
+      {:ok, again} =
+        apply!(user, edit_items(TodoistSnapshot.small(), %{"t2" => %{"priority" => 4}}))
+
+      assert task!(user, "t2").flagged
+      assert again.stats["kept"] == 0
+    end
+  end
+
   describe "subtasks" do
     test "a subtask is imported under its parent", %{user: user} do
       assert task!(user, "t3").parent_id == task!(user, "t2").id

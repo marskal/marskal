@@ -51,10 +51,10 @@ without a second pipeline. Competing formats differ; Marskal’s model does not
   becomes a folder. A parent with no tasks of its own is only that folder;
   a parent that also has tasks keeps them in a project named "<name> tasks"
   inside the folder. A subtask stays under its parent task, in
-  `child_order`. A due date is Planned and a deadline Due. Section,
-  priority, order key, the due date's zone, and the repeat text stay in
-  `extras`. Completed-task history is not in the sync snapshot and is not
-  imported.
+  `child_order`. A due date is Planned and a deadline Due. Priority is
+  a flag or a tag (ADR 0025). Section, order key, the due date's zone, and
+  the repeat text stay in `extras`. Completed-task history is not in the
+  sync snapshot and is not imported.
 
 ### Re-import updates (amended 2026-10-04)
 
@@ -111,8 +111,9 @@ What an import cannot carry over is easy to find and fix
   items once the adapter can map the field.
 - A folder has no tags or notes. What one cannot keep is listed on the import
   page instead.
-- A source convention with no Marskal column (OmniFocus flagged, Todoist
-  priority) is not a problem; it stays in `extras` for now.
+- A source convention with no Marskal column is not a problem; it stays in
+  `extras` for now. OmniFocus flagged and Todoist priority have one now
+  (ADR 0025).
 
 ### Todoist repeats (amended 2026-10-09)
 

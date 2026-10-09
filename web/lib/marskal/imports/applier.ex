@@ -425,6 +425,7 @@ defmodule Marskal.Imports.Applier do
       "title" => clip(node.title, Tasks.Task.title_max()),
       "notes" => node.notes,
       "url" => node.url,
+      "flagged" => node.flagged == true,
       "project_folder_id" => acc.ids[node.folder_source_id],
       "state" => state(node.state)
     }
@@ -489,6 +490,7 @@ defmodule Marskal.Imports.Applier do
       "title" => clip(node.title, Tasks.Task.title_max()),
       "notes" => node.notes,
       "url" => node.url,
+      "flagged" => node.flagged == true,
       "inbox" => is_nil(project_id),
       "project_id" => project_id,
       "parent_id" => acc.ids[node.parent_source_id],

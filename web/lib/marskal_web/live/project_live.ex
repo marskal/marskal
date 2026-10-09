@@ -66,6 +66,7 @@ defmodule MarskalWeb.ProjectLive do
         resolved={@task_tags.resolved}
         parents={@task_tags.parents}
         repeating={@task_tags.repeating}
+        flagged={@task_tags.flagged}
         outline
         collapsed={@collapsed}
         zone={Marskal.Accounts.timezone(@current_scope.user)}

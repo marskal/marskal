@@ -451,6 +451,7 @@ defmodule Marskal.Recurrence do
         title: latest.title,
         notes: latest.notes,
         url: latest.url,
+        flagged: latest.flagged,
         inbox: latest.inbox,
         project_id: latest.project_id,
         parent_id: parent && parent.id,

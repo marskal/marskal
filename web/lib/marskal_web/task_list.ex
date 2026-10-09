@@ -30,7 +30,7 @@ defmodule MarskalWeb.TaskList do
   state makes unavailable (ADR 0005), the deferred ids and the dates each
   task goes by (ADR 0006), the ids resolved by a task or project above
   them, each subtask's parent, for a breadcrumb, and the ids that repeat
-  (ADR 0007).
+  (ADR 0007), and the flagged ids (ADR 0025).
   """
   def annotate(user, tasks) do
     ids = Enum.map(tasks, & &1.id)
@@ -42,6 +42,7 @@ defmodule MarskalWeb.TaskList do
     |> Map.put(:resolved, Marskal.Tasks.resolved_ids(user, ids))
     |> Map.put(:parents, parents(user, tasks))
     |> Map.put(:repeating, Marskal.Recurrence.repeating_ids(user, tasks))
+    |> Map.put(:flagged, Marskal.Tasks.flagged_ids(user, tasks))
   end
 
   @doc "Each subtask's parent task, by the subtask's id."

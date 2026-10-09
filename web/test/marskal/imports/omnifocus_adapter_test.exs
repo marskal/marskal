@@ -22,6 +22,7 @@ defmodule Marskal.Imports.OmnifocusAdapterTest do
     assert Enum.find(graph.folders, &(&1.name == "Old stuff")).dropped
     assert Enum.map(graph.projects, & &1.title) == ["Launch website"]
     assert hd(graph.projects).folder_source_id == "folderWork00"
+    assert hd(graph.projects).flagged
 
     titles = Enum.map(graph.tasks, & &1.title)
     assert "Draft homepage" in titles
@@ -30,12 +31,15 @@ defmodule Marskal.Imports.OmnifocusAdapterTest do
 
     milk = Enum.find(graph.tasks, &(&1.title == "Buy milk"))
     assert milk.inbox
+    assert milk.flagged
+    refute Map.has_key?(milk.extras, "flagged")
     assert milk.project_source_id == nil
 
     draft = Enum.find(graph.tasks, &(&1.title == "Draft homepage"))
     refute draft.inbox
     assert draft.project_source_id == "projSite0000"
     assert draft.state == "to_do"
+    refute draft.flagged
 
     done = Enum.find(graph.tasks, &(&1.title == "Pick palette"))
     assert done.state == "done"

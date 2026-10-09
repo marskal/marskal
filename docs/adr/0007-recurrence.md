@@ -193,7 +193,7 @@ section wins.
 ### The next occurrence copies the latest
 
 - The latest occurrence is the one with the greatest `occurrence_for`. The next
-  copies its title, notes, URL (ADR 0022), location, parent task, and tags, sits right after
+  copies its title, notes, URL (ADR 0022), flag (ADR 0025), location, parent task, and tags, sits right after
   it among its siblings, and starts To-Do.
 - The anchor field gets the new `occurrence_for`. Each other date that is set
   keeps its distance from the latest's anchor field on the user's zone clock

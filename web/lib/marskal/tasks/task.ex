@@ -14,6 +14,7 @@ defmodule Marskal.Tasks.Task do
     field :title, :string
     field :notes, :string
     field :url, :string
+    field :flagged, :boolean, default: false
     field :state, Ecto.Enum, values: @states, default: :to_do
     field :inbox, :boolean, default: true
     field :defer_until, :utc_datetime
@@ -39,11 +40,11 @@ defmodule Marskal.Tasks.Task do
   """
   def client_fields(:insert),
     do:
-      ~w(title notes url project_id parent_id rank inbox state defer_until deferred_indefinitely planned_at due_at series_id occurrence_for)
+      ~w(title notes url flagged project_id parent_id rank inbox state defer_until deferred_indefinitely planned_at due_at series_id occurrence_for)
 
   def client_fields(:patch),
     do:
-      ~w(title notes url project_id parent_id rank inbox state defer_until deferred_indefinitely planned_at due_at series_id occurrence_for discarded_at)
+      ~w(title notes url flagged project_id parent_id rank inbox state defer_until deferred_indefinitely planned_at due_at series_id occurrence_for discarded_at)
 
   def title_max, do: @title_max
 
@@ -63,6 +64,7 @@ defmodule Marskal.Tasks.Task do
       :title,
       :notes,
       :url,
+      :flagged,
       :project_id,
       :parent_id,
       :rank,
@@ -72,7 +74,7 @@ defmodule Marskal.Tasks.Task do
       :occurrence_for,
       :resolved_at | Dates.fields()
     ])
-    |> validate_required([:title])
+    |> validate_required([:title, :flagged])
     |> validate_length(:title, max: @title_max)
     |> validate_length(:notes, max: @notes_max)
     |> Marskal.Url.validate("tasks")
@@ -99,13 +101,14 @@ defmodule Marskal.Tasks.Task do
       :title,
       :notes,
       :url,
+      :flagged,
       :project_id,
       :inbox,
       :state,
       :series_id,
       :occurrence_for | Dates.fields()
     ])
-    |> validate_required([:title, :inbox, :state])
+    |> validate_required([:title, :inbox, :state, :flagged])
     |> validate_length(:title, max: @title_max)
     |> validate_length(:notes, max: @notes_max)
     |> Marskal.Url.validate("tasks")

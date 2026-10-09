@@ -38,7 +38,7 @@ defmodule Marskal.Projects do
   end
 
   @doc """
-  Patch any of title, notes, url, project_folder_id, state, and the dates in one
+  Patch any of title, notes, url, flagged, project_folder_id, state, and the dates in one
   command. `at:` is as for `Marskal.Tasks.update_task/5`.
   """
   def update_project(%User{} = user, id, attrs, command_id, opts \\ []) when is_map(attrs) do

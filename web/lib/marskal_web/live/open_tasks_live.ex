@@ -9,12 +9,16 @@ defmodule MarskalWeb.OpenTasksLive do
 
   alias Marskal.Tasks
 
+  # The open stream, and :flagged, its flagged tasks with the inbox's
+  # (ADR 0025).
   @impl true
   def mount(_params, _session, socket) do
+    title = if socket.assigns.live_action == :flagged, do: "Flagged", else: "Open tasks"
+
     {:ok,
      socket
      |> MarskalWeb.Outline.attach()
-     |> assign(:page_title, "Open tasks")
+     |> assign(:page_title, title)
      |> assign(:show_unavailable, nil)}
   end
 
@@ -34,24 +38,30 @@ defmodule MarskalWeb.OpenTasksLive do
 
   @impl true
   def render(assigns) do
+    assigns = assign(assigns, :flagged?, assigns.live_action == :flagged)
+
     ~H"""
     <Layouts.app
       flash={@flash}
       current_scope={@current_scope}
-      current_nav={:open}
+      current_nav={if @flagged?, do: :flagged, else: :open}
       inspector={assigns[:inspector]}
       nav={assigns[:nav]}
       change_version={assigns[:change_version] || 0}
     >
-      <h1>Open tasks</h1>
+      <h1>{@page_title}</h1>
       <p class="lede">
-        Work out of the inbox, still to do.
-        <.link :if={!@show_unavailable} patch={~p"/?#{[unavailable: 1]}"}>Show unavailable</.link>
-        <.link :if={@show_unavailable} patch={~p"/"}>Hide unavailable</.link>
+        {if @flagged?,
+          do: "Open tasks flagged by themselves or by their project.",
+          else: "Work out of the inbox, still to do."}
+        <.link :if={!@show_unavailable} patch={view_path(@flagged?, unavailable: 1)}>
+          Show unavailable
+        </.link>
+        <.link :if={@show_unavailable} patch={view_path(@flagged?, [])}>Hide unavailable</.link>
       </p>
 
       <MarskalWeb.TaskComponents.list
-        id="open-tasks"
+        id={if @flagged?, do: "flagged-tasks", else: "open-tasks"}
         tasks={@tasks}
         tags={@task_tags.tags}
         unavailable={@task_tags.unavailable}
@@ -60,10 +70,12 @@ defmodule MarskalWeb.OpenTasksLive do
         resolved={@task_tags.resolved}
         parents={@task_tags.parents}
         repeating={@task_tags.repeating}
+        flagged={@task_tags.flagged}
         zone={Marskal.Accounts.timezone(@current_scope.user)}
-        nested
+        nested={!@flagged?}
         collapsed={@collapsed}
-        empty="No open tasks."
+        mark_inbox={@flagged?}
+        empty={if @flagged?, do: "Nothing flagged.", else: "No open tasks."}
         actions={[:complete]}
         inspector={@inspector}
       />
@@ -71,13 +83,21 @@ defmodule MarskalWeb.OpenTasksLive do
     """
   end
 
+  defp view_path(true, []), do: ~p"/flagged"
+  defp view_path(true, query), do: ~p"/flagged?#{query}"
+  defp view_path(false, []), do: ~p"/"
+  defp view_path(false, query), do: ~p"/?#{query}"
+
   defp load_tasks(socket) do
     user = socket.assigns.current_scope.user
-    # Subtasks show under their parents (ADR 0009).
+    opts = [unavailable: socket.assigns.show_unavailable]
+
+    # Subtasks show under their parents (ADR 0009). Flagged stays flat:
+    # a parent task does not flag its subtasks (ADR 0025).
     tasks =
-      user
-      |> Tasks.list_open(unavailable: socket.assigns.show_unavailable)
-      |> then(&Tasks.with_ancestors(user, &1))
+      if socket.assigns.live_action == :flagged,
+        do: Tasks.list_flagged(user, opts),
+        else: user |> Tasks.list_open(opts) |> then(&Tasks.with_ancestors(user, &1))
 
     assign_tasks(socket, tasks)
   end

@@ -21,6 +21,7 @@ defmodule OmnifocusBackup do
         <status>active</status>
       </project>
       <name>Launch website</name>
+      <flagged>true</flagged>
       <note><text>Public site</text></note>
       <added>2024-01-02T00:00:00.000Z</added>
       <rank>3</rank>
@@ -43,6 +44,7 @@ defmodule OmnifocusBackup do
     <task id="taskInbox000">
       <inbox/>
       <name>Buy milk</name>
+      <flagged>true</flagged>
       <added>2024-01-05T00:00:00.000Z</added>
       <rank>6</rank>
     </task>

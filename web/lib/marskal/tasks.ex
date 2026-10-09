@@ -141,6 +141,46 @@ defmodule Marskal.Tasks do
   end
 
   @doc """
+  The Flagged view (ADR 0025): open tasks flagged by themselves or by
+  their project, inbox included, oldest first. Deferred and unavailable
+  tasks are left out unless `unavailable: true`, as in `list_open/2`.
+  """
+  def list_flagged(%User{} = user, opts \\ []) do
+    flagged_projects =
+      from p in Project, where: p.user_id == ^user.id and p.flagged, select: p.id
+
+    tasks =
+      Task
+      |> where_open(user)
+      |> where([t], t.flagged or t.project_id in subquery(flagged_projects))
+      |> order_by([t], asc: t.inserted_at, asc: t.id)
+      |> Repo.all()
+
+    if Keyword.get(opts, :unavailable, false), do: tasks, else: available(user, tasks)
+  end
+
+  @doc """
+  Ids of the tasks that are flagged, by themselves or by their project
+  (ADR 0025). A parent task does not flag its subtasks.
+  """
+  def flagged_ids(%User{} = user, tasks) do
+    project_ids = tasks |> Enum.map(& &1.project_id) |> Enum.reject(&is_nil/1) |> Enum.uniq()
+
+    flagged_projects =
+      from(p in Project,
+        where: p.user_id == ^user.id and p.id in ^project_ids and p.flagged,
+        select: p.id
+      )
+      |> Repo.all()
+      |> MapSet.new()
+
+    for task <- tasks,
+        task.flagged or MapSet.member?(flagged_projects, task.project_id),
+        into: MapSet.new(),
+        do: task.id
+  end
+
+  @doc """
   Ids of the tasks that are deferred now: by their own Defer, or because a
   task above them or their project still is (ADR 0006).
   """
@@ -191,7 +231,7 @@ defmodule Marskal.Tasks do
   end
 
   @doc """
-  Patch any of title, notes, url, project_id, inbox, state, and the dates in one
+  Patch any of title, notes, url, flagged, project_id, inbox, state, and the dates in one
   command. Fields equal to the stored value are left out of the patch,
   except that a move always carries both inbox and project_id (ADR 0017),
   and a Defer change both of its fields (ADR 0006).
