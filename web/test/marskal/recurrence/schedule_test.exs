@@ -174,6 +174,17 @@ defmodule Marskal.Recurrence.ScheduleTest do
       assert slot(%{frequency: :months, on_days: ["-5:friday"]}, ~D[2026-10-02]) ==
                at(~D[2027-01-01])
 
+      # Work days go to the 23rd and weekend days to the 10th. October and
+      # November 2026 have fewer, so those months are skipped.
+      assert slot(%{frequency: :months, on_days: ["10:work_day"]}, ~D[2026-10-01]) ==
+               at(~D[2026-10-14])
+
+      assert slot(%{frequency: :months, on_days: ["23:work_day"]}, ~D[2026-10-01]) ==
+               at(~D[2026-12-31])
+
+      assert slot(%{frequency: :months, on_days: ["10:weekend_day"]}, ~D[2026-10-01]) ==
+               at(~D[2027-01-31])
+
       assert slot(
                %{frequency: :months, on_days: ["1:weekend_day"]},
                ~D[2026-05-01]

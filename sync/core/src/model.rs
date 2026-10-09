@@ -141,7 +141,8 @@ pub struct UserPreferences {
 /// `weekdays` are ISO numbers, 1 for Monday. `on_days` are a monthly or
 /// yearly rule's rows, `ordinal:kind` with the month first for a year:
 /// `"14:day"`, `"-1:day"`, `"2:tuesday"`, `"-1:work_day"`, `"10:-1:monday"`.
-/// An ordinal of -1 to -5 counts from the end; -1 is the last.
+/// Ordinals go to 31 for a day, 5 for a weekday, 23 for a work day, and 10
+/// for a weekend day; -1 to -5 count from the end, -1 being the last.
 /// `week_start` is the ISO day weeks start on, kept from when the series
 /// was made.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

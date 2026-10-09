@@ -106,7 +106,8 @@ Default home: **Open tasks** stream. Timezone is stored per user, default
 - **Weekly:** optional weekday set; the week starts on the series' `week_start`,
   copied from the user's preference when the series is made. **Monthly / yearly:**
   rows in `on_days`, a day of the month (1–31, or 1st–5th from the end) or an nth
-  weekday (1st–5th from either end × Mon–Sun | work day | weekend day); a yearly row also names its month. A month's
+  Mon–Sun (1st–5th), work day (1st–23rd), or weekend day (1st–10th), also
+  1st–5th from the end; a yearly row also names its month. A month's
   rows are one set of days. Regular mode only; it expands as RFC 5545 does, so a day
   the month lacks is skipped; see ADR 0007.
 - **End:** none, **end date**, **count = N generated** (not N Dones), or both (whichever first).

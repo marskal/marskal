@@ -92,6 +92,17 @@ defmodule MarskalWeb.RepeatLiveTest do
     |> form("#{@dialog}-form", repeat: %{rows: %{"0" => %{ordinal: "-2", kind: "friday"}}})
     |> render_change()
 
+    view
+    |> form("#{@dialog}-form", repeat: %{rows: %{"0" => %{ordinal: "1", kind: "work_day"}}})
+    |> render_change()
+
+    assert has_element?(view, "#{@dialog}-ordinal-0 option[value='23']", "23rd")
+
+    view
+    |> form("#{@dialog}-form", repeat: %{rows: %{"0" => %{ordinal: "-2", kind: "friday"}}})
+    |> render_change()
+
+    refute has_element?(view, "#{@dialog}-ordinal-0 option[value='6']")
     assert has_element?(view, "#{@dialog}-ordinal-0 option[value='-2'][selected]", "2nd to last")
     view |> form("#{@dialog}-form") |> render_submit()
 

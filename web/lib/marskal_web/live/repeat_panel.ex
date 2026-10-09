@@ -1167,8 +1167,7 @@ defmodule MarskalWeb.RepeatPanel do
   defp day_kinds, do: @day_kinds
   defp kind_name(kind), do: Keyword.fetch!(@day_kinds, kind)
 
-  defp ordinals(:day), do: Enum.to_list(1..31) ++ Enum.to_list(-5..-1//1)
-  defp ordinals(_kind), do: [1, 2, 3, 4, 5, -5, -4, -3, -2, -1]
+  defp ordinals(kind), do: Enum.to_list(1..Series.most(kind)) ++ Enum.to_list(-5..-1//1)
 
   defp ordinal_name(-1), do: "last"
   defp ordinal_name(n) when n < 0, do: "#{ordinal_name(-n)} to last"

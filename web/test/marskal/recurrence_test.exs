@@ -67,6 +67,8 @@ defmodule Marskal.RecurrenceTest do
             {%{frequency: :months, on_days: ["32:day"]}, :on_days},
             {%{frequency: :months, on_days: ["6:friday"]}, :on_days},
             {%{frequency: :months, on_days: ["-6:friday"]}, :on_days},
+            {%{frequency: :months, on_days: ["24:work_day"]}, :on_days},
+            {%{frequency: :months, on_days: ["11:weekend_day"]}, :on_days},
             {%{frequency: :months, on_days: ["1:payday"]}, :on_days},
             {%{frequency: :months, on_days: ["10:14:day"]}, :on_days},
             {%{frequency: :years, on_days: ["14:day"]}, :on_days},
@@ -134,7 +136,11 @@ defmodule Marskal.RecurrenceTest do
                )
 
       assert {:ok, _} =
-               Repo.update(Ecto.Changeset.change(series, on_days: ["-5:day", "-2:friday"]))
+               Repo.update(
+                 Ecto.Changeset.change(series,
+                   on_days: ["-5:day", "-2:friday", "23:work_day", "10:weekend_day"]
+                 )
+               )
     end
 
     test "a rule change patches the whole rule", %{user: user} do
