@@ -59,8 +59,10 @@ defmodule Marskal.Recurrence.Series do
   @doc """
   The days a monthly or yearly rule lands on, as `{month, ordinal, kind}`.
   `month` is 1–12 for a yearly row and nil for a monthly one. `kind` is
-  `:day` with an ordinal of 1–31, or a weekday, `:work_day`, or
-  `:weekend_day` with an ordinal of 1–5. An ordinal of −1 is the last.
+  `:day` with an ordinal of 1–31, a weekday with 1–5, `:work_day` with
+  1–23, or `:weekend_day` with 1–10: as many as a month can have. An
+  ordinal of −1 to −5 counts from the end: −1 is the last, −2 the second
+  to last.
   Rows that do not parse are left out; the changeset refuses them.
   """
   def day_rules(%__MODULE__{on_days: days}),
@@ -105,8 +107,13 @@ defmodule Marskal.Recurrence.Series do
     Enum.find([:day | @day_kinds], &(Atom.to_string(&1) == kind))
   end
 
-  defp ordinal_fits?(ordinal, :day), do: ordinal == -1 or ordinal in 1..31
-  defp ordinal_fits?(ordinal, _kind), do: ordinal == -1 or ordinal in 1..5
+  defp ordinal_fits?(ordinal, kind), do: ordinal in -5..-1//1 or ordinal in 1..most(kind)
+
+  @doc "The highest ordinal a kind of day takes: as many as a month can have."
+  def most(:day), do: 31
+  def most(:work_day), do: 23
+  def most(:weekend_day), do: 10
+  def most(_weekday), do: 5
 
   @doc "The date field an occurrence's anchor is."
   def anchor_field(%__MODULE__{anchor: :defer}), do: :defer_until
@@ -231,9 +238,11 @@ defmodule Marskal.Recurrence.Series do
   defp fits?({:ok, {month, _ordinal, _kind}}, :years) when is_integer(month), do: true
   defp fits?(_parsed, _frequency), do: false
 
-  # Month, then numbered days before nth weekdays, the last of each last.
+  # Month, then numbered days before nth weekdays, those counted from the
+  # end after the rest, the last one last.
   defp day_order({month, ordinal, kind}) do
-    {month || 0, if(kind == :day, do: 0, else: 1), if(ordinal == -1, do: 99, else: ordinal),
+    {month || 0, if(kind == :day, do: 0, else: 1),
+     if(ordinal < 0, do: 100 + ordinal, else: ordinal),
      Enum.find_index([:day | @day_kinds], &(&1 == kind))}
   end
 end

@@ -127,6 +127,10 @@ defmodule Marskal.Recurrence.ScheduleTest do
       assert slot(last, ~D[2026-01-31]) == at(~D[2026-02-28])
       assert slot(last, ~D[2026-02-28]) == at(~D[2026-03-31])
 
+      second_to_last = %{frequency: :months, on_days: ["-2:day"]}
+      assert slot(second_to_last, ~D[2026-01-30]) == at(~D[2026-02-27])
+      assert slot(second_to_last, ~D[2026-02-27]) == at(~D[2026-03-30])
+
       both = %{frequency: :months, on_days: ["-1:day", "31:day"]}
       assert slot(both, ~D[2026-01-31]) == at(~D[2026-02-28])
       assert slot(both, ~D[2026-02-28]) == at(~D[2026-03-31])
@@ -158,6 +162,28 @@ defmodule Marskal.Recurrence.ScheduleTest do
                ~D[2026-05-01]
              ) ==
                at(~D[2026-05-29])
+
+      # October 2026 has five Fridays: the 2nd to last is the 23rd.
+      assert slot(%{frequency: :months, on_days: ["-2:friday"]}, ~D[2026-10-01]) ==
+               at(~D[2026-10-23])
+
+      assert slot(%{frequency: :months, on_days: ["-5:friday"]}, ~D[2026-10-01]) ==
+               at(~D[2026-10-02])
+
+      # November has four, so the 5th to last is skipped to January.
+      assert slot(%{frequency: :months, on_days: ["-5:friday"]}, ~D[2026-10-02]) ==
+               at(~D[2027-01-01])
+
+      # Work days go to the 23rd and weekend days to the 10th. October and
+      # November 2026 have fewer, so those months are skipped.
+      assert slot(%{frequency: :months, on_days: ["10:work_day"]}, ~D[2026-10-01]) ==
+               at(~D[2026-10-14])
+
+      assert slot(%{frequency: :months, on_days: ["23:work_day"]}, ~D[2026-10-01]) ==
+               at(~D[2026-12-31])
+
+      assert slot(%{frequency: :months, on_days: ["10:weekend_day"]}, ~D[2026-10-01]) ==
+               at(~D[2027-01-31])
 
       assert slot(
                %{frequency: :months, on_days: ["1:weekend_day"]},

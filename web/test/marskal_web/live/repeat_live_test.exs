@@ -82,6 +82,40 @@ defmodule MarskalWeb.RepeatLiveTest do
            )
   end
 
+  test "a row may count from the end", %{conn: conn, user: user} do
+    task = task_fixture(user, %{due_at: @friday})
+    view = inspect_task(conn, "Trash")
+    view |> element("#inspector-task-repeat-open") |> render_click()
+    view |> form("#{@dialog}-form", repeat: %{repeat: "monthly"}) |> render_change()
+
+    view
+    |> form("#{@dialog}-form", repeat: %{rows: %{"0" => %{ordinal: "-2", kind: "friday"}}})
+    |> render_change()
+
+    view
+    |> form("#{@dialog}-form", repeat: %{rows: %{"0" => %{ordinal: "1", kind: "work_day"}}})
+    |> render_change()
+
+    assert has_element?(view, "#{@dialog}-ordinal-0 option[value='23']", "23rd")
+
+    view
+    |> form("#{@dialog}-form", repeat: %{rows: %{"0" => %{ordinal: "-2", kind: "friday"}}})
+    |> render_change()
+
+    refute has_element?(view, "#{@dialog}-ordinal-0 option[value='6']")
+    assert has_element?(view, "#{@dialog}-ordinal-0 option[value='-2'][selected]", "2nd to last")
+    view |> form("#{@dialog}-form") |> render_submit()
+
+    assert %Series{on_days: ["-2:friday"]} =
+             Recurrence.get_series(user, Tasks.get_task(user, task.id).series_id)
+
+    assert has_element?(
+             view,
+             "#inspector-task-repeat-summary",
+             "Repeats monthly on the 2nd to last Friday"
+           )
+  end
+
   test "a yearly row names its month", %{conn: conn, user: user} do
     task = task_fixture(user, %{due_at: @friday})
     view = inspect_task(conn, "Trash")
