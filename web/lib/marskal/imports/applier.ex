@@ -82,7 +82,11 @@ defmodule Marskal.Imports.Applier do
         |> Enum.reduce(acc, &apply_folder(batch, &1, &2))
 
       acc = Enum.reduce(graph.projects, acc, &apply_project(batch, &1, &2))
-      acc = Enum.reduce(graph.tasks, acc, &apply_task(batch, &1, &2))
+
+      acc =
+        graph.tasks
+        |> outline_order()
+        |> Enum.reduce(acc, &apply_task(batch, &1, &2))
 
       batch
       |> Ecto.Changeset.change(%{
@@ -157,6 +161,53 @@ defmodule Marskal.Imports.Applier do
     levels
     |> Enum.sort_by(fn {depth, node} -> {depth, node.rank} end)
     |> Enum.map(&elem(&1, 1))
+  end
+
+  # Each task right before its subtasks, siblings in source order, so a
+  # parent is created first and its subtasks keep their order below it. A
+  # parent that is not a task in the graph, such as an OmniFocus project,
+  # leaves the task at the top; a parent cycle is cut where the walk meets it.
+  defp outline_order(tasks) do
+    ids = MapSet.new(tasks, & &1.source_id)
+
+    tasks =
+      Enum.map(tasks, fn node ->
+        if MapSet.member?(ids, node.parent_source_id) and node.parent_source_id != node.source_id,
+          do: node,
+          else: %{node | parent_source_id: nil}
+      end)
+
+    children = Enum.group_by(tasks, & &1.parent_source_id)
+
+    {ordered, _seen} =
+      Enum.reduce(tasks, {[], MapSet.new()}, fn node, {_ordered, seen} = acc ->
+        cond do
+          MapSet.member?(seen, node.source_id) -> acc
+          is_nil(node.parent_source_id) -> walk_outline(node, children, acc)
+          true -> acc
+        end
+      end)
+
+    # What no top-level task reached is in a cycle: its first task goes on top.
+    {ordered, _seen} =
+      Enum.reduce(tasks, {ordered, MapSet.new(ordered, & &1.source_id)}, fn node,
+                                                                            {_, seen} = acc ->
+        if MapSet.member?(seen, node.source_id),
+          do: acc,
+          else: walk_outline(%{node | parent_source_id: nil}, children, acc)
+      end)
+
+    Enum.reverse(ordered)
+  end
+
+  defp walk_outline(node, children, {ordered, seen}) do
+    acc = {[node | ordered], MapSet.put(seen, node.source_id)}
+
+    children
+    |> Map.get(node.source_id, [])
+    |> Enum.reduce(acc, fn child, {_, seen} = acc ->
+      if MapSet.member?(seen, child.source_id), do: acc, else: walk_outline(child, children, acc)
+    end)
   end
 
   defp visit(node, by_id, {ordered, seen} = acc, path) do
@@ -412,7 +463,7 @@ defmodule Marskal.Imports.Applier do
   defp apply_task(batch, node, acc) do
     with %ImportItem{task_id: id} = item <- Map.get(acc.existing, node.source_id),
          %Tasks.Task{} = task <- Tasks.get_task(batch.user, id) do
-      update_task(acc, batch, node, item, task)
+      acc |> put_id(node, id) |> update_task(batch, node, item, task)
     else
       _ ->
         {:ok, task} =
@@ -424,6 +475,7 @@ defmodule Marskal.Imports.Applier do
 
         acc
         |> record!(batch, :task, node, %{task_id: task.id}, base)
+        |> put_id(node, task.id)
         |> count(:created, "tasks")
     end
   end
@@ -439,6 +491,7 @@ defmodule Marskal.Imports.Applier do
       "url" => node.url,
       "inbox" => is_nil(project_id),
       "project_id" => project_id,
+      "parent_id" => acc.ids[node.parent_source_id],
       "state" => state(node.state)
     }
     |> Map.merge(dates(node, user))
@@ -447,16 +500,21 @@ defmodule Marskal.Imports.Applier do
   defp update_task(acc, batch, node, item, task) do
     user = batch.user
     desired = task_attrs(node, acc, user)
-    incoming = merged(:task, Tasks.Task.update_changeset(task, desired))
+    # The changeset leaves the outline to `Tasks`, so the parent goes in here.
+    incoming =
+      merged(:task, Tasks.Task.update_changeset(task, desired))
+      |> Map.put("parent_id", desired["parent_id"])
+
     base = item.fields || base_from_feed(:task, task.id)
 
     {patch, kept} = Merge.fields(:task, base, Merge.snapshot(:task, task), incoming)
     patch = series_dates(task, patch)
     {patch, kept} = applicable(:task, patch, kept, Tasks.Task.update_changeset(task, patch))
+    {patch, kept} = placeable(user, task, patch, kept)
 
     if patch != %{} do
       {:ok, _} =
-        Tasks.update_task(user, task.id, patch, Ecto.UUID.generate(), at: desired["resolved_at"])
+        Tasks.patch_task(user, task.id, patch, Ecto.UUID.generate(), at: desired["resolved_at"])
     end
 
     repeat!(user, Tasks.get_task(user, task.id), node)
@@ -471,6 +529,23 @@ defmodule Marskal.Imports.Applier do
     |> store_base!(item, Map.put(incoming, "tag_ids", Enum.sort(tags)))
     |> outcome(node.title, "tasks", patch != %{} or add != [] or remove != [], kept)
   end
+
+  # A parent the user has since put under the task stays where it is.
+  defp placeable(_user, _task, %{"parent_id" => nil} = patch, kept), do: {patch, kept}
+
+  defp placeable(user, task, %{"parent_id" => parent_id} = patch, kept) do
+    case Tasks.get_task(user, parent_id) do
+      %Tasks.Task{} = parent ->
+        if Tasks.Outline.within?(parent, task.id),
+          do: {Map.delete(patch, "parent_id"), kept ++ ["parent_id"]},
+          else: {patch, kept}
+
+      nil ->
+        {Map.delete(patch, "parent_id"), kept ++ ["parent_id"]}
+    end
+  end
+
+  defp placeable(_user, _task, patch, kept), do: {patch, kept}
 
   @dates ~w(defer_until deferred_indefinitely planned_at due_at)
 

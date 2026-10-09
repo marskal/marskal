@@ -79,7 +79,7 @@ defmodule Marskal.Imports.TodoistAdapterTest do
 
     ask = Enum.find(graph.tasks, &(&1.title == "Ask editor"))
     assert ask.parent_source_id == "task:t2"
-    assert ask.extras["parent_source_id"] == "task:t2"
+    refute Map.has_key?(ask.extras, "parent_source_id")
 
     shipped = Enum.find(graph.tasks, &(&1.title == "Shipped"))
     assert shipped.state == "done"

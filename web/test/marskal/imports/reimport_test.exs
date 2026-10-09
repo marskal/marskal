@@ -206,6 +206,84 @@ defmodule Marskal.Imports.ReimportTest do
     assert Repo.get!(Task, milk.id).notes == nil
   end
 
+  describe "subtasks" do
+    test "a subtask is imported under its parent", %{user: user} do
+      assert task!(user, "t3").parent_id == task!(user, "t2").id
+    end
+
+    test "subtasks keep their order below the parent" do
+      user = AccountsFixtures.user_fixture()
+
+      items = [
+        %{
+          "id" => "c1",
+          "content" => "2024",
+          "project_id" => "p1",
+          "parent_id" => "m",
+          "child_order" => 1
+        },
+        %{"id" => "a", "content" => "Andagter", "project_id" => "p1", "child_order" => 2},
+        %{
+          "id" => "c3",
+          "content" => "2022",
+          "project_id" => "p1",
+          "parent_id" => "m",
+          "child_order" => 3
+        },
+        %{"id" => "m", "content" => "Prædikener", "project_id" => "p1", "child_order" => 1},
+        %{
+          "id" => "c2",
+          "content" => "2023",
+          "project_id" => "p1",
+          "parent_id" => "m",
+          "child_order" => 2
+        }
+      ]
+
+      {:ok, _} = apply!(user, Map.put(TodoistSnapshot.small(), "items", items))
+
+      parent = task!(user, "m")
+      assert parent.parent_id == nil
+
+      assert titles(user, %{parent_id: nil, inbox: false, project_id: parent.project_id}) ==
+               ["Prædikener", "Andagter"]
+
+      assert titles(user, Tasks.Outline.children_of(parent)) == ["2024", "2023", "2022"]
+    end
+
+    test "a subtask imported flat goes under its parent on re-import", %{user: user} do
+      flatten!(user, "t3")
+
+      {:ok, again} = apply!(user, TodoistSnapshot.small())
+
+      assert task!(user, "t3").parent_id == task!(user, "t2").id
+      assert again.stats["kept"] == 0
+    end
+
+    test "the user's place in the outline wins over the source's", %{user: user} do
+      ask = task!(user, "t3")
+      {:ok, _} = Tasks.place_task(user, ask.id, nil, nil, uuid())
+
+      {:ok, again} = apply!(user, TodoistSnapshot.small())
+
+      assert task!(user, "t3").parent_id == nil
+      assert again.stats["kept"] == 0
+    end
+
+    test "a parent the user put under its subtask stays there", %{user: user} do
+      flatten!(user, "t3")
+      ask = task!(user, "t3")
+      copy = task!(user, "t2")
+      {:ok, _} = Tasks.place_task(user, copy.id, ask.id, nil, uuid())
+
+      {:ok, again} = apply!(user, TodoistSnapshot.small())
+
+      assert task!(user, "t3").parent_id == nil
+      assert task!(user, "t2").parent_id == ask.id
+      assert [%{"fields" => ["parent_id"]}] = again.stats["kept_samples"]
+    end
+  end
+
   describe "repeats" do
     test "a repeat the importer reads makes the task a series' first occurrence", %{user: user} do
       milk = task!(user, "t1")
@@ -306,6 +384,35 @@ defmodule Marskal.Imports.ReimportTest do
     |> Enum.map(& &1.tag.name)
     |> Enum.sort()
   end
+
+  # As a task was imported before subtasks were: at the top, with a base
+  # that predates the parent.
+  defp flatten!(user, id) do
+    task = task!(user, id)
+    Repo.update_all(from(t in Task, where: t.id == ^task.id), set: [parent_id: nil])
+
+    item = Repo.get_by!(ImportItem, user_id: user.id, source_id: "task:" <> id)
+
+    item
+    |> ImportItem.changeset(%{fields: Map.delete(item.fields, "parent_id")})
+    |> Repo.update!()
+  end
+
+  defp titles(user, group) do
+    from(t in Task,
+      where: t.user_id == ^user.id and t.inbox == ^group.inbox and is_nil(t.discarded_at),
+      order_by: [asc: t.rank]
+    )
+    |> where_group(group)
+    |> select([t], t.title)
+    |> Repo.all()
+  end
+
+  defp where_group(query, %{parent_id: nil, project_id: project_id}),
+    do: where(query, [t], is_nil(t.parent_id) and t.project_id == ^project_id)
+
+  defp where_group(query, %{parent_id: parent_id}),
+    do: where(query, [t], t.parent_id == ^parent_id)
 
   defp uuid, do: Ecto.UUID.generate()
 end

@@ -36,8 +36,8 @@ without a second pipeline. Competing formats differ; Marskal’s model does not
   `extras`. Tags do so with the tags slice: the OmniFocus adapter parses tags
   and contexts into the graph as their own items (ADR 0005).
 - First adapter: **OmniFocus `.ofocus` / `.ofocus-backup`** (zip-of-zips XML,
-  replay master + transactions). Flatten nested actions until `tasks.parent_id`
-  exists.
+  replay master + transactions). A nested action is a subtask of its parent
+  action (`tasks.parent_id`), siblings in the backup's rank order.
 - **Todoist** is the OAuth fetcher. The user signs in with scope `data:read`.
   Marskal exchanges the code, downloads one API v1 sync snapshot (`user`,
   `projects`, `items`, `sections`, `labels`, `folders`), stores that JSON as
@@ -50,9 +50,11 @@ without a second pipeline. Competing formats differ; Marskal’s model does not
   as tags. The inbox project is not created. A nested Todoist project
   becomes a folder. A parent with no tasks of its own is only that folder;
   a parent that also has tasks keeps them in a project named "<name> tasks"
-  inside the folder. Sections, subtask parent, a Todoist due date (planned),
-  a deadline (due), and the recurrence text stay in `extras`. Completed-task
-  history is not in the sync snapshot and is not imported.
+  inside the folder. A subtask stays under its parent task, in
+  `child_order`. A due date is Planned and a deadline Due. Section,
+  priority, order key, the due date's zone, and the repeat text stay in
+  `extras`. Completed-task history is not in the sync snapshot and is not
+  imported.
 
 ### Re-import updates (amended 2026-10-04)
 

@@ -298,7 +298,6 @@ defmodule Marskal.Imports.TodoistAdapter do
         names |> Enum.map(&label_ids[tag_key(&1)]) |> Enum.reject(&is_nil/1) |> Enum.uniq(),
       extras:
         %{}
-        |> put_extra("parent_source_id", parent)
         |> put_extra("section", section)
         |> put_extra("order_key", row["order_key"])
         |> put_extra("planned_zone", get_in(row, ["due", "timezone"]))
