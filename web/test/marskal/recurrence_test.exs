@@ -66,6 +66,7 @@ defmodule Marskal.RecurrenceTest do
             {%{on_days: ["1:day"]}, :on_days},
             {%{frequency: :months, on_days: ["32:day"]}, :on_days},
             {%{frequency: :months, on_days: ["6:friday"]}, :on_days},
+            {%{frequency: :months, on_days: ["-6:friday"]}, :on_days},
             {%{frequency: :months, on_days: ["1:payday"]}, :on_days},
             {%{frequency: :months, on_days: ["10:14:day"]}, :on_days},
             {%{frequency: :years, on_days: ["14:day"]}, :on_days},
@@ -115,6 +116,25 @@ defmodule Marskal.RecurrenceTest do
 
       assert {:error, changeset} = Repo.update(changeset)
       assert "is invalid" in errors_on(changeset).on_days
+    end
+
+    test "rows counted from the end are kept, and sorted after the rest", %{user: user} do
+      assert {:ok, %Series{on_days: ["15:day", "-2:day", "-1:day", "-5:work_day"]} = series} =
+               Recurrence.create_series(
+                 user,
+                 %{
+                   kind: :task,
+                   mode: :regular,
+                   anchor: :due,
+                   interval: 1,
+                   frequency: :months,
+                   on_days: ["-5:work_day", "-1:day", "-2:day", "15:day"]
+                 },
+                 command()
+               )
+
+      assert {:ok, _} =
+               Repo.update(Ecto.Changeset.change(series, on_days: ["-5:day", "-2:friday"]))
     end
 
     test "a rule change patches the whole rule", %{user: user} do

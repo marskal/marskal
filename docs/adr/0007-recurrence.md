@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted; amended 2026-10-02 (projects, date offsets, open cap); amended 2026-10-07 (regular mode follows RFC 5545; monthly days are one set; on completion is an interval); amended 2026-10-08 (the week start is the series'); amended 2026-10-09 (monthly and yearly days are rows; one occurrence at a time)
+Accepted; amended 2026-10-02 (projects, date offsets, open cap); amended 2026-10-07 (regular mode follows RFC 5545; monthly days are one set; on completion is an interval); amended 2026-10-08 (the week start is the series'); amended 2026-10-09 (monthly and yearly days are rows; one occurrence at a time; days counted from the end)
 
 ## Context
 
@@ -290,7 +290,8 @@ section wins.
 - A monthly or yearly rule's days are one list, `on_days`. A row is an
   ordinal and a kind of day: the 14th day, the last day, the 2nd Tuesday,
   the last work day. A day row's ordinal is 1–31, any other kind's 1–5,
-  and −1 is the last. It replaces the calendar days and the single nth day:
+  and −1 to −5 count from the end, −1 being the last (amended the same
+  day: the second to last day, the 2nd to last Friday). It replaces the calendar days and the single nth day:
   a month may now have several nth days, such as the 2nd Tuesday and the
   last Friday.
 - A yearly row also names its month: the 14th day in April, the last

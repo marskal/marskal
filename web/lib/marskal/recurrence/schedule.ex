@@ -26,8 +26,9 @@ defmodule Marskal.Recurrence.Schedule do
   start on Sunday, and six days apart when they start on Monday.
 
   Monthly and yearly rules land on the rows in `on_days`
-  (`Series.day_rules/1`): calendar days (1–31, and −1 for the last), and
-  nth weekdays, work days, or weekend days. A work day is Monday to
+  (`Series.day_rules/1`): calendar days (1–31, and −1 to −5 counting from
+  the last), and nth weekdays, work days, or weekend days, also counted
+  from either end. A work day is Monday to
   Friday. A month's rows together are the set of days the slot may land
   on. A yearly row names its month, so "the last Monday in October" and
   "the 14th of April" are two days a year, not four. With no rows, the
@@ -181,7 +182,8 @@ defmodule Marskal.Recurrence.Schedule do
   end
 
   # The day a row names in that month, or nil when the month lacks it.
-  defp day_in(year, month, -1, :day), do: Date.end_of_month(Date.new!(year, month, 1))
+  defp day_in(year, month, from_end, :day) when from_end < 0,
+    do: Date.add(Date.end_of_month(Date.new!(year, month, 1)), from_end + 1)
 
   defp day_in(year, month, day, :day) do
     case Date.new(year, month, day) do
@@ -194,10 +196,7 @@ defmodule Marskal.Recurrence.Schedule do
     start = Date.new!(year, month, 1)
     matches = Enum.filter(Date.range(start, Date.end_of_month(start)), &day_kind?(&1, kind))
 
-    case ordinal do
-      -1 -> List.last(matches)
-      n -> Enum.at(matches, n - 1)
-    end
+    if ordinal < 0, do: Enum.at(matches, ordinal), else: Enum.at(matches, ordinal - 1)
   end
 
   defp day_kind?(date, :work_day), do: Date.day_of_week(date, :monday) in 1..5
