@@ -51,9 +51,10 @@ without a second pipeline. Competing formats differ; Marskal’s model does not
   becomes a folder. A parent with no tasks of its own is only that folder;
   a parent that also has tasks keeps them in a project named "<name> tasks"
   inside the folder. A subtask stays under its parent task, in
-  `child_order`. Sections, a Todoist due date (planned),
-  a deadline (due), and the recurrence text stay in `extras`. Completed-task
-  history is not in the sync snapshot and is not imported.
+  `child_order`. A due date is Planned and a deadline Due. Section,
+  priority, order key, the due date's zone, and the repeat text stay in
+  `extras`. Completed-task history is not in the sync snapshot and is not
+  imported.
 
 ### Re-import updates (amended 2026-10-04)
 
