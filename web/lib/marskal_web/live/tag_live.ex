@@ -94,6 +94,7 @@ defmodule MarskalWeb.TagLive do
         dates={@task_tags.dates}
         resolved={@task_tags.resolved}
         parents={@task_tags.parents}
+        repeating={@task_tags.repeating}
         zone={@zone}
         mark_inbox
         empty="No tasks carry this tag itself."
@@ -169,7 +170,8 @@ defmodule MarskalWeb.TagLive do
       deferred: Tasks.deferred_ids(user, tasks),
       dates: Tasks.effective_dates(user, tasks),
       resolved: Tasks.resolved_ids(user, Enum.map(tasks, & &1.id)),
-      parents: TaskList.parents(user, tasks)
+      parents: TaskList.parents(user, tasks),
+      repeating: Marskal.Recurrence.repeating_ids(user, tasks)
     }
   end
 

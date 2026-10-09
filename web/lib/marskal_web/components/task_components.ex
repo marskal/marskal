@@ -41,6 +41,7 @@ defmodule MarskalWeb.TaskComponents do
   attr :collapsed, :any, default: MapSet.new(), doc: "ids whose subtasks the outline hides"
 
   attr :zone, :string, default: "Europe/Copenhagen", doc: "the user's zone, for date labels"
+  attr :repeating, :any, default: MapSet.new(), doc: "ids of tasks in a running series"
 
   def list(assigns) do
     assigns =
@@ -178,6 +179,14 @@ defmodule MarskalWeb.TaskComponents do
           padding: 0 0.4rem;
           border: 1px solid var(--border);
           border-radius: 4px;
+        }
+
+        .mark--repeat {
+          display: inline-flex;
+          align-items: center;
+          padding: 0;
+          border: 0;
+          color: var(--muted);
         }
 
         .mark--overdue {
@@ -387,10 +396,18 @@ defmodule MarskalWeb.TaskComponents do
           <span
             :if={
               (@mark_inbox and task.inbox) or d.planned_at != nil or d.due_at != nil or
-                MapSet.member?(@unavailable, task.id) or MapSet.member?(@deferred, task.id)
+                MapSet.member?(@unavailable, task.id) or MapSet.member?(@deferred, task.id) or
+                MapSet.member?(@repeating, task.id)
             }
             class="marks"
           >
+            <span
+              :if={MapSet.member?(@repeating, task.id)}
+              class="mark mark--repeat"
+              title="Repeats"
+            >
+              <Lucideicons.repeat class="icon" aria-label="Repeats" />
+            </span>
             <span :if={@mark_inbox and task.inbox} class="mark mark--inbox">Inbox</span>
             <span :if={MapSet.member?(@unavailable, task.id)} class="mark mark--unavailable">
               Unavailable

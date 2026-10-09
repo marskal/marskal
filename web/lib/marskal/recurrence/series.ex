@@ -16,25 +16,14 @@ defmodule Marskal.Recurrence.Series do
     :interval,
     :frequency,
     :weekdays,
-    :month_days,
-    :month_ordinal,
-    :month_day_kind,
+    :on_days,
     :ends_at,
     :end_count,
     :week_start
   ]
 
-  @day_kinds [
-    :monday,
-    :tuesday,
-    :wednesday,
-    :thursday,
-    :friday,
-    :saturday,
-    :sunday,
-    :work_day,
-    :weekend_day
-  ]
+  @weekday_kinds ~w(monday tuesday wednesday thursday friday saturday sunday)a
+  @day_kinds @weekday_kinds ++ [:work_day, :weekend_day]
 
   @primary_key {:id, Ecto.UUID, autogenerate: false, read_after_writes: true}
   @foreign_key_type Ecto.UUID
@@ -46,9 +35,7 @@ defmodule Marskal.Recurrence.Series do
     field :interval, :integer
     field :frequency, Ecto.Enum, values: [:minutes, :hours, :days, :weeks, :months, :years]
     field :weekdays, {:array, :integer}, default: []
-    field :month_days, {:array, :integer}, default: []
-    field :month_ordinal, :integer
-    field :month_day_kind, Ecto.Enum, values: @day_kinds
+    field :on_days, {:array, :string}, default: []
     field :ends_at, :utc_datetime
     field :end_count, :integer
     field :week_start, :integer, default: 1
@@ -68,6 +55,58 @@ defmodule Marskal.Recurrence.Series do
 
   def client_fields(:patch),
     do: Enum.map(@rule, &Atom.to_string/1) ++ ~w(stopped_at discarded_at)
+
+  @doc """
+  The days a monthly or yearly rule lands on, as `{month, ordinal, kind}`.
+  `month` is 1–12 for a yearly row and nil for a monthly one. `kind` is
+  `:day` with an ordinal of 1–31, or a weekday, `:work_day`, or
+  `:weekend_day` with an ordinal of 1–5. An ordinal of −1 is the last.
+  Rows that do not parse are left out; the changeset refuses them.
+  """
+  def day_rules(%__MODULE__{on_days: days}),
+    do: for(day <- days, {:ok, rule} = parse_day(day), do: rule)
+
+  @doc ~S(A day row as stored: `"14:day"`, or `"10:-1:monday"` with its month.)
+  def format_day({nil, ordinal, kind}), do: "#{ordinal}:#{kind}"
+  def format_day({month, ordinal, kind}), do: "#{month}:#{ordinal}:#{kind}"
+
+  @doc "Parses a stored day row into `{month, ordinal, kind}`."
+  def parse_day(day) when is_binary(day) do
+    case String.split(day, ":") do
+      [ordinal, kind] -> build_day(nil, ordinal, kind)
+      [month, ordinal, kind] -> build_day(month, ordinal, kind)
+      _ -> :error
+    end
+  end
+
+  def parse_day(_day), do: :error
+
+  defp build_day(month, ordinal, kind) do
+    with {:ok, month} <- parse_month(month),
+         {ordinal, ""} <- Integer.parse(ordinal),
+         kind when kind in [:day | @day_kinds] <- parse_kind(kind),
+         true <- ordinal_fits?(ordinal, kind) do
+      {:ok, {month, ordinal, kind}}
+    else
+      _ -> :error
+    end
+  end
+
+  defp parse_month(nil), do: {:ok, nil}
+
+  defp parse_month(month) do
+    case Integer.parse(month) do
+      {month, ""} when month in 1..12 -> {:ok, month}
+      _ -> :error
+    end
+  end
+
+  defp parse_kind(kind) do
+    Enum.find([:day | @day_kinds], &(Atom.to_string(&1) == kind))
+  end
+
+  defp ordinal_fits?(ordinal, :day), do: ordinal == -1 or ordinal in 1..31
+  defp ordinal_fits?(ordinal, _kind), do: ordinal == -1 or ordinal in 1..5
 
   @doc "The date field an occurrence's anchor is."
   def anchor_field(%__MODULE__{anchor: :defer}), do: :defer_until
@@ -123,27 +162,20 @@ defmodule Marskal.Recurrence.Series do
       :interval,
       :frequency,
       :weekdays,
-      :month_days,
+      :on_days,
       :week_start
     ])
     |> validate_number(:interval, greater_than: 0)
     |> validate_number(:end_count, greater_than: 0)
     |> normalize(:weekdays)
-    |> normalize(:month_days)
     |> validate_subset(:weekdays, 1..7)
     |> validate_inclusion(:week_start, 1..7)
-    |> validate_subset(:month_days, [-1 | Enum.to_list(1..31)])
-    |> validate_inclusion(:month_ordinal, [-1, 1, 2, 3, 4, 5])
+    |> validate_on_days()
     |> only_for(:weeks, :weekdays, [])
-    |> only_for(:months, :month_days, [])
-    |> only_for(:months, :month_ordinal, nil)
     |> regular_only(:weekdays, [])
-    |> regular_only(:month_days, [])
-    |> regular_only(:month_ordinal, nil)
-    |> validate_month_weekday()
+    |> regular_only(:on_days, [])
     |> check_constraint(:weekdays, name: :recurrence_series_weekdays)
-    |> check_constraint(:month_days, name: :recurrence_series_month_days)
-    |> check_constraint(:month_ordinal, name: :recurrence_series_month_weekday)
+    |> check_constraint(:on_days, name: :recurrence_series_on_days)
     |> check_constraint(:week_start, name: :recurrence_series_week_start)
   end
 
@@ -172,16 +204,36 @@ defmodule Marskal.Recurrence.Series do
       else: changeset
   end
 
-  defp validate_month_weekday(changeset) do
-    case {get_field(changeset, :month_ordinal), get_field(changeset, :month_day_kind)} do
-      {nil, kind} when not is_nil(kind) ->
-        add_error(changeset, :month_ordinal, "can't be blank")
+  # Each row parses, and has a month exactly when the rule is yearly. Kept
+  # without repeats, in calendar order, so the same days are the same value.
+  defp validate_on_days(changeset) do
+    frequency = get_field(changeset, :frequency)
+    days = get_field(changeset, :on_days) || []
+    parsed = Enum.map(days, &parse_day/1)
 
-      {ordinal, nil} when not is_nil(ordinal) ->
-        add_error(changeset, :month_day_kind, "can't be blank")
+    cond do
+      days != [] and frequency not in [:months, :years] ->
+        add_error(changeset, :on_days, "only applies to a monthly or yearly rule")
 
-      _ ->
+      Enum.any?(parsed, &(not fits?(&1, frequency))) ->
+        add_error(changeset, :on_days, "has a day that does not fit the rule")
+
+      changed?(changeset, :on_days) ->
+        sorted = parsed |> Enum.map(&elem(&1, 1)) |> Enum.uniq() |> Enum.sort_by(&day_order/1)
+        put_change(changeset, :on_days, Enum.map(sorted, &format_day/1))
+
+      true ->
         changeset
     end
+  end
+
+  defp fits?({:ok, {nil, _ordinal, _kind}}, :months), do: true
+  defp fits?({:ok, {month, _ordinal, _kind}}, :years) when is_integer(month), do: true
+  defp fits?(_parsed, _frequency), do: false
+
+  # Month, then numbered days before nth weekdays, the last of each last.
+  defp day_order({month, ordinal, kind}) do
+    {month || 0, if(kind == :day, do: 0, else: 1), if(ordinal == -1, do: 99, else: ordinal),
+     Enum.find_index([:day | @day_kinds], &(&1 == kind))}
   end
 end

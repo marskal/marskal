@@ -563,9 +563,7 @@ fn a_pulled_series_and_its_occurrence_read_back() {
         "interval": 2,
         "frequency": "weeks",
         "weekdays": [2, 5],
-        "month_days": [],
-        "month_ordinal": null,
-        "month_day_kind": null,
+        "on_days": [],
         "ends_at": null,
         "end_count": 10,
         "week_start": 7,
@@ -604,7 +602,7 @@ fn a_pulled_series_and_its_occurrence_read_back() {
     assert_eq!((read.interval, read.end_count), (2, Some(10)));
     assert_eq!(read.weekdays, vec![2, 5]);
     assert_eq!(read.week_start, 7);
-    assert!(read.month_days.is_empty());
+    assert!(read.on_days.is_empty());
 
     let read = world.task(task).unwrap();
     assert_eq!(read.series_id, Some(series));
@@ -715,6 +713,10 @@ fn a_database_from_before_urls_asks_for_a_snapshot() {
         "ALTER TABLE tasks DROP COLUMN url;
          ALTER TABLE projects DROP COLUMN url;
          ALTER TABLE recurrence_series DROP COLUMN week_start;
+         ALTER TABLE recurrence_series DROP COLUMN on_days;
+         ALTER TABLE recurrence_series ADD COLUMN month_days TEXT NOT NULL DEFAULT '[]';
+         ALTER TABLE recurrence_series ADD COLUMN month_ordinal INTEGER;
+         ALTER TABLE recurrence_series ADD COLUMN month_day_kind TEXT;
          DROP TABLE user_preferences;
          PRAGMA user_version = 2;",
     )

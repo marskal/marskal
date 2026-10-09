@@ -63,19 +63,15 @@ defmodule Marskal.RecurrenceTest do
             {%{end_count: 0}, :end_count},
             {%{weekdays: [1]}, :weekdays},
             {%{frequency: :weeks, weekdays: [8]}, :weekdays},
-            {%{month_days: [1]}, :month_days},
-            {%{frequency: :months, month_days: [32]}, :month_days},
-            {%{frequency: :months, month_ordinal: 1}, :month_day_kind},
-            {%{frequency: :months, month_day_kind: :work_day}, :month_ordinal},
-            {%{frequency: :months, month_ordinal: 6, month_day_kind: :friday}, :month_ordinal},
+            {%{on_days: ["1:day"]}, :on_days},
+            {%{frequency: :months, on_days: ["32:day"]}, :on_days},
+            {%{frequency: :months, on_days: ["6:friday"]}, :on_days},
+            {%{frequency: :months, on_days: ["1:payday"]}, :on_days},
+            {%{frequency: :months, on_days: ["10:14:day"]}, :on_days},
+            {%{frequency: :years, on_days: ["14:day"]}, :on_days},
+            {%{frequency: :years, on_days: ["13:14:day"]}, :on_days},
             {%{mode: :on_completion, frequency: :weeks, weekdays: [1]}, :weekdays},
-            {%{mode: :on_completion, frequency: :months, month_days: [15]}, :month_days},
-            {%{
-               mode: :on_completion,
-               frequency: :months,
-               month_ordinal: 1,
-               month_day_kind: :monday
-             }, :month_ordinal},
+            {%{mode: :on_completion, frequency: :months, on_days: ["15:day"]}, :on_days},
             {%{mode: nil}, :mode},
             {%{kind: :project}, :kind}
           ] do
@@ -86,22 +82,39 @@ defmodule Marskal.RecurrenceTest do
       end
     end
 
-    test "takes a last-day and an nth-weekday month rule", %{user: user} do
-      assert {:ok, %Series{month_days: [-1, 15], month_ordinal: -1, month_day_kind: :work_day}} =
+    test "keeps month and year days as rows, in calendar order", %{user: user} do
+      rule = %{kind: :task, mode: :regular, anchor: :planned, interval: 1}
+
+      assert {:ok, %Series{on_days: ["15:day", "-1:day", "2:tuesday", "-1:work_day"]}} =
                Recurrence.create_series(
                  user,
-                 %{
-                   kind: :task,
-                   mode: :regular,
-                   anchor: :planned,
-                   interval: 1,
+                 Map.merge(rule, %{
                    frequency: :months,
-                   month_days: [15, -1],
-                   month_ordinal: -1,
-                   month_day_kind: :work_day
-                 },
+                   on_days: ["-1:work_day", "-1:day", "2:tuesday", "15:day", "15:day"]
+                 }),
                  command()
                )
+
+      assert {:ok, %Series{on_days: ["4:14:day", "10:14:day", "10:-1:monday"]}} =
+               Recurrence.create_series(
+                 user,
+                 Map.merge(rule, %{
+                   frequency: :years,
+                   on_days: ["10:-1:monday", "10:14:day", "4:14:day"]
+                 }),
+                 command()
+               )
+    end
+
+    test "the database refuses a day row that does not parse", %{user: user} do
+      changeset =
+        user
+        |> series_fixture()
+        |> Ecto.Changeset.change(frequency: :months, on_days: ["32:day"])
+        |> Ecto.Changeset.check_constraint(:on_days, name: :recurrence_series_on_days)
+
+      assert {:error, changeset} = Repo.update(changeset)
+      assert "is invalid" in errors_on(changeset).on_days
     end
 
     test "a rule change patches the whole rule", %{user: user} do
@@ -267,6 +280,36 @@ defmodule Marskal.RecurrenceTest do
 
       assert %Task{series_id: id, occurrence_for: @friday} = Tasks.get_task(user, task.id)
       assert id == series.id
+    end
+  end
+
+  describe "repeat_task/4" do
+    test "makes a series with the task as its first occurrence", %{user: user} do
+      {:ok, task} = Tasks.create_task(user, %{title: "Trash", due_at: @friday}, command())
+      rule = %{"mode" => "regular", "anchor" => "due", "interval" => 1, "frequency" => "weeks"}
+
+      {:ok, series} = Recurrence.repeat_task(user, task.id, rule, command())
+
+      assert %Series{kind: :task, frequency: :weeks} = series
+      assert %Task{occurrence_for: @friday} = joined = Tasks.get_task(user, task.id)
+      assert joined.series_id == series.id
+      assert Recurrence.repeating_ids(user, [joined]) == MapSet.new([task.id])
+
+      assert {:error, :already_repeating} =
+               Recurrence.repeat_task(user, task.id, rule, command())
+
+      {:ok, _} = Recurrence.stop_series(user, series.id, command())
+      assert Recurrence.repeating_ids(user, [joined]) == MapSet.new()
+    end
+
+    test "needs the anchor date, and leaves nothing behind without it", %{user: user} do
+      {:ok, task} = Tasks.create_task(user, %{title: "Trash", due_at: @friday}, command())
+      rule = %{mode: :regular, anchor: :planned, interval: 1, frequency: :weeks}
+
+      assert {:error, changeset} = Recurrence.repeat_task(user, task.id, rule, command())
+      assert "needs the task's Planned date" in errors_on(changeset).anchor
+      assert Repo.aggregate(Series, :count) == 0
+      assert Tasks.get_task(user, task.id).series_id == nil
     end
   end
 

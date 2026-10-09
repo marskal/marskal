@@ -25,12 +25,15 @@ defmodule Marskal.Recurrence.Schedule do
   WKST), so every 2 weeks on Sun and Mon is two days in a row when weeks
   start on Sunday, and six days apart when they start on Monday.
 
-  Monthly limits are calendar days (1–31, and −1 for the last) and one
-  nth weekday, work day, or weekend day. A work day is Monday to Friday.
-  Together they are the set of days the slot may land on. With neither,
-  the slot keeps the day of the month. A day the month does not have is
-  skipped, so the month after a 31st is March. Months step by `interval`
-  from `from`'s month.
+  Monthly and yearly rules land on the rows in `on_days`
+  (`Series.day_rules/1`): calendar days (1–31, and −1 for the last), and
+  nth weekdays, work days, or weekend days. A work day is Monday to
+  Friday. A month's rows together are the set of days the slot may land
+  on. A yearly row names its month, so "the last Monday in October" and
+  "the 14th of April" are two days a year, not four. With no rows, the
+  slot keeps the day of the month, or the date in the year. A day the
+  month does not have is skipped, so the month after a 31st is March.
+  Months and years step by `interval` from `from`'s month or year.
 
   The result is nil when the slot would fall after `ends_at`. A slot on
   `ends_at` is kept. The count of occurrences already generated, and the
@@ -127,7 +130,7 @@ defmodule Marskal.Recurrence.Schedule do
       :days -> Date.add(date, series.interval)
       :weeks -> next_week(date, series)
       :months -> next_month(date, series)
-      :years -> next_year(date, series.interval)
+      :years -> next_year(date, series)
     end
   end
 
@@ -155,54 +158,41 @@ defmodule Marskal.Recurrence.Schedule do
     Enum.find_value(@weekday, fn {name, number} -> if number == day, do: name end)
   end
 
-  defp next_month(date, %Series{month_days: [], month_ordinal: nil} = series) do
+  defp next_month(date, %Series{on_days: []} = series) do
     next_month_day(date, series.interval, date.day)
   end
 
   defp next_month(date, series) do
+    rules = Series.day_rules(series)
+
     Enum.find_value(0..480, fn step ->
       {year, month} = shift_months(date, step * series.interval)
 
-      series
-      |> matching_days(year, month)
-      |> Enum.find(&Date.after?(&1, date))
+      rules
+      |> Enum.map(fn {nil, ordinal, kind} -> day_in(year, month, ordinal, kind) end)
+      |> first_after(date)
     end)
   end
 
-  # The calendar days and the nth day together are the days the slot may
-  # land on.
-  defp matching_days(series, year, month) do
-    start = Date.new!(year, month, 1)
-    last = Date.days_in_month(start)
-
-    numbered =
-      for day <- series.month_days,
-          date = calendar_day(year, month, day, last),
-          not is_nil(date),
-          do: date
-
-    nth =
-      case series.month_ordinal do
-        nil -> []
-        ordinal -> List.wrap(nth_day(start, ordinal, series.month_day_kind))
-      end
-
-    numbered
-    |> Enum.concat(nth)
-    |> Enum.uniq()
+  defp first_after(days, date) do
+    days
+    |> Enum.reject(&is_nil/1)
     |> Enum.sort(Date)
+    |> Enum.find(&Date.after?(&1, date))
   end
 
-  defp calendar_day(year, month, -1, last), do: Date.new!(year, month, last)
+  # The day a row names in that month, or nil when the month lacks it.
+  defp day_in(year, month, -1, :day), do: Date.end_of_month(Date.new!(year, month, 1))
 
-  defp calendar_day(year, month, day, _last) do
+  defp day_in(year, month, day, :day) do
     case Date.new(year, month, day) do
       {:ok, date} -> date
       {:error, _} -> nil
     end
   end
 
-  defp nth_day(start, ordinal, kind) do
+  defp day_in(year, month, ordinal, kind) do
+    start = Date.new!(year, month, 1)
     matches = Enum.filter(Date.range(start, Date.end_of_month(start)), &day_kind?(&1, kind))
 
     case ordinal do
@@ -228,12 +218,24 @@ defmodule Marskal.Recurrence.Schedule do
     end)
   end
 
-  defp next_year(%Date{year: year, month: month, day: day}, interval) do
+  defp next_year(%Date{year: year, month: month, day: day}, %Series{on_days: []} = series) do
     Enum.find_value(1..500, fn step ->
-      case Date.new(year + step * interval, month, day) do
+      case Date.new(year + step * series.interval, month, day) do
         {:ok, found} -> found
         {:error, _} -> nil
       end
+    end)
+  end
+
+  defp next_year(date, series) do
+    rules = Series.day_rules(series)
+
+    Enum.find_value(0..500, fn step ->
+      year = date.year + step * series.interval
+
+      rules
+      |> Enum.map(fn {month, ordinal, kind} -> day_in(year, month, ordinal, kind) end)
+      |> first_after(date)
     end)
   end
 

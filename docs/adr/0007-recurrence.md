@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted; amended 2026-10-02 (projects, date offsets, open cap); amended 2026-10-07 (regular mode follows RFC 5545; monthly days are one set; on completion is an interval); amended 2026-10-08 (the week start is the series')
+Accepted; amended 2026-10-02 (projects, date offsets, open cap); amended 2026-10-07 (regular mode follows RFC 5545; monthly days are one set; on completion is an interval); amended 2026-10-08 (the week start is the series'); amended 2026-10-09 (monthly and yearly days are rows)
 
 ## Context
 
@@ -280,6 +280,29 @@ section wins.
 - When the latest's parent task is gone, the next goes to the top level of
   its location. Tags that were deleted are not copied; a merged tag copies
   as the one it went into.
+
+## Days as rows (2026-10-09)
+
+The editor reads a rule as a sentence with one row per day, and rows are
+added and removed. Where an earlier paragraph disagrees, this
+section wins.
+
+- A monthly or yearly rule's days are one list, `on_days`. A row is an
+  ordinal and a kind of day: the 14th day, the last day, the 2nd Tuesday,
+  the last work day. A day row's ordinal is 1–31, any other kind's 1–5,
+  and −1 is the last. It replaces the calendar days and the single nth day:
+  a month may now have several nth days, such as the 2nd Tuesday and the
+  last Friday.
+- A yearly row also names its month: the 14th day in April, the last
+  Monday in October. Each row is a day in its own month, not every month
+  crossed with every day, so those two give two dates a year, not four.
+  RFC 5545 needs one RRULE per month for that; the store stays structured.
+- A month's rows, or a year's, are together the days the slot may land on.
+  With none, a monthly rule keeps the day of the month, and a yearly one
+  the date. A row the month lacks is skipped.
+- Stored as text, `"14:day"`, `"2:tuesday"`, `"10:-1:monday"`, kept sorted
+  and without repeats. The database checks each row's shape.
+- Weekly days stay ISO weekday numbers.
 
 ## Consequences
 

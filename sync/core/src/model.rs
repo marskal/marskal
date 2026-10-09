@@ -126,21 +126,6 @@ pub enum Frequency {
     Years,
 }
 
-/// The day an nth-weekday month rule counts.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum DayKind {
-    Monday,
-    Tuesday,
-    Wednesday,
-    Thursday,
-    Friday,
-    Saturday,
-    Sunday,
-    WorkDay,
-    WeekendDay,
-}
-
 /// The user's preferences, one row keyed by the user id (ADR 0023).
 /// `week_start` is the ISO day weeks start on, 1 for Monday.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -153,8 +138,10 @@ pub struct UserPreferences {
 }
 
 /// A recurrence rule and the identity its occurrences share (ADR 0007).
-/// `weekdays` are ISO numbers, 1 for Monday. `month_days` are 1-31, and -1
-/// for the last day; `month_ordinal` is 1-5, and -1 for the last.
+/// `weekdays` are ISO numbers, 1 for Monday. `on_days` are a monthly or
+/// yearly rule's rows, `ordinal:kind` with the month first for a year:
+/// `"14:day"`, `"-1:day"`, `"2:tuesday"`, `"-1:work_day"`, `"10:-1:monday"`.
+/// An ordinal of -1 is the last.
 /// `week_start` is the ISO day weeks start on, kept from when the series
 /// was made.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -166,9 +153,7 @@ pub struct Series {
     pub interval: u32,
     pub frequency: Frequency,
     pub weekdays: Vec<u8>,
-    pub month_days: Vec<i8>,
-    pub month_ordinal: Option<i8>,
-    pub month_day_kind: Option<DayKind>,
+    pub on_days: Vec<String>,
     pub ends_at: Option<String>,
     pub end_count: Option<u32>,
     pub week_start: u8,
