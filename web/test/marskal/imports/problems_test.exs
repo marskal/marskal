@@ -32,7 +32,7 @@ defmodule Marskal.Imports.ProblemsTest do
     assert task.notes == "Two litres\n\n---\nImported from Todoist:\n- Repeat: every monday"
     assert task.tag_source_ids == ["food", "problem:missing-recurrence"]
     assert %TagNode{source_id: "problem", name: "Import problems", rank: 5} = parent
-    assert %TagNode{name: "Missing repeat", parent_source_id: "problem"} = child
+    assert %TagNode{name: "Missing repeat rule", parent_source_id: "problem"} = child
   end
 
   test "a long title is cut, and the rest goes in the notes" do
