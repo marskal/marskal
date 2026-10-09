@@ -220,7 +220,9 @@ defmodule Marskal.RecurrenceTest do
     test "a client joins only a series' first occurrence", %{user: user} do
       series = series_fixture(user)
       first = occurrence_fixture(user, series)
-      {:ok, _} = Tasks.delete_task(user, first.id, command())
+      # Discarded, as a deleted earlier occurrence is; deleting the latest
+      # would end the series.
+      Repo.update_all(from(t in Task, where: t.id == ^first.id), set: [discarded_at: @friday])
       next = ~U[2026-10-16 15:00:00Z]
 
       assert {:error, changeset} =

@@ -1,6 +1,5 @@
-defmodule Marskal.Recurrence.GenerateTest do
+defmodule Marskal.Recurrence.NextOccurrenceTest do
   use Marskal.DataCase, async: true
-  use Oban.Testing, repo: Marskal.Repo
 
   alias Marskal.AccountsFixtures
   alias Marskal.Changes.Change
@@ -173,91 +172,151 @@ defmodule Marskal.Recurrence.GenerateTest do
   end
 
   describe "regular" do
-    test "finishing creates nothing; a passed slot gets the first after now", %{user: user} do
+    test "Done creates the slot after the one resolved, and To-Do does not", %{user: user} do
+      series = series_fixture(user, %{frequency: :days})
+      first = occurrence_fixture(user, series, hours_ago(1))
+
+      {:ok, _} = Tasks.update_task(user, first.id, %{title: "Bins"}, command())
+      assert later_occurrences(series, first) == []
+
+      {:ok, _} = Tasks.complete_task(user, first.id, command())
+      [next] = later_occurrences(series, first)
+      slot = DateTime.add(first.occurrence_for, 1, :day)
+      assert next.id == Recurrence.occurrence_id(series.id, slot)
+      assert %Task{title: "Bins", state: :to_do, due_at: ^slot, occurrence_for: ^slot} = next
+    end
+
+    test "finishing early still takes the slot after this one", %{user: user} do
+      series = series_fixture(user, %{frequency: :weeks})
+      first = occurrence_fixture(user, series, DateTime.add(now(), 2, :day))
+
+      {:ok, _} = Tasks.drop_task(user, first.id, command())
+      assert [%Task{occurrence_for: slot}] = later_occurrences(series, first)
+      assert slot == DateTime.add(first.occurrence_for, 7, :day)
+    end
+
+    test "finishing late skips the slots that passed", %{user: user} do
       series = series_fixture(user, %{frequency: :days})
       first = occurrence_fixture(user, series, hours_ago(3 * 24 - 1))
 
       {:ok, _} = Tasks.complete_task(user, first.id, command())
+      assert [%Task{occurrence_for: slot}] = later_occurrences(series, first)
+      assert slot == DateTime.add(first.occurrence_for, 3, :day)
+    end
+
+    test "done by mistake, undone, and done again creates one", %{user: user} do
+      for due <- [hours_ago(1), DateTime.add(now(), 2, :day)] do
+        series = series_fixture(user, %{frequency: :days})
+        first = occurrence_fixture(user, series, due)
+
+        {:ok, _} = Tasks.complete_task(user, first.id, command())
+        [second] = later_occurrences(series, first)
+        {:ok, _} = Tasks.reopen_task(user, first.id, command())
+        assert later_occurrences(series, first) == [second]
+
+        # The second is the latest now, so finishing the first again, or
+        # dropping it, adds nothing.
+        {:ok, _} = Tasks.complete_task(user, first.id, command())
+        {:ok, _} = Tasks.reopen_task(user, first.id, command())
+        {:ok, _} = Tasks.drop_task(user, first.id, command())
+
+        assert [%Task{id: id, state: :to_do}] = later_occurrences(series, first)
+        assert id == second.id
+      end
+    end
+
+    test "not past the end count or the end date", %{user: user} do
+      counted = series_fixture(user, %{frequency: :days, end_count: 1})
+      first = occurrence_fixture(user, counted, hours_ago(1))
+      {:ok, _} = Tasks.complete_task(user, first.id, command())
+      assert later_occurrences(counted, first) == []
+
+      ended = series_fixture(user, %{frequency: :days, ends_at: now()})
+      first = occurrence_fixture(user, ended, hours_ago(1))
+      {:ok, _} = Tasks.complete_task(user, first.id, command())
+      assert later_occurrences(ended, first) == []
+    end
+  end
+
+  describe "pause and resume" do
+    test "resuming after the latest was resolved creates the next from now", %{user: user} do
+      series = series_fixture(user, %{frequency: :hours})
+      first = occurrence_fixture(user, series, hours_ago(5))
+      {:ok, _} = Recurrence.stop_series(user, series.id, command())
+      {:ok, _} = Tasks.complete_task(user, first.id, command())
       assert later_occurrences(series, first) == []
 
-      assert Recurrence.generate(now()) == 1
-      [next] = later_occurrences(series, first)
-      assert next.occurrence_for == DateTime.add(first.occurrence_for, 3, :day)
-      assert next.state == :to_do
-
-      assert Recurrence.generate(now()) == 0
-      assert Recurrence.generate(DateTime.add(next.occurrence_for, 1, :second)) == 1
-      assert [_, _] = later_occurrences(series, first)
+      {:ok, _} = Recurrence.update_series(user, series.id, %{stopped_at: nil}, command())
+      assert [%Task{occurrence_for: slot}] = later_occurrences(series, first)
+      assert slot == DateTime.add(first.occurrence_for, 6, :hour)
     end
 
-    test "creates the next even while the previous is open", %{user: user} do
-      series = series_fixture(user, %{frequency: :hours})
+    test "resuming with the latest open creates none", %{user: user} do
+      series = series_fixture(user, %{mode: :on_completion, frequency: :days})
       first = occurrence_fixture(user, series, hours_ago(1))
+      {:ok, _} = Recurrence.stop_series(user, series.id, command())
+      {:ok, _} = Recurrence.update_series(user, series.id, %{stopped_at: nil}, command())
 
-      assert Recurrence.generate(now()) == 1
-      assert [%Task{state: :to_do}] = later_occurrences(series, first)
-      assert %Task{state: :to_do} = Tasks.get_task(user, first.id)
+      assert later_occurrences(series, first) == []
     end
+  end
 
-    test "stops at the open cap and resumes at the first slot after now", %{user: user} do
-      series = series_fixture(user, %{frequency: :hours})
-      first = occurrence_fixture(user, series, hours_ago(20))
-
-      for hour <- -18..-10//1, do: Recurrence.generate(hours_ago(-hour))
-      assert open_count(series) == Recurrence.open_cap()
-      latest = latest_slot(series)
-
-      assert Recurrence.generate(now()) == 0
-      {:ok, _} = Tasks.complete_task(user, first.id, command())
-
-      assert Recurrence.generate(now()) == 1
-      assert latest_slot(series) == DateTime.add(first.occurrence_for, 21, :hour)
-      assert DateTime.diff(latest_slot(series), latest, :hour) == 10
-    end
-
-    test "a deleted occurrence does not come back", %{user: user} do
+  describe "deleting" do
+    test "the latest occurrence ends the series, and its history stays", %{user: user} do
       series = series_fixture(user, %{frequency: :days})
       first = occurrence_fixture(user, series, hours_ago(1))
-
-      assert Recurrence.generate(now()) == 1
+      {:ok, _} = Tasks.complete_task(user, first.id, command())
       [next] = later_occurrences(series, first)
+
       {:ok, _} = Tasks.delete_task(user, next.id, command())
 
-      assert Recurrence.generate(DateTime.add(next.occurrence_for, -60, :second)) == 0
-      assert Recurrence.generate(DateTime.add(next.occurrence_for, 60, :second)) == 1
-      assert [%Task{occurrence_for: slot}] = later_occurrences(series, first)
-      assert slot == DateTime.add(next.occurrence_for, 1, :day)
+      assert Recurrence.get_series(user, series.id) == nil
+      assert %Task{state: :done, series_id: series_id} = Tasks.get_task(user, first.id)
+      assert series_id == series.id
     end
 
-    test "end count includes the first, and the end date its own slot", %{user: user} do
-      counted = series_fixture(user, %{frequency: :days, end_count: 2})
-      occurrence_fixture(user, counted, hours_ago(1))
-      ends = DateTime.add(hours_ago(1), 1, :day)
-      ended = series_fixture(user, %{frequency: :days, ends_at: ends})
-      occurrence_fixture(user, ended, hours_ago(1))
-
-      assert Recurrence.generate(now()) == 2
-      assert Recurrence.generate(DateTime.add(now(), 2, :day)) == 0
-    end
-
-    test "not from a stopped series or one with no live occurrence", %{user: user} do
-      stopped = series_fixture(user, %{frequency: :days})
-      occurrence_fixture(user, stopped, hours_ago(1))
-      {:ok, _} = Recurrence.stop_series(user, stopped.id, command())
-
-      emptied = series_fixture(user, %{frequency: :days})
-      gone = occurrence_fixture(user, emptied, hours_ago(1))
-      {:ok, _} = Tasks.delete_task(user, gone.id, command())
-
-      assert Recurrence.generate(now()) == 0
-    end
-
-    test "the job runs the generator", %{user: user} do
+    test "an earlier occurrence leaves the series as it is", %{user: user} do
       series = series_fixture(user, %{frequency: :days})
       first = occurrence_fixture(user, series, hours_ago(1))
+      {:ok, _} = Tasks.complete_task(user, first.id, command())
 
-      assert :ok = perform_job(Recurrence.GenerateJob, %{})
-      assert [_] = later_occurrences(series, first)
+      {:ok, _} = Tasks.delete_task(user, first.id, command())
+      assert Recurrence.get_series(user, series.id)
+    end
+
+    test "a paused series ends too, as does one under a deleted parent", %{user: user} do
+      paused = series_fixture(user, %{frequency: :days})
+      occurrence = occurrence_fixture(user, paused, hours_ago(1))
+      {:ok, _} = Recurrence.stop_series(user, paused.id, command())
+      {:ok, _} = Tasks.delete_task(user, occurrence.id, command())
+      assert Recurrence.get_series(user, paused.id) == nil
+
+      nested = series_fixture(user, %{frequency: :days})
+      {:ok, parent} = Tasks.create_task(user, %{title: "House"}, command())
+      occurrence_fixture(user, nested, hours_ago(1), %{parent_id: parent.id})
+      {:ok, _} = Tasks.delete_task(user, parent.id, command())
+      assert Recurrence.get_series(user, nested.id) == nil
+    end
+
+    test "a client's delete ends it, and the next pull carries the series", %{user: user} do
+      series = series_fixture(user, %{frequency: :days})
+      first = occurrence_fixture(user, series, hours_ago(1))
+      cursor = Sync.pull(user, nil).cursor
+
+      assert [%{status: "applied"}] =
+               Push.push(user, [
+                 %{
+                   "id" => command(),
+                   "entity" => "task",
+                   "entity_id" => first.id,
+                   "op" => "patch",
+                   "fields" => %{"discarded_at" => DateTime.to_iso8601(now())}
+                 }
+               ])
+
+      assert Recurrence.get_series(user, series.id) == nil
+      ids = Enum.map(Sync.pull(user, cursor).rows["recurrence_series"], & &1["id"])
+      assert series.id in ids
     end
   end
 
@@ -300,17 +359,6 @@ defmodule Marskal.Recurrence.GenerateTest do
         where: t.series_id == ^series.id and t.id != ^first.id and is_nil(t.discarded_at),
         order_by: t.inserted_at
     )
-  end
-
-  defp open_count(series) do
-    Repo.aggregate(
-      from(t in Task, where: t.series_id == ^series.id and t.state == :to_do),
-      :count
-    )
-  end
-
-  defp latest_slot(series) do
-    Repo.one(from t in Task, where: t.series_id == ^series.id, select: max(t.occurrence_for))
   end
 
   defp now, do: DateTime.utc_now(:second)

@@ -36,9 +36,8 @@ defmodule Marskal.Recurrence.Schedule do
   Months and years step by `interval` from `from`'s month or year.
 
   The result is nil when the slot would fall after `ends_at`. A slot on
-  `ends_at` is kept. The count of occurrences already generated, and the
-  cap on open ones, belong to the step that creates the task
-  (`Marskal.Recurrence`).
+  `ends_at` is kept. The count of occurrences already generated belongs
+  to the step that creates the task (`Marskal.Recurrence`).
   """
 
   alias Marskal.Dates

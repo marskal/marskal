@@ -181,8 +181,8 @@ A client may still join a task to a series as its first occurrence. That is
 the user's act, not the rule's, and the task keeps its v7 id.
 
 **Occurrence ids for rows the rule creates are UUIDv5**, not v7. This is the
-one exception to ADR 0011's "new domain keys are v7." A generator run and a
-completion that reach the same slot at once name the same row.
+one exception to ADR 0011's "new domain keys are v7." Two writers that reach
+the same slot at once name the same row.
 
 - **Namespace:** `a5c0ffee-0014-5000-8000-000000000014`
 - **Name (UTF-8):** `{series_id}|{anchor}`
@@ -193,8 +193,9 @@ completion that reach the same slot at once name the same row.
 **On completion.** The next anchor comes from the server's clamped
 `resolved_at`, applied when the completion syncs.
 
-**Regular.** The server's generator creates each occurrence when the previous
-slot passes.
+**Regular.** The next anchor is the slot after the one resolved, or the first
+after the server's `resolved_at` when that has passed, applied when the
+completion syncs (ADR 0007, amended 2026-10-09: one occurrence at a time).
 
 ### Timezone
 
