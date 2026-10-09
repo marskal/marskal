@@ -284,6 +284,7 @@ defmodule Marskal.Imports.OmnifocusAdapter do
       "notes" => notes_at(element),
       "inbox" => inbox?(element),
       "parent_id" => parent && Xml.attr(parent, "idref"),
+      "rank" => text_at(element, "rank"),
       "completed" => text_at(element, "completed"),
       "start" => text_at(element, "start"),
       "due" => text_at(element, "due"),
@@ -446,6 +447,7 @@ defmodule Marskal.Imports.OmnifocusAdapter do
 
     tasks
     |> Map.values()
+    |> Enum.sort_by(&{parse_rank(&1["rank"]), &1["id"]})
     |> Enum.flat_map(fn row ->
       if row["project"] do
         []
@@ -469,7 +471,7 @@ defmodule Marskal.Imports.OmnifocusAdapter do
             due: row["due"],
             resolved_at: row["completed"],
             tag_source_ids: Map.get(tag_ids, row["id"], []),
-            extras: extras_for(row) |> Map.put("parent_source_id", parent_id) |> compact(),
+            extras: row |> extras_for() |> compact(),
             problems: problems_for(row)
           }
         ]

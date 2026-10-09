@@ -19,6 +19,7 @@ defmodule Marskal.Imports.Merge do
       ~w(url),
       ~w(state),
       ~w(inbox project_id),
+      ~w(parent_id),
       ~w(defer_until deferred_indefinitely),
       ~w(planned_at),
       ~w(due_at)
@@ -54,7 +55,8 @@ defmodule Marskal.Imports.Merge do
   """
   def fields(kind, base, current, incoming) do
     Enum.reduce(groups(kind), {%{}, []}, fn group, {patch, kept} ->
-      b = Map.take(base, group)
+      # A field the base predates was not set then: it had its default.
+      b = Map.new(group, &{&1, Map.get(base, &1)})
       c = Map.take(current, group)
       i = Map.take(incoming, group)
 
