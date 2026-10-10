@@ -89,8 +89,8 @@ Default home: **Open tasks** stream. Timezone is stored per user, default
   the rule and `kind` (task | project). Occurrences are tasks or projects with
   `series_id` and an immutable `occurrence_for`. The first build repeats tasks only.
 - The next occurrence copies the latest (the live one created last): title, notes,
-  URL, flag, location, parent, tags. In the first build a task's subtasks are not copied.
-  Other dates keep their offset from the anchor on the user's zone clock.
+  URL, flag, location, parent, tags, and its live subtasks, every one To-Do.
+  Other dates, subtasks' too, keep their offset from the anchor on the user's zone clock.
 - Occurrences are the history; no completions table. A generated id that exists,
   discarded or not, is never created again.
 - The server creates every occurrence after the first; a client only joins a task

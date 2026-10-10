@@ -463,7 +463,40 @@ defmodule Marskal.Recurrence do
 
     {:ok, task} = Tasks.create_task(user, attrs, command_id, generated: true)
     copy_tags(user, latest, task, command_id)
+    anchor_at = Map.fetch!(latest, Series.anchor_field(series))
+    copy_subtasks(user, latest, task, {anchor_at, slot}, command_id)
     task
+  end
+
+  # The live subtasks under the latest, copied under the next in the same
+  # order, every one To-Do, Dropped ones too. A copy's id is v5 of the new
+  # occurrence and the task copied, so the tree has one name wherever it
+  # is made. A subtask in a series of its own is copied as a plain task.
+  defp copy_subtasks(user, source, copy, {anchor_at, slot} = shift, command_id) do
+    zone = Accounts.timezone(user)
+
+    for subtask <- Tasks.Outline.children(source) do
+      id = Marskal.Uuid.v5(copy.id, subtask.id)
+      subtask_command = Marskal.Uuid.v5(command_id, "task|#{id}")
+
+      attrs =
+        subtask
+        |> Schedule.shift_subtask_dates(anchor_at, slot, zone)
+        |> Map.merge(%{
+          id: id,
+          title: subtask.title,
+          notes: subtask.notes,
+          url: subtask.url,
+          flagged: subtask.flagged,
+          parent_id: copy.id,
+          rank: subtask.rank,
+          deferred_indefinitely: subtask.deferred_indefinitely
+        })
+
+      {:ok, subtask_copy} = Tasks.create_task(user, attrs, subtask_command)
+      copy_tags(user, subtask, subtask_copy, subtask_command)
+      copy_subtasks(user, subtask, subtask_copy, shift, command_id)
+    end
   end
 
   # Right after the latest among its siblings. When its parent is gone, at

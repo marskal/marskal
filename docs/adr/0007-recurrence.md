@@ -199,7 +199,8 @@ section wins.
   keeps its distance from the latest's anchor field on the user's zone clock
   (same days, same local time), so "defer 2 days before due" holds across a
   DST change. The offset is part of the pure function and its fixtures.
-- A task's subtasks are not copied in the first build.
+- A task's subtasks are not copied in the first build (superseded
+  2026-10-10, see Subtasks).
 - A project occurrence will copy the latest project with its task tree, every
   task To-Do. Copied task ids are UUIDv5 of the new project id and the source
   task id, so both sides mint the same tree.
@@ -330,6 +331,26 @@ section wins.
   series is discarded in the same command, as Stop does, and the earlier
   occurrences stay as history. Dropped is how to skip one occurrence.
   Deleting an earlier occurrence leaves the series alone.
+
+## Subtasks (2026-10-10)
+
+The next occurrence of a task takes its subtasks along. Where an earlier
+paragraph disagrees, this section wins.
+
+- The latest occurrence's live subtasks, at every depth, are copied under
+  the next, in the same order. Every copy starts To-Do: a Done or Dropped
+  subtask comes back, so Dropped skips a step for one round. A deleted
+  subtask is not copied, so deleting a step removes it from the rounds
+  after.
+- A copy takes the subtask's title, notes, URL, flag, and tags. Its dates
+  keep their distance from the latest's anchor date on the user's zone
+  clock, as the occurrence's own other dates do: "buy the gift two days
+  before the birthday" stays two days before.
+- A copy's id is UUIDv5 of the new occurrence's id and the subtask's id,
+  the scheme a project occurrence uses for its tree.
+- A subtask that is in a series of its own is copied as a plain task.
+- The subtasks under the resolved occurrence stay as they were, as its
+  history.
 
 ## Consequences
 
