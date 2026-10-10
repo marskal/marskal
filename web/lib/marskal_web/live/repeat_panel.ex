@@ -1,6 +1,6 @@
 defmodule MarskalWeb.RepeatPanel do
   @moduledoc """
-  The inspector's repeat line for a task, and the dialog that edits its
+  The inspector's repeat line for a task or project, and the dialog that edits its
   rule (ADR 0007): a kind of repeat, then the rule as a sentence with a
   row per day, the next dates, and the end.
 
@@ -9,8 +9,8 @@ defmodule MarskalWeb.RepeatPanel do
   Stopping deletes the series; its occurrences stay as they are.
 
   The dialog edits a draft, and OK saves it as one command. For a task
-  that does not repeat yet, Next is its first date, which becomes the
-  task's anchor date. Dates are on the user's zone clock.
+  or project that does not repeat yet, Next is its first date, which
+  becomes its anchor date. Dates are on the user's zone clock.
   """
 
   use MarskalWeb, :live_component
@@ -59,7 +59,7 @@ defmodule MarskalWeb.RepeatPanel do
 
   @impl true
   def update(assigns, socket) do
-    new_task? = socket.assigns[:task] == nil or socket.assigns.task.id != assigns.task.id
+    new_record? = socket.assigns[:record] == nil or socket.assigns.record.id != assigns.record.id
 
     socket =
       socket
@@ -67,14 +67,15 @@ defmodule MarskalWeb.RepeatPanel do
       |> assign_new(:draft, fn -> nil end)
       |> assign_new(:error, fn -> nil end)
 
-    socket = if new_task?, do: assign(socket, draft: nil, error: nil), else: socket
-    %{user: user, task: task} = socket.assigns
-    series = task.series_id && Recurrence.get_series(user, task.series_id)
+    socket = if new_record?, do: assign(socket, draft: nil, error: nil), else: socket
+    %{user: user, record: record} = socket.assigns
+    series = record.series_id && Recurrence.get_series(user, record.series_id)
 
     {:ok,
      assign(socket,
        series: series,
-       previous: series && Recurrence.previous_occurrence(user, task),
+       kind: kind(record),
+       previous: series && Recurrence.previous_occurrence(user, record),
        upcoming: upcoming(series, zone(socket))
      )}
   end
@@ -169,7 +170,7 @@ defmodule MarskalWeb.RepeatPanel do
       </style>
 
       <%= cond do %>
-        <% @task.series_id && @series == nil -> %>
+        <% @record.series_id && @series == nil -> %>
           <p class="hint">Its series was deleted, so it no longer repeats.</p>
         <% @series -> %>
           <button
@@ -205,7 +206,7 @@ defmodule MarskalWeb.RepeatPanel do
                 type="button"
                 id={"#{@id}-previous"}
                 phx-click={JS.hide(to: "##{@id}-menu") |> JS.push("inspect")}
-                phx-value-type="task"
+                phx-value-type={@kind}
                 phx-value-id={@previous.id}
               >
                 <Lucideicons.history class="icon" aria-hidden="true" /> Show previous copy
@@ -228,7 +229,7 @@ defmodule MarskalWeb.RepeatPanel do
                 id={"#{@id}-stop"}
                 phx-click="stop"
                 phx-target={@myself}
-                data-confirm="Stop repeating? The task stays, and so do earlier occurrences, but it cannot repeat again."
+                data-confirm={"Stop repeating? The #{@kind} stays, and so do earlier occurrences, but it cannot repeat again."}
               >
                 <Lucideicons.x class="icon" aria-hidden="true" /> Stop
               </button>
@@ -248,7 +249,7 @@ defmodule MarskalWeb.RepeatPanel do
         error={@error}
         running?={@series != nil}
         week_start={week_start(@series, @user)}
-        preview={preview(@draft, @series, @task, @user, @zone)}
+        preview={preview(@draft, @series, @record, @user, @zone)}
         zone={@zone}
       />
     </section>
@@ -724,8 +725,11 @@ defmodule MarskalWeb.RepeatPanel do
 
   @impl true
   def handle_event("edit", _params, socket) do
-    %{series: series, task: task} = socket.assigns
-    draft = if series, do: draft_from(series, task, zone(socket)), else: new_draft(task, socket)
+    %{series: series, record: record} = socket.assigns
+
+    draft =
+      if series, do: draft_from(series, record, zone(socket)), else: new_draft(record, socket)
+
     {:noreply, assign(socket, draft: draft, error: nil)}
   end
 
@@ -747,7 +751,7 @@ defmodule MarskalWeb.RepeatPanel do
   end
 
   def handle_event("save", params, socket) do
-    %{user: user, task: task, series: series} = socket.assigns
+    %{user: user, record: record, series: series} = socket.assigns
     draft = apply_params(socket.assigns.draft, params["repeat"] || %{}, base_date(socket))
     attrs = draft_to_attrs(draft, zone(socket))
 
@@ -755,9 +759,12 @@ defmodule MarskalWeb.RepeatPanel do
       if series do
         Recurrence.update_series(user, series.id, attrs, command())
       else
-        Recurrence.repeat_task(user, task.id, attrs, command(),
-          starts_at: starts_at(draft, task, zone(socket))
-        )
+        opts = [starts_at: starts_at(draft, record, zone(socket))]
+
+        case socket.assigns.kind do
+          :task -> Recurrence.repeat_task(user, record.id, attrs, command(), opts)
+          :project -> Recurrence.repeat_project(user, record.id, attrs, command(), opts)
+        end
       end
 
     case result do
@@ -765,7 +772,7 @@ defmodule MarskalWeb.RepeatPanel do
         {:noreply, assign(socket, draft: nil, error: nil)}
 
       {:error, reason} ->
-        {:noreply, assign(socket, draft: draft, error: message(reason))}
+        {:noreply, assign(socket, draft: draft, error: message(reason, socket.assigns.kind))}
     end
   end
 
@@ -786,22 +793,27 @@ defmodule MarskalWeb.RepeatPanel do
 
   # The change broadcast reloads the panel with the saved series.
   defp act(socket, {:ok, _series}), do: {:noreply, assign(socket, :error, nil)}
-  defp act(socket, {:error, reason}), do: {:noreply, assign(socket, :error, message(reason))}
+
+  defp act(socket, {:error, reason}),
+    do: {:noreply, assign(socket, :error, message(reason, socket.assigns.kind))}
 
   defp command, do: Ecto.UUID.generate()
 
   defp zone(%{assigns: assigns}), do: zone(assigns)
   defp zone(%{user: user}), do: Accounts.timezone(user)
 
+  defp kind(%Marskal.Projects.Project{}), do: :project
+  defp kind(_task), do: :task
+
   defp week_start(%Series{week_start: week_start}, _user), do: week_start
   defp week_start(nil, user), do: Accounts.preferences(user).week_start
 
-  defp message(%Ecto.Changeset{errors: [{field, error} | _]}),
+  defp message(%Ecto.Changeset{errors: [{field, error} | _]}, _kind),
     do: "#{field_label(field)} #{translate_error(error)}."
 
-  defp message(:already_repeating), do: "This task already repeats."
-  defp message(:not_found), do: "That task is not available."
-  defp message(_reason), do: "Could not save."
+  defp message(:already_repeating, kind), do: "This #{kind} already repeats."
+  defp message(:not_found, kind), do: "That #{kind} is not available."
+  defp message(_reason, _kind), do: "Could not save."
 
   defp field_label(:anchor), do: "The date it moves"
   defp field_label(:interval), do: "Every"
@@ -814,14 +826,14 @@ defmodule MarskalWeb.RepeatPanel do
   ## The draft
 
   @doc """
-  A draft for a new rule on `task`: weekly, on the weekday of its date.
-  Next is the task's anchor date, Due first, or today.
+  A draft for a new rule on `record`: weekly, on the weekday of its date.
+  Next is its anchor date, Due first, or today.
   """
-  def new_draft(task, %{assigns: %{user: user}}) do
+  def new_draft(record, %{assigns: %{user: user}}) do
     zone = Accounts.timezone(user)
-    anchor = default_anchor(task)
+    anchor = default_anchor(record)
     field = Series.anchor_field(%Series{anchor: anchor})
-    next = local_date(Map.fetch!(task, field), zone) || Dates.today(zone)
+    next = local_date(Map.fetch!(record, field), zone) || Dates.today(zone)
 
     %{repeat: :weekly, interval: 1, unit: :weeks, anchor: anchor, ends: :never}
     |> Map.merge(%{ends_on: nil, end_count: nil, next: next})
@@ -829,8 +841,8 @@ defmodule MarskalWeb.RepeatPanel do
   end
 
   @doc "A draft of `series`, as the dialog shows it."
-  def draft_from(%Series{} = series, task, zone) do
-    date = local_date(Map.fetch!(task, Series.anchor_field(series)), zone) || Dates.today(zone)
+  def draft_from(%Series{} = series, record, zone) do
+    date = local_date(Map.fetch!(record, Series.anchor_field(series)), zone) || Dates.today(zone)
     repeat = repeat_of(series)
 
     draft = %{
@@ -861,11 +873,11 @@ defmodule MarskalWeb.RepeatPanel do
   defp ends_mode(_series), do: :never
 
   # The date it moves, Due first.
-  defp default_anchor(task) do
+  defp default_anchor(record) do
     cond do
-      task.due_at -> :due
-      task.planned_at -> :planned
-      task.defer_until -> :defer
+      record.due_at -> :due
+      record.planned_at -> :planned
+      record.defer_until -> :defer
       true -> :due
     end
   end
@@ -1051,14 +1063,14 @@ defmodule MarskalWeb.RepeatPanel do
   defp frequency(%{repeat: :after, unit: unit}), do: unit
   defp frequency(%{repeat: repeat}), do: Keyword.fetch!(@repeats, repeat)
 
-  # Next on the task's own time of day for that date, or the date's default.
+  # Next on its own time of day for that date, or the date's default.
   defp starts_at(%{next: nil}, _task, _zone), do: nil
 
-  defp starts_at(draft, task, zone) do
+  defp starts_at(draft, record, zone) do
     field = Series.anchor_field(%Series{anchor: draft.anchor})
 
     time =
-      case Map.fetch!(task, field) do
+      case Map.fetch!(record, field) do
         nil -> nil
         at -> at |> Dates.to_local(zone) |> elem(1)
       end
@@ -1068,10 +1080,13 @@ defmodule MarskalWeb.RepeatPanel do
 
   # The first date and the three after it, as the rule in the draft gives
   # them. A running series counts from its latest occurrence.
-  defp preview(draft, series, task, user, zone) do
+  defp preview(draft, series, record, user, zone) do
     attrs = draft_to_attrs(draft, zone)
-    changeset = Series.create_changeset(%Series{}, user, Map.put(attrs, "kind", "task"))
-    first = if series, do: Recurrence.latest_slot(series), else: starts_at(draft, task, zone)
+
+    changeset =
+      Series.create_changeset(%Series{}, user, Map.put(attrs, "kind", to_string(kind(record))))
+
+    first = if series, do: Recurrence.latest_slot(series), else: starts_at(draft, record, zone)
 
     if changeset.valid? and first do
       rule = %{Ecto.Changeset.apply_changes(changeset) | week_start: week_start(series, user)}
@@ -1153,7 +1168,7 @@ defmodule MarskalWeb.RepeatPanel do
 
   defp day_label(at, zone), do: MarskalWeb.DateFields.short(at, :due_at, zone) |> drop_time()
 
-  # The row shows days; the time is the task's own.
+  # The row shows days; the time is the task's or project's own.
   defp drop_time(label), do: String.replace(label, ~r/ \d\d:\d\d$/, "")
 
   defp unit_word(unit, interval) when interval in [1, "1"],
