@@ -27,7 +27,7 @@ defmodule Marskal.Recurrence.NextOccurrenceTest do
       first =
         occurrence_fixture(user, series, due, %{
           notes: "Bins too",
-          url: "https://example.com/trash",
+          url: "https://marskal.example/trash",
           project_id: project.id,
           flagged: true,
           defer_until: DateTime.add(due, -2, :day)
@@ -46,7 +46,7 @@ defmodule Marskal.Recurrence.NextOccurrenceTest do
       assert %Task{
                title: "Trash",
                notes: "Bins too",
-               url: "https://example.com/trash",
+               url: "https://marskal.example/trash",
                flagged: true,
                project_id: project_id,
                inbox: false,

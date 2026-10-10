@@ -7,7 +7,7 @@ defmodule TodoistSnapshot do
     %{
       "sync_token" => "snapshot-1",
       "full_sync" => true,
-      "user" => %{"email" => "ada@example.com", "inbox_project_id" => "in1"},
+      "user" => %{"email" => "ada@marskal.example", "inbox_project_id" => "in1"},
       "folders" => [
         %{"id" => "fold1", "name" => "Work", "is_deleted" => false, "child_order" => 1},
         %{"id" => "fold2", "name" => "Old", "is_deleted" => true}

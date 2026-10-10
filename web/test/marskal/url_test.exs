@@ -15,7 +15,7 @@ defmodule Marskal.UrlTest do
     for url <- [
           "https://www.vivit.dk/kalender/",
           "file:///Users/me/Documents/plan.md",
-          "mailto:someone@example.com",
+          "mailto:someone@marskal.example",
           "obsidian://open?vault=Notes&file=Plan"
         ] do
       assert {:ok, task} = Tasks.create_task(user, %{"title" => "T", "url" => url}, command())
@@ -40,7 +40,7 @@ defmodule Marskal.UrlTest do
 
   test "refuses a relative URL, whitespace, and scripts", %{user: user} do
     for url <- [
-          "www.example.com",
+          "www.marskal.example",
           "/tmp/file",
           "https://a.example/with space",
           "javascript:alert(1)",

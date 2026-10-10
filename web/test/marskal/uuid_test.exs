@@ -7,7 +7,7 @@ defmodule Marskal.UuidTest do
   # Expected values come from Python's uuid.uuid5, an independent
   # implementation.
   test "v5 matches the RFC 9562 example" do
-    assert Uuid.v5("6ba7b810-9dad-11d1-80b4-00c04fd430c8", "www.example.com") ==
+    assert Uuid.v5("6ba7b810-9dad-11d1-80b4-00c04fd430c8", "www.marskal.example") ==
              "2ed6657d-e927-568b-95e1-2665a8aea6a2"
   end
 

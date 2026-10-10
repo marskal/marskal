@@ -36,7 +36,7 @@ in
         options.server = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           default = null;
-          example = "https://tasks.example.com";
+          example = "https://tasks.marskal.example";
           description = ''
             The server's base URL. Without it, `marskal` uses the server
             last signed in to.

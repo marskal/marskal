@@ -25,7 +25,7 @@ signedOutView.addEventListener("submit", (event) => {
 
   const server = serverUrl(serverInput.value);
   if (!server) {
-    show("Enter the server’s address, such as https://tasks.example.com.");
+    show("Enter the server’s address, such as https://tasks.marskal.example.");
     return;
   }
 

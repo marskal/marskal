@@ -25,7 +25,7 @@ inputs.marskal-terminal.url = "git+https://…/marskal?dir=clients/terminal";
 imports = [ inputs.marskal-terminal.homeModules.default ];
 programs.marskal = {
   enable = true;
-  settings.server = "https://tasks.example.com";  # config.toml
+  settings.server = "https://tasks.marskal.example";  # config.toml
   # keychain = false;  # headless: tokens in a file
 };
 ```
@@ -36,7 +36,7 @@ Then sign in once with `marskal login`. To install the package alone, use
 ## Signing in
 
 ```sh
-marskal login --server https://tasks.example.com
+marskal login --server https://tasks.marskal.example
 ```
 
 `login` shows a code and opens the browser, where you confirm the code,

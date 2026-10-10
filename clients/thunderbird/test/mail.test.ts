@@ -13,9 +13,9 @@ import {
 
 const mail: Mail = {
   subject: "Invoice  for\tOctober",
-  author: "Ada Lovelace <ada@example.com>",
+  author: "Ada Lovelace <ada@marskal.example>",
   date: new Date("2026-10-08T09:30:00Z"),
-  headerMessageId: "abc.123@mail.example.com",
+  headerMessageId: "abc.123@mail.marskal.example",
   text: "Please pay by Friday.\n",
 };
 
@@ -24,8 +24,8 @@ const isoDate = (date: Date) => date.toISOString();
 test("a message becomes an inbox task", () => {
   assert.deepEqual(taskFields(mail, isoDate), {
     title: "Invoice for October",
-    notes: "From: Ada Lovelace <ada@example.com>  \nDate: 2026-10-08T09:30:00.000Z\n\nPlease pay by Friday.",
-    url: "mid:abc.123@mail.example.com",
+    notes: "From: Ada Lovelace <ada@marskal.example>  \nDate: 2026-10-08T09:30:00.000Z\n\nPlease pay by Friday.",
+    url: "mid:abc.123@mail.marskal.example",
     inbox: true,
   });
 });
@@ -33,13 +33,13 @@ test("a message becomes an inbox task", () => {
 test("without text the notes are the sender and date", () => {
   assert.equal(
     taskFields({ ...mail, text: null }, isoDate).notes,
-    "From: Ada Lovelace <ada@example.com>  \nDate: 2026-10-08T09:30:00.000Z",
+    "From: Ada Lovelace <ada@marskal.example>  \nDate: 2026-10-08T09:30:00.000Z",
   );
 });
 
 test("a message without a subject is titled by its sender", () => {
-  assert.equal(title({ subject: "  ", author: "Ada Lovelace <ada@example.com>" }), "Mail from Ada Lovelace");
-  assert.equal(title({ subject: "", author: "<ada@example.com>" }), "Mail from ada@example.com");
+  assert.equal(title({ subject: "  ", author: "Ada Lovelace <ada@marskal.example>" }), "Mail from Ada Lovelace");
+  assert.equal(title({ subject: "", author: "<ada@marskal.example>" }), "Mail from ada@marskal.example");
   assert.equal(title({ subject: "", author: "" }), "Mail");
 });
 
@@ -61,8 +61,8 @@ test("Message-IDs become mid: URLs", () => {
 });
 
 test("sender names", () => {
-  assert.equal(senderName('"Lovelace, Ada" <ada@example.com>'), "Lovelace, Ada");
-  assert.equal(senderName("ada@example.com"), "ada@example.com");
+  assert.equal(senderName('"Lovelace, Ada" <ada@marskal.example>'), "Lovelace, Ada");
+  assert.equal(senderName("ada@marskal.example"), "ada@marskal.example");
 });
 
 test("plain text is preferred to HTML", async () => {

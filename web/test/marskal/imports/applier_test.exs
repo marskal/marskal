@@ -226,7 +226,7 @@ defmodule Marskal.Imports.ApplierTest do
     batch = preview_todoist!(user)
     assert batch.status == :previewed
     assert batch.stats["tags"] == 5
-    assert batch.external_account == "ada@example.com"
+    assert batch.external_account == "ada@marskal.example"
 
     assert {:ok, applied} = Applier.call(batch)
     assert applied.stats["created"]["tasks"] == 4
@@ -310,7 +310,7 @@ defmodule Marskal.Imports.ApplierTest do
         channel: :oauth,
         status: :pending,
         filename: "Todoist",
-        external_account: "ada@example.com",
+        external_account: "ada@marskal.example",
         payload: TodoistSnapshot.json()
       })
       |> Repo.insert()

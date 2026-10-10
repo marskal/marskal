@@ -13,7 +13,7 @@ use crate::state::State;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize)]
 pub struct Config {
-    /// The server's base URL, such as `https://tasks.example.com`.
+    /// The server's base URL, such as `https://tasks.marskal.example`.
     pub server: Option<String>,
 }
 
