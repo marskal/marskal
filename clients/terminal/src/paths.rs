@@ -42,8 +42,8 @@ pub fn create_data_dir() -> std::io::Result<PathBuf> {
     }
 }
 
-/// `$XDG_STATE_HOME/marskal`: the token file where there is no keychain,
-/// and the refresh lock.
+/// `$XDG_STATE_HOME/marskal`: what `marskal` records (`state.toml`), the
+/// token file where there is no keychain, and the refresh lock.
 pub fn state_dir() -> PathBuf {
     base("XDG_STATE_HOME", ".local/state").join("marskal")
 }
@@ -74,8 +74,8 @@ mod tests {
     #[test]
     fn slugs_keep_host_and_port() {
         assert_eq!(
-            server_slug("https://tasks.example.com/"),
-            "tasks.example.com"
+            server_slug("https://tasks.marskal.example/"),
+            "tasks.marskal.example"
         );
         assert_eq!(
             server_slug("http://marskal.localhost:8275"),

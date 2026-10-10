@@ -62,7 +62,7 @@ defmodule Marskal.Imports.OmnifocusNoteTest do
           <run>
             <style>
               <value key="font-weight">9</value>
-              <value key="link">https://example.com</value>
+              <value key="link">https://marskal.example</value>
             </style>
             <lit>docs</lit>
           </run>
@@ -76,6 +76,6 @@ defmodule Marskal.Imports.OmnifocusNoteTest do
     assert markdown =~ "**bold**"
     assert markdown =~ "*italic*"
     assert markdown =~ "~~gone~~"
-    assert markdown =~ "[**docs**](https://example.com)"
+    assert markdown =~ "[**docs**](https://marskal.example)"
   end
 end

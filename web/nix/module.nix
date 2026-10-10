@@ -12,8 +12,8 @@
   Admin commands run the release as the service user, with the service
   environment:
 
-      sudo -u marskal marskal remote
-      sudo -u marskal marskal eval "Marskal.Release.migrate()"
+      sudo -u marskal marskal-server remote
+      sudo -u marskal marskal-server eval "Marskal.Release.migrate()"
 */
 { self }:
 {
@@ -65,7 +65,7 @@ let
     ProtectHome = true;
   };
 
-  adminCommand = pkgs.writeShellScriptBin "marskal" ''
+  adminCommand = pkgs.writeShellScriptBin "marskal-server" ''
     set -a
     ${lib.toShellVars environment}
     . ${lib.escapeShellArg cfg.secretsFile}

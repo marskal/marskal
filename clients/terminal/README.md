@@ -9,10 +9,34 @@ devenv shell        # Rust toolchain
 cargo build --release
 ```
 
+The devenv shell sets `MARSKAL_SERVER` to the local web app,
+http://marskal.localhost:8275 (`devenv up` in `web/`). Inside it, any
+`marskal` talks to that server unless you give `--server`.
+
+## Installing with Nix
+
+The flake here builds `marskal` for Linux (x86_64, aarch64) and Apple
+Silicon macOS, and has a Home Manager module for both:
+
+```nix
+inputs.marskal-terminal.url = "git+https://…/marskal?dir=clients/terminal";
+
+# in a Home Manager configuration
+imports = [ inputs.marskal-terminal.homeModules.default ];
+programs.marskal = {
+  enable = true;
+  settings.server = "https://tasks.marskal.example";  # config.toml
+  # keychain = false;  # headless: tokens in a file
+};
+```
+
+Then sign in once with `marskal login`. To install the package alone, use
+`packages.${system}.default`.
+
 ## Signing in
 
 ```sh
-marskal login --server https://tasks.example.com
+marskal login --server https://tasks.marskal.example
 ```
 
 `login` shows a code and opens the browser, where you confirm the code,
@@ -57,9 +81,14 @@ XDG base directories, on macOS too:
 
 | Path | Holds |
 |------|-------|
-| `$XDG_CONFIG_HOME/marskal/config.toml` | The server URL |
+| `$XDG_CONFIG_HOME/marskal/config.toml` | Your settings: `server`. Optional; `marskal` never writes it |
 | `$XDG_DATA_HOME/marskal/<server>.db` | The local database and its outbox of unsent edits |
+| `$XDG_STATE_HOME/marskal/state.toml` | The server last signed in to |
 | `$XDG_STATE_HOME/marskal/` | The refresh lock; the token file where there is no keychain |
+
+The server is `--server` (or `MARSKAL_SERVER`), else `server` in
+config.toml, else the one last signed in to. `login` says so when a
+setting will send later commands elsewhere.
 
 Tokens go to the OS keychain. `MARSKAL_NO_KEYCHAIN=1` keeps them in the
 token file (mode 0600) instead. `marskal` creates `$XDG_DATA_HOME/marskal`

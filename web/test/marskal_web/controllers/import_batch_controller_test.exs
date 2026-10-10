@@ -49,7 +49,7 @@ defmodule MarskalWeb.ImportBatchControllerTest do
     query = conn |> redirected_to() |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
     assert query["scope"] == "data:read"
     assert query["client_id"] == "todoist-client"
-    assert query["redirect_uri"] == "http://www.example.com/imports/todoist/callback"
+    assert query["redirect_uri"] == "http://www.marskal.example/imports/todoist/callback"
 
     conn =
       get(
@@ -61,7 +61,7 @@ defmodule MarskalWeb.ImportBatchControllerTest do
     assert redirected_to(conn) == ~p"/imports/#{batch.id}"
     assert batch.source == "todoist"
     assert batch.channel == :oauth
-    assert batch.external_account == "ada@example.com"
+    assert batch.external_account == "ada@marskal.example"
     assert_enqueued(worker: ParseJob, args: %{batch_id: batch.id})
 
     payload = Imports.load_payload(batch).payload

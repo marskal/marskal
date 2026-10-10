@@ -31,7 +31,7 @@ pub(crate) fn clean(url: &str) -> Result<Option<String>> {
         "" => Ok(None),
         url if valid(url) => Ok(Some(url.to_string())),
         _ => Err(Error::Invalid(
-            "a URL must be absolute, such as https://example.com, and not a script".into(),
+            "a URL must be absolute, such as https://marskal.example, and not a script".into(),
         )),
     }
 }
@@ -45,13 +45,13 @@ mod tests {
         for url in [
             "https://a.example",
             "file:///Users/me/plan.md",
-            "mailto:me@example.com",
+            "mailto:me@marskal.example",
             "obsidian://open?vault=x",
         ] {
             assert!(valid(url), "{url}");
         }
         for url in [
-            "www.example.com",
+            "www.marskal.example",
             "/tmp/x",
             "https:",
             "https://a.example/a b",

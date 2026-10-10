@@ -36,7 +36,7 @@ config :marskal, Oban, testing: :manual
 config :marskal, Marskal.Imports.Todoist,
   client_id: "todoist-client",
   client_secret: "todoist-secret",
-  redirect_uri: "http://www.example.com/imports/todoist/callback",
+  redirect_uri: "http://www.marskal.example/imports/todoist/callback",
   req_options: [plug: {Req.Test, Marskal.Imports.Todoist}]
 
 # Hydra's admin API is stubbed (Marskal.HydraFixtures).

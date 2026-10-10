@@ -12,6 +12,7 @@ mod config;
 mod error;
 mod output;
 mod paths;
+mod state;
 mod sync;
 
 use std::path::PathBuf;
@@ -26,9 +27,10 @@ use uuid::Uuid;
 
 use crate::api::Api;
 use crate::auth::TokenStore;
-use crate::config::{Config, normalize_server};
+use crate::config::{Config, default_server, normalize_server};
 use crate::error::{CliError, Result};
 use crate::output::Output;
+use crate::state::State;
 
 const STALE_AFTER_SECONDS: i64 = 60;
 
@@ -305,7 +307,7 @@ impl Context {
     fn open(cli: &Cli) -> Result<Context> {
         let server = match &cli.server {
             Some(server) => Some(normalize_server(server)?),
-            None => Config::load()?.server,
+            None => default_server()?,
         };
         Context::open_with(server, cli.db.clone(), cli.offline)
     }
@@ -408,7 +410,7 @@ fn run(cli: Cli, output: &Output) -> Result<()> {
         } => {
             let server = match &cli.server {
                 Some(server) => normalize_server(server)?,
-                None => Config::load()?.server.ok_or_else(|| {
+                None => default_server()?.ok_or_else(|| {
                     CliError::usage("Give the server: marskal login --server https://…")
                 })?,
             };
@@ -424,14 +426,22 @@ fn run(cli: Cli, output: &Output) -> Result<()> {
 
             let signed_in = auth::login(&api, &tokens, scope, !no_browser)?;
 
-            let mut config = Config::load()?;
-            config.server = Some(server.clone());
-            config.save()?;
+            State {
+                server: Some(server.clone()),
+            }
+            .save()?;
+            // Where later commands look first. If it names another server,
+            // say so: signing in here does not change it.
+            let shadowed = match std::env::var("MARSKAL_SERVER") {
+                Ok(env) if !env.is_empty() => Some((normalize_server(&env)?, "MARSKAL_SERVER")),
+                _ => Config::load()?.server()?.map(|c| (c, "config.toml")),
+            }
+            .filter(|(other, _)| *other != server);
 
             let mut context =
                 Context::open_with(Some(server.clone()), cli.db.clone(), cli.offline)?;
             let unsynced = context.try_sync();
-            output.login(&server, &signed_in.scope, unsynced.as_deref());
+            output.login(&server, &signed_in.scope, shadowed, unsynced.as_deref());
             Ok(())
         }
 

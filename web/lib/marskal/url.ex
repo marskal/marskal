@@ -19,7 +19,7 @@ defmodule Marskal.Url do
     |> validate_length(:url, max: @max)
     |> validate_change(:url, fn :url, url ->
       cond do
-        not Regex.match?(@shape, url) -> [url: "must be a full URL, like https://example.com"]
+        not Regex.match?(@shape, url) -> [url: "must be a full URL, like https://marskal.example"]
         not safe?(url) -> [url: "cannot use that scheme"]
         true -> []
       end
