@@ -164,7 +164,11 @@ defmodule Marskal.Recurrence.NextOccurrenceTest do
                %Task{title: "Card", state: :to_do, series_id: nil}
              ] = Tasks.Outline.children(next)
 
-      assert [%Task{title: "Wrap", state: :to_do}] = Tasks.Outline.children(gift_copy)
+      wrap_id = Marskal.Uuid.v5(next.id, wrap.id)
+
+      assert [%Task{id: ^wrap_id, title: "Wrap", state: :to_do}] =
+               Tasks.Outline.children(gift_copy)
+
       assert gift_copy.inbox == next.inbox
 
       zone = "Europe/Copenhagen"
@@ -182,8 +186,8 @@ defmodule Marskal.Recurrence.NextOccurrenceTest do
                )
 
       # The old tree stays as it was.
-      assert [%Task{id: wrap_id, state: :done}] = Tasks.Outline.children(gift)
-      assert wrap_id == wrap.id
+      assert [%Task{id: old_wrap_id, state: :done}] = Tasks.Outline.children(gift)
+      assert old_wrap_id == wrap.id
     end
 
     test "a client's Done creates it, and the next pull carries it", %{user: user} do

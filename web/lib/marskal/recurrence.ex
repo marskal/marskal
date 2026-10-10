@@ -464,38 +464,41 @@ defmodule Marskal.Recurrence do
     {:ok, task} = Tasks.create_task(user, attrs, command_id, generated: true)
     copy_tags(user, latest, task, command_id)
     anchor_at = Map.fetch!(latest, Series.anchor_field(series))
-    copy_subtasks(user, latest, task, {anchor_at, slot}, command_id)
+    copy = {task.id, anchor_at, slot}
+    copy_tasks(user, Tasks.Outline.children(latest), %{parent_id: task.id}, copy, command_id)
     task
   end
 
-  # The live subtasks under the latest, copied under the next in the same
-  # order, every one To-Do, Dropped ones too. A copy's id is v5 of the new
-  # occurrence and the task copied, so the tree has one name wherever it
-  # is made. A subtask in a series of its own is copied as a plain task.
-  defp copy_subtasks(user, source, copy, {anchor_at, slot} = shift, command_id) do
+  # Copies `tasks` into the new occurrence at `place`, with the live
+  # subtasks under them, in the same order, every one To-Do, Dropped ones
+  # too. A copy's id is v5 of the new occurrence and the task copied, so
+  # the tree has one name wherever it is made. Dates keep their distance
+  # from the anchor. A task in a series of its own is copied as a plain
+  # task.
+  defp copy_tasks(user, tasks, place, {occurrence_id, anchor_at, slot} = copy, command_id) do
     zone = Accounts.timezone(user)
 
-    for subtask <- Tasks.Outline.children(source) do
-      id = Marskal.Uuid.v5(copy.id, subtask.id)
-      subtask_command = Marskal.Uuid.v5(command_id, "task|#{id}")
+    for source <- tasks do
+      id = Marskal.Uuid.v5(occurrence_id, source.id)
+      task_command = Marskal.Uuid.v5(command_id, "task|#{id}")
 
       attrs =
-        subtask
+        source
         |> Schedule.shift_subtask_dates(anchor_at, slot, zone)
         |> Map.merge(%{
           id: id,
-          title: subtask.title,
-          notes: subtask.notes,
-          url: subtask.url,
-          flagged: subtask.flagged,
-          parent_id: copy.id,
-          rank: subtask.rank,
-          deferred_indefinitely: subtask.deferred_indefinitely
+          title: source.title,
+          notes: source.notes,
+          url: source.url,
+          flagged: source.flagged,
+          rank: source.rank,
+          deferred_indefinitely: source.deferred_indefinitely
         })
+        |> Map.merge(place)
 
-      {:ok, subtask_copy} = Tasks.create_task(user, attrs, subtask_command)
-      copy_tags(user, subtask, subtask_copy, subtask_command)
-      copy_subtasks(user, subtask, subtask_copy, shift, command_id)
+      {:ok, task} = Tasks.create_task(user, attrs, task_command)
+      copy_tags(user, source, task, task_command)
+      copy_tasks(user, Tasks.Outline.children(source), %{parent_id: task.id}, copy, command_id)
     end
   end
 
