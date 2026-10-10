@@ -3,8 +3,8 @@ use std::sync::{Arc, Mutex};
 
 use jiff::Timestamp;
 use marskal_sync::{
-    Anchor, Clock, Entity, Frequency, Location, Mode, NewTask, Op, PullResponse, PullUser,
-    PushResult, PushStatus, Store, TaskFilter, TaskPatch, TaskState,
+    Anchor, Clock, Entity, Frequency, Location, Mode, NewProject, NewTask, Op, PullResponse,
+    PullUser, PushResult, PushStatus, Store, TaskFilter, TaskPatch, TaskState,
 };
 use serde_json::{Map, Value, json};
 use uuid::Uuid;
@@ -710,7 +710,9 @@ fn a_database_from_before_urls_asks_for_a_snapshot() {
     // Back to the schema a client built before URLs left.
     let conn = rusqlite::Connection::open(&path).unwrap();
     conn.execute_batch(
-        "ALTER TABLE tasks DROP COLUMN url;
+        "ALTER TABLE tasks DROP COLUMN flagged;
+         ALTER TABLE projects DROP COLUMN flagged;
+         ALTER TABLE tasks DROP COLUMN url;
          ALTER TABLE projects DROP COLUMN url;
          ALTER TABLE recurrence_series DROP COLUMN week_start;
          ALTER TABLE recurrence_series DROP COLUMN on_days;
@@ -727,4 +729,72 @@ fn a_database_from_before_urls_asks_for_a_snapshot() {
     assert_eq!(store.pull_cursor().unwrap(), None);
 
     std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
+fn a_flag_on_the_task_or_its_project_puts_it_in_flagged() {
+    let (mut store, _clock) = store();
+    let home = store
+        .add_project(NewProject {
+            title: "Home".into(),
+            ..NewProject::default()
+        })
+        .unwrap();
+    let paint = store
+        .add_task(NewTask {
+            title: "Paint".into(),
+            location: Some(Location::Project(home)),
+            ..NewTask::default()
+        })
+        .unwrap();
+    let milk = store
+        .add_task(NewTask {
+            title: "Milk".into(),
+            flagged: true,
+            ..NewTask::default()
+        })
+        .unwrap();
+    store
+        .add_task(NewTask {
+            title: "Under milk".into(),
+            parent_id: Some(milk),
+            ..NewTask::default()
+        })
+        .unwrap();
+
+    assert_eq!(store.pending(10).unwrap()[2].fields["flagged"], true);
+    assert_eq!(
+        titles(&store, TaskFilter::Flagged { unavailable: false }),
+        vec!["Milk"]
+    );
+
+    store.set_project_flagged(home, true).unwrap();
+    store
+        .edit_task(
+            milk,
+            TaskPatch {
+                flagged: Some(false),
+                ..TaskPatch::default()
+            },
+        )
+        .unwrap();
+
+    let world = store.world().unwrap();
+    let flagged = world.tasks(TaskFilter::Flagged { unavailable: false });
+    assert_eq!(flagged.len(), 1);
+    assert_eq!(flagged[0].task.id, paint);
+    assert!(flagged[0].flagged);
+    assert!(!flagged[0].task.flagged);
+}
+
+#[test]
+fn a_pulled_flag_is_kept() {
+    let (mut store, _clock) = store();
+    let id = Uuid::now_v7();
+    let row = task_row(id, "Call", json!({ "flagged": true }));
+    store
+        .apply_pull(&pull(1, true, vec![("task", row)]))
+        .unwrap();
+
+    assert!(store.world().unwrap().task(id).unwrap().flagged);
 }

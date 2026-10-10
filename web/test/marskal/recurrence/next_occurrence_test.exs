@@ -29,6 +29,7 @@ defmodule Marskal.Recurrence.NextOccurrenceTest do
           notes: "Bins too",
           url: "https://example.com/trash",
           project_id: project.id,
+          flagged: true,
           defer_until: DateTime.add(due, -2, :day)
         })
 
@@ -46,6 +47,7 @@ defmodule Marskal.Recurrence.NextOccurrenceTest do
                title: "Trash",
                notes: "Bins too",
                url: "https://example.com/trash",
+               flagged: true,
                project_id: project_id,
                inbox: false,
                state: :to_do,

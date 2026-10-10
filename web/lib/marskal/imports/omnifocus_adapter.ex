@@ -427,6 +427,7 @@ defmodule Marskal.Imports.OmnifocusAdapter do
             planned: row["planned"],
             due: row["due"],
             resolved_at: row["completed"],
+            flagged: row["flagged"] == true,
             tag_source_ids: Map.get(tag_ids, row["id"], []),
             extras: extras_for(row),
             problems: problems_for(row)
@@ -470,6 +471,7 @@ defmodule Marskal.Imports.OmnifocusAdapter do
             planned: row["planned"],
             due: row["due"],
             resolved_at: row["completed"],
+            flagged: row["flagged"] == true,
             tag_source_ids: Map.get(tag_ids, row["id"], []),
             extras: row |> extras_for() |> compact(),
             problems: problems_for(row)
@@ -524,9 +526,6 @@ defmodule Marskal.Imports.OmnifocusAdapter do
 
   defp extras_for(row) do
     %{}
-    |> then(fn extras ->
-      if row["flagged"], do: Map.put(extras, "flagged", true), else: extras
-    end)
     |> put_extra("repeat", row["repeat"])
     |> then(fn extras ->
       if present?(row["repeat"]) do

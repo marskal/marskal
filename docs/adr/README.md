@@ -33,6 +33,7 @@ This directory holds **ADRs** — durable decisions and their context.
 | [0022](0022-task-and-project-url.md) | A URL on tasks and projects | Accepted |
 | [0023](0023-user-preferences.md) | User preferences | Accepted |
 | [0024](0024-thunderbird-extension.md) | Thunderbird extension | Accepted |
+| [0025](0025-flagged.md) | Flagged tasks and projects | Accepted |
 
 ## When to add an ADR
 

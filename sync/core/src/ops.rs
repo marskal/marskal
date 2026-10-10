@@ -43,6 +43,8 @@ pub struct NewTask {
     pub notes: Option<String>,
     /// Absolute, as [`crate::url::valid`] checks it. Blank means none.
     pub url: Option<String>,
+    /// ADR 0025.
+    pub flagged: bool,
     pub location: Option<Location>,
     /// A subtask lives where its parent does, whatever `location` says.
     pub parent_id: Option<Uuid>,
@@ -60,6 +62,7 @@ pub struct TaskPatch {
     pub notes: Option<Option<String>>,
     /// `Some("")` or `Some(None)` clears it.
     pub url: Option<Option<String>>,
+    pub flagged: Option<bool>,
     pub planned_at: Option<Option<Timestamp>>,
     pub due_at: Option<Option<Timestamp>>,
     /// Defer until an instant, or `Some(None)` to stop deferring.
@@ -74,6 +77,7 @@ pub struct NewProject {
     pub title: String,
     pub notes: Option<String>,
     pub url: Option<String>,
+    pub flagged: bool,
     pub folder_id: Option<Uuid>,
 }
 
@@ -125,6 +129,9 @@ impl Store {
             if let Some(url) = &url {
                 fields.insert("url".into(), url.clone().into());
             }
+            if new.flagged {
+                fields.insert("flagged".into(), true.into());
+            }
             put_time(&mut fields, "planned_at", new.planned_at);
             put_time(&mut fields, "due_at", new.due_at);
             if new.deferred_indefinitely {
@@ -139,7 +146,7 @@ impl Store {
         Ok(id)
     }
 
-    /// Changes a task's title, notes, URL, or dates.
+    /// Changes a task's title, notes, URL, flag, or dates.
     pub fn edit_task(&mut self, id: Uuid, patch: TaskPatch) -> Result<()> {
         let mut fields = Map::new();
 
@@ -152,6 +159,9 @@ impl Store {
         if let Some(new_url) = &patch.url {
             let new_url = new_url.as_deref().map(url::clean).transpose()?.flatten();
             fields.insert("url".into(), new_url.into());
+        }
+        if let Some(flagged) = patch.flagged {
+            fields.insert("flagged".into(), flagged.into());
         }
         if let Some(planned) = patch.planned_at {
             fields.insert("planned_at".into(), planned.map(stamp).into());
@@ -227,6 +237,7 @@ impl Store {
                 "title": title,
                 "notes": new.notes,
                 "url": url,
+                "flagged": new.flagged,
                 "project_folder_id": new.folder_id.map(|f| f.to_string()),
             }));
             run(tx, now, Entity::Project, id, Op::Insert, fields)
@@ -239,6 +250,14 @@ impl Store {
     pub fn set_project_state(&mut self, id: Uuid, state: TaskState) -> Result<()> {
         self.write(|tx, now| {
             let fields = object(json!({ "state": state.as_str() }));
+            run(tx, now, Entity::Project, id, Op::Patch, fields)
+        })
+    }
+
+    /// Flags a project, which flags its tasks, or clears its flag (ADR 0025).
+    pub fn set_project_flagged(&mut self, id: Uuid, flagged: bool) -> Result<()> {
+        self.write(|tx, now| {
+            let fields = object(json!({ "flagged": flagged }));
             run(tx, now, Entity::Project, id, Op::Patch, fields)
         })
     }

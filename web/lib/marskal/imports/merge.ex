@@ -17,6 +17,7 @@ defmodule Marskal.Imports.Merge do
       ~w(title),
       ~w(notes),
       ~w(url),
+      ~w(flagged),
       ~w(state),
       ~w(inbox project_id),
       ~w(parent_id),
@@ -28,6 +29,7 @@ defmodule Marskal.Imports.Merge do
       ~w(title),
       ~w(notes),
       ~w(url),
+      ~w(flagged),
       ~w(state),
       ~w(project_folder_id),
       ~w(defer_until deferred_indefinitely),
@@ -36,6 +38,13 @@ defmodule Marskal.Imports.Merge do
     ],
     folder: [~w(name), ~w(parent_id), ~w(state)],
     tag: [~w(name), ~w(parent_id), ~w(state)]
+  }
+
+  @schemas %{
+    task: Marskal.Tasks.Task,
+    project: Marskal.Projects.Project,
+    folder: Marskal.ProjectFolders.ProjectFolder,
+    tag: Marskal.Tags.Tag
   }
 
   def groups(kind), do: Map.fetch!(@groups, kind)
@@ -55,8 +64,7 @@ defmodule Marskal.Imports.Merge do
   """
   def fields(kind, base, current, incoming) do
     Enum.reduce(groups(kind), {%{}, []}, fn group, {patch, kept} ->
-      # A field the base predates was not set then: it had its default.
-      b = Map.new(group, &{&1, Map.get(base, &1)})
+      b = Map.take(Map.merge(defaults(kind), base), group)
       c = Map.take(current, group)
       i = Map.take(incoming, group)
 
@@ -67,6 +75,9 @@ defmodule Marskal.Imports.Merge do
       end
     end)
   end
+
+  # A field the base predates was not set then: it had its default.
+  defp defaults(kind), do: snapshot(kind, struct(Map.fetch!(@schemas, kind)))
 
   @doc """
   `{add, remove}` for a set of tag ids. A tag the user added or removed

@@ -33,6 +33,7 @@ This file is **short and actionable**. Rationale and history live in
 | URL on tasks & projects | [0022](docs/adr/0022-task-and-project-url.md) |
 | User preferences | [0023](docs/adr/0023-user-preferences.md) |
 | Thunderbird extension | [0024](docs/adr/0024-thunderbird-extension.md) |
+| Flagged tasks & projects | [0025](docs/adr/0025-flagged.md) |
 | Repository layout | [0015](docs/adr/0015-repository-layout.md) |
 
 ---
@@ -88,7 +89,7 @@ Default home: **Open tasks** stream. Timezone is stored per user, default
   the rule and `kind` (task | project). Occurrences are tasks or projects with
   `series_id` and an immutable `occurrence_for`. The first build repeats tasks only.
 - The next occurrence copies the latest (the live one created last): title, notes,
-  URL, location, parent, tags. In the first build a task's subtasks are not copied.
+  URL, flag, location, parent, tags. In the first build a task's subtasks are not copied.
   Other dates keep their offset from the anchor on the user's zone clock.
 - Occurrences are the history; no completions table. A generated id that exists,
   discarded or not, is never created again.
@@ -297,6 +298,9 @@ The repository root is the product, not the web app (ADR 0015).
 - Tasks and projects have one optional `url` (ADR 0022). Titles stay plain
   text; an import moves a title's link there. `javascript:`, `data:` and
   `vbscript:` are refused.
+- Tasks and projects have one `flagged` boolean (ADR 0025); no priority
+  levels. A flagged project flags its tasks at read time, a parent task
+  does not. Imports map their flag, star, pin, or top priority to it.
 - Structure: `tasks.parent_id`, `project_folders` tree, `projects.project_folder_id`;
   no project-to-project parent (ADR 0009). Prevent parent cycles.
   A subtask lives where its parent does; a move to another location leaves the

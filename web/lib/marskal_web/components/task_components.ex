@@ -48,6 +48,7 @@ defmodule MarskalWeb.TaskComponents do
 
   attr :zone, :string, default: "Europe/Copenhagen", doc: "the user's zone, for date labels"
   attr :repeating, :any, default: MapSet.new(), doc: "ids of tasks in a running series"
+  attr :flagged, :any, default: MapSet.new(), doc: "ids of flagged tasks, own flag or project's"
 
   def list(assigns) do
     assigns =
@@ -193,6 +194,14 @@ defmodule MarskalWeb.TaskComponents do
           padding: 0;
           border: 0;
           color: var(--muted);
+        }
+
+        .mark--flag {
+          display: inline-flex;
+          align-items: center;
+          padding: 0;
+          border: 0;
+          color: var(--flag);
         }
 
         .mark--overdue {
@@ -409,10 +418,18 @@ defmodule MarskalWeb.TaskComponents do
             :if={
               (@mark_inbox and task.inbox) or d.planned_at != nil or d.due_at != nil or
                 MapSet.member?(@unavailable, task.id) or MapSet.member?(@deferred, task.id) or
-                MapSet.member?(@repeating, task.id)
+                MapSet.member?(@repeating, task.id) or
+                MapSet.member?(@flagged, task.id)
             }
             class="marks"
           >
+            <span
+              :if={MapSet.member?(@flagged, task.id)}
+              class="mark mark--flag"
+              title={flag_label(task)}
+            >
+              <Lucideicons.flag class="icon" aria-label={flag_label(task)} />
+            </span>
             <span
               :if={MapSet.member?(@repeating, task.id)}
               class="mark mark--repeat"
@@ -760,6 +777,9 @@ defmodule MarskalWeb.TaskComponents do
   defp planned_today?(task, dates, zone, today) do
     task.state == :to_do and elem(Marskal.Dates.to_local(dates.planned_at, zone), 0) == today
   end
+
+  defp flag_label(%{flagged: true}), do: "Flagged"
+  defp flag_label(_task), do: "Flagged by its project"
 
   defp check_event(%{state: :to_do}), do: "complete"
   defp check_event(_task), do: "reopen"

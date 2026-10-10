@@ -227,7 +227,9 @@ defmodule MarskalWeb.InspectorPanel do
           gap: 0.4rem;
         }
 
-        .indefinite {
+        .indefinite,
+        .field label.toggle,
+        .toggle {
           display: flex;
           align-items: center;
           gap: 0.4rem;
@@ -394,6 +396,25 @@ defmodule MarskalWeb.InspectorPanel do
             Resolved along with the task or project above. Reopen that to bring this back.
           </p>
         </div>
+        <div class="field">
+          <label class="toggle">
+            <input type="hidden" name="task[flagged]" value="false" />
+            <input
+              type="checkbox"
+              id="inspector-task-flagged"
+              name="task[flagged]"
+              value="true"
+              checked={@record.flagged}
+            /> Flagged
+          </label>
+          <p
+            :if={!@record.flagged and project_flagged?(@record, @options)}
+            class="hint"
+            id="inspector-task-flagged-by-project"
+          >
+            Flagged by its project.
+          </p>
+        </div>
         <MarskalWeb.DateFields.inputs
           form="task"
           id="inspector-task-dates"
@@ -512,6 +533,16 @@ defmodule MarskalWeb.InspectorPanel do
             </option>
           </select>
         </div>
+        <label class="toggle">
+          <input type="hidden" name="project[flagged]" value="false" />
+          <input
+            type="checkbox"
+            id="inspector-project-flagged"
+            name="project[flagged]"
+            value="true"
+            checked={@record.flagged}
+          /> Flagged
+        </label>
         <MarskalWeb.DateFields.inputs
           form="project"
           id="inspector-project-dates"
@@ -764,7 +795,7 @@ defmodule MarskalWeb.InspectorPanel do
   def handle_event("save", %{"task" => params}, socket) do
     attrs =
       params
-      |> Map.take(["title", "notes", "url", "state"])
+      |> Map.take(["title", "notes", "url", "flagged", "state"])
       |> Map.merge(location_params(params))
       |> Map.reject(fn {_key, value} -> value == nil end)
       |> Map.merge(date_params(params, socket))
@@ -775,7 +806,7 @@ defmodule MarskalWeb.InspectorPanel do
   def handle_event("save", %{"project" => params}, socket) do
     attrs =
       params
-      |> Map.take(["title", "notes", "url", "project_folder_id", "state"])
+      |> Map.take(["title", "notes", "url", "flagged", "project_folder_id", "state"])
       |> Map.merge(date_params(params, socket))
 
     save(socket, &Projects.update_project(&1, &2, drop_blank_title(attrs, "title"), &3))
@@ -986,6 +1017,9 @@ defmodule MarskalWeb.InspectorPanel do
   end
 
   defp options(_user, nil), do: []
+
+  defp project_flagged?(task, projects),
+    do: Enum.any?(projects, &(&1.id == task.project_id and &1.flagged))
 
   defp task_projects(user, task) do
     projects = Projects.list_open(user)

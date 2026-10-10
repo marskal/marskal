@@ -67,6 +67,25 @@ defmodule Marskal.SyncPushTest do
     assert Tasks.get_task(user, id).url == nil
   end
 
+  test "a client flags a task and a project", %{user: user} do
+    task = uuid()
+    project = uuid()
+
+    assert [%{status: "applied"}, %{status: "applied"}, %{status: "applied"}] =
+             Push.push(user, [
+               insert("project", project, %{"title" => "Home", "flagged" => true}),
+               insert("task", task, %{"title" => "Call"}),
+               patch("task", task, %{"flagged" => true})
+             ])
+
+    assert Tasks.get_task(user, task).flagged
+    assert Projects.get_project(user, project).flagged
+
+    rows = Sync.pull(user, nil).rows
+    assert [%{"flagged" => true}] = rows["task"]
+    assert [%{"flagged" => true}] = rows["project"]
+  end
+
   describe "rejected" do
     test "a field outside the allow-list", %{user: user} do
       id = uuid()

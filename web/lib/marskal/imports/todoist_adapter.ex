@@ -278,7 +278,7 @@ defmodule Marskal.Imports.TodoistAdapter do
     section = section_names[string_id(row["section_id"])]
     repeat = repeat(row["due"])
     recurrence = recurrence(repeat, row["due"])
-    names = row |> Map.get("labels", []) |> List.wrap() |> Enum.filter(&is_binary/1)
+    names = label_names(row)
     {title, url, more} = row["content"] |> blank("Untitled") |> TitleLinks.split()
 
     %TaskNode{
@@ -289,6 +289,7 @@ defmodule Marskal.Imports.TodoistAdapter do
       inbox: inbox?,
       project_source_id: project_source_id,
       parent_source_id: parent,
+      flagged: row["priority"] == 4,
       state: if(done?(row), do: "done", else: "to_do"),
       planned: date_value(row["due"]),
       due: date_value(row["deadline"]),
@@ -301,8 +302,7 @@ defmodule Marskal.Imports.TodoistAdapter do
         |> put_extra("section", section)
         |> put_extra("order_key", row["order_key"])
         |> put_extra("planned_zone", get_in(row, ["due", "timezone"]))
-        |> put_extra("repeat", repeat)
-        |> put_priority(row["priority"]),
+        |> put_extra("repeat", repeat),
       problems:
         Enum.reject(
           [
@@ -335,8 +335,7 @@ defmodule Marskal.Imports.TodoistAdapter do
     shared =
       items
       |> Enum.reject(&deleted?/1)
-      |> Enum.flat_map(fn row -> row |> Map.get("labels", []) |> List.wrap() end)
-      |> Enum.filter(&is_binary/1)
+      |> Enum.flat_map(&label_names/1)
       |> Enum.map(&tag_name/1)
       |> Enum.reject(&(&1 == "" or Map.has_key?(known, tag_key(&1))))
       |> Enum.uniq_by(&tag_key/1)
@@ -352,6 +351,18 @@ defmodule Marskal.Imports.TodoistAdapter do
       |> Enum.map(fn {tag, rank} -> %{tag | rank: rank} end)
 
     {nodes, Map.new(nodes, &{tag_key(&1.name), &1.source_id})}
+  end
+
+  # A task's labels, and the tag that keeps a P2 or P3 priority (ADR 0025).
+  # The API counts priority up: 4 is P1, which flags the task, and 1 is P4.
+  defp label_names(row) do
+    names = row |> Map.get("labels", []) |> List.wrap() |> Enum.filter(&is_binary/1)
+
+    case row["priority"] do
+      3 -> names ++ ["Priority 2"]
+      2 -> names ++ ["Priority 3"]
+      _ -> names
+    end
   end
 
   defp section_names(sections) do
@@ -415,11 +426,6 @@ defmodule Marskal.Imports.TodoistAdapter do
       _ -> nil
     end
   end
-
-  defp put_priority(extras, priority) when is_integer(priority) and priority > 1,
-    do: Map.put(extras, "priority", priority)
-
-  defp put_priority(extras, _priority), do: extras
 
   defp put_flag(extras, _key, value) when value in [nil, false], do: extras
   defp put_flag(extras, key, true), do: Map.put(extras, key, true)

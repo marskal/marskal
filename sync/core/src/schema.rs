@@ -182,6 +182,13 @@ ALTER TABLE recurrence_series DROP COLUMN month_day_kind;
 ALTER TABLE recurrence_series ADD COLUMN on_days TEXT NOT NULL DEFAULT '[]';
 INSERT OR REPLACE INTO meta (key, value) VALUES ('needs_snapshot', '1');
 "#,
+    // ADR 0025. Rows pulled before this have no flag, so the next pull is a
+    // snapshot.
+    r#"
+ALTER TABLE projects ADD COLUMN flagged INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE tasks ADD COLUMN flagged INTEGER NOT NULL DEFAULT 0;
+INSERT OR REPLACE INTO meta (key, value) VALUES ('needs_snapshot', '1');
+"#,
 ];
 
 /// Brings the database to the latest schema. `user_version` counts the

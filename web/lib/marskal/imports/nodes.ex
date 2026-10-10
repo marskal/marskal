@@ -20,6 +20,7 @@ defmodule Marskal.Imports.ProjectNode do
     :resolved_at,
     deferred_indefinitely: false,
     tag_source_ids: [],
+    flagged: false,
     extras: %{},
     problems: []
   ]
@@ -45,6 +46,7 @@ defmodule Marskal.Imports.TaskNode do
     :recurrence,
     deferred_indefinitely: false,
     tag_source_ids: [],
+    flagged: false,
     extras: %{},
     problems: []
   ]

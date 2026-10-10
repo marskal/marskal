@@ -161,7 +161,7 @@ defmodule MarskalWeb.InspectorLiveTest do
   } do
     {:ok, project} = Projects.create_project(user, %{"title" => "Launch"}, command())
 
-    {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}")
+    {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}?#{[project: project.id]}")
     view |> element("#sidebar a", "Launch") |> render_click()
 
     assert_patch(view, ~p"/projects/#{project.id}?#{[project: project.id]}")
@@ -254,6 +254,48 @@ defmodule MarskalWeb.InspectorLiveTest do
     assert has_element?(view, "#inspector-task-title[value='Oat milk']")
     assert has_element?(view, "#sidebar", "Launch")
     assert has_element?(view, "#inspector-task-location option", "Launch")
+  end
+
+  test "a flag set in the inspector puts a task in Flagged, and a project flags its tasks", %{
+    conn: conn,
+    user: user
+  } do
+    {:ok, project} = Projects.create_project(user, %{"title" => "Home"}, command())
+
+    {:ok, _} =
+      Tasks.create_task(user, %{"title" => "Call", "project_id" => project.id}, command())
+
+    {:ok, _} =
+      Tasks.create_task(user, %{"title" => "Paint", "project_id" => project.id}, command())
+
+    {:ok, view, _html} = live(conn, ~p"/flagged")
+    assert render(view) =~ "Nothing flagged."
+
+    {:ok, view, _html} = live(conn, ~p"/")
+    view |> element("#open-tasks li.task-row", "Call") |> render_click()
+    view |> form("#inspector-task", task: %{flagged: "true"}) |> render_change()
+
+    assert has_element?(view, "#open-tasks li.task-row:has(.mark--flag[title='Flagged'])", "Call")
+    refute has_element?(view, "#open-tasks li.task-row:has(.mark--flag)", "Paint")
+
+    {:ok, view, _html} = live(conn, ~p"/flagged")
+    assert has_element?(view, "#flagged-tasks li.task-row", "Call")
+    refute has_element?(view, "#flagged-tasks li.task-row", "Paint")
+
+    {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}?#{[project: project.id]}")
+    view |> form("#inspector-project", project: %{flagged: "true"}) |> render_change()
+
+    {:ok, view, _html} = live(conn, ~p"/flagged")
+    assert has_element?(view, "#flagged-tasks li.task-row", "Call")
+
+    assert has_element?(
+             view,
+             "#flagged-tasks li.task-row:has(.mark--flag[title='Flagged by its project'])",
+             "Paint"
+           )
+
+    view |> element("#flagged-tasks li.task-row", "Paint") |> render_click()
+    assert has_element?(view, "#inspector-task-flagged-by-project")
   end
 
   defp command, do: Ecto.UUID.generate()

@@ -24,6 +24,9 @@ defmodule MarskalWeb.NavComponents do
         <.link navigate={~p"/agenda"} class={link_class(@current_nav, :agenda)}>
           <Lucideicons.calendar_days class="icon" /> Agenda
         </.link>
+        <.link navigate={~p"/flagged"} class={link_class(@current_nav, :flagged)}>
+          <Lucideicons.flag class="icon" /> Flagged
+        </.link>
         <.link navigate={~p"/imports"} class={link_class(@current_nav, :import)}>
           <Lucideicons.download class="icon" /> Import
         </.link>
