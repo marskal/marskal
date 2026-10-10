@@ -128,6 +128,68 @@ defmodule Marskal.Recurrence.NextOccurrenceTest do
       assert parent_id == parent.id
     end
 
+    test "subtasks are copied under the next, To-Do, dates shifted", %{user: user} do
+      series = series_fixture(user, %{mode: :on_completion, frequency: :days, interval: 7})
+      {:ok, tag} = Tags.create_tag(user, %{name: "shop"}, command())
+      due = hours_ago(1)
+      first = occurrence_fixture(user, series, due)
+
+      {:ok, gift} =
+        Tasks.create_task(
+          user,
+          %{
+            title: "Gift",
+            parent_id: first.id,
+            notes: "Ask first",
+            flagged: true,
+            due_at: DateTime.add(due, -2, :day)
+          },
+          command()
+        )
+
+      {:ok, wrap} = Tasks.create_task(user, %{title: "Wrap", parent_id: gift.id}, command())
+      {:ok, card} = Tasks.create_task(user, %{title: "Card", parent_id: first.id}, command())
+      {:ok, gone} = Tasks.create_task(user, %{title: "Gone", parent_id: first.id}, command())
+      {:ok, _} = Tags.tag_task(user, gift.id, tag.id, command())
+      {:ok, _} = Tasks.complete_task(user, wrap.id, command())
+      {:ok, _} = Tasks.drop_task(user, card.id, command())
+      {:ok, _} = Tasks.delete_task(user, gone.id, command())
+      {:ok, _} = Tasks.complete_task(user, first.id, command())
+
+      [next] = later_occurrences(series, first)
+      gift_id = Marskal.Uuid.v5(next.id, gift.id)
+
+      assert [
+               %Task{id: ^gift_id, title: "Gift", notes: "Ask first", flagged: true} = gift_copy,
+               %Task{title: "Card", state: :to_do, series_id: nil}
+             ] = Tasks.Outline.children(next)
+
+      wrap_id = Marskal.Uuid.v5(next.id, wrap.id)
+
+      assert [%Task{id: ^wrap_id, title: "Wrap", state: :to_do}] =
+               Tasks.Outline.children(gift_copy)
+
+      assert gift_copy.inbox == next.inbox
+
+      zone = "Europe/Copenhagen"
+      {next_day, _} = Dates.to_local(next.due_at, zone)
+      {gift_day, gift_time} = Dates.to_local(gift_copy.due_at, zone)
+      {_, source_time} = Dates.to_local(gift.due_at, zone)
+      assert Date.diff(next_day, gift_day) == 2
+      assert gift_time == source_time
+
+      assert [tag.id] ==
+               Repo.all(
+                 from l in TaskTag,
+                   where: l.task_id == ^gift_copy.id and is_nil(l.discarded_at),
+                   select: l.tag_id
+               )
+
+      # The old tree stays as it was.
+      assert [%Task{id: old_wrap_id, state: :done}] = Tasks.Outline.children(gift)
+      assert old_wrap_id == wrap.id
+    end
+
     test "a client's Done creates it, and the next pull carries it", %{user: user} do
       series = series_fixture(user, %{mode: :on_completion, frequency: :days})
       first = occurrence_fixture(user, series, hours_ago(1))

@@ -109,6 +109,16 @@ defmodule Marskal.Recurrence.Schedule do
     end)
   end
 
+  @doc """
+  The dates of a subtask copied into the occurrence at `slot`. Each date
+  set on `subtask` keeps its distance from `anchor_at`, the anchor date of
+  the occurrence it was under, as `shift_dates/4` measures it.
+  """
+  def shift_subtask_dates(subtask, anchor_at, %DateTime{} = slot, zone) when is_binary(zone) do
+    slot = slot |> DateTime.shift_zone!("Etc/UTC") |> DateTime.truncate(:second)
+    Map.new(@date_fields, &{&1, shift_field(Map.get(subtask, &1), anchor_at, slot, zone)})
+  end
+
   defp calendar(series, from, zone) do
     {date, time} = Dates.to_local(from, zone)
     finish(next_date(date, series), time, zone, series.ends_at)
