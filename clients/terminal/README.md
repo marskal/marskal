@@ -9,6 +9,27 @@ devenv shell        # Rust toolchain
 cargo build --release
 ```
 
+## Installing with Nix
+
+The flake here builds `marskal` for Linux (x86_64, aarch64) and Apple
+Silicon macOS, and has a Home Manager module for both:
+
+```nix
+inputs.marskal-terminal.url = "git+https://…/marskal?dir=clients/terminal";
+
+# in a Home Manager configuration
+imports = [ inputs.marskal-terminal.homeModules.default ];
+programs.marskal = {
+  enable = true;
+  server = "https://tasks.example.com";  # sets MARSKAL_SERVER
+  # keychain = false;                    # headless: tokens in a file
+};
+```
+
+Then sign in once with `marskal login`. The module does not manage
+`config.toml`, because `login` writes it. To install the package alone, use
+`packages.${system}.default`.
+
 ## Signing in
 
 ```sh
