@@ -21,13 +21,12 @@ inputs.marskal-terminal.url = "git+https://…/marskal?dir=clients/terminal";
 imports = [ inputs.marskal-terminal.homeModules.default ];
 programs.marskal = {
   enable = true;
-  server = "https://tasks.example.com";  # sets MARSKAL_SERVER
-  # keychain = false;                    # headless: tokens in a file
+  settings.server = "https://tasks.example.com";  # config.toml
+  # keychain = false;  # headless: tokens in a file
 };
 ```
 
-Then sign in once with `marskal login`. The module does not manage
-`config.toml`, because `login` writes it. To install the package alone, use
+Then sign in once with `marskal login`. To install the package alone, use
 `packages.${system}.default`.
 
 ## Signing in
@@ -78,9 +77,14 @@ XDG base directories, on macOS too:
 
 | Path | Holds |
 |------|-------|
-| `$XDG_CONFIG_HOME/marskal/config.toml` | The server URL |
+| `$XDG_CONFIG_HOME/marskal/config.toml` | Your settings: `server`. Optional; `marskal` never writes it |
 | `$XDG_DATA_HOME/marskal/<server>.db` | The local database and its outbox of unsent edits |
+| `$XDG_STATE_HOME/marskal/state.toml` | The server last signed in to |
 | `$XDG_STATE_HOME/marskal/` | The refresh lock; the token file where there is no keychain |
+
+The server is `--server` (or `MARSKAL_SERVER`), else `server` in
+config.toml, else the one last signed in to. `login` says so when a
+setting will send later commands elsewhere.
 
 Tokens go to the OS keychain. `MARSKAL_NO_KEYCHAIN=1` keeps them in the
 token file (mode 0600) instead. `marskal` creates `$XDG_DATA_HOME/marskal`

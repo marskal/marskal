@@ -1,9 +1,9 @@
 /**
   Home Manager module for the terminal client, on Linux and macOS alike.
 
-  The server is set through `MARSKAL_SERVER`, not config.toml: `marskal
-  login` writes config.toml, which a store symlink would refuse. Sign in
-  once by hand after switching:
+  `settings` becomes `$XDG_CONFIG_HOME/marskal/config.toml`, which
+  `marskal` only reads; what it records itself goes to the state
+  directory. Sign in once by hand after switching:
 
       marskal login
 */
@@ -16,6 +16,8 @@
 }:
 let
   cfg = config.programs.marskal;
+  toml = pkgs.formats.toml { };
+  settings = lib.filterAttrs (_: v: v != null) cfg.settings;
 in
 {
   options.programs.marskal = {
@@ -28,14 +30,21 @@ in
       description = "The `marskal` package.";
     };
 
-    server = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = null;
-      example = "https://tasks.example.com";
-      description = ''
-        The server's base URL. Sets `MARSKAL_SERVER`, which overrides
-        the server `marskal login` saved.
-      '';
+    settings = lib.mkOption {
+      type = lib.types.submodule {
+        freeformType = toml.type;
+        options.server = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          example = "https://tasks.example.com";
+          description = ''
+            The server's base URL. Without it, `marskal` uses the server
+            last signed in to.
+          '';
+        };
+      };
+      default = { };
+      description = "Written to `$XDG_CONFIG_HOME/marskal/config.toml`.";
     };
 
     keychain = lib.mkOption {
@@ -53,8 +62,10 @@ in
   config = lib.mkIf cfg.enable {
     home.packages = [ cfg.package ];
 
-    home.sessionVariables =
-      lib.optionalAttrs (cfg.server != null) { MARSKAL_SERVER = cfg.server; }
-      // lib.optionalAttrs (!cfg.keychain) { MARSKAL_NO_KEYCHAIN = "1"; };
+    xdg.configFile."marskal/config.toml" = lib.mkIf (settings != { }) {
+      source = toml.generate "marskal-config.toml" settings;
+    };
+
+    home.sessionVariables = lib.mkIf (!cfg.keychain) { MARSKAL_NO_KEYCHAIN = "1"; };
   };
 }

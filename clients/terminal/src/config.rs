@@ -1,13 +1,17 @@
-//! `$XDG_CONFIG_HOME/marskal/config.toml`.
+//! `$XDG_CONFIG_HOME/marskal/config.toml`: the user's settings. `marskal`
+//! reads it and never writes it (ADR 0020), so it may be a read-only file
+//! managed elsewhere, such as by Home Manager. What `marskal` records
+//! itself goes to the state directory (`crate::state`).
 
 use std::path::PathBuf;
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::error::{CliError, Result};
 use crate::paths;
+use crate::state::State;
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize)]
 pub struct Config {
     /// The server's base URL, such as `https://tasks.example.com`.
     pub server: Option<String>,
@@ -27,11 +31,18 @@ impl Config {
         }
     }
 
-    pub fn save(&self) -> Result<()> {
-        std::fs::create_dir_all(paths::config_dir())?;
-        let text = toml::to_string(self).expect("the config serializes");
-        std::fs::write(path(), text)?;
-        Ok(())
+    /// The configured server, normalized.
+    pub fn server(&self) -> Result<Option<String>> {
+        self.server.as_deref().map(normalize_server).transpose()
+    }
+}
+
+/// The server when none is given on the command line: the config file's,
+/// else the one last signed in to.
+pub fn default_server() -> Result<Option<String>> {
+    match Config::load()?.server()? {
+        Some(server) => Ok(Some(server)),
+        None => Ok(State::load()?.server),
     }
 }
 

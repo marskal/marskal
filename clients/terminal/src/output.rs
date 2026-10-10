@@ -240,8 +240,24 @@ impl Output {
         }
     }
 
-    pub fn login(&self, server: &str, scope: &str, unsynced: Option<&str>) {
+    pub fn login(
+        &self,
+        server: &str,
+        scope: &str,
+        shadowed: Option<(String, &str)>,
+        unsynced: Option<&str>,
+    ) {
+        // On stderr in JSON mode too: the shape stays version 1.
+        let note_shadowed = || {
+            if let Some((other, source)) = &shadowed {
+                eprintln!(
+                    "Other commands still use {other}, from {source}. \
+                     Pass --server {server} to use this one."
+                );
+            }
+        };
         if self.json {
+            note_shadowed();
             return self.emit(json!({ "server": server, "scope": scope }), unsynced);
         }
         let read_only = if scope.contains("sync:write") {
@@ -250,6 +266,7 @@ impl Output {
             ", read-only"
         };
         println!("Signed in to {server}{read_only}.");
+        note_shadowed();
         self.note_unsynced(unsynced);
     }
 
