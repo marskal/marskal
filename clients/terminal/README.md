@@ -9,6 +9,10 @@ devenv shell        # Rust toolchain
 cargo build --release
 ```
 
+The devenv shell sets `MARSKAL_SERVER` to the local web app,
+http://marskal.localhost:8275 (`devenv up` in `web/`). Inside it, any
+`marskal` talks to that server unless you give `--server`.
+
 ## Installing with Nix
 
 The flake here builds `marskal` for Linux (x86_64, aarch64) and Apple
