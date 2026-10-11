@@ -179,6 +179,7 @@ defmodule MarskalWeb.NavComponents do
     ~H"""
     <.link
       {@to}
+      data-opens-inspector
       class={[
         "inspect-row",
         @current_id == @id && "is-current",
@@ -188,6 +189,33 @@ defmodule MarskalWeb.NavComponents do
     >
       {render_slot(@inner_block)}
     </.link>
+    """
+  end
+
+  attr :type, :atom, required: true, values: [:project, :folder, :tag]
+  attr :id, :string, required: true
+  attr :inspector, :any, default: nil
+  slot :inner_block, required: true
+
+  @doc """
+  A record page's heading, with a button that opens the record in the
+  inspector. Narrow screens need it: there the record's page opens alone.
+  """
+  def page_heading(assigns) do
+    ~H"""
+    <div class="page-heading">
+      <h1>{render_slot(@inner_block)}</h1>
+      <button
+        :if={!MarskalWeb.Inspector.selected?(@type, @id, @inspector)}
+        type="button"
+        class="page-heading__details"
+        phx-click="inspect"
+        phx-value-type={@type}
+        phx-value-id={@id}
+      >
+        <Lucideicons.info class="icon" /> Details
+      </button>
+    </div>
     """
   end
 

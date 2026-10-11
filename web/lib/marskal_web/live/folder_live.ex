@@ -32,7 +32,9 @@ defmodule MarskalWeb.FolderLive do
       change_version={assigns[:change_version] || 0}
     >
       <p :if={@folder.parent_path != []} class="lede">{Enum.join(@folder.parent_path, " / ")}</p>
-      <h1>{@folder.name}</h1>
+      <MarskalWeb.NavComponents.page_heading type={:folder} id={@folder.id} inspector={@inspector}>
+        {@folder.name}
+      </MarskalWeb.NavComponents.page_heading>
       <p class="actions">
         <button :if={@folder.state == :active} type="button" phx-click="drop">Drop</button>
         <button :if={@folder.state == :dropped} type="button" phx-click="activate">Activate</button>

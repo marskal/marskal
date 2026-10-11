@@ -38,7 +38,9 @@ defmodule MarskalWeb.TagLive do
           <.link navigate={~p"/tags/#{ancestor.id}"}>{ancestor.name}</.link>
         <% end %>
       </p>
-      <h1>{@tag.name}</h1>
+      <MarskalWeb.NavComponents.page_heading type={:tag} id={@tag.id} inspector={@inspector}>
+        {@tag.name}
+      </MarskalWeb.NavComponents.page_heading>
       <p :if={state_note(@tag, @state)} class="lede">{state_note(@tag, @state)}</p>
       <p class="actions">
         <button :if={@tag.state != :on_hold} type="button" phx-click="state" phx-value-state="on_hold">
