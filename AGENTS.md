@@ -34,6 +34,7 @@ This file is **short and actionable**. Rationale and history live in
 | User preferences | [0023](docs/adr/0023-user-preferences.md) |
 | Thunderbird extension | [0024](docs/adr/0024-thunderbird-extension.md) |
 | Flagged tasks & projects | [0025](docs/adr/0025-flagged.md) |
+| Project review | [0026](docs/adr/0026-project-review.md) |
 | Repository layout | [0015](docs/adr/0015-repository-layout.md) |
 
 ---
