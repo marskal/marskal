@@ -103,16 +103,6 @@ defmodule MarskalWeb.InspectorLiveTest do
     refute html =~ "Secret"
   end
 
-  test "saving in the inspector updates the task page form", %{conn: conn, user: user} do
-    {:ok, task} = Tasks.create_task(user, %{"title" => "Milk", "inbox" => false}, command())
-
-    {:ok, view, _html} = live(conn, "/tasks/#{task.id}?task=#{task.id}")
-    view |> form("#inspector-task", task: %{title: "Oat milk"}) |> render_change()
-
-    assert has_element?(view, "#task-form input[value='Oat milk']")
-    assert Tasks.get_task(user, task.id).title == "Oat milk"
-  end
-
   test "clearing a title does not rename the task", %{conn: conn, user: user} do
     {:ok, task} = Tasks.create_task(user, %{"title" => "Milk", "inbox" => false}, command())
 
@@ -235,7 +225,6 @@ defmodule MarskalWeb.InspectorLiveTest do
     {:ok, _view, html} = live(conn, "/?task=not-a-uuid")
     assert html =~ "That item is not available."
 
-    assert {:error, {:redirect, %{to: "/"}}} = live(conn, "/tasks/not-a-uuid")
     assert {:error, {:redirect, %{to: "/"}}} = live(conn, "/projects/not-a-uuid")
     assert {:error, {:redirect, %{to: "/"}}} = live(conn, "/folders/not-a-uuid")
   end

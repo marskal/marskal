@@ -72,6 +72,7 @@ defmodule MarskalWeb.Router do
     get "/imports/todoist", ImportBatchController, :todoist
     get "/imports/todoist/callback", ImportBatchController, :todoist_callback
     post "/imports/:id/apply", ImportBatchController, :apply
+    get "/tasks/:id", TaskController, :show
 
     live_session :require_authenticated_user,
       on_mount: [{MarskalWeb.UserAuth, :require_authenticated}, {MarskalWeb.Inspector, :default}] do
@@ -86,7 +87,6 @@ defmodule MarskalWeb.Router do
       live "/folders/:id", FolderLive, :show
       live "/tags/untagged", UntaggedLive, :index
       live "/tags/:id", TagLive, :show
-      live "/tasks/:id", TaskLive, :show
       live "/device", DeviceLive, :verify
       live "/device/done", DeviceLive, :done
       live "/oauth/error", DeviceLive, :error
