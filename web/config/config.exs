@@ -68,7 +68,7 @@ config :esbuild,
   path: System.get_env("MIX_ESBUILD_PATH"),
   marskal: [
     args:
-      ~w(js/app.ts --bundle --target=es2024 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --alias:@=.),
+      ~w(js/app.ts --bundle --target=es2024 --outdir=../priv/static/assets/js --loader:.woff2=file --external:/fonts/* --external:/images/* --alias:@=.),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
   ]
