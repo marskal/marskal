@@ -31,7 +31,7 @@ defmodule MarskalWeb.TaskActions do
 
   @doc false
   def act(socket, id, fun, missing, reload) do
-    case fun.(socket.assigns.current_scope.user, id, Ecto.UUID.generate()) do
+    case fun.(socket.assigns.current_scope.user, id, Ecto.UUID.generate(version: 7)) do
       {:ok, _} ->
         {:noreply, reload.(socket)}
 

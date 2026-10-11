@@ -105,7 +105,7 @@ defmodule MarskalWeb.TaskLive do
       |> Map.take(["title", "notes", "url"])
       |> Map.merge(Map.new(Tasks.location_attrs(location), fn {k, v} -> {to_string(k), v} end))
 
-    case Tasks.update_task(user, socket.assigns.task.id, attrs, Ecto.UUID.generate()) do
+    case Tasks.update_task(user, socket.assigns.task.id, attrs, Ecto.UUID.generate(version: 7)) do
       {:ok, task} ->
         {:noreply, assign_task(socket, user, task) |> put_flash(:info, "Saved.")}
 
@@ -124,7 +124,7 @@ defmodule MarskalWeb.TaskLive do
   defp act(socket, fun) do
     user = socket.assigns.current_scope.user
 
-    case fun.(user, socket.assigns.task.id, Ecto.UUID.generate()) do
+    case fun.(user, socket.assigns.task.id, Ecto.UUID.generate(version: 7)) do
       {:ok, task} -> {:noreply, assign_task(socket, user, task)}
       {:error, _} -> {:noreply, put_flash(socket, :error, "Could not update task.")}
     end

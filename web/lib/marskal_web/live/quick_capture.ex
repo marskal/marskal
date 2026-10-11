@@ -161,7 +161,7 @@ defmodule MarskalWeb.QuickCapture do
 
   defp reset(socket) do
     socket
-    |> assign(:command_id, Ecto.UUID.generate())
+    |> assign(:command_id, Ecto.UUID.generate(version: 7))
     |> assign(:form, to_form(%{"title" => ""}, as: "task"))
   end
 end

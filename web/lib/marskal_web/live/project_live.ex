@@ -121,7 +121,7 @@ defmodule MarskalWeb.ProjectLive do
   defp act(socket, fun) do
     user = socket.assigns.current_scope.user
 
-    case fun.(user, socket.assigns.project.id, Ecto.UUID.generate()) do
+    case fun.(user, socket.assigns.project.id, Ecto.UUID.generate(version: 7)) do
       {:ok, project} -> {:noreply, assign_project(socket, user, project)}
       {:error, _} -> {:noreply, put_flash(socket, :error, "Could not update project.")}
     end
@@ -130,7 +130,7 @@ defmodule MarskalWeb.ProjectLive do
   defp task_act(socket, id, fun) do
     user = socket.assigns.current_scope.user
 
-    case fun.(user, id, Ecto.UUID.generate()) do
+    case fun.(user, id, Ecto.UUID.generate(version: 7)) do
       {:ok, _} -> {:noreply, assign_project(socket, user, socket.assigns.project)}
       {:error, _} -> {:noreply, put_flash(socket, :error, "Could not update task.")}
     end
@@ -139,7 +139,7 @@ defmodule MarskalWeb.ProjectLive do
   defp assign_project(socket, user, project) do
     socket
     |> assign_records(user, project)
-    |> assign(:command_id, Ecto.UUID.generate())
+    |> assign(:command_id, Ecto.UUID.generate(version: 7))
     |> assign(:form, to_form(%{"title" => ""}, as: "task"))
   end
 
