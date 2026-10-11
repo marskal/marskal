@@ -13,18 +13,24 @@ defmodule MarskalWeb.NavComponents do
 
   def sidebar(assigns) do
     ~H"""
-    <aside id="sidebar" class="sidebar">
+    <aside
+      id="sidebar"
+      class="sidebar"
+      tabindex="-1"
+      aria-label="Projects and tags"
+      phx-mounted={JS.ignore_attributes("inert")}
+    >
       <nav class="sidebar-links">
-        <.link navigate={~p"/inbox"} class={link_class(@current_nav, :inbox)}>
+        <.link navigate={~p"/inbox"} class={["in-tab-bar", link_class(@current_nav, :inbox)]}>
           <Lucideicons.inbox class="icon" /> Inbox
         </.link>
-        <.link navigate={~p"/"} class={link_class(@current_nav, :open)}>
+        <.link navigate={~p"/"} class={["in-tab-bar", link_class(@current_nav, :open)]}>
           <Lucideicons.list class="icon" /> Open
         </.link>
-        <.link navigate={~p"/agenda"} class={link_class(@current_nav, :agenda)}>
+        <.link navigate={~p"/agenda"} class={["in-tab-bar", link_class(@current_nav, :agenda)]}>
           <Lucideicons.calendar_days class="icon" /> Agenda
         </.link>
-        <.link navigate={~p"/flagged"} class={link_class(@current_nav, :flagged)}>
+        <.link navigate={~p"/flagged"} class={["in-tab-bar", link_class(@current_nav, :flagged)]}>
           <Lucideicons.flag class="icon" /> Flagged
         </.link>
         <.link navigate={~p"/imports"} class={link_class(@current_nav, :import)}>
@@ -75,6 +81,19 @@ defmodule MarskalWeb.NavComponents do
         </li>
       </ul>
       <.live_component module={MarskalWeb.NewTagForm} id="new-root-tag" user={@user} />
+
+      <div class="sidebar-account">
+        <p class="who">{@user.email}</p>
+        <.link :if={@user.superuser} href={~p"/dev/dashboard"}>
+          <Lucideicons.gauge class="icon" /> Dashboard
+        </.link>
+        <.link href={~p"/users/settings"}>
+          <Lucideicons.settings class="icon" /> Settings
+        </.link>
+        <.link href={~p"/users/log-out"} method="delete">
+          <Lucideicons.log_out class="icon" /> Log out
+        </.link>
+      </div>
     </aside>
     """
   end

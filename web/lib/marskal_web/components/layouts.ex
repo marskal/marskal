@@ -47,6 +47,17 @@ defmodule MarskalWeb.Layouts do
       phx-hook=".Inspector"
     >
       <header class="app-header">
+        <button
+          :if={@nav}
+          type="button"
+          class="app-header__menu"
+          aria-label="Menu"
+          aria-controls="sidebar"
+          aria-expanded="false"
+          phx-mounted={JS.ignore_attributes("aria-expanded")}
+        >
+          <Lucideicons.menu class="icon" />
+        </button>
         <div class="app-header__brand">
           <.link navigate={~p"/"}>
             <img src={~p"/images/icon.svg"} alt="" class="app-header__logo" />
@@ -75,6 +86,7 @@ defmodule MarskalWeb.Layouts do
           current_id={@current_id}
           inspector={@inspector}
         />
+        <div :if={@nav} class="sidebar-backdrop"></div>
         <main class="app-main">
           {render_slot(@inner_block)}
         </main>
@@ -110,15 +122,36 @@ defmodule MarskalWeb.Layouts do
           />
         </aside>
       </div>
+
+      <nav :if={@nav} class="tab-bar" aria-label="Views">
+        <.tab navigate={~p"/inbox"} current={@current_nav == :inbox}>
+          <Lucideicons.inbox class="icon" /> Inbox
+        </.tab>
+        <.tab navigate={~p"/"} current={@current_nav == :open}>
+          <Lucideicons.list class="icon" /> Open
+        </.tab>
+        <.tab navigate={~p"/agenda"} current={@current_nav == :agenda}>
+          <Lucideicons.calendar_days class="icon" /> Agenda
+        </.tab>
+        <.tab navigate={~p"/flagged"} current={@current_nav == :flagged}>
+          <Lucideicons.flag class="icon" /> Flagged
+        </.tab>
+      </nav>
     </div>
     <script :type={Phoenix.LiveView.ColocatedHook} name=".Inspector" extension="ts">
       import {ViewHook} from "phoenix_live_view"
 
       export default class extends ViewHook {
         wasOpen = false
+        phone = window.matchMedia("(max-width: 720px)")
 
         onClick = (event: MouseEvent) => {
           if (!(event.target instanceof Element)) return
+          if (event.target.closest(".app-header__menu")) {
+            this.setNav(!document.body.classList.contains("nav-open"))
+            return
+          }
+          if (event.target.closest(".sidebar-backdrop, .sidebar a")) this.setNav(false)
           const link = event.target.closest("a")
           if (link) {
             if (link.closest(".task-row")) event.stopPropagation()
@@ -132,6 +165,11 @@ defmodule MarskalWeb.Layouts do
 
         onKeydown = (event: KeyboardEvent) => {
           if (event.key !== "Escape") return
+          if (document.body.classList.contains("nav-open")) {
+            event.preventDefault()
+            this.setNav(false)
+            return
+          }
           if (!this.el.classList.contains("is-inspector-open")) return
           event.preventDefault()
           this.pushEvent("close-inspector", {})
@@ -140,6 +178,8 @@ defmodule MarskalWeb.Layouts do
         mounted() {
           this.el.addEventListener("click", this.onClick)
           document.addEventListener("keydown", this.onKeydown)
+          this.phone.addEventListener("change", this.onResize)
+          this.setNav(false)
           this.sync()
         }
 
@@ -150,7 +190,26 @@ defmodule MarskalWeb.Layouts do
         destroyed() {
           this.el.removeEventListener("click", this.onClick)
           document.removeEventListener("keydown", this.onKeydown)
-          document.body.classList.remove("inspector-open")
+          this.phone.removeEventListener("change", this.onResize)
+          document.body.classList.remove("inspector-open", "nav-open")
+        }
+
+        onResize = () => {
+          this.setNav(false)
+          this.sync()
+        }
+
+        // On a phone the sidebar is a drawer behind the menu button. The
+        // state lives on <body>, outside what LiveView patches.
+        setNav(open: boolean) {
+          const sidebar = this.el.querySelector<HTMLElement>(".sidebar")
+          const button = this.el.querySelector<HTMLElement>(".app-header__menu")
+          if (!sidebar || !button) return
+          const opened = open && !document.body.classList.contains("nav-open")
+          document.body.classList.toggle("nav-open", open)
+          button.setAttribute("aria-expanded", String(open))
+          sidebar.toggleAttribute("inert", this.phone.matches && !open)
+          if (opened) sidebar.focus({preventScroll: true})
         }
 
         sync() {
@@ -167,6 +226,18 @@ defmodule MarskalWeb.Layouts do
     </script>
 
     <.flash_group flash={@flash} />
+    """
+  end
+
+  attr :navigate, :string, required: true
+  attr :current, :boolean, default: false
+  slot :inner_block, required: true
+
+  defp tab(assigns) do
+    ~H"""
+    <.link navigate={@navigate} class={@current && "is-current"} aria-current={@current && "page"}>
+      {render_slot(@inner_block)}
+    </.link>
     """
   end
 
