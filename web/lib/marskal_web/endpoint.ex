@@ -25,6 +25,7 @@ defmodule MarskalWeb.Endpoint do
     from: :marskal,
     gzip: not code_reloading?,
     only: MarskalWeb.static_paths(),
+    headers: MarskalWeb.SecurityHeaders.static_headers(),
     raise_on_missing_only: code_reloading?
 
   # Code reloading can be explicitly enabled under the

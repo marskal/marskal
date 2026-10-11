@@ -6,16 +6,17 @@ defmodule MarskalWeb.Router do
 
   pipeline :browser do
     plug :accepts, ["html"]
+    plug MarskalWeb.SecurityHeaders
     plug :fetch_session
     plug :fetch_live_flash
     plug :put_root_layout, html: {MarskalWeb.Layouts, :root}
     plug :protect_from_forgery
-    plug :put_secure_browser_headers
     plug :fetch_current_scope_for_user
   end
 
   pipeline :api do
     plug :accepts, ["json"]
+    plug MarskalWeb.SecurityHeaders
   end
 
   scope "/", MarskalWeb do
@@ -26,6 +27,7 @@ defmodule MarskalWeb.Router do
 
   pipeline :api_auth do
     plug :accepts, ["json"]
+    plug MarskalWeb.SecurityHeaders
     plug MarskalWeb.APIAuth
   end
 
@@ -46,8 +48,7 @@ defmodule MarskalWeb.Router do
   # Enable Swoosh mailbox preview in development
   if Application.compile_env(:marskal, :dev_routes) do
     scope "/dev" do
-      pipe_through :browser
-
+      # Without SecurityHeaders: it frames each message and inlines its styles.
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
   end
@@ -55,7 +56,7 @@ defmodule MarskalWeb.Router do
   scope "/dev" do
     pipe_through [:browser, :require_authenticated_user, :require_superuser]
 
-    live_dashboard "/dashboard", metrics: MarskalWeb.Telemetry
+    live_dashboard "/dashboard", metrics: MarskalWeb.Telemetry, csp_nonce_assign_key: :csp_nonce
   end
 
   ## Authentication routes
