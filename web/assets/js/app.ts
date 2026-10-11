@@ -24,6 +24,9 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/marskal"
 import "phoenix-colocated/marskal/colocated.css"
+// The default typeface, self-hosted. --font in app.css names it.
+import "@fontsource-variable/atkinson-hyperlegible-next/wght.css"
+import "@fontsource-variable/atkinson-hyperlegible-next/wght-italic.css"
 import topbar from "topbar"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content")

@@ -9,6 +9,9 @@ declare module "phoenix-colocated/marskal" {
 
 declare module "phoenix-colocated/marskal/colocated.css"
 
+declare module "@fontsource-variable/atkinson-hyperlegible-next/wght.css"
+declare module "@fontsource-variable/atkinson-hyperlegible-next/wght-italic.css"
+
 // esbuild replaces this at build time.
 declare const process: {env: {NODE_ENV: string}}
 
