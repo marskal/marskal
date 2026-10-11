@@ -50,12 +50,14 @@ defmodule MarskalWeb.FolderLive do
       </ul>
       <p :if={@children == []} class="empty">No folders inside.</p>
 
-      <.form for={@folder_form} id="new-folder" phx-submit="create-folder" class="capture">
-        <input type="hidden" name="command_id" value={@folder_command_id} />
-        <label for={@folder_form[:name].id}>New folder</label>
-        <input type="text" name={@folder_form[:name].name} id={@folder_form[:name].id} required />
-        <button type="submit">Add folder</button>
-      </.form>
+      <.add_form
+        id="new-folder"
+        for={@folder_form}
+        field={@folder_form[:name]}
+        label="New folder"
+        command_id={@folder_command_id}
+        phx-submit="create-folder"
+      />
 
       <h2>Projects</h2>
       <ul class="nav-tree">
@@ -67,12 +69,14 @@ defmodule MarskalWeb.FolderLive do
       </ul>
       <p :if={@projects == []} class="empty">No open projects.</p>
 
-      <.form for={@project_form} id="new-project" phx-submit="create-project" class="capture">
-        <input type="hidden" name="command_id" value={@project_command_id} />
-        <label for={@project_form[:title].id}>New project</label>
-        <input type="text" name={@project_form[:title].name} id={@project_form[:title].id} required />
-        <button type="submit">Add project</button>
-      </.form>
+      <.add_form
+        id="new-project"
+        for={@project_form}
+        field={@project_form[:title]}
+        label="New project"
+        command_id={@project_command_id}
+        phx-submit="create-project"
+      />
     </Layouts.app>
     """
   end

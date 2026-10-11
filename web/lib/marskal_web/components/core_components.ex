@@ -115,6 +115,50 @@ defmodule MarskalWeb.CoreComponents do
   end
 
   @doc """
+  A one-line form that adds something by name: a plus, a field whose
+  placeholder says what it adds, and an Add button that shows once there is
+  text. Enter submits.
+
+  ## Examples
+
+      <.add_form id="new-task" for={@form} field={@form[:title]} label="Add a task"
+        phx-submit="create" command_id={@command_id} />
+  """
+  attr :id, :string, required: true
+  attr :for, :any, required: true, doc: "the form, from `to_form/2`"
+  attr :field, Phoenix.HTML.FormField, required: true
+  attr :label, :string, required: true
+  attr :command_id, :string, default: nil
+  attr :input_id, :string, default: nil, doc: "the field's id, when its default would repeat"
+  attr :autofocus, :boolean, default: false
+  attr :rest, :global, include: ~w(phx-submit phx-target phx-keydown phx-key)
+
+  def add_form(assigns) do
+    assigns = assign(assigns, :input_id, assigns.input_id || assigns.field.id)
+
+    ~H"""
+    <.form for={@for} id={@id} class="add-form" {@rest}>
+      <input :if={@command_id} type="hidden" name="command_id" value={@command_id} />
+      <label for={@input_id} class="sr-only">{@label}</label>
+      <Lucideicons.plus class="icon add-form__icon" aria-hidden="true" />
+      <input
+        type="text"
+        name={@field.name}
+        id={@input_id}
+        value={@field.value}
+        placeholder={@label}
+        autocomplete="off"
+        enterkeyhint="done"
+        required
+        autofocus={@autofocus}
+      />
+      <button type="submit">Add</button>
+      <p :for={error <- @field.errors} class="field-error">{translate_error(error)}</p>
+    </.form>
+    """
+  end
+
+  @doc """
   Renders a button with navigation support.
 
   ## Examples

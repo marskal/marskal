@@ -130,7 +130,7 @@ defmodule MarskalWeb.ImportBatchControllerTest do
     conn = get(recycle(conn), ~p"/imports/#{batch.id}")
     html = html_response(conn, 200)
     assert html =~ "Reading the backup"
-    assert html =~ "Add folder"
+    assert html =~ ~s(aria-label="New folder")
     refute html =~ ~s(http-equiv="refresh")
 
     drain_imports!()

@@ -83,6 +83,17 @@ defmodule MarskalWeb.AppShellLiveTest do
     refute has_element?(view, "#quick-capture")
   end
 
+  test "Escape closes a sidebar add field", %{conn: conn} do
+    {:ok, view, _html} = live(log_in_user(conn, user_fixture()), ~p"/")
+
+    view |> element("button[aria-label='New folder']") |> render_click()
+    assert has_element?(view, "#new-root-folder input[placeholder='New folder']")
+
+    view |> element("#new-root-folder") |> render_keydown(%{"key" => "Escape"})
+    refute has_element?(view, "#new-root-folder")
+    assert has_element?(view, "button[aria-label='New folder'][aria-expanded=false]")
+  end
+
   test "signed-out pages have no menu or tab bar", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/users/log-in")
 

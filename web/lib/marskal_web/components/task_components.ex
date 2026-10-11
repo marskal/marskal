@@ -59,20 +59,29 @@ defmodule MarskalWeb.TaskComponents do
         rows: rows(assigns)
       )
 
+    # Rows keep a disclosure column only when some row can use it.
+    assigns =
+      assign(assigns,
+        disclosures:
+          (assigns.outline or assigns.nested) and Enum.any?(assigns.rows, & &1.children?)
+      )
+
     ~H"""
     <style :type={MarskalWeb.ColocatedCSS}>
       @scope (.task-row) {
         :scope {
           display: flex;
           flex-wrap: wrap;
-          gap: 0.75rem 0.85rem;
+          gap: 0.25rem 0.6rem;
           align-items: flex-start;
           justify-content: space-between;
-          padding: 0.85rem 1rem;
-          background: var(--surface);
-          border: 1px solid var(--border);
-          border-radius: var(--radius);
+          padding: 0.6rem 0.5rem;
+          border-bottom: 1px solid var(--border);
           cursor: pointer;
+        }
+
+        :scope:hover {
+          background: color-mix(in oklch, var(--text) 4%, transparent);
         }
 
         .check-form {
@@ -129,7 +138,7 @@ defmodule MarskalWeb.TaskComponents do
         }
 
         :scope.is-selected {
-          background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+          background: var(--accent-tint);
         }
 
         button.select {
@@ -168,18 +177,38 @@ defmodule MarskalWeb.TaskComponents do
         }
 
         .notes {
-          margin-top: 0.35rem;
+          display: -webkit-box;
+          margin-top: 0.25rem;
+          overflow: hidden;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
+          line-clamp: 2;
           color: var(--muted);
-          font-size: 0.9rem;
+          font-size: 0.875rem;
+        }
+
+        .meta {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 0.3rem;
+          margin-top: 0.3rem;
+        }
+
+        .meta:not(:has(*)) {
+          display: none;
+        }
+
+        .meta .tag-chips {
+          margin: 0;
         }
 
         .marks {
           display: inline-flex;
-          gap: 0.35rem;
-          margin-inline-start: 0.5rem;
-          font-size: 0.75rem;
+          flex-wrap: wrap;
+          gap: 0.3rem;
+          font-size: 0.8rem;
           color: var(--muted);
-          vertical-align: middle;
         }
 
         .mark {
@@ -312,8 +341,6 @@ defmodule MarskalWeb.TaskComponents do
         list-style: none;
         margin: 0;
         padding: 0;
-        display: grid;
-        gap: 0.5rem;
       }
     </style>
     <p :if={@tasks == []} class="empty">{@empty}</p>
@@ -354,7 +381,7 @@ defmodule MarskalWeb.TaskComponents do
         >
           <Lucideicons.grip_vertical class="icon" />
         </span>
-        <span :if={@outline or @nested} class="disclosure">
+        <span :if={@disclosures} class="disclosure">
           <button
             :if={children?}
             type="button"
@@ -414,62 +441,64 @@ defmodule MarskalWeb.TaskComponents do
             {task.title}
           </button>
           <MarskalWeb.UrlLink.link url={task.url} />
-          <span
-            :if={
-              (@mark_inbox and task.inbox) or d.planned_at != nil or d.due_at != nil or
-                MapSet.member?(@unavailable, task.id) or MapSet.member?(@deferred, task.id) or
-                MapSet.member?(@repeating, task.id) or
-                MapSet.member?(@flagged, task.id)
-            }
-            class="marks"
-          >
+          <div class="meta">
             <span
-              :if={MapSet.member?(@flagged, task.id)}
-              class="mark mark--flag"
-              title={flag_label(task)}
+              :if={
+                (@mark_inbox and task.inbox) or d.planned_at != nil or d.due_at != nil or
+                  MapSet.member?(@unavailable, task.id) or MapSet.member?(@deferred, task.id) or
+                  MapSet.member?(@repeating, task.id) or
+                  MapSet.member?(@flagged, task.id)
+              }
+              class="marks"
             >
-              <Lucideicons.flag class="icon" aria-label={flag_label(task)} />
+              <span
+                :if={MapSet.member?(@flagged, task.id)}
+                class="mark mark--flag"
+                title={flag_label(task)}
+              >
+                <Lucideicons.flag class="icon" aria-label={flag_label(task)} />
+              </span>
+              <span
+                :if={MapSet.member?(@repeating, task.id)}
+                class="mark mark--repeat"
+                title="Repeats"
+              >
+                <Lucideicons.repeat class="icon" aria-label="Repeats" />
+              </span>
+              <span :if={@mark_inbox and task.inbox} class="mark mark--inbox">Inbox</span>
+              <span :if={MapSet.member?(@unavailable, task.id)} class="mark mark--unavailable">
+                Unavailable
+              </span>
+              <span :if={MapSet.member?(@deferred, task.id)} class="mark mark--deferred">
+                {deferred_label(d, @zone, @today, @now)}
+              </span>
+              <span
+                :if={d.planned_at}
+                class={[
+                  "mark mark--planned",
+                  planned_today?(task, d, @zone, @today) && "mark--today",
+                  inherited?(task, d, :planned_at) && "mark--inherited"
+                ]}
+                title={inherited?(task, d, :planned_at) && @inherited_hint}
+              >
+                Planned {MarskalWeb.DateFields.short(d.planned_at, :planned_at, @zone, @today)}
+              </span>
+              <span
+                :if={d.due_at}
+                class={[
+                  "mark mark--due",
+                  Marskal.Dates.overdue?(%{state: task.state, due_at: d.due_at}, @now) &&
+                    "mark--overdue",
+                  inherited?(task, d, :due_at) && "mark--inherited"
+                ]}
+                title={inherited?(task, d, :due_at) && @inherited_hint}
+              >
+                Due {MarskalWeb.DateFields.short(d.due_at, :due_at, @zone, @today)}
+              </span>
             </span>
-            <span
-              :if={MapSet.member?(@repeating, task.id)}
-              class="mark mark--repeat"
-              title="Repeats"
-            >
-              <Lucideicons.repeat class="icon" aria-label="Repeats" />
-            </span>
-            <span :if={@mark_inbox and task.inbox} class="mark mark--inbox">Inbox</span>
-            <span :if={MapSet.member?(@unavailable, task.id)} class="mark mark--unavailable">
-              Unavailable
-            </span>
-            <span :if={MapSet.member?(@deferred, task.id)} class="mark mark--deferred">
-              {deferred_label(d, @zone, @today, @now)}
-            </span>
-            <span
-              :if={d.planned_at}
-              class={[
-                "mark mark--planned",
-                planned_today?(task, d, @zone, @today) && "mark--today",
-                inherited?(task, d, :planned_at) && "mark--inherited"
-              ]}
-              title={inherited?(task, d, :planned_at) && @inherited_hint}
-            >
-              Planned {MarskalWeb.DateFields.short(d.planned_at, :planned_at, @zone, @today)}
-            </span>
-            <span
-              :if={d.due_at}
-              class={[
-                "mark mark--due",
-                Marskal.Dates.overdue?(%{state: task.state, due_at: d.due_at}, @now) &&
-                  "mark--overdue",
-                inherited?(task, d, :due_at) && "mark--inherited"
-              ]}
-              title={inherited?(task, d, :due_at) && @inherited_hint}
-            >
-              Due {MarskalWeb.DateFields.short(d.due_at, :due_at, @zone, @today)}
-            </span>
-          </span>
+            <MarskalWeb.TagComponents.chips entries={Map.get(@tags, task.id, [])} />
+          </div>
           <MarskalWeb.FormattedNotes.block text={task.notes} />
-          <MarskalWeb.TagComponents.chips entries={Map.get(@tags, task.id, [])} />
         </div>
       </li>
     </ul>

@@ -7,6 +7,7 @@ defmodule MarskalWeb.StructureLiveTest do
   test "a new folder shows in the sidebar and accepts a project", %{conn: conn} do
     conn = log_in_user(conn, user_fixture())
     {:ok, view, _html} = live(conn, ~p"/")
+    view |> element("button[aria-label='New folder']") |> render_click()
 
     assert {:error, {:live_redirect, %{to: path}}} =
              view

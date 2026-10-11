@@ -62,12 +62,14 @@ defmodule MarskalWeb.TagLive do
         zone={Marskal.Accounts.timezone(@current_scope.user)}
       />
 
-      <.form for={@tag_form} id="new-child-tag" phx-submit="create-tag" class="capture">
-        <input type="hidden" name="command_id" value={@tag_command_id} />
-        <label for={@tag_form[:name].id}>New tag inside</label>
-        <input type="text" name={@tag_form[:name].name} id={@tag_form[:name].id} required />
-        <button type="submit">Add tag</button>
-      </.form>
+      <.add_form
+        id="new-child-tag"
+        for={@tag_form}
+        field={@tag_form[:name]}
+        label="New tag inside"
+        command_id={@tag_command_id}
+        phx-submit="create-tag"
+      />
     </Layouts.app>
     """
   end

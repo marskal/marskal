@@ -38,6 +38,8 @@ defmodule MarskalWeb.NavComponents do
         </.link>
       </nav>
 
+      <.live_component module={MarskalWeb.NewFolderForm} id="new-root-folder" user={@user} />
+
       <p :if={Marskal.ProjectNav.empty?(@nav)} class="empty">No projects yet.</p>
 
       <ul class="nav-tree">
@@ -63,9 +65,7 @@ defmodule MarskalWeb.NavComponents do
         </li>
       </ul>
 
-      <.live_component module={MarskalWeb.NewFolderForm} id="new-root-folder" user={@user} />
-
-      <h2 class="sidebar-heading">Tags</h2>
+      <.live_component module={MarskalWeb.NewTagForm} id="new-root-tag" user={@user} />
       <ul class="nav-tree" id="sidebar-tags">
         <MarskalWeb.NavComponents.tag
           :for={tag <- Marskal.ProjectNav.tags_in(@nav, nil)}
@@ -80,7 +80,6 @@ defmodule MarskalWeb.NavComponents do
           </.link>
         </li>
       </ul>
-      <.live_component module={MarskalWeb.NewTagForm} id="new-root-tag" user={@user} />
 
       <div class="sidebar-account">
         <p class="who">{@user.email}</p>
