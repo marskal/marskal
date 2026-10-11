@@ -95,15 +95,18 @@ several sittings or devices without a session to resume.
 
 ### Choosing an interval
 
-The ISO 8601 form is for storage and the wire. The user never sees or
-types it.
+The ISO 8601 form is for storage and the wire. A user only meets it if
+they choose Custom.
 
 - One picker sets an interval, both in the project inspector and in
   settings: **Never**, **Every week**, **Every 2 weeks**, **Every month**,
   **Every 3 months**, **Every year**, and **Custom…**.
-- **Custom** shows "Every [n] [days | weeks | months | years]", the same
-  number and unit fields as the repeat dialog's "Every [n] weeks"
-  (ADR 0007).
+- **Custom** is a text field that takes the ISO 8601 form itself, such as
+  `P2W3D`, for users who want an interval the presets lack. Letters may be
+  lower case. It refuses a time part, and shows the interval in words
+  beside the field as it is typed, so a mistake is seen before it is saved.
+  Beside it, a link opens a short help page in the app that explains the
+  format with examples.
 - An interval is shown in words: a whole number of weeks as weeks ("Every
   2 weeks", not 14 days), and a mixed one, which only an import or another
   client can make, in its parts ("Every 1 month, 15 days"). Picking a new
