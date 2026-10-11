@@ -54,20 +54,18 @@ several sittings or devices without a session to resume.
 
 ### Defaults
 
-- A new preference (ADR 0023): **`review_interval`**, an `interval` with
-  the same `CHECK`, default `P1W`. Null is **Never**. As with `week_start`,
-  a new project copies it when it is made, and a later change to an
-  interval does not move existing projects.
+- A new preference (ADR 0023): **`default_review_interval`**, an
+  `interval` with the same `CHECK`, default `P1W`. Null is **Never**. It
+  only applies to new projects: a project copies it when it is made, as a
+  series copies `week_start`, and changing it does not touch existing
+  projects. A user who does not want reviews sets it to Never, and new
+  projects are made with Never.
 - A new project's `next_review_on` is its creation day plus its interval,
   on the user's clock, or null under Never.
-- **Never turns review off.** While the preference is Never, the Review
-  view, its sidebar count, and the review line in the project inspector are
-  hidden, and new projects get no interval. Existing projects keep their
-  review fields, so choosing an interval again picks up where the user
-  left off. Projects made while it was off stay at Never until given an
-  interval.
-- A single project can be set to Never while review is on, for example a
-  reference project that needs no review.
+- Any project can be set to Never on its own, for example a reference
+  project that needs no review.
+- With no project due, the Review view is empty and the sidebar shows no
+  count. Nothing else is hidden.
 - At migration, existing projects get the preference's default (`P1W`) and
   `next_review_on` is the migration day, so the first review covers all of
   them.
@@ -150,20 +148,22 @@ its `next_review_on` is its creation day plus its interval.
   in days, weeks, months, and years, so they map directly. An interval the
   import cannot read leaves the project with the default interval and an
   import problem saying what it was (`Imports.Problems`).
-- **Todoist** has no reviews, so imported projects get the preference,
-  Never included.
+- **Todoist** has no reviews, so imported projects get
+  `default_review_interval`, Never included.
 - On re-import, the user's own review state wins under the three-way merge
   (ADR 0013), as with any other field.
 
 ## Consequences
 
+- Setting `default_review_interval` to Never leaves the projects that
+  already exist on review. Each is set to Never on its own.
 - Review does not change availability. A project that is due for review
   stays in the open stream and in its views as usual.
 - Repeat rules keep their number and unit (ADR 0007). There the unit
   decides which `on_days` rows apply, which a duration cannot express.
 - The Rust library's local schema gains the three project columns and the
-  preference, with the interval stored as text. A client asks for a snapshot after upgrading, as with
-  ADR 0025.
+  preference, with the interval stored as text. A client asks for a
+  snapshot after upgrading, as with ADR 0025.
 - The terminal client can add `marskal review` (list the projects due) and
   `marskal review --done <id>` later. This ADR does not require them.
 - A guided session (inbox, agenda, tags, then projects) can be built later
