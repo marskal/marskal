@@ -37,14 +37,16 @@ several sittings or devices without a session to resume.
 
 ### Fields on projects
 
-- **`review_interval`** (`interval`, required). It is written as an
+- **`review_interval`** (`interval`, nullable). It is written as an
   ISO 8601 duration, `P[n]Y[n]M[n]W[n]D`: `P1W`, `P2W`, `P1M`, `P1M15D`.
   It has date parts only. A `CHECK` refuses a time part
   (`date_trunc('day', review_interval) = review_interval`), a negative
-  part, and a zero interval, because a review is due on a day.
-- **`next_review_on`** (`date`, required): the day in the user's timezone
+  part, and a zero interval, because a review is due on a day. Null is
+  **Never**: the project is not reviewed.
+- **`next_review_on`** (`date`, nullable): the day in the user's timezone
   when the project is due for review. It is a calendar day, not an instant,
-  because a review is due on a day rather than at a time.
+  because a review is due on a day rather than at a time. A `CHECK` keeps
+  it null exactly when `review_interval` is.
 - **`last_reviewed_at`** (`timestamptz`, nullable): when it was last marked
   reviewed. It is shown, not computed from.
 - The user may set `next_review_on` directly, for example to bring a
@@ -53,13 +55,22 @@ several sittings or devices without a session to resume.
 ### Defaults
 
 - A new preference (ADR 0023): **`review_interval`**, an `interval` with
-  the same `CHECK`, default `P1W`. As with `week_start`, a new project
-  copies it when it is made, and later changes to the preference do not
-  move existing projects.
+  the same `CHECK`, default `P1W`. Null is **Never**. As with `week_start`,
+  a new project copies it when it is made, and a later change to an
+  interval does not move existing projects.
 - A new project's `next_review_on` is its creation day plus its interval,
-  on the user's clock.
-- At migration, existing projects get 1 week and `next_review_on` is the
-  migration day, so the first review covers all of them.
+  on the user's clock, or null under Never.
+- **Never turns review off.** While the preference is Never, the Review
+  view, its sidebar count, and the review line in the project inspector are
+  hidden, and new projects get no interval. Existing projects keep their
+  review fields, so choosing an interval again picks up where the user
+  left off. Projects made while it was off stay at Never until given an
+  interval.
+- A single project can be set to Never while review is on, for example a
+  reference project that needs no review.
+- At migration, existing projects get the preference's default (`P1W`) and
+  `next_review_on` is the migration day, so the first review covers all of
+  them.
 
 ### Marking reviewed
 
@@ -89,7 +100,8 @@ several sittings or devices without a session to resume.
 The **Review** view lists projects that:
 
 - are **To-Do**, and not discarded,
-- have `next_review_on` on or before today in the user's timezone.
+- have `next_review_on` on or before today in the user's timezone (so not
+  Never).
 
 Deferred projects, indefinite ones included, **are** listed: the review is
 where the user decides to resume one. Projects in a Dropped folder are
@@ -118,7 +130,8 @@ its `next_review_on` is its creation day plus its interval.
   in days, weeks, months, and years, so they map directly. An interval the
   import cannot read leaves the project with the default interval and an
   import problem saying what it was (`Imports.Problems`).
-- **Todoist** has no reviews, so imported projects get the defaults.
+- **Todoist** has no reviews, so imported projects get the preference,
+  Never included.
 - On re-import, the user's own review state wins under the three-way merge
   (ADR 0013), as with any other field.
 
