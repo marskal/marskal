@@ -78,5 +78,5 @@ defmodule Marskal.UrlTest do
     refute Url.safe?(nil)
   end
 
-  defp command, do: Ecto.UUID.generate()
+  defp command, do: Ecto.UUID.generate(version: 7)
 end

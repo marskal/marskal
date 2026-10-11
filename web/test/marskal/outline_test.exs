@@ -417,5 +417,5 @@ defmodule Marskal.OutlineTest do
       |> DateTime.new!(~T[12:00:00], Marskal.Accounts.timezone(user))
       |> DateTime.shift_zone!("Etc/UTC")
 
-  defp command_id, do: Ecto.UUID.generate()
+  defp command_id, do: Ecto.UUID.generate(version: 7)
 end

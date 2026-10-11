@@ -444,5 +444,5 @@ defmodule Marskal.Imports.ReimportTest do
   defp where_group(query, %{parent_id: parent_id}),
     do: where(query, [t], t.parent_id == ^parent_id)
 
-  defp uuid, do: Ecto.UUID.generate()
+  defp uuid, do: Ecto.UUID.generate(version: 7)
 end

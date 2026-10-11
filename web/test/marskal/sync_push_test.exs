@@ -327,5 +327,5 @@ defmodule Marskal.SyncPushTest do
     }
 
   defp now, do: DateTime.utc_now(:second) |> DateTime.to_iso8601()
-  defp uuid, do: Ecto.UUID.generate()
+  defp uuid, do: Ecto.UUID.generate(version: 7)
 end

@@ -100,5 +100,5 @@ defmodule MarskalWeb.DatesLiveTest do
     assert Projects.get_project(user, project.id) == nil
   end
 
-  defp command, do: Ecto.UUID.generate()
+  defp command, do: Ecto.UUID.generate(version: 7)
 end

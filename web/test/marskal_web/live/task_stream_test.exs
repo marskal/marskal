@@ -129,5 +129,5 @@ defmodule MarskalWeb.TaskStreamTest do
     refute html =~ "Secret"
   end
 
-  defp command, do: Ecto.UUID.generate()
+  defp command, do: Ecto.UUID.generate(version: 7)
 end

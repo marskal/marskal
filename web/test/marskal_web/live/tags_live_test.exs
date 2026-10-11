@@ -257,5 +257,5 @@ defmodule MarskalWeb.TagsLiveTest do
     task
   end
 
-  defp command, do: Ecto.UUID.generate()
+  defp command, do: Ecto.UUID.generate(version: 7)
 end

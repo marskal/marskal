@@ -159,5 +159,5 @@ defmodule Marskal.Recurrence.ProjectOccurrenceTest do
   end
 
   defp hours_ago(hours), do: DateTime.add(DateTime.utc_now(:second), -hours, :hour)
-  defp command, do: Ecto.UUID.generate()
+  defp command, do: Ecto.UUID.generate(version: 7)
 end

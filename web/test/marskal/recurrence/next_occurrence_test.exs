@@ -427,5 +427,5 @@ defmodule Marskal.Recurrence.NextOccurrenceTest do
 
   defp now, do: DateTime.utc_now(:second)
   defp hours_ago(hours), do: DateTime.add(now(), -hours, :hour)
-  defp command, do: Ecto.UUID.generate()
+  defp command, do: Ecto.UUID.generate(version: 7)
 end

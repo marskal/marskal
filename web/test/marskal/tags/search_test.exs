@@ -68,7 +68,7 @@ defmodule Marskal.Tags.SearchTest do
 
   defp tag(name, parent, state \\ :active) do
     %Tag{
-      id: Ecto.UUID.generate(),
+      id: Ecto.UUID.generate(version: 7),
       name: name,
       state: state,
       parent_id: parent && parent.id,

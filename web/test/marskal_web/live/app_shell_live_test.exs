@@ -29,7 +29,11 @@ defmodule MarskalWeb.AppShellLiveTest do
     conn = log_in_user(conn, user)
 
     {:ok, project} =
-      Marskal.Projects.create_project(user, %{"title" => "Launch"}, Ecto.UUID.generate())
+      Marskal.Projects.create_project(
+        user,
+        %{"title" => "Launch"},
+        Ecto.UUID.generate(version: 7)
+      )
 
     {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}")
 
@@ -48,7 +52,11 @@ defmodule MarskalWeb.AppShellLiveTest do
     user = user_fixture()
 
     {:ok, _project} =
-      Marskal.Projects.create_project(user, %{"title" => "Launch"}, Ecto.UUID.generate())
+      Marskal.Projects.create_project(
+        user,
+        %{"title" => "Launch"},
+        Ecto.UUID.generate(version: 7)
+      )
 
     {:ok, view, _html} = live(log_in_user(conn, user), ~p"/")
 

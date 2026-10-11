@@ -44,7 +44,7 @@ defmodule Marskal.OAuthFixtures do
       Devices.create(user, %{
         name: attrs["name"] || "marskal on laptop",
         client_id: "marskal-terminal",
-        consent_request_id: Ecto.UUID.generate()
+        consent_request_id: Ecto.UUID.generate(version: 7)
       })
 
     %{
