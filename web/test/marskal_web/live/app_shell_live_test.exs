@@ -55,6 +55,25 @@ defmodule MarskalWeb.AppShellLiveTest do
     assert has_element?(view, "#sidebar a[data-opens-inspector]", "Launch")
   end
 
+  test "quick capture adds a task to the inbox from another page", %{conn: conn} do
+    user = user_fixture()
+    {:ok, view, _html} = live(log_in_user(conn, user), ~p"/agenda")
+
+    view
+    |> form("#quick-capture-form", task: %{title: "Call the plumber"})
+    |> render_submit()
+
+    assert [%{title: "Call the plumber", inbox: true}] = Marskal.Tasks.list_inbox(user)
+    assert render(view) =~ "Added to the inbox."
+    assert has_element?(view, "#quick-capture-title[value='']")
+  end
+
+  test "the inbox page has its own capture form instead", %{conn: conn} do
+    {:ok, view, _html} = live(log_in_user(conn, user_fixture()), ~p"/inbox")
+
+    refute has_element?(view, "#quick-capture")
+  end
+
   test "signed-out pages have no menu or tab bar", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/users/log-in")
 

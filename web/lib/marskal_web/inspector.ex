@@ -73,6 +73,10 @@ defmodule MarskalWeb.Inspector do
     |> continue_if_defined(:handle_info, 2)
   end
 
+  # A component cannot set the page flash itself.
+  defp on_info({:put_flash, kind, message}, socket),
+    do: {:halt, put_flash(socket, kind, message)}
+
   defp on_info(_message, socket), do: {:cont, socket}
 
   defp continue_if_defined(socket, fun, arity) do

@@ -138,9 +138,22 @@ defmodule MarskalWeb.Layouts do
           <Lucideicons.flag class="icon" /> Flagged
         </.tab>
       </nav>
+
+      <.live_component
+        :if={@nav && @current_nav != :inbox}
+        module={MarskalWeb.QuickCapture}
+        id="quick-capture"
+        user={@current_scope.user}
+      />
     </div>
     <script :type={Phoenix.LiveView.ColocatedHook} name=".Inspector" extension="ts">
       import {ViewHook} from "phoenix_live_view"
+
+      const outside = (el: Element, event: MouseEvent) => {
+        const box = el.getBoundingClientRect()
+        return event.clientX < box.left || event.clientX > box.right ||
+          event.clientY < box.top || event.clientY > box.bottom
+      }
 
       export default class extends ViewHook {
         wasOpen = false
@@ -149,6 +162,7 @@ defmodule MarskalWeb.Layouts do
 
         onClick = (event: MouseEvent) => {
           if (!(event.target instanceof Element)) return
+          if (this.onCaptureClick(event)) return
           if (event.target.closest(".app-header__menu")) {
             this.setNav(!document.body.classList.contains("nav-open"))
             return
@@ -168,6 +182,7 @@ defmodule MarskalWeb.Layouts do
 
         onKeydown = (event: KeyboardEvent) => {
           if (event.key !== "Escape") return
+          if (document.querySelector("dialog[open]")) return
           if (document.body.classList.contains("nav-open")) {
             event.preventDefault()
             this.setNav(false)
@@ -182,6 +197,9 @@ defmodule MarskalWeb.Layouts do
           this.el.addEventListener("click", this.onClick)
           document.addEventListener("keydown", this.onKeydown)
           this.phone.addEventListener("change", this.onResize)
+          this.handleEvent("quick-capture:added", ({id}: {id: string}) => {
+            document.getElementById(id)?.closest("dialog")?.close()
+          })
           this.setNav(false)
           this.sync()
         }
@@ -200,6 +218,20 @@ defmodule MarskalWeb.Layouts do
         onResize = () => {
           this.setNav(false)
           this.sync()
+        }
+
+        // The add button opens its sheet; the close button or a tap on the
+        // backdrop, which targets the dialog itself, closes it.
+        onCaptureClick(event: MouseEvent): boolean {
+          const target = event.target as Element
+          const capture = target.closest(".quick-capture")
+          if (!capture) return false
+          const dialog = capture.querySelector("dialog")
+          if (!dialog) return false
+          if (target.closest(".open")) dialog.showModal()
+          else if (target.closest(".close") || (target === dialog && outside(dialog, event))) dialog.close()
+          else return false
+          return true
         }
 
         // A record link opens the inspector with its page only when there is
