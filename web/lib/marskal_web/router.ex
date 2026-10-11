@@ -7,6 +7,7 @@ defmodule MarskalWeb.Router do
   pipeline :browser do
     plug :accepts, ["html"]
     plug MarskalWeb.SecurityHeaders
+    plug MarskalWeb.FetchMetadata
     plug :fetch_session
     plug :fetch_live_flash
     plug :put_root_layout, html: {MarskalWeb.Layouts, :root}
