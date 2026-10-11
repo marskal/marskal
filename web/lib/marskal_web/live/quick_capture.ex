@@ -37,7 +37,7 @@ defmodule MarskalWeb.QuickCapture do
           }
 
           dialog::backdrop {
-            background: rgb(0 0 0 / 0.4);
+            background: var(--scrim);
           }
 
           form {
@@ -87,7 +87,7 @@ defmodule MarskalWeb.QuickCapture do
               border-radius: 50%;
               background: var(--accent);
               color: var(--accent-contrast);
-              box-shadow: 0 0.25rem 0.75rem rgb(0 0 0 / 0.25);
+              box-shadow: 0 0.25rem 0.75rem var(--shadow);
             }
 
             .open .icon {

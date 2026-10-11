@@ -62,27 +62,55 @@ defmodule MarskalWeb.CoreComponents do
       :if={msg = render_slot(@inner_block) || Phoenix.Flash.get(@flash, @kind)}
       id={@id}
       phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
-      role="alert"
-      class="toast toast-top toast-end z-50"
+      phx-hook={@kind == :info && ".AutoHide"}
+      role={if(@kind == :error, do: "alert", else: "status")}
+      class={["toast", "toast--#{@kind}"]}
       {@rest}
     >
-      <div class={[
-        "alert w-80 sm:w-96 max-w-80 sm:max-w-96 text-wrap",
-        @kind == :info && "alert-info",
-        @kind == :error && "alert-error"
-      ]}>
-        <Lucideicons.info :if={@kind == :info} class="icon" />
-        <Lucideicons.circle_alert :if={@kind == :error} class="icon" />
-        <div>
-          <p :if={@title} class="font-semibold">{@title}</p>
-          <p>{msg}</p>
-        </div>
-        <div class="flex-1" />
-        <button type="button" class="group self-start cursor-pointer" aria-label={gettext("close")}>
-          <Lucideicons.x class="icon" />
-        </button>
+      <Lucideicons.info :if={@kind == :info} class="icon toast__icon" />
+      <Lucideicons.circle_alert :if={@kind == :error} class="icon toast__icon" />
+      <div class="toast__body">
+        <p :if={@title} class="toast__title">{@title}</p>
+        <p>{msg}</p>
       </div>
+      <button type="button" class="toast__close" aria-label={gettext("close")}>
+        <Lucideicons.x class="icon" />
+      </button>
     </div>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".AutoHide" extension="ts">
+      import {ViewHook} from "phoenix_live_view"
+
+      // A notice clears itself after a while, unless the pointer or focus is
+      // on it. An error stays until it is closed.
+      export default class extends ViewHook {
+        timer?: number
+
+        mounted() {
+          this.el.addEventListener("pointerenter", this.stop)
+          this.el.addEventListener("focusin", this.stop)
+          this.el.addEventListener("pointerleave", this.start)
+          this.el.addEventListener("focusout", this.start)
+          this.start()
+        }
+
+        updated() {
+          this.start()
+        }
+
+        destroyed() {
+          this.stop()
+        }
+
+        start = () => {
+          this.stop()
+          this.timer = window.setTimeout(() => this.el.click(), 6000)
+        }
+
+        stop = () => {
+          window.clearTimeout(this.timer)
+        }
+      }
+    </script>
     """
   end
 
@@ -431,10 +459,7 @@ defmodule MarskalWeb.CoreComponents do
     JS.show(js,
       to: selector,
       time: 300,
-      transition:
-        {"transition-all ease-out duration-300",
-         "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95",
-         "opacity-100 translate-y-0 sm:scale-100"}
+      transition: {"fx-ease-out", "fx-away", "fx-here"}
     )
   end
 
@@ -442,9 +467,7 @@ defmodule MarskalWeb.CoreComponents do
     JS.hide(js,
       to: selector,
       time: 200,
-      transition:
-        {"transition-all ease-in duration-200", "opacity-100 translate-y-0 sm:scale-100",
-         "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"}
+      transition: {"fx-ease-in", "fx-here", "fx-away"}
     )
   end
 

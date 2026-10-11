@@ -107,7 +107,7 @@ defmodule MarskalWeb.InspectorPanel do
         input.input {
           width: 100%;
           padding: 0.45rem 0.6rem;
-          border: 1px solid var(--border);
+          border: 1px solid var(--border-strong);
           border-radius: 6px;
           background: var(--bg);
           color: var(--text);
