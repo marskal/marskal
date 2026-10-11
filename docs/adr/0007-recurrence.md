@@ -172,8 +172,8 @@ section wins.
   edits leave one of the two rules, never a mix that does not fit together
   (as Defer does, ADR 0006).
 - Tasks and projects both carry `series_id` and `occurrence_for`. A series has
-  occurrences of its own kind only. The first build repeats tasks; projects
-  follow without a schema change.
+  occurrences of its own kind only. The first build repeated tasks;
+  projects followed without a schema change (see Projects, 2026-10-10).
 - The series holds no title, notes, location, or tags. Those come from the
   occurrences.
 
@@ -351,6 +351,24 @@ paragraph disagrees, this section wins.
 - A subtask that is in a series of its own is copied as a plain task.
 - The subtasks under the resolved occurrence stay as they were, as its
   history.
+
+## Projects (2026-10-10)
+
+A project repeats as a task does, from the same rule and the same
+inspector line. Where an earlier paragraph disagrees, this section wins.
+
+- A project joins a series as its first occurrence, from the web app or
+  from a client patch of `series_id` and `occurrence_for`, as a task does.
+- Resolving the latest project, Done or Dropped, creates the next in the
+  same command. Deleting it ends the series. Pause, resume, and the end
+  date and count work as for tasks.
+- The next project copies the latest's title, notes, URL, flag, folder,
+  and tags, and starts To-Do. A deleted folder is not copied; the project
+  goes unfiled.
+- Its tasks are the latest's live tasks, copied by the Subtasks rules
+  above: every depth, the same order, every one To-Do, dates measured from
+  the project's anchor date, ids UUIDv5 of the new project and the task
+  copied.
 
 ## Consequences
 

@@ -2,14 +2,15 @@ defmodule Marskal.Recurrence do
   @moduledoc """
   Recurrence series and the occurrences that belong to them (ADR 0007).
 
-  An occurrence is a task (projects later) with `series_id` and
-  `occurrence_for`, the slot the rule gave it. It keeps that slot when its
-  dates move. The occurrences are the series' history.
+  An occurrence is a task or a project, as the series' `kind` says, with
+  `series_id` and `occurrence_for`, the slot the rule gave it. It keeps
+  that slot when its dates move. The occurrences are the series' history.
 
-  A client joins a task to a series only as its first occurrence. The
-  server creates every later one; clients get them on pull (ADR 0014).
-  `Marskal.Recurrence.Schedule` names the next slot and the dates that
-  move with it; this module creates the task for it.
+  A client joins a task or project to a series only as its first
+  occurrence. The server creates every later one; clients get them on
+  pull (ADR 0014). `Marskal.Recurrence.Schedule` names the next slot and
+  the dates that move with it; this module creates the occurrence for it,
+  with the latest's tasks copied under it.
 
   A series has one occurrence at a time: resolving the latest, Done or
   Dropped, creates the next, in the same command. Regular mode takes the
@@ -30,9 +31,13 @@ defmodule Marskal.Recurrence do
   alias Marskal.Accounts
   alias Marskal.Accounts.User
   alias Marskal.Changes
+  alias Marskal.ProjectFolders.ProjectFolder
+  alias Marskal.Projects
+  alias Marskal.Projects.Project
   alias Marskal.Recurrence.Schedule
   alias Marskal.Recurrence.Series
   alias Marskal.Repo
+  alias Marskal.Tags.ProjectTag
   alias Marskal.Tags.TaskTag
   alias Marskal.Tasks
   alias Marskal.Tasks.Task
@@ -84,46 +89,61 @@ defmodule Marskal.Recurrence do
   slot. Without it, the task needs the anchor date already.
   """
   def repeat_task(%User{} = user, task_id, attrs, command_id, opts \\ [])
-      when is_map(attrs) do
+      when is_map(attrs),
+      do: repeat(user, :task, task_id, attrs, command_id, opts)
+
+  @doc "As `repeat_task/5`, for a project."
+  def repeat_project(%User{} = user, project_id, attrs, command_id, opts \\ [])
+      when is_map(attrs),
+      do: repeat(user, :project, project_id, attrs, command_id, opts)
+
+  defp repeat(user, kind, id, attrs, command_id, opts) do
     Changes.apply(user, command_id, "recurrence_series", fn ->
-      case Tasks.get_task(user, task_id) do
+      case get_record(user, kind, id) do
         nil ->
           {:error, :not_found}
 
-        %Task{series_id: nil} = task ->
-          start_series(user, task, attrs, command_id, opts[:starts_at])
+        %{series_id: nil} = record ->
+          start_series(user, kind, record, attrs, command_id, opts[:starts_at])
 
-        %Task{} ->
+        _record ->
           {:error, :already_repeating}
       end
     end)
   end
 
-  defp start_series(user, task, attrs, command_id, starts_at) do
+  defp get_record(user, :task, id), do: Tasks.get_task(user, id)
+  defp get_record(user, :project, id), do: Projects.get_project(user, id)
+
+  defp schema(:task), do: Task
+  defp schema(:project), do: Project
+
+  defp start_series(user, kind, record, attrs, command_id, starts_at) do
     changeset =
       %Series{}
-      |> Series.create_changeset(user, Map.put(stringify(attrs), "kind", "task"))
-      |> require_anchor_date(task, starts_at)
+      |> Series.create_changeset(user, Map.put(stringify(attrs), "kind", to_string(kind)))
+      |> require_anchor_date(kind, record, starts_at)
 
     with {:ok, series} <- Repo.insert(changeset),
-         {:ok, _task} <- join_series(user, task, series, starts_at, command_id) do
+         {:ok, _record} <- join_series(user, kind, record, series, starts_at, command_id) do
       {:ok, series, changeset}
     end
   end
 
   defp stringify(attrs), do: Map.new(attrs, fn {key, value} -> {to_string(key), value} end)
 
-  defp require_anchor_date(%Ecto.Changeset{valid?: false} = changeset, _task, _starts_at),
+  defp require_anchor_date(%Ecto.Changeset{valid?: false} = changeset, _kind, _record, _at),
     do: changeset
 
-  defp require_anchor_date(changeset, _task, %DateTime{}), do: changeset
+  defp require_anchor_date(changeset, _kind, _record, %DateTime{}), do: changeset
 
-  defp require_anchor_date(changeset, task, nil) do
+  defp require_anchor_date(changeset, kind, record, nil) do
     series = apply_changes(changeset)
 
-    if Map.fetch!(task, Series.anchor_field(series)),
+    if Map.fetch!(record, Series.anchor_field(series)),
       do: changeset,
-      else: add_error(changeset, :anchor, "needs the task's #{anchor_word(series.anchor)} date")
+      else:
+        add_error(changeset, :anchor, "needs the #{kind}'s #{anchor_word(series.anchor)} date")
   end
 
   defp anchor_word(:defer), do: "Defer"
@@ -131,30 +151,35 @@ defmodule Marskal.Recurrence do
   defp anchor_word(:due), do: "Due"
 
   # The join follows from the series insert, with its own derived command.
-  defp join_series(user, task, series, starts_at, command_id) do
+  defp join_series(user, kind, record, series, starts_at, command_id) do
     field = Series.anchor_field(series)
-    slot = DateTime.truncate(starts_at || Map.fetch!(task, field), :second)
+    slot = DateTime.truncate(starts_at || Map.fetch!(record, field), :second)
     attrs = %{field => slot, series_id: series.id, occurrence_for: slot}
 
     attrs =
       if field == :defer_until, do: Map.put(attrs, :deferred_indefinitely, false), else: attrs
 
-    Tasks.update_task(user, task.id, attrs, Marskal.Uuid.v5(command_id, "task|#{task.id}"))
+    join_command = Marskal.Uuid.v5(command_id, "#{kind}|#{record.id}")
+
+    case kind do
+      :task -> Tasks.update_task(user, record.id, attrs, join_command)
+      :project -> Projects.update_project(user, record.id, attrs, join_command)
+    end
   end
 
-  @doc "The live occurrence of `task`'s series with the slot just before it."
-  def previous_occurrence(%User{} = user, %Task{series_id: id, occurrence_for: slot})
-      when is_binary(id) do
+  @doc "The live occurrence of a task's or project's series with the slot just before it."
+  def previous_occurrence(%User{} = user, %schema{series_id: id, occurrence_for: slot})
+      when is_binary(id) and schema in [Task, Project] do
     Repo.one(
-      from t in Task,
-        where: t.user_id == ^user.id and t.series_id == ^id and is_nil(t.discarded_at),
-        where: t.occurrence_for < ^slot,
-        order_by: [desc: t.occurrence_for],
+      from r in schema,
+        where: r.user_id == ^user.id and r.series_id == ^id and is_nil(r.discarded_at),
+        where: r.occurrence_for < ^slot,
+        order_by: [desc: r.occurrence_for],
         limit: 1
     )
   end
 
-  def previous_occurrence(_user, _task), do: nil
+  def previous_occurrence(_user, _record), do: nil
 
   @doc """
   The next `count` slots after `from`, in regular mode. Fewer when the rule
@@ -176,15 +201,15 @@ defmodule Marskal.Recurrence do
   @doc "The greatest slot among the series' live occurrences."
   def latest_slot(%Series{} = series) do
     Repo.one(
-      from t in Task,
-        where: t.series_id == ^series.id and is_nil(t.discarded_at),
-        select: max(t.occurrence_for)
+      from r in schema(series.kind),
+        where: r.series_id == ^series.id and is_nil(r.discarded_at),
+        select: max(r.occurrence_for)
     )
   end
 
-  @doc "Which of these tasks are in a live series that has not stopped."
-  def repeating_ids(%User{} = user, tasks) do
-    case for %Task{series_id: id} when is_binary(id) <- tasks, do: id do
+  @doc "Which of these tasks or projects are in a live series that has not stopped."
+  def repeating_ids(%User{} = user, records) do
+    case for %{series_id: id} when is_binary(id) <- records, do: id do
       [] ->
         MapSet.new()
 
@@ -198,10 +223,10 @@ defmodule Marskal.Recurrence do
           )
           |> MapSet.new()
 
-        for %Task{series_id: id} = task <- tasks,
+        for %{series_id: id} = record <- records,
             MapSet.member?(live, id),
             into: MapSet.new(),
-            do: task.id
+            do: record.id
     end
   end
 
@@ -329,28 +354,30 @@ defmodule Marskal.Recurrence do
   ## Creating occurrences
 
   @doc false
-  # Called by `Marskal.Tasks` in the command that resolves `task`. The
-  # next occurrence is part of that command, so a replay replays it too.
-  def occurrence_resolved(%User{} = user, command_id, %Task{series_id: series_id} = task)
+  # Called by `Marskal.Tasks` or `Marskal.Projects` in the command that
+  # resolves `record`. The next occurrence is part of that command, so a
+  # replay replays it too.
+  def occurrence_resolved(%User{} = user, command_id, %{series_id: series_id} = record)
       when is_binary(series_id) do
     with %Series{} = series <- lock_live(series_id),
-         %Task{id: id} when id == task.id <- latest(series) do
-      create_next(user, series, task, task.resolved_at, command_id)
+         %{id: id} when id == record.id <- latest(series) do
+      create_next(user, series, record, record.resolved_at, command_id)
     end
 
     :ok
   end
 
-  def occurrence_resolved(_user, _command_id, _task), do: :ok
+  def occurrence_resolved(_user, _command_id, _record), do: :ok
 
   @doc false
-  # Called by `Marskal.Tasks` in the command that deletes `task`, before
-  # the discard. Deleting the latest occurrence ends its series, paused or
-  # not; the occurrences before it stay, as `delete_series/3` leaves them.
-  def occurrence_deleted(%User{} = user, command_id, %Task{series_id: series_id} = task)
+  # Called by `Marskal.Tasks` or `Marskal.Projects` in the command that
+  # deletes `record`, before the discard. Deleting the latest occurrence
+  # ends its series, paused or not; the occurrences before it stay, as
+  # `delete_series/3` leaves them.
+  def occurrence_deleted(%User{} = user, command_id, %{series_id: series_id} = record)
       when is_binary(series_id) do
     with %Series{} = series <- lock_series(series_id),
-         %Task{id: id} when id == task.id <- latest(series) do
+         %{id: id} when id == record.id <- latest(series) do
       Changes.cascade(user, command_id, "recurrence_series", series.id, fn ->
         discard_series(series)
       end)
@@ -359,13 +386,13 @@ defmodule Marskal.Recurrence do
     :ok
   end
 
-  def occurrence_deleted(_user, _command_id, _task), do: :ok
+  def occurrence_deleted(_user, _command_id, _record), do: :ok
 
   # A series paused after its latest was resolved made nothing then. On
   # resume it steps on from now.
   defp resumed(user, series, command_id) do
     with %Series{} = series <- lock_live(series.id),
-         %Task{state: state} = latest when state != :to_do <- latest(series) do
+         %{state: state} = latest when state != :to_do <- latest(series) do
       create_next(user, series, latest, DateTime.utc_now(:second), command_id)
     end
   end
@@ -389,7 +416,7 @@ defmodule Marskal.Recurrence do
         series,
         latest,
         slot,
-        Marskal.Uuid.v5(command_id, "task|#{next_id}")
+        Marskal.Uuid.v5(command_id, "#{series.kind}|#{next_id}")
       )
     end
   end
@@ -415,9 +442,9 @@ defmodule Marskal.Recurrence do
   # nothing to copy, and creates nothing.
   defp latest(series) do
     Repo.one(
-      from t in Task,
-        where: t.series_id == ^series.id and is_nil(t.discarded_at),
-        order_by: [desc: t.inserted_at, desc: t.occurrence_for],
+      from r in schema(series.kind),
+        where: r.series_id == ^series.id and is_nil(r.discarded_at),
+        order_by: [desc: r.inserted_at, desc: r.occurrence_for],
         limit: 1
     )
   end
@@ -427,7 +454,7 @@ defmodule Marskal.Recurrence do
 
     cond do
       # A generated id is never created again, discarded or not.
-      Repo.exists?(from t in Task, where: t.id == ^id) -> nil
+      Repo.exists?(from r in schema(series.kind), where: r.id == ^id) -> nil
       ended?(series) -> nil
       true -> insert_occurrence(user, series, latest, id, slot, command_id)
     end
@@ -437,11 +464,11 @@ defmodule Marskal.Recurrence do
   defp ended?(%Series{end_count: nil}), do: false
 
   defp ended?(series) do
-    Repo.aggregate(from(t in Task, where: t.series_id == ^series.id), :count) >=
+    Repo.aggregate(from(r in schema(series.kind), where: r.series_id == ^series.id), :count) >=
       series.end_count
   end
 
-  defp insert_occurrence(user, series, latest, id, slot, command_id) do
+  defp insert_occurrence(user, %Series{kind: :task} = series, latest, id, slot, command_id) do
     dates = Schedule.shift_dates(latest, series.anchor, slot, Accounts.timezone(user))
     parent = latest.parent_id && Tasks.get_task(user, latest.parent_id)
 
@@ -467,6 +494,49 @@ defmodule Marskal.Recurrence do
     copy = {task.id, anchor_at, slot}
     copy_tasks(user, Tasks.Outline.children(latest), %{parent_id: task.id}, copy, command_id)
     task
+  end
+
+  # A project copies the latest's folder, while the folder is live, its
+  # tags, and its live tasks, as a task copies its subtasks.
+  defp insert_occurrence(user, %Series{kind: :project} = series, latest, id, slot, command_id) do
+    dates = Schedule.shift_dates(latest, series.anchor, slot, Accounts.timezone(user))
+
+    attrs =
+      Map.merge(dates, %{
+        id: id,
+        title: latest.title,
+        notes: latest.notes,
+        url: latest.url,
+        flagged: latest.flagged,
+        project_folder_id: live_folder_id(latest),
+        deferred_indefinitely: latest.deferred_indefinitely and series.anchor != :defer,
+        series_id: series.id,
+        occurrence_for: slot
+      })
+
+    {:ok, project} = Projects.create_project(user, attrs, command_id, generated: true)
+    copy_project_tags(user, latest, project, command_id)
+    anchor_at = Map.fetch!(latest, Series.anchor_field(series))
+    place = %{project_id: project.id, inbox: false, parent_id: nil}
+    copy_tasks(user, top_tasks(latest), place, {project.id, anchor_at, slot}, command_id)
+    project
+  end
+
+  defp live_folder_id(%Project{project_folder_id: nil}), do: nil
+
+  defp live_folder_id(%Project{project_folder_id: id}) do
+    case Repo.get(ProjectFolder, id) do
+      %ProjectFolder{discarded_at: nil} -> id
+      _ -> nil
+    end
+  end
+
+  defp top_tasks(project) do
+    Repo.all(
+      from t in Task,
+        where: t.project_id == ^project.id and is_nil(t.parent_id) and is_nil(t.discarded_at),
+        order_by: [asc: t.rank, asc: t.id]
+    )
   end
 
   # Copies `tasks` into the new occurrence at `place`, with the live
@@ -512,21 +582,34 @@ defmodule Marskal.Recurrence do
   end
 
   # A link to a deleted tag is left behind. A merged tag stands for the one
-  # it went into, which `Marskal.Tags.tag_task/4` follows.
-  defp copy_tags(user, latest, task, command_id) do
-    tag_ids =
-      Repo.all(
-        from l in TaskTag,
-          join: tag in assoc(l, :tag),
-          where: l.task_id == ^latest.id and is_nil(l.discarded_at),
-          where: is_nil(tag.discarded_at) or not is_nil(tag.merged_into_id),
-          order_by: [asc: l.inserted_at, asc: l.id],
-          select: l.tag_id
-      )
-
-    for tag_id <- tag_ids do
+  # it went into, which `Marskal.Tags` follows.
+  defp copy_tags(user, %Task{} = source, %Task{} = copy, command_id) do
+    for tag_id <- live_tag_ids(TaskTag, :task_id, source.id) do
       {:ok, _} =
-        Marskal.Tags.tag_task(user, task.id, tag_id, Marskal.Uuid.v5(command_id, "tag|#{tag_id}"))
+        Marskal.Tags.tag_task(user, copy.id, tag_id, Marskal.Uuid.v5(command_id, "tag|#{tag_id}"))
     end
+  end
+
+  defp copy_project_tags(user, source, copy, command_id) do
+    for tag_id <- live_tag_ids(ProjectTag, :project_id, source.id) do
+      {:ok, _} =
+        Marskal.Tags.tag_project(
+          user,
+          copy.id,
+          tag_id,
+          Marskal.Uuid.v5(command_id, "tag|#{tag_id}")
+        )
+    end
+  end
+
+  defp live_tag_ids(schema, owner_field, owner_id) do
+    Repo.all(
+      from l in schema,
+        join: tag in assoc(l, :tag),
+        where: field(l, ^owner_field) == ^owner_id and is_nil(l.discarded_at),
+        where: is_nil(tag.discarded_at) or not is_nil(tag.merged_into_id),
+        order_by: [asc: l.inserted_at, asc: l.id],
+        select: l.tag_id
+    )
   end
 end

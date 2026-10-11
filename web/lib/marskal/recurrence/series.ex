@@ -124,8 +124,6 @@ defmodule Marskal.Recurrence.Series do
     series
     |> cast(attrs, [:id, :kind | @rule])
     |> validate_required([:kind])
-    # Recurring projects come with copying a project's task tree (ADR 0007).
-    |> validate_inclusion(:kind, [:task], message: "projects do not repeat yet")
     |> put_change(:user_id, user.id)
     |> put_week_start(user)
     |> validate_rule()

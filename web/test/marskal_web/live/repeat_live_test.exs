@@ -240,6 +240,37 @@ defmodule MarskalWeb.RepeatLiveTest do
     assert has_element?(view, "#inspector-task-repeat", "Its series was deleted")
   end
 
+  test "a project repeats from its inspector, and its next shows the line", %{
+    conn: conn,
+    user: user
+  } do
+    {:ok, project} =
+      Marskal.Projects.create_project(user, %{title: "Review", due_at: @friday}, command())
+
+    {:ok, view, _html} = live(conn, ~p"/?project=#{project.id}")
+    view |> element("#inspector-project-repeat-open") |> render_click()
+
+    dialog = "#inspector-project-repeat-dialog"
+    assert has_element?(view, "#{dialog}-weekday-0 option[value='5'][selected]")
+    view |> form("#{dialog}-form") |> render_submit()
+
+    %{series_id: series_id} = Marskal.Projects.get_project(user, project.id)
+    assert %Series{kind: :project} = Recurrence.get_series(user, series_id)
+    assert has_element?(view, "#inspector-project-repeat-summary", "Repeats weekly on Fri")
+
+    assert has_element?(
+             view,
+             "#inspector-project-delete[data-confirm*='end its repeat']"
+           )
+
+    {:ok, _} = Marskal.Projects.complete_project(user, project.id, command())
+    [next] = Enum.reject(Marskal.Projects.list_open(user), &(&1.id == project.id))
+
+    {:ok, view, _html} = live(conn, ~p"/?project=#{next.id}")
+    view |> element("#inspector-project-repeat-previous") |> render_click()
+    assert_patch(view, ~p"/?project=#{project.id}")
+  end
+
   describe "draft_to_attrs/2" do
     test "clears the days a kind of repeat does not take" do
       draft = %{

@@ -39,21 +39,34 @@ defmodule Marskal.Projects do
 
   @doc """
   Patch any of title, notes, url, flagged, project_folder_id, state, and the dates in one
-  command. `at:` is as for `Marskal.Tasks.update_task/5`.
+  command. `at:` is as for `Marskal.Tasks.update_task/5`. Resolving the
+  latest occurrence of a series creates the next one (ADR 0007).
   """
   def update_project(%User{} = user, id, attrs, command_id, opts \\ []) when is_map(attrs) do
     Changes.apply(user, command_id, "project", fn ->
       case get_project(user, id) do
         nil -> {:error, :not_found}
-        project -> Changes.commit(Project.update_changeset(project, attrs, opts))
+        project -> commit_update(user, command_id, project, attrs, opts)
       end
     end)
+  end
+
+  defp commit_update(user, command_id, project, attrs, opts) do
+    with {:ok, updated, changeset} <-
+           Changes.commit(Project.update_changeset(project, attrs, opts)) do
+      if Ecto.Changeset.changed?(changeset, :state) and updated.state in [:done, :dropped] do
+        Marskal.Recurrence.occurrence_resolved(user, command_id, updated)
+      end
+
+      {:ok, updated, changeset}
+    end
   end
 
   @doc """
   Discards the project and every task in it (ADR 0014). Each task gets its
   own change, under a command id derived from this one, so a replay
-  discards nothing twice.
+  discards nothing twice. Deleting a series' latest occurrence ends the
+  series (ADR 0007).
   """
   def delete_project(%User{} = user, id, command_id) do
     Changes.apply(user, command_id, "project", fn ->
@@ -68,6 +81,8 @@ defmodule Marskal.Projects do
     project
     |> project_tasks()
     |> Enum.each(&discard_project_task(user, command_id, &1))
+
+    Marskal.Recurrence.occurrence_deleted(user, command_id, project)
 
     changeset = Project.discard_changeset(project)
     {:ok, Repo.update!(changeset), changeset}

@@ -76,7 +76,7 @@ defmodule Marskal.RecurrenceTest do
             {%{mode: :on_completion, frequency: :weeks, weekdays: [1]}, :weekdays},
             {%{mode: :on_completion, frequency: :months, on_days: ["15:day"]}, :on_days},
             {%{mode: nil}, :mode},
-            {%{kind: :project}, :kind}
+            {%{kind: :folder}, :kind}
           ] do
         assert {:error, changeset} =
                  Recurrence.create_series(user, Map.merge(base, attrs), command())
@@ -341,6 +341,33 @@ defmodule Marskal.RecurrenceTest do
     end
   end
 
+  describe "repeat_project/4" do
+    test "makes a project series with the project as its first occurrence", %{user: user} do
+      {:ok, project} =
+        Marskal.Projects.create_project(user, %{title: "Review", planned_at: @friday}, command())
+
+      rule = %{mode: :regular, anchor: :planned, interval: 1, frequency: :weeks}
+      {:ok, series} = Recurrence.repeat_project(user, project.id, rule, command())
+
+      assert %Series{kind: :project} = series
+      joined = Marskal.Projects.get_project(user, project.id)
+      assert joined.series_id == series.id
+      assert joined.occurrence_for == @friday
+      assert Recurrence.repeating_ids(user, [joined]) == MapSet.new([project.id])
+
+      assert {:error, :already_repeating} =
+               Recurrence.repeat_project(user, project.id, rule, command())
+    end
+
+    test "needs the anchor date", %{user: user} do
+      {:ok, project} = Marskal.Projects.create_project(user, %{title: "Review"}, command())
+      rule = %{mode: :regular, anchor: :due, interval: 1, frequency: :weeks}
+
+      assert {:error, changeset} = Recurrence.repeat_project(user, project.id, rule, command())
+      assert "needs the project's Due date" in errors_on(changeset).anchor
+    end
+  end
+
   describe "occurrence_id/2" do
     test "is v5 of the series and the instant, with six fractional digits" do
       series_id = "0192F0A0-0000-7000-8000-000000000001"
@@ -425,16 +452,35 @@ defmodule Marskal.RecurrenceTest do
                Sync.pull(user, nil).rows["task"]
     end
 
-    test "projects carry the occurrence fields, read-only for now", %{user: user} do
-      {:ok, project} = Marskal.Projects.create_project(user, %{title: "Review"}, command())
+    test "a project joins a project series, not a task one", %{user: user} do
+      {:ok, project} =
+        Marskal.Projects.create_project(user, %{title: "Review", due_at: @friday}, command())
 
       assert [%{"series_id" => nil, "occurrence_for" => nil}] =
                Sync.pull(user, nil).rows["project"]
 
-      assert [%{status: "rejected", reason: "field_not_allowed"}] =
-               Push.push(user, [
-                 command("project", project.id, "patch", %{"series_id" => Ecto.UUID.generate()})
-               ])
+      at = DateTime.to_iso8601(@friday)
+      join = %{"series_id" => series_fixture(user).id, "occurrence_for" => at}
+
+      assert [%{status: "rejected", reason: "invalid"}] =
+               Push.push(user, [command("project", project.id, "patch", join)])
+
+      {:ok, series} =
+        Recurrence.create_series(
+          user,
+          %{kind: :project, mode: :regular, anchor: :due, interval: 1, frequency: :weeks},
+          command()
+        )
+
+      join = %{join | "series_id" => series.id}
+
+      assert [%{status: "applied"}] =
+               Push.push(user, [command("project", project.id, "patch", join)])
+
+      series_id = series.id
+
+      assert [%{"series_id" => ^series_id, "occurrence_for" => ^at}] =
+               Sync.pull(user, nil).rows["project"]
     end
 
     test "a patch that moves a task's slot is rejected", %{user: user} do

@@ -282,6 +282,8 @@ defmodule MarskalWeb.InspectorPanel do
       />
       <.project_form
         :if={match?(%Projects.Project{}, @record)}
+        user={@user}
+        change_version={assigns[:change_version]}
         zone={Marskal.Accounts.timezone(@user)}
         myself={@myself}
         record={@record}
@@ -440,7 +442,7 @@ defmodule MarskalWeb.InspectorPanel do
         module={MarskalWeb.RepeatPanel}
         id="inspector-task-repeat"
         user={@user}
-        task={@record}
+        record={@record}
         change_version={@change_version}
       />
       <.tag_picker id="inspector-task-tags" myself={@myself} tagging={@tagging} picker={@picker} />
@@ -456,6 +458,8 @@ defmodule MarskalWeb.InspectorPanel do
   attr :tagging, :map, required: true
   attr :picker, :map, required: true
   attr :zone, :string, required: true
+  attr :user, :any, required: true
+  attr :change_version, :any, default: nil
 
   defp project_form(assigns) do
     ~H"""
@@ -556,13 +560,20 @@ defmodule MarskalWeb.InspectorPanel do
             class="danger"
             phx-click="delete"
             phx-target={@myself}
-            data-confirm="Delete this project and every task in it? To finish it or give it up, use Done or Dropped."
+            data-confirm={delete_project_confirm(@record)}
           >
             Delete
           </button>
           <.link navigate={~p"/projects/#{@record.id}"} class="open">Open project</.link>
         </div>
       </form>
+      <.live_component
+        module={MarskalWeb.RepeatPanel}
+        id="inspector-project-repeat"
+        user={@user}
+        record={@record}
+        change_version={@change_version}
+      />
       <.tag_picker id="inspector-project-tags" myself={@myself} tagging={@tagging} picker={@picker} />
       <.meta record={@record} zone={@zone} />
     </section>
@@ -1057,6 +1068,15 @@ defmodule MarskalWeb.InspectorPanel do
 
   defp delete_task_confirm(_task),
     do: "Delete this task? To finish it or give it up, use Done or Dropped."
+
+  defp delete_project_confirm(%Projects.Project{series_id: id, state: :to_do})
+       when is_binary(id),
+       do:
+         "Delete this project and every task in it, and end its repeat? To skip only this one, use Dropped."
+
+  defp delete_project_confirm(_project),
+    do:
+      "Delete this project and every task in it? To finish it or give it up, use Done or Dropped."
 
   # A hidden "false" is always submitted. A checked box adds "true" after it.
   defp location_params(%{"location" => value}) do

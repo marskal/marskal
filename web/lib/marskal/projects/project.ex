@@ -20,7 +20,6 @@ defmodule Marskal.Projects.Project do
     field :due_at, :utc_datetime
     field :resolved_at, :utc_datetime
     field :discarded_at, :utc_datetime
-    # Read-only until projects repeat (ADR 0007).
     field :occurrence_for, :utc_datetime
 
     belongs_to :user, Marskal.Accounts.User
@@ -36,12 +35,16 @@ defmodule Marskal.Projects.Project do
   """
   def client_fields(:insert),
     do:
-      ~w(title notes url flagged project_folder_id state defer_until deferred_indefinitely planned_at due_at)
+      ~w(title notes url flagged project_folder_id state defer_until deferred_indefinitely planned_at due_at series_id occurrence_for)
 
   def client_fields(:patch),
     do:
-      ~w(title notes url flagged project_folder_id state defer_until deferred_indefinitely planned_at due_at discarded_at)
+      ~w(title notes url flagged project_folder_id state defer_until deferred_indefinitely planned_at due_at series_id occurrence_for discarded_at)
 
+  @doc """
+  A new project. `generated: true` is for the occurrences
+  `Marskal.Recurrence` creates.
+  """
   def create_changeset(project, user, attrs, opts \\ []) do
     project
     |> cast(attrs, [
@@ -52,6 +55,8 @@ defmodule Marskal.Projects.Project do
       :flagged,
       :project_folder_id,
       :state,
+      :series_id,
+      :occurrence_for,
       :resolved_at | Dates.fields()
     ])
     |> validate_required([:title, :flagged])
@@ -64,12 +69,25 @@ defmodule Marskal.Projects.Project do
     |> owned_folder_constraint()
     |> validate_live_folder()
     |> date_constraints()
+    |> Marskal.Recurrence.validate_occurrence(user.id, :project, generated: opts[:generated])
   end
 
-  @doc "Any subset of the editable fields. Only fields that differ reach the patch."
+  @doc """
+  Any subset of the editable fields. Only fields that differ reach the
+  patch. `series_id` and `occurrence_for` join a series, once.
+  """
   def update_changeset(project, attrs, opts \\ []) do
     project
-    |> cast(attrs, [:title, :notes, :url, :flagged, :project_folder_id, :state | Dates.fields()])
+    |> cast(attrs, [
+      :title,
+      :notes,
+      :url,
+      :flagged,
+      :project_folder_id,
+      :state,
+      :series_id,
+      :occurrence_for | Dates.fields()
+    ])
     |> validate_required([:title, :state, :flagged])
     |> validate_length(:title, max: Marskal.Tasks.Task.title_max())
     |> validate_length(:notes, max: Marskal.Tasks.Task.notes_max())
@@ -79,6 +97,7 @@ defmodule Marskal.Projects.Project do
     |> owned_folder_constraint()
     |> validate_live_folder()
     |> date_constraints()
+    |> Marskal.Recurrence.validate_occurrence(project.user_id, :project)
   end
 
   def discard_changeset(project), do: Dates.discard(project)
