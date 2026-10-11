@@ -24,6 +24,37 @@ defmodule MarskalWeb.AppShellLiveTest do
     assert has_element?(view, ~s|#sidebar .sidebar-account a[href="/users/settings"]|)
   end
 
+  test "a project page opened alone has a button to show its details", %{conn: conn} do
+    user = user_fixture()
+    conn = log_in_user(conn, user)
+
+    {:ok, project} =
+      Marskal.Projects.create_project(user, %{"title" => "Launch"}, Ecto.UUID.generate())
+
+    {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}")
+
+    assert has_element?(view, ".app-inspector__title", "Details")
+    refute has_element?(view, "#inspector-project-title")
+
+    view |> element(".page-heading__details") |> render_click()
+
+    assert_patch(view, ~p"/projects/#{project.id}?#{[project: project.id]}")
+    assert has_element?(view, ".app-inspector__title", "Project")
+    assert has_element?(view, "#inspector-project-title[value='Launch']")
+    refute has_element?(view, ".page-heading__details")
+  end
+
+  test "record links say they open the inspector, for the client to skip", %{conn: conn} do
+    user = user_fixture()
+
+    {:ok, _project} =
+      Marskal.Projects.create_project(user, %{"title" => "Launch"}, Ecto.UUID.generate())
+
+    {:ok, view, _html} = live(log_in_user(conn, user), ~p"/")
+
+    assert has_element?(view, "#sidebar a[data-opens-inspector]", "Launch")
+  end
+
   test "signed-out pages have no menu or tab bar", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/users/log-in")
 

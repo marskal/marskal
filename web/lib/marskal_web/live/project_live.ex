@@ -32,9 +32,14 @@ defmodule MarskalWeb.ProjectLive do
       change_version={assigns[:change_version] || 0}
     >
       <p :if={@folder} class="lede">
-        <.link navigate={MarskalWeb.NavComponents.record_path(:folder, @folder.id)}>{@folder.name}</.link>
+        <.link
+          navigate={MarskalWeb.NavComponents.record_path(:folder, @folder.id)}
+          data-opens-inspector
+        >{@folder.name}</.link>
       </p>
-      <h1>{@project.title}</h1>
+      <MarskalWeb.NavComponents.page_heading type={:project} id={@project.id} inspector={@inspector}>
+        {@project.title}
+      </MarskalWeb.NavComponents.page_heading>
       <p :if={@project.url} class="lede"><MarskalWeb.UrlLink.link url={@project.url} text /></p>
       <MarskalWeb.FormattedNotes.block text={@project.notes} class="lede notes" />
       <p class="actions">

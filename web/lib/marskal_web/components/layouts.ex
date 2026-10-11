@@ -103,15 +103,16 @@ defmodule MarskalWeb.Layouts do
           aria-label="Inspector"
         >
           <div class="app-inspector__chrome">
-            <h2 class="app-inspector__title">Inspector</h2>
             <button
               type="button"
               class="app-inspector__close"
               phx-click="close-inspector"
               aria-label="Close inspector"
             >
-              <Lucideicons.x class="icon" />
+              <Lucideicons.arrow_left class="icon app-inspector__back" />
+              <Lucideicons.x class="icon app-inspector__x" />
             </button>
+            <h2 class="app-inspector__title">{inspector_title(@inspector)}</h2>
           </div>
           <.live_component
             module={MarskalWeb.InspectorPanel}
@@ -144,6 +145,7 @@ defmodule MarskalWeb.Layouts do
       export default class extends ViewHook {
         wasOpen = false
         phone = window.matchMedia("(max-width: 720px)")
+        narrow = window.matchMedia("(max-width: 64rem)")
 
         onClick = (event: MouseEvent) => {
           if (!(event.target instanceof Element)) return
@@ -154,6 +156,7 @@ defmodule MarskalWeb.Layouts do
           if (event.target.closest(".sidebar-backdrop, .sidebar a")) this.setNav(false)
           const link = event.target.closest("a")
           if (link) {
+            if (link.hasAttribute("data-opens-inspector") && this.narrow.matches) this.skipInspector(link)
             if (link.closest(".task-row")) event.stopPropagation()
             return
           }
@@ -199,6 +202,14 @@ defmodule MarskalWeb.Layouts do
           this.sync()
         }
 
+        // A record link opens the inspector with its page only when there is
+        // room for three panes. LiveView reads the href after this handler.
+        skipInspector(link: HTMLAnchorElement) {
+          const url = new URL(link.href)
+          for (const key of ["task", "project", "folder", "tag"]) url.searchParams.delete(key)
+          link.setAttribute("href", url.pathname + url.search)
+        }
+
         // On a phone the sidebar is a drawer behind the menu button. The
         // state lives on <body>, outside what LiveView patches.
         setNav(open: boolean) {
@@ -216,7 +227,7 @@ defmodule MarskalWeb.Layouts do
           const panel = this.el.querySelector<HTMLElement>(".app-inspector")
           if (!panel) return
           const open = this.el.classList.contains("is-inspector-open")
-          const narrow = window.matchMedia("(max-width: 64rem)").matches
+          const narrow = this.narrow.matches
           panel.toggleAttribute("inert", narrow && !open)
           document.body.classList.toggle("inspector-open", narrow && open)
           if (open && !this.wasOpen) panel.focus({preventScroll: true})
@@ -228,6 +239,12 @@ defmodule MarskalWeb.Layouts do
     <.flash_group flash={@flash} />
     """
   end
+
+  defp inspector_title(%{type: :task}), do: "Task"
+  defp inspector_title(%{type: :project}), do: "Project"
+  defp inspector_title(%{type: :folder}), do: "Folder"
+  defp inspector_title(%{type: :tag}), do: "Tag"
+  defp inspector_title(_selection), do: "Details"
 
   attr :navigate, :string, required: true
   attr :current, :boolean, default: false
