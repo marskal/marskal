@@ -1,0 +1,33 @@
+defmodule MarskalWeb.AppShellLiveTest do
+  use MarskalWeb.ConnCase, async: true
+
+  import Phoenix.LiveViewTest
+  import Marskal.AccountsFixtures
+
+  test "the tab bar marks the current view", %{conn: conn} do
+    conn = log_in_user(conn, user_fixture())
+    {:ok, view, _html} = live(conn, ~p"/agenda")
+
+    assert has_element?(view, ".tab-bar a[aria-current=page]", "Agenda")
+    refute has_element?(view, ".tab-bar a[aria-current=page]", "Inbox")
+
+    {:ok, view, _html} = live(conn, ~p"/flagged")
+    assert has_element?(view, ".tab-bar a[aria-current=page]", "Flagged")
+  end
+
+  test "the sidebar holds the account links for the phone drawer", %{conn: conn} do
+    user = user_fixture()
+    {:ok, view, _html} = live(log_in_user(conn, user), ~p"/")
+
+    assert has_element?(view, ".app-header__menu[aria-controls=sidebar]")
+    assert has_element?(view, "#sidebar .sidebar-account", user.email)
+    assert has_element?(view, ~s|#sidebar .sidebar-account a[href="/users/settings"]|)
+  end
+
+  test "signed-out pages have no menu or tab bar", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/users/log-in")
+
+    refute has_element?(view, ".app-header__menu")
+    refute has_element?(view, ".tab-bar")
+  end
+end
