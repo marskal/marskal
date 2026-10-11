@@ -9,6 +9,20 @@ defmodule MarskalWeb.TaskStreamTest do
     %{conn: log_in_user(conn, user), user: user}
   end
 
+  test "the form mints a UUIDv7 command id", %{conn: conn, user: user} do
+    {:ok, inbox, _html} = live(conn, ~p"/inbox")
+    inbox |> form("#new-task", task: %{title: "Milk"}) |> render_submit()
+
+    [task] = Marskal.Tasks.list_inbox(user)
+
+    %{rows: [[command_id]]} =
+      Marskal.Repo.query!("SELECT command_id::text FROM changes WHERE entity_id = $1", [
+        Ecto.UUID.dump!(task.id)
+      ])
+
+    assert String.at(command_id, 14) == "7"
+  end
+
   test "capture, move out of the inbox, and complete", %{conn: conn} do
     {:ok, inbox, _html} = live(conn, ~p"/inbox")
 
@@ -115,5 +129,5 @@ defmodule MarskalWeb.TaskStreamTest do
     refute html =~ "Secret"
   end
 
-  defp command, do: Ecto.UUID.generate()
+  defp command, do: Ecto.UUID.generate(version: 7)
 end

@@ -245,7 +245,7 @@ defmodule Marskal.Imports.Applier do
 
           nil ->
             attrs = %{"name" => name, "parent_id" => parent_id, "state" => node.state}
-            {:ok, tag} = Tags.create_tag(user, attrs, Ecto.UUID.generate())
+            {:ok, tag} = Tags.create_tag(user, attrs, Ecto.UUID.generate(version: 7))
 
             acc
             |> record!(batch, :tag, node, %{tag_id: tag.id}, Merge.snapshot(:tag, tag))
@@ -302,7 +302,7 @@ defmodule Marskal.Imports.Applier do
         )
 
       if patch != %{},
-        do: {:ok, _} = Tags.update_tag(batch.user, tag.id, patch, Ecto.UUID.generate())
+        do: {:ok, _} = Tags.update_tag(batch.user, tag.id, patch, Ecto.UUID.generate(version: 7))
 
       acc
       |> store_base!(item, incoming)
@@ -323,8 +323,8 @@ defmodule Marskal.Imports.Applier do
     Enum.filter(tag_ids, fn tag_id ->
       result =
         case kind do
-          :task -> Tags.tag_task(user, owner_id, tag_id, Ecto.UUID.generate())
-          :project -> Tags.tag_project(user, owner_id, tag_id, Ecto.UUID.generate())
+          :task -> Tags.tag_task(user, owner_id, tag_id, Ecto.UUID.generate(version: 7))
+          :project -> Tags.tag_project(user, owner_id, tag_id, Ecto.UUID.generate(version: 7))
         end
 
       # A tag the user deleted since an earlier import is left off.
@@ -339,8 +339,8 @@ defmodule Marskal.Imports.Applier do
     for tag_id <- tag_ids do
       {:ok, _} =
         case kind do
-          :task -> Tags.untag_task(user, owner_id, tag_id, Ecto.UUID.generate())
-          :project -> Tags.untag_project(user, owner_id, tag_id, Ecto.UUID.generate())
+          :task -> Tags.untag_task(user, owner_id, tag_id, Ecto.UUID.generate(version: 7))
+          :project -> Tags.untag_project(user, owner_id, tag_id, Ecto.UUID.generate(version: 7))
         end
     end
   end
@@ -355,7 +355,11 @@ defmodule Marskal.Imports.Applier do
     else
       _ ->
         {:ok, folder} =
-          ProjectFolders.create_folder(batch.user, folder_attrs(node, acc), Ecto.UUID.generate())
+          ProjectFolders.create_folder(
+            batch.user,
+            folder_attrs(node, acc),
+            Ecto.UUID.generate(version: 7)
+          )
 
         acc
         |> record!(
@@ -390,7 +394,9 @@ defmodule Marskal.Imports.Applier do
       applicable(:folder, patch, kept, ProjectFolder.update_changeset(folder, user, patch))
 
     if patch != %{},
-      do: {:ok, _} = ProjectFolders.update_folder(user, folder.id, patch, Ecto.UUID.generate())
+      do:
+        {:ok, _} =
+          ProjectFolders.update_folder(user, folder.id, patch, Ecto.UUID.generate(version: 7))
 
     acc
     |> store_base!(item, incoming)
@@ -407,7 +413,7 @@ defmodule Marskal.Imports.Applier do
           Projects.create_project(
             batch.user,
             project_attrs(node, acc, batch.user),
-            Ecto.UUID.generate()
+            Ecto.UUID.generate(version: 7)
           )
 
         tags = tag_all!(batch.user, :project, project.id, source_tags(node, acc))
@@ -445,7 +451,7 @@ defmodule Marskal.Imports.Applier do
 
     if patch != %{} do
       {:ok, _} =
-        Projects.update_project(user, project.id, patch, Ecto.UUID.generate(),
+        Projects.update_project(user, project.id, patch, Ecto.UUID.generate(version: 7),
           at: desired["resolved_at"]
         )
     end
@@ -468,7 +474,11 @@ defmodule Marskal.Imports.Applier do
     else
       _ ->
         {:ok, task} =
-          Tasks.create_task(batch.user, task_attrs(node, acc, batch.user), Ecto.UUID.generate())
+          Tasks.create_task(
+            batch.user,
+            task_attrs(node, acc, batch.user),
+            Ecto.UUID.generate(version: 7)
+          )
 
         tags = tag_all!(batch.user, :task, task.id, source_tags(node, acc))
         base = Merge.snapshot(:task, task) |> Map.put("tag_ids", Enum.sort(tags))
@@ -516,7 +526,9 @@ defmodule Marskal.Imports.Applier do
 
     if patch != %{} do
       {:ok, _} =
-        Tasks.patch_task(user, task.id, patch, Ecto.UUID.generate(), at: desired["resolved_at"])
+        Tasks.patch_task(user, task.id, patch, Ecto.UUID.generate(version: 7),
+          at: desired["resolved_at"]
+        )
     end
 
     repeat!(user, Tasks.get_task(user, task.id), node)
@@ -567,7 +579,7 @@ defmodule Marskal.Imports.Applier do
     series = Ecto.Changeset.apply_changes(changeset)
 
     if changeset.valid? and Map.fetch!(task, Series.anchor_field(series)) do
-      {:ok, _series} = Recurrence.repeat_task(user, task.id, rule, Ecto.UUID.generate())
+      {:ok, _series} = Recurrence.repeat_task(user, task.id, rule, Ecto.UUID.generate(version: 7))
     end
 
     :ok

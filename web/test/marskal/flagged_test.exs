@@ -71,5 +71,5 @@ defmodule Marskal.FlaggedTest do
 
   defp titles(tasks), do: Enum.map(tasks, & &1.title)
 
-  defp command, do: Ecto.UUID.generate()
+  defp command, do: Ecto.UUID.generate(version: 7)
 end

@@ -9,7 +9,7 @@ defmodule MarskalWeb.NewFolderForm do
 
   @impl true
   def update(assigns, socket) do
-    {:ok, assign(socket, assigns) |> assign(:command_id, Ecto.UUID.generate())}
+    {:ok, assign(socket, assigns) |> assign(:command_id, Ecto.UUID.generate(version: 7))}
   end
 
   @impl true

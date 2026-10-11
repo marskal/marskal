@@ -118,7 +118,7 @@ defmodule MarskalWeb.FolderLive do
   defp state(socket, fun) do
     user = socket.assigns.current_scope.user
 
-    case fun.(user, socket.assigns.folder.id, Ecto.UUID.generate()) do
+    case fun.(user, socket.assigns.folder.id, Ecto.UUID.generate(version: 7)) do
       {:ok, folder} -> {:noreply, assign_folder(socket, user, folder)}
       {:error, _} -> {:noreply, put_flash(socket, :error, "Could not update folder.")}
     end
@@ -127,8 +127,8 @@ defmodule MarskalWeb.FolderLive do
   defp assign_folder(socket, user, folder) do
     socket
     |> assign_records(user, folder)
-    |> assign(:folder_command_id, Ecto.UUID.generate())
-    |> assign(:project_command_id, Ecto.UUID.generate())
+    |> assign(:folder_command_id, Ecto.UUID.generate(version: 7))
+    |> assign(:project_command_id, Ecto.UUID.generate(version: 7))
     |> assign(:folder_form, to_form(%{"name" => ""}, as: "project_folder"))
     |> assign(:project_form, to_form(%{"title" => ""}, as: "project"))
   end

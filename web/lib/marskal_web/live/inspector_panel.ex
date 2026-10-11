@@ -838,8 +838,11 @@ defmodule MarskalWeb.InspectorPanel do
 
     result =
       case record do
-        %Tasks.Task{} -> Tasks.delete_task(user, record.id, Ecto.UUID.generate())
-        %Projects.Project{} -> Projects.delete_project(user, record.id, Ecto.UUID.generate())
+        %Tasks.Task{} ->
+          Tasks.delete_task(user, record.id, Ecto.UUID.generate(version: 7))
+
+        %Projects.Project{} ->
+          Projects.delete_project(user, record.id, Ecto.UUID.generate(version: 7))
       end
 
     case result do
@@ -851,7 +854,7 @@ defmodule MarskalWeb.InspectorPanel do
   def handle_event("tag-delete", _params, socket) do
     %{user: user, record: record} = socket.assigns
 
-    case Tags.delete_tag(user, record.id, Ecto.UUID.generate()) do
+    case Tags.delete_tag(user, record.id, Ecto.UUID.generate(version: 7)) do
       {:ok, _} -> {:noreply, assign(socket, record: nil, error: nil)}
       {:error, _} -> {:noreply, assign(socket, :error, "Could not delete the tag.")}
     end
@@ -878,7 +881,7 @@ defmodule MarskalWeb.InspectorPanel do
   defp save(socket, update) do
     %{user: user, record: record} = socket.assigns
 
-    case update.(user, record.id, Ecto.UUID.generate()) do
+    case update.(user, record.id, Ecto.UUID.generate(version: 7)) do
       {:ok, record} ->
         {:noreply, assign(socket, record: record, error: nil)}
 
@@ -924,16 +927,16 @@ defmodule MarskalWeb.InspectorPanel do
     result =
       case {record, action} do
         {%Tasks.Task{}, :tag} ->
-          Tags.tag_task(user, record.id, tag_id, Ecto.UUID.generate())
+          Tags.tag_task(user, record.id, tag_id, Ecto.UUID.generate(version: 7))
 
         {%Tasks.Task{}, :untag} ->
-          Tags.untag_task(user, record.id, tag_id, Ecto.UUID.generate())
+          Tags.untag_task(user, record.id, tag_id, Ecto.UUID.generate(version: 7))
 
         {%Projects.Project{}, :tag} ->
-          Tags.tag_project(user, record.id, tag_id, Ecto.UUID.generate())
+          Tags.tag_project(user, record.id, tag_id, Ecto.UUID.generate(version: 7))
 
         {%Projects.Project{}, :untag} ->
-          Tags.untag_project(user, record.id, tag_id, Ecto.UUID.generate())
+          Tags.untag_project(user, record.id, tag_id, Ecto.UUID.generate(version: 7))
       end
 
     case result do
@@ -956,7 +959,7 @@ defmodule MarskalWeb.InspectorPanel do
       "parent_id" => if(parent_id in [nil, ""], do: nil, else: parent_id)
     }
 
-    case Tags.create_tag(socket.assigns.user, attrs, Ecto.UUID.generate()) do
+    case Tags.create_tag(socket.assigns.user, attrs, Ecto.UUID.generate(version: 7)) do
       {:ok, tag} ->
         link_tag(socket, :tag, tag.id)
 

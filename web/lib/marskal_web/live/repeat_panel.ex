@@ -797,7 +797,7 @@ defmodule MarskalWeb.RepeatPanel do
   defp act(socket, {:error, reason}),
     do: {:noreply, assign(socket, :error, message(reason, socket.assigns.kind))}
 
-  defp command, do: Ecto.UUID.generate()
+  defp command, do: Ecto.UUID.generate(version: 7)
 
   defp zone(%{assigns: assigns}), do: zone(assigns)
   defp zone(%{user: user}), do: Accounts.timezone(user)

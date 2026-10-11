@@ -57,8 +57,8 @@ defmodule Marskal.UserPreferencesTest do
                push(id, "patch", %{"week_start" => 6}),
                push(theirs, "patch", %{"week_start" => 6}),
                push(id, "patch", %{"discarded_at" => "2026-10-08T10:00:00Z"}),
-               push(Ecto.UUID.generate(), "insert", %{"week_start" => 6}),
-               push(Ecto.UUID.generate(), "insert", %{})
+               push(Ecto.UUID.generate(version: 7), "insert", %{"week_start" => 6}),
+               push(Ecto.UUID.generate(version: 7), "insert", %{})
              ])
 
     assert Accounts.preferences(user).week_start == 6
@@ -74,5 +74,5 @@ defmodule Marskal.UserPreferencesTest do
       "fields" => fields
     }
 
-  defp command, do: Ecto.UUID.generate()
+  defp command, do: Ecto.UUID.generate(version: 7)
 end

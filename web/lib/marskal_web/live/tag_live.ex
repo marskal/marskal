@@ -120,7 +120,7 @@ defmodule MarskalWeb.TagLive do
       when state in ["active", "on_hold", "dropped"] do
     user = socket.assigns.current_scope.user
 
-    case Tags.set_tag_state(user, socket.assigns.tag.id, state, Ecto.UUID.generate()) do
+    case Tags.set_tag_state(user, socket.assigns.tag.id, state, Ecto.UUID.generate(version: 7)) do
       {:ok, _tag} -> {:noreply, load(socket)}
       {:error, _} -> {:noreply, put_flash(socket, :error, "Could not update tag.")}
     end
@@ -238,7 +238,7 @@ defmodule MarskalWeb.TagLive do
 
   defp new_tag_form(socket) do
     socket
-    |> assign(:tag_command_id, Ecto.UUID.generate())
+    |> assign(:tag_command_id, Ecto.UUID.generate(version: 7))
     |> assign(:tag_form, to_form(%{"name" => ""}, as: "tag"))
   end
 

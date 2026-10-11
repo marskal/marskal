@@ -181,5 +181,5 @@ defmodule MarskalWeb.OutlineLiveTest do
     |> LazyHTML.attribute("data-inspect-id")
   end
 
-  defp command_id, do: Ecto.UUID.generate()
+  defp command_id, do: Ecto.UUID.generate(version: 7)
 end

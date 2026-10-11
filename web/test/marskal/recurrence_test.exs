@@ -387,7 +387,7 @@ defmodule Marskal.RecurrenceTest do
 
   describe "sync" do
     test "a client creates, edits, and deletes a series", %{user: user} do
-      id = Ecto.UUID.generate()
+      id = Ecto.UUID.generate(version: 7)
 
       rule = %{
         "kind" => "task",
@@ -535,5 +535,5 @@ defmodule Marskal.RecurrenceTest do
     }
 
   defp now, do: DateTime.utc_now(:second) |> DateTime.to_iso8601()
-  defp command, do: Ecto.UUID.generate()
+  defp command, do: Ecto.UUID.generate(version: 7)
 end

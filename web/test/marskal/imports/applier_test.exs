@@ -75,7 +75,9 @@ defmodule Marskal.Imports.ApplierTest do
     batch = preview!(user, OmnifocusBackup.compact_backup(), "OmniFocus.ofocus-backup")
     assert {:ok, batch} = Applier.call(batch)
     project = project!(batch, "projSite0000")
-    {:ok, _} = Marskal.Projects.set_notes(user, project.id, "My notes", Ecto.UUID.generate())
+
+    {:ok, _} =
+      Marskal.Projects.set_notes(user, project.id, "My notes", Ecto.UUID.generate(version: 7))
 
     batch2 = preview!(user, OmnifocusBackup.compact_backup(), "OmniFocus.ofocus-backup")
     assert {:ok, _} = Applier.call(batch2)
@@ -171,7 +173,8 @@ defmodule Marskal.Imports.ApplierTest do
     end
 
     test "reuses a tag the user already has at the same place", %{user: user} do
-      {:ok, waiting} = Tags.create_tag(user, %{"name" => "waiting"}, Ecto.UUID.generate())
+      {:ok, waiting} =
+        Tags.create_tag(user, %{"name" => "waiting"}, Ecto.UUID.generate(version: 7))
 
       {:ok, batch} =
         user |> preview!(OmnifocusBackup.tagged_backup(), "tagged.zip") |> Applier.call()
@@ -186,7 +189,7 @@ defmodule Marskal.Imports.ApplierTest do
 
       call = task!(first, "taskCall000")
       wait = tag!(first, "ctxWait0000")
-      {:ok, _} = Tags.untag_task(user, call.id, wait.id, Ecto.UUID.generate())
+      {:ok, _} = Tags.untag_task(user, call.id, wait.id, Ecto.UUID.generate(version: 7))
 
       {:ok, second} =
         user |> preview!(OmnifocusBackup.tagged_backup(), "tagged.zip") |> Applier.call()
@@ -221,7 +224,7 @@ defmodule Marskal.Imports.ApplierTest do
   test "applies a todoist snapshot, including labels, and skips it the second time", %{
     user: user
   } do
-    {:ok, existing} = Tags.create_tag(user, %{"name" => "Food"}, Ecto.UUID.generate())
+    {:ok, existing} = Tags.create_tag(user, %{"name" => "Food"}, Ecto.UUID.generate(version: 7))
 
     batch = preview_todoist!(user)
     assert batch.status == :previewed

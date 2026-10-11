@@ -24,7 +24,7 @@ defmodule Marskal.TasksTest do
   end
 
   test "create keeps a client-supplied id", %{user: user} do
-    id = Ecto.UUID.generate()
+    id = Ecto.UUID.generate(version: 7)
     {:ok, task} = Tasks.create_task(user, %{"id" => id, "title" => "Bread"}, command_id())
 
     assert task.id == id
@@ -223,7 +223,7 @@ defmodule Marskal.TasksTest do
     assert Repo.get!(Task, task.id).project_id == nil
   end
 
-  defp command_id, do: Ecto.UUID.generate()
+  defp command_id, do: Ecto.UUID.generate(version: 7)
 
   defp uuid_version(id) do
     <<_::48, version::4, _::76>> = Ecto.UUID.dump!(id)

@@ -228,7 +228,7 @@ defmodule MarskalWeb.UserLive.Settings do
   def handle_event("update_preferences", %{"preferences" => params}, socket) do
     scope = socket.assigns.current_scope
 
-    case Accounts.update_preferences(scope.user, params, Ecto.UUID.generate()) do
+    case Accounts.update_preferences(scope.user, params, Ecto.UUID.generate(version: 7)) do
       {:ok, preferences} ->
         {:noreply,
          socket

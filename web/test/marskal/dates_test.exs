@@ -335,5 +335,5 @@ defmodule Marskal.DatesTest do
     Change |> order_by(desc: :id) |> limit(1) |> Repo.one!() |> Map.fetch!(:patch)
   end
 
-  defp command_id, do: Ecto.UUID.generate()
+  defp command_id, do: Ecto.UUID.generate(version: 7)
 end

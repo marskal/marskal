@@ -149,5 +149,5 @@ defmodule Marskal.SyncTest do
     Repo.one(from c in Marskal.Changes.Change, where: c.user_id == ^user.id, select: max(c.id))
   end
 
-  defp command, do: Ecto.UUID.generate()
+  defp command, do: Ecto.UUID.generate(version: 7)
 end

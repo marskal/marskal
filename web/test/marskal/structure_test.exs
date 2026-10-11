@@ -151,5 +151,5 @@ defmodule Marskal.StructureTest do
     end
   end
 
-  defp command, do: Ecto.UUID.generate()
+  defp command, do: Ecto.UUID.generate(version: 7)
 end

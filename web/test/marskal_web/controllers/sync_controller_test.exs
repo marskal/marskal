@@ -15,14 +15,14 @@ defmodule MarskalWeb.SyncControllerTest do
 
   describe "GET /api/v1/sync/pull" do
     test "a snapshot, then the changes after its cursor", %{user: user, authed: authed} do
-      {:ok, task} = Tasks.create_task(user, %{title: "Milk"}, Ecto.UUID.generate())
+      {:ok, task} = Tasks.create_task(user, %{title: "Milk"}, Ecto.UUID.generate(version: 7))
 
       snapshot = authed |> get(~p"/api/v1/sync/pull") |> json_response(200)
       assert snapshot["snapshot"]
       assert [%{"id" => id, "title" => "Milk"}] = snapshot["rows"]["task"]
       assert id == task.id
 
-      {:ok, _} = Tasks.complete_task(user, task.id, Ecto.UUID.generate())
+      {:ok, _} = Tasks.complete_task(user, task.id, Ecto.UUID.generate(version: 7))
 
       changes =
         authed
@@ -55,8 +55,8 @@ defmodule MarskalWeb.SyncControllerTest do
 
   describe "POST /api/v1/sync/push" do
     test "applies commands and answers one result each", %{authed: authed, user: user} do
-      id = Ecto.UUID.generate()
-      command = Ecto.UUID.generate()
+      id = Ecto.UUID.generate(version: 7)
+      command = Ecto.UUID.generate(version: 7)
 
       body = %{
         "commands" => [

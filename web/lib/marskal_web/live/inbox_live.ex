@@ -13,7 +13,7 @@ defmodule MarskalWeb.InboxLive do
      socket
      |> assign(:page_title, "Inbox")
      |> MarskalWeb.Outline.attach()
-     |> assign(:command_id, Ecto.UUID.generate())
+     |> assign(:command_id, Ecto.UUID.generate(version: 7))
      |> assign(:form, to_form(%{"title" => ""}, as: "task"))
      |> assign_tasks(Tasks.list_inbox(user))}
   end
@@ -85,7 +85,7 @@ defmodule MarskalWeb.InboxLive do
         {:noreply,
          socket
          |> put_flash(:info, "Added.")
-         |> assign(:command_id, Ecto.UUID.generate())
+         |> assign(:command_id, Ecto.UUID.generate(version: 7))
          |> assign(:form, to_form(%{"title" => ""}, as: "task"))
          |> assign_tasks(Tasks.list_inbox(user))}
 
@@ -103,7 +103,7 @@ defmodule MarskalWeb.InboxLive do
   defp act(socket, id, fun) do
     user = socket.assigns.current_scope.user
 
-    case fun.(user, id, Ecto.UUID.generate()) do
+    case fun.(user, id, Ecto.UUID.generate(version: 7)) do
       {:ok, _task} ->
         {:noreply, assign_tasks(socket, Tasks.list_inbox(user))}
 
