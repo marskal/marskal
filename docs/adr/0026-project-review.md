@@ -91,9 +91,26 @@ several sittings or devices without a session to resume.
   A concurrent edit to the same field follows the usual rule: the later
   command wins (ADR 0014).
 - Postgres keeps an interval as months, days, and microseconds, so weeks
-  come back as days: `P2W` is stored and pulled as `P14D`. The UI shows a
-  whole number of weeks as weeks ("Review every 2 weeks"), and a mixed
-  interval in its parts ("every 1 month, 15 days").
+  come back as days: `P2W` is stored and pulled as `P14D`.
+
+### Choosing an interval
+
+The ISO 8601 form is for storage and the wire. The user never sees or
+types it.
+
+- One picker sets an interval, both in the project inspector and in
+  settings: **Never**, **Every week**, **Every 2 weeks**, **Every month**,
+  **Every 3 months**, **Every year**, and **Custom…**.
+- **Custom** shows "Every [n] [days | weeks | months | years]", the same
+  number and unit fields as the repeat dialog's "Every [n] weeks"
+  (ADR 0007).
+- An interval is shown in words: a whole number of weeks as weeks ("Every
+  2 weeks", not 14 days), and a mixed one, which only an import or another
+  client can make, in its parts ("Every 1 month, 15 days"). Picking a new
+  interval replaces it.
+- The inspector's review line shows the interval, the next review day, and
+  when the project was last reviewed, and the next review day can be
+  changed there.
 
 ### Which projects are due
 
