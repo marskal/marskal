@@ -3,48 +3,52 @@
  */
 
 /*
- * Colour is OKLCH. The neutral and accent ramps share hue 177; the neutrals
- * carry a trace of it. Components use the role tokens below the ramps, never
- * a ramp step directly. Text pairs meet WCAG AA in both schemes, and input
+ * Colour is OKLCH. The accent ramp is teal, hue 171. The neutrals and the
+ * bronze ramp take hue 76 from the bronze in the logo; --bronze-500 is its
+ * main colour. Components use the role tokens below the ramps, never a ramp
+ * step directly. Text pairs meet WCAG AA in both schemes, and input
  * borders 3:1.
  */
 :root {
   color-scheme: light dark;
 
-  --stone-0: oklch(99.5% 0.003 177);
-  --stone-50: oklch(97.5% 0.005 177);
-  --stone-100: oklch(95% 0.007 177);
-  --stone-200: oklch(90.5% 0.01 177);
-  --stone-300: oklch(83.5% 0.012 177);
-  --stone-400: oklch(70% 0.014 177);
-  --stone-450: oklch(63.5% 0.014 177);
-  --stone-500: oklch(58% 0.014 177);
-  --stone-600: oklch(48% 0.013 177);
-  --stone-700: oklch(38% 0.012 177);
-  --stone-800: oklch(28% 0.01 177);
-  --stone-850: oklch(23.5% 0.009 177);
-  --stone-900: oklch(19.5% 0.008 177);
-  --stone-950: oklch(15.5% 0.007 177);
+  --stone-0: oklch(99.0% 0.005 76);
+  --stone-50: oklch(97.2% 0.01 76);
+  --stone-100: oklch(94.5% 0.013 76);
+  --stone-200: oklch(90.0% 0.016 76);
+  --stone-300: oklch(83.0% 0.018 76);
+  --stone-400: oklch(70.0% 0.018 76);
+  --stone-450: oklch(63.5% 0.018 76);
+  --stone-500: oklch(58.0% 0.017 76);
+  --stone-600: oklch(48.0% 0.015 76);
+  --stone-700: oklch(38.0% 0.013 76);
+  --stone-800: oklch(28.0% 0.011 76);
+  --stone-850: oklch(23.5% 0.01 76);
+  --stone-900: oklch(19.5% 0.009 76);
+  --stone-950: oklch(15.5% 0.008 76);
 
-  --teal-50: oklch(96.5% 0.025 177);
-  --teal-100: oklch(92.5% 0.045 177);
-  --teal-200: oklch(86% 0.075 177);
-  --teal-300: oklch(78% 0.1 177);
-  --teal-400: oklch(69% 0.11 177);
-  --teal-500: oklch(59% 0.105 177);
-  --teal-600: oklch(50% 0.09 177);
-  --teal-700: oklch(42% 0.075 177);
-  --teal-800: oklch(34% 0.06 177);
-  --teal-900: oklch(26% 0.045 177);
-  --teal-950: oklch(20% 0.035 177);
+  --teal-50: oklch(96.5% 0.025 171);
+  --teal-100: oklch(92.5% 0.045 171);
+  --teal-200: oklch(86.0% 0.075 171);
+  --teal-300: oklch(78.0% 0.1 171);
+  --teal-400: oklch(69.0% 0.11 171);
+  --teal-500: oklch(59.0% 0.105 171);
+  --teal-600: oklch(50.0% 0.09 171);
+  --teal-700: oklch(42.0% 0.075 171);
+  --teal-800: oklch(34.0% 0.06 171);
+  --teal-900: oklch(26.0% 0.045 171);
+  --teal-950: oklch(20.0% 0.035 171);
 
   --red-100: oklch(94% 0.028 27);
   --red-300: oklch(78% 0.11 27);
   --red-600: oklch(50% 0.17 27);
   --red-900: oklch(28% 0.06 27);
 
-  --amber-300: oklch(82% 0.13 65);
-  --amber-600: oklch(55% 0.12 65);
+  --bronze-100: oklch(93.0% 0.03 76);
+  --bronze-300: oklch(80.0% 0.09 76);
+  --bronze-500: oklch(68.0% 0.084 76);
+  --bronze-600: oklch(52.0% 0.085 76);
+  --bronze-800: oklch(35.0% 0.04 76);
 
   --bg: var(--stone-50);
   --surface: var(--stone-0);
@@ -60,9 +64,9 @@
   --danger: var(--red-600);
   --danger-bg: var(--red-100);
   --notice-bg: var(--teal-50);
-  --flag: var(--amber-600);
-  --scrim: oklch(15.5% 0.007 177 / 0.45);
-  --shadow: oklch(15.5% 0.007 177 / 0.18);
+  --flag: var(--bronze-600);
+  --scrim: oklch(15.5% 0.008 76 / 0.45);
+  --shadow: oklch(15.5% 0.008 76 / 0.18);
 
   --radius: 8px;
   --space: 1rem;
@@ -85,7 +89,7 @@
     --danger: var(--red-300);
     --danger-bg: var(--red-900);
     --notice-bg: var(--teal-900);
-    --flag: var(--amber-300);
+    --flag: var(--bronze-300);
     --scrim: oklch(0% 0 0 / 0.6);
     --shadow: oklch(0% 0 0 / 0.5);
   }
