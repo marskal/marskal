@@ -65,6 +65,7 @@ defmodule MarskalWeb.AppShellLiveTest do
 
     assert [%{title: "Call the plumber", inbox: true}] = Marskal.Tasks.list_inbox(user)
     assert render(view) =~ "Added to the inbox."
+    assert has_element?(view, "#flash-info.toast--info[role=status]")
     assert has_element?(view, "#quick-capture-title[value='']")
   end
 
