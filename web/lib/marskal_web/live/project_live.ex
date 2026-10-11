@@ -48,18 +48,14 @@ defmodule MarskalWeb.ProjectLive do
         <button :if={@project.state != :to_do} type="button" phx-click="reopen">Reopen</button>
       </p>
 
-      <.form for={@form} id="new-project-task" phx-submit="create" class="capture">
-        <input type="hidden" name="command_id" value={@command_id} />
-        <label for={@form[:title].id}>Add a task</label>
-        <input
-          type="text"
-          name={@form[:title].name}
-          id={@form[:title].id}
-          value={@form[:title].value}
-          required
-        />
-        <button type="submit">Add</button>
-      </.form>
+      <.add_form
+        id="new-project-task"
+        for={@form}
+        field={@form[:title]}
+        label="Add a task"
+        command_id={@command_id}
+        phx-submit="create"
+      />
 
       <MarskalWeb.TaskComponents.list
         id="project-tasks"

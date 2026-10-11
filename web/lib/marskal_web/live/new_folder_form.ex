@@ -1,6 +1,7 @@
 defmodule MarskalWeb.NewFolderForm do
   @moduledoc """
-  The form that creates a project folder.
+  The sidebar's Projects heading, with a button that opens a field for a new
+  folder.
   """
 
   use MarskalWeb, :live_component
@@ -9,22 +10,49 @@ defmodule MarskalWeb.NewFolderForm do
 
   @impl true
   def update(assigns, socket) do
-    {:ok, assign(socket, assigns) |> assign(:command_id, Ecto.UUID.generate(version: 7))}
+    socket = assign(socket, assigns)
+    {:ok, if(Map.has_key?(socket.assigns, :open), do: socket, else: reset(socket, false))}
   end
 
   @impl true
   def render(assigns) do
     ~H"""
-    <form id={@id} phx-submit="create" phx-target={@myself} class="capture">
-      <input type="hidden" name="command_id" value={@command_id} />
-      <label for={"#{@id}-name"}>New folder</label>
-      <input type="text" name="project_folder[name]" id={"#{@id}-name"} />
-      <button type="submit">Add folder</button>
-    </form>
+    <div id={"#{@id}-section"} class="sidebar-section">
+      <div class="sidebar-section__head">
+        <h2 class="sidebar-heading">Projects</h2>
+        <button
+          type="button"
+          class="sidebar-add"
+          phx-click="toggle"
+          phx-target={@myself}
+          aria-expanded={to_string(@open)}
+          aria-label="New folder"
+          title="New folder"
+        >
+          <Lucideicons.folder_plus class="icon" />
+        </button>
+      </div>
+      <.add_form
+        :if={@open}
+        id={@id}
+        for={@form}
+        field={@form[:name]}
+        input_id={"#{@id}-name"}
+        label="New folder"
+        command_id={@command_id}
+        autofocus
+        phx-submit="create"
+        phx-target={@myself}
+        phx-keydown="toggle"
+        phx-key="Escape"
+      />
+    </div>
     """
   end
 
   @impl true
+  def handle_event("toggle", _params, socket), do: {:noreply, reset(socket, !socket.assigns.open)}
+
   def handle_event(
         "create",
         %{"project_folder" => %{"name" => name}, "command_id" => command_id},
@@ -37,5 +65,12 @@ defmodule MarskalWeb.NewFolderForm do
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Could not add folder.")}
     end
+  end
+
+  defp reset(socket, open) do
+    socket
+    |> assign(:open, open)
+    |> assign(:command_id, Ecto.UUID.generate(version: 7))
+    |> assign(:form, to_form(%{"name" => ""}, as: "project_folder"))
   end
 end

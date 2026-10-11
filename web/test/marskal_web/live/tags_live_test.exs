@@ -31,6 +31,8 @@ defmodule MarskalWeb.TagsLiveTest do
 
     test "a new tag opens its page", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/")
+      refute has_element?(view, "#new-root-tag")
+      view |> element("button[aria-label='New tag']") |> render_click()
 
       {:ok, _tag_view, html} =
         view

@@ -34,20 +34,15 @@ defmodule MarskalWeb.InboxLive do
         New captures. Move one to a project, or to no project, to put it on the open list.
       </p>
 
-      <.form for={@form} id="new-task" phx-submit="create" class="capture">
-        <input type="hidden" name="command_id" value={@command_id} />
-        <label for={@form[:title].id}>Title</label>
-        <input
-          type="text"
-          name={@form[:title].name}
-          id={@form[:title].id}
-          value={@form[:title].value}
-          required
-          autofocus
-        />
-        <p :for={error <- @form[:title].errors} class="field-error">{translate_error(error)}</p>
-        <button type="submit">Add to inbox</button>
-      </.form>
+      <.add_form
+        id="new-task"
+        for={@form}
+        field={@form[:title]}
+        label="Add to inbox"
+        command_id={@command_id}
+        autofocus
+        phx-submit="create"
+      />
 
       <MarskalWeb.TaskComponents.list
         id="inbox-tasks"

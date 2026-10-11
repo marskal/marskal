@@ -350,12 +350,52 @@ h1 {
 }
 
 .sidebar-heading {
-  margin: 1.5rem 0 0.5rem;
-  font-size: 0.75rem;
+  margin: 0;
+  font-size: 0.875rem;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   color: var(--muted);
+}
+
+.sidebar-section {
+  margin-top: 1.25rem;
+}
+
+.sidebar-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.sidebar-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.sidebar-add:hover,
+.sidebar-add:focus-visible,
+.sidebar-add[aria-expanded="true"] {
+  background: var(--accent-tint);
+  color: var(--accent);
+}
+
+.sidebar-section .add-form {
+  margin: 0.35rem 0 0;
+}
+
+@media (max-width: 720px) {
+  .sidebar-add {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
 }
 
 .sidebar-links a,
@@ -416,10 +456,8 @@ h1 {
 
 .app-inspector__title {
   margin: 0;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 0.875rem;
+  font-weight: 600;
   color: var(--muted);
 }
 
@@ -853,4 +891,65 @@ a.btn {
     text-transform: none;
     color: var(--text);
   }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* CoreComponents.add_form/1: a quiet line, not a block of controls. */
+.add-form {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0 0.5rem;
+  margin: 0 0 1rem;
+  padding: 0 0 0 0.5rem;
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.add-form:focus-within {
+  border-bottom-color: var(--accent);
+  box-shadow: 0 1px 0 var(--accent);
+}
+
+.add-form__icon {
+  color: var(--muted);
+}
+
+.add-form:focus-within .add-form__icon {
+  color: var(--accent);
+}
+
+.add-form input[type="text"] {
+  min-height: 2.75rem;
+  padding: 0.5rem 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.add-form input[type="text"]:focus-visible {
+  outline: none;
+}
+
+.add-form button[type="submit"] {
+  padding: 0.25rem 0.75rem;
+}
+
+.add-form:has(input:placeholder-shown) button[type="submit"] {
+  visibility: hidden;
+}
+
+.add-form .field-error {
+  grid-column: 2 / -1;
+  padding-bottom: 0.35rem;
 }
