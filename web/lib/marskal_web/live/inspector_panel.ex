@@ -435,7 +435,6 @@ defmodule MarskalWeb.InspectorPanel do
           >
             Delete
           </button>
-          <.link navigate={~p"/tasks/#{@record.id}"} class="open">Open task</.link>
         </div>
       </form>
       <.live_component
