@@ -619,6 +619,7 @@ fn pulled_preferences_read_back() {
         "id": user.to_string(),
         "timezone": "America/New_York",
         "week_start": 7,
+        "locale": "en-DK",
         "inserted_at": "2026-10-01T08:00:00Z",
         "updated_at": "2026-10-01T08:00:00Z"
     });
@@ -635,6 +636,7 @@ fn pulled_preferences_read_back() {
     assert_eq!(preferences.id, user);
     assert_eq!(preferences.timezone, "America/New_York");
     assert_eq!(preferences.week_start, 7);
+    assert_eq!(preferences.locale, "en-DK");
 }
 
 #[test]

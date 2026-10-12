@@ -49,6 +49,7 @@ defmodule Marskal.MixProject do
       {:mdex, "~> 0.13"},
       {:lucide_icons, "~> 2.4"},
       {:tz, "~> 0.28"},
+      {:ex_cldr_dates_times, "~> 2.25"},
       {:phoenix_live_dashboard, "~> 0.8"},
       {:phoenix, "~> 1.8.14"},
       {:phoenix_ecto, "~> 4.5"},

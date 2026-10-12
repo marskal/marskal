@@ -35,6 +35,7 @@ This directory holds **ADRs** — durable decisions and their context.
 | [0024](0024-thunderbird-extension.md) | Thunderbird extension | Accepted |
 | [0025](0025-flagged.md) | Flagged tasks and projects | Accepted |
 | [0026](0026-project-review.md) | Project review | Proposed |
+| [0027](0027-locale-formatting.md) | Locale for dates and times | Accepted |
 
 ## When to add an ADR
 

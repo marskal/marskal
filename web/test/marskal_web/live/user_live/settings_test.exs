@@ -26,6 +26,37 @@ defmodule MarskalWeb.UserLive.SettingsTest do
       assert Accounts.preferences(Accounts.get_user!(user.id)).week_start == 7
     end
 
+    test "sets the locale dates and times are shown in", %{conn: conn} do
+      user = user_fixture()
+      zone = Accounts.timezone(user)
+
+      due =
+        Marskal.Dates.from_local(
+          Date.add(Marskal.Dates.today(zone), 20),
+          ~T[16:30:00],
+          :due_at,
+          zone
+        )
+
+      {:ok, _} =
+        Marskal.Tasks.create_task(
+          user,
+          %{title: "Report", inbox: false, due_at: due},
+          Ecto.UUID.generate(version: 7)
+        )
+
+      conn = log_in_user(conn, user)
+
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
+      assert has_element?(lv, "#preferences_form option[value=en-DK]", "Denmark")
+
+      lv |> form("#preferences_form", preferences: %{locale: "en-DK"}) |> render_change()
+      assert Accounts.locale(Accounts.get_user!(user.id)) == "en-DK"
+
+      {:ok, lv, _html} = live(conn, ~p"/")
+      assert render(lv) =~ "16.30"
+    end
+
     test "redirects if user is not logged in", %{conn: conn} do
       assert {:error, redirect} = live(conn, ~p"/users/settings")
 

@@ -189,6 +189,9 @@ defmodule Marskal.Accounts do
   @doc "The zone the user's days are in."
   def timezone(%User{} = user), do: preferences(user).timezone
 
+  @doc "The CLDR locale the user's dates and times are formatted in (ADR 0027)."
+  def locale(%User{} = user), do: preferences(user).locale
+
   def change_preferences(%UserPreferences{} = preferences, attrs \\ %{}),
     do: UserPreferences.changeset(preferences, attrs)
 

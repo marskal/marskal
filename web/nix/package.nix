@@ -11,13 +11,17 @@
   no hash to update here. Only runtime dependencies are installed:
   devDependencies like TypeScript are for checking, not for the bundle.
 
-  Two deps download binaries at compile time, which the sandbox forbids:
+  Three deps download at compile time, which the sandbox forbids:
 
   - esbuild uses nixpkgs' binary through `MIX_ESBUILD_PATH`
     (config/config.exs).
   - mdex_native gets its precompiled NIF from a pre-fetched cache
     directory. rustler_precompiled still checks the tarball against the
     checksum file shipped in the hex package.
+  - ex_cldr downloads the locale data Marskal.Cldr names. The build fetches
+    each file by the hash in cldr-locales.nix into priv/cldr/locales, where
+    ex_cldr finds it. Run nix/update-cldr-locales after changing the
+    locales or upgrading ex_cldr.
 */
 {
   lib,
@@ -33,7 +37,7 @@ let
   pname = "marskal";
   version = "0.1.0";
 
-  depsHash = "sha256-4i8Hd+oJak7GYQ9T3muuauZyNsKCa1jYzgzWh7+imrU=";
+  depsHash = "sha256-97x8IoVGjkHvPubBAxUJpMTXvJ6rn4rD6a4W+28aWPI=";
 
   src = lib.fileset.toSource {
     root = ../.;
@@ -78,6 +82,20 @@ let
       };
     };
 
+  cldrVersion = builtins.head (
+    builtins.match ''.*"ex_cldr": \{:hex, :ex_cldr, "([^"]+)".*'' mixLock
+  );
+
+  cldrLocales = linkFarm "cldr-locales" (
+    lib.mapAttrsToList (locale: hash: {
+      name = "${locale}.json";
+      path = fetchurl {
+        url = "https://raw.githubusercontent.com/elixir-cldr/cldr/v${cldrVersion}/priv/cldr/locales/${locale}.json";
+        inherit hash;
+      };
+    }) (import ./cldr-locales.nix)
+  );
+
   # The lock without its dev entries, and package.json to match, so
   # `npm ci` accepts it.
   npmPackage = removeAttrs (lib.importJSON ../assets/package.json) [ "devDependencies" ];
@@ -115,8 +133,11 @@ beamPackages.mixRelease {
 
   # Before compiling: LiveView links assets/node_modules into the colocated
   # hooks directory when it extracts them.
+  # ex_cldr reads its locale files from priv/cldr.
   preBuild = ''
     ln -s ${nodeModules}/node_modules assets/node_modules
+    mkdir -p priv/cldr/locales
+    cp ${cldrLocales}/*.json priv/cldr/locales/
   '';
 
   # Compile first: esbuild bundles the colocated hooks and CSS that the

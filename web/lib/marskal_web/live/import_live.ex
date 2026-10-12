@@ -174,7 +174,7 @@ defmodule MarskalWeb.ImportLive do
               <.link navigate={~p"/imports/#{batch.id}"} class="import-card">
                 <span class="source">{source_label(batch.source)}</span>
                 <span class="status">{status_label(batch.status)}</span>
-                <span class="when">{format_when(batch.inserted_at)}</span>
+                <span class="when">{format_when(batch.inserted_at, @current_scope.user)}</span>
               </.link>
             </li>
           </ul>
@@ -558,8 +558,13 @@ defmodule MarskalWeb.ImportLive do
     end
   end
 
-  defp format_when(%DateTime{} = datetime), do: Calendar.strftime(datetime, "%Y-%m-%d %H:%M")
-  defp format_when(_datetime), do: ""
+  defp format_when(%DateTime{} = datetime, user) do
+    datetime
+    |> DateTime.shift_zone!(Marskal.Accounts.timezone(user))
+    |> Marskal.DateFormat.date_time()
+  end
+
+  defp format_when(_datetime, _user), do: ""
 
   defp stat(batch, key), do: (batch.stats || %{})[key] || 0
   defp created(batch, key), do: get_in(batch.stats || %{}, ["created", key]) || 0

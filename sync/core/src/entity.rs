@@ -55,6 +55,7 @@ const USER_PREFERENCES: &[Column] = &[
     text("id"),
     text("timezone"),
     text("week_start"),
+    text("locale"),
     text("inserted_at"),
     text("updated_at"),
 ];

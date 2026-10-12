@@ -43,3 +43,6 @@ secretspec.toml
 npm-debug.log
 /assets/node_modules/
 
+
+# CLDR locale data: ex_cldr downloads it in dev, nix/package.nix fetches it (ADR 0027).
+/priv/cldr/

@@ -157,7 +157,7 @@ defmodule MarskalWeb.AgendaLive do
       0 -> "Today"
       1 -> "Tomorrow"
       -1 -> "Yesterday"
-      _ -> Calendar.strftime(date, "%A %-d %B %Y")
+      _ -> Marskal.DateFormat.date(date, :long_year)
     end
   end
 

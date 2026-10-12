@@ -1060,7 +1060,7 @@ defmodule MarskalWeb.InspectorPanel do
   end
 
   defp stamp(%DateTime{} = datetime, zone),
-    do: datetime |> DateTime.shift_zone!(zone) |> Calendar.strftime("%Y-%m-%d %H:%M")
+    do: datetime |> DateTime.shift_zone!(zone) |> Marskal.DateFormat.date_time()
 
   defp stamp(_datetime, _zone), do: ""
 
