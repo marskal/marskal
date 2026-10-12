@@ -166,8 +166,8 @@ defmodule MarskalWeb.AgendaLive do
       0 -> "today"
       1 -> "tomorrow"
       -1 -> "yesterday"
-      _ when date.year == today.year -> Calendar.strftime(date, "%A %-d %B")
-      _ -> Calendar.strftime(date, "%A %-d %B %Y")
+      _ when date.year == today.year -> Marskal.DateFormat.date(date, :long)
+      _ -> Marskal.DateFormat.date(date, :long_year)
     end
   end
 
