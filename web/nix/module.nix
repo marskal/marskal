@@ -65,6 +65,27 @@ let
     ProtectHome = true;
   };
 
+  # Hydra's public API answers with redirects and JSON. nginx gives it the
+  # headers MarskalWeb.SecurityHeaders and Plug.SSL give the app; Hydra
+  # sets its own Cache-Control.
+  hydraLocation = {
+    proxyPass = "http://127.0.0.1:${toString hydra.publicPort}";
+    extraConfig = lib.concatMapStrings (h: "add_header ${h} always;\n") [
+      "Strict-Transport-Security \"max-age=63072000; includeSubDomains; preload\""
+      "Content-Security-Policy \"default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'\""
+      "Cross-Origin-Embedder-Policy require-corp"
+      "Cross-Origin-Opener-Policy same-origin"
+      "Cross-Origin-Resource-Policy same-site"
+      "Permissions-Policy \"camera=(), geolocation=(), microphone=()\""
+      "Referrer-Policy strict-origin-when-cross-origin"
+      "X-Content-Type-Options nosniff"
+      "X-DNS-Prefetch-Control off"
+      "X-Frame-Options DENY"
+      "X-Permitted-Cross-Domain-Policies none"
+      "X-Robots-Tag \"noindex, nofollow\""
+    ];
+  };
+
   adminCommand = pkgs.writeShellScriptBin "marskal-server" ''
     set -a
     ${lib.toShellVars environment}
@@ -327,12 +348,10 @@ in
           proxyWebsockets = true;
         };
         # Hydra's public API (ADR 0021). Its admin API is never proxied.
-        locations."/oauth2/".proxyPass = "http://127.0.0.1:${toString hydra.publicPort}";
-        locations."= /.well-known/oauth-authorization-server".proxyPass =
-          "http://127.0.0.1:${toString hydra.publicPort}";
-        locations."= /.well-known/openid-configuration".proxyPass =
-          "http://127.0.0.1:${toString hydra.publicPort}";
-        locations."= /.well-known/jwks.json".proxyPass = "http://127.0.0.1:${toString hydra.publicPort}";
+        locations."/oauth2/" = hydraLocation;
+        locations."= /.well-known/oauth-authorization-server" = hydraLocation;
+        locations."= /.well-known/openid-configuration" = hydraLocation;
+        locations."= /.well-known/jwks.json" = hydraLocation;
       };
     };
   };
