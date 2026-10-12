@@ -25,7 +25,7 @@ Store instants as timestamptz (UTC); display in the user’s zone.
 |--------|--------|-----------|
 | **Defer** | Quiet until a condition clears | **Hidden by default** while deferred. Reveal with **“Show deferred …”**. Does not by itself put the item on an agenda. |
 | **Planned** | Intentional focus for a calendar day | On the **agenda for that day**; still visible in the open stream and other filters (subject to Defer). |
-| **Due** | Hard commitment by this instant | Highlight / urgency when approaching or past due and still open; notifications when not done (mechanism later). |
+| **Due** | Hard commitment by this instant | On the **agenda for that day**, apart from Planned; today's also lists what is overdue. Highlight / urgency when approaching or past due and still open; notifications when not done (mechanism later). |
 
 ### Defer shapes
 
@@ -49,7 +49,7 @@ Defer is optional and is either:
 - Same field semantics on **tasks** and **projects**.
 - Fields are **independent**: any combination (including none).
 - **Inbox** capture should not require any of them.
-- **Planned** drives agenda membership (not a plan join table for MVP).
+- **Planned** and **Due** drive agenda membership (not a plan join table for MVP).
 - **Due** ≠ Planned; **Defer** ≠ Due.
 - Task and project dates are **independent** by default (no auto-cascade of project
   dates onto child task columns). Open-stream / filter logic may optionally hide tasks
@@ -76,7 +76,7 @@ Defer is optional and is either:
   until and/or indefinite as above — not one overloaded `due_on`.
 - Open stream and other task queries use the “still deferred” predicate; honor
   show-deferred.
-- Agenda keys off **Planned**.
+- Agenda keys off **Planned** and **Due**.
 - UI teaches three dates; indefinite is a Defer option, not a fourth status chip.
 
 ## Implementation notes (2026-09-28)
@@ -97,6 +97,10 @@ Defer is optional and is either:
   and inbox views show the task with a mark.
 - The agenda for today also lists to-do tasks planned on earlier days, so a
   missed plan stays visible.
+- The agenda lists Due beside Planned (2026-10-13): what is due that day,
+  and for today what is overdue too. A task both due and planned shows
+  once, under Due. Due is the firmer of the two, so this does not make
+  Planned and Due the same thing.
 - Dates inherit down the outline (2026-09-29, with ADR 0009 nesting). A task
   with no Planned or Due of its own goes by its nearest ancestor task's, then
   its project's; the agenda and the Due marks use that. A task is deferred

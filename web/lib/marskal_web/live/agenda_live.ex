@@ -12,9 +12,9 @@ defmodule MarskalWeb.AgendaLive do
     {:ok, socket |> assign(:page_title, "Agenda") |> assign(:view, nil)}
   end
 
-  # The agenda is driven by Planned (ADR 0006), on the user's stored zone
-  # (ADR 0014). Today also carries earlier plans that are still to do, so a
-  # missed day is not lost. Deferred and unavailable tasks are hidden
+  # The agenda lists what is due and what is planned (ADR 0006), on the
+  # user's stored zone (ADR 0014). Today also carries earlier plans and
+  # dues that are still to do, so a missed day is not lost. Deferred and unavailable tasks are hidden
   # unless ?unavailable=1, as in the open stream. A new day or toggle is a
   # new view, so kept rows go.
   @impl true
@@ -74,41 +74,82 @@ defmodule MarskalWeb.AgendaLive do
         </.link>
       </p>
 
-      <MarskalWeb.TaskComponents.list
-        id="agenda-tasks"
-        tasks={@tasks}
-        tags={@task_tags.tags}
-        unavailable={@task_tags.unavailable}
-        deferred={@task_tags.deferred}
-        dates={@task_tags.dates}
-        resolved={@task_tags.resolved}
-        parents={@task_tags.parents}
-        repeating={@task_tags.repeating}
-        flagged={@task_tags.flagged}
-        zone={Marskal.Accounts.timezone(@current_scope.user)}
-        mark_inbox
-        actions={[:complete]}
-        inspector={@inspector}
+      <.empty_state
+        :if={@tasks == []}
+        id="agenda-empty"
+        title={"Nothing planned or due #{day_name(@date, @today)}"}
       >
-        <:empty_state>
-          <.empty_state id="agenda-empty" title="Nothing planned">
-            <:icon><Lucideicons.calendar_check class="icon" /></:icon>
-            Give a task a Planned date to put it on that day.
-          </.empty_state>
-        </:empty_state>
-      </MarskalWeb.TaskComponents.list>
+        <:icon><Lucideicons.calendar_check class="icon" /></:icon>
+        Set a task or project as planned or due {if Date.diff(@date, @today) in -1..1,
+          do: day_name(@date, @today),
+          else: "that day"} to have it show up here.
+      </.empty_state>
+
+      <div :if={@tasks != []} class="agenda-columns">
+        <section class="agenda-section" aria-labelledby="agenda-due-heading">
+          <h2 id="agenda-due-heading">{if @date == @today, do: "Due and overdue", else: "Due"}</h2>
+          <MarskalWeb.TaskComponents.list
+            id="agenda-due"
+            tasks={@due_tasks}
+            tags={@task_tags.tags}
+            unavailable={@task_tags.unavailable}
+            deferred={@task_tags.deferred}
+            dates={@task_tags.dates}
+            resolved={@task_tags.resolved}
+            parents={@task_tags.parents}
+            repeating={@task_tags.repeating}
+            flagged={@task_tags.flagged}
+            zone={Marskal.Accounts.timezone(@current_scope.user)}
+            mark_inbox
+            empty="Nothing due."
+            actions={[:complete]}
+            inspector={@inspector}
+          />
+        </section>
+        <section class="agenda-section" aria-labelledby="agenda-planned-heading">
+          <h2 id="agenda-planned-heading">Planned</h2>
+          <MarskalWeb.TaskComponents.list
+            id="agenda-tasks"
+            tasks={@planned_tasks}
+            tags={@task_tags.tags}
+            unavailable={@task_tags.unavailable}
+            deferred={@task_tags.deferred}
+            dates={@task_tags.dates}
+            resolved={@task_tags.resolved}
+            parents={@task_tags.parents}
+            repeating={@task_tags.repeating}
+            flagged={@task_tags.flagged}
+            zone={Marskal.Accounts.timezone(@current_scope.user)}
+            mark_inbox
+            empty="Nothing planned."
+            actions={[:complete]}
+            inspector={@inspector}
+          />
+        </section>
+      </div>
     </Layouts.app>
     """
   end
 
+  # A task both due and planned shows once, under Due. Rows that linger
+  # after Done stay in the column they were in.
   defp load_tasks(socket) do
     %{date: date, today: today, show_unavailable: show} = socket.assigns
     user = socket.assigns.current_scope.user
+    due = Tasks.list_due(user, date, overdue: date == today, unavailable: show)
+    due_ids = MapSet.new(due, & &1.id)
 
-    assign_tasks(
-      socket,
-      Tasks.list_planned(user, date, carry_over: date == today, unavailable: show)
-    )
+    planned =
+      user
+      |> Tasks.list_planned(date, carry_over: date == today, unavailable: show)
+      |> Enum.reject(&MapSet.member?(due_ids, &1.id))
+
+    was_due = if socket.assigns[:tasks] == [], do: MapSet.new(), else: socket.assigns[:due_ids]
+    due_ids = MapSet.union(due_ids, was_due || MapSet.new())
+    socket = assign_tasks(socket, due ++ planned)
+    {due, planned} = Enum.split_with(socket.assigns.tasks, &MapSet.member?(due_ids, &1.id))
+
+    assign(socket, due_ids: due_ids, due_tasks: due, planned_tasks: planned)
   end
 
   defp heading(date, today) do
@@ -116,6 +157,16 @@ defmodule MarskalWeb.AgendaLive do
       0 -> "Today"
       1 -> "Tomorrow"
       -1 -> "Yesterday"
+      _ -> Calendar.strftime(date, "%A %-d %B %Y")
+    end
+  end
+
+  defp day_name(date, today) do
+    case Date.diff(date, today) do
+      0 -> "today"
+      1 -> "tomorrow"
+      -1 -> "yesterday"
+      _ when date.year == today.year -> Calendar.strftime(date, "%A %-d %B")
       _ -> Calendar.strftime(date, "%A %-d %B %Y")
     end
   end

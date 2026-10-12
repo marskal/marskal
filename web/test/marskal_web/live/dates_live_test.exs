@@ -39,6 +39,74 @@ defmodule MarskalWeb.DatesLiveTest do
     refute has_element?(view, "#agenda-tasks", "Missed")
   end
 
+  test "the agenda lists what is due, and today what is overdue", %{conn: conn, user: user} do
+    zone = Marskal.Accounts.timezone(user)
+    today = Dates.today(zone)
+    due = fn date -> Dates.from_local(date, nil, :due_at, zone) end
+    planned = fn date -> Dates.from_local(date, nil, :planned_at, zone) end
+
+    {:ok, _} = Tasks.create_task(user, %{title: "Due today", due_at: due.(today)}, command())
+
+    {:ok, _} =
+      Tasks.create_task(user, %{title: "Overdue", due_at: due.(Date.add(today, -3))}, command())
+
+    {:ok, _} =
+      Tasks.create_task(
+        user,
+        %{title: "Both", due_at: due.(today), planned_at: planned.(today)},
+        command()
+      )
+
+    {:ok, _} =
+      Tasks.create_task(user, %{title: "Due later", due_at: due.(Date.add(today, 2))}, command())
+
+    {:ok, view, _html} = live(conn, ~p"/agenda")
+    assert has_element?(view, "#agenda-due-heading", "Due and overdue")
+    assert has_element?(view, "#agenda-due", "Due today")
+    assert has_element?(view, "#agenda-due", "Overdue")
+    assert has_element?(view, "#agenda-due", "Both")
+    refute has_element?(view, "#agenda-tasks", "Both")
+    refute has_element?(view, "#agenda-due", "Due later")
+
+    {:ok, view, _html} = live(conn, ~p"/agenda?#{[date: Date.to_iso8601(Date.add(today, 2))]}")
+    assert has_element?(view, "#agenda-due-heading", "Due")
+    assert has_element?(view, "#agenda-due", "Due later")
+    refute has_element?(view, "#agenda-due", "Overdue")
+    assert has_element?(view, "#agenda-planned-heading ~ p.empty", "Nothing planned.")
+  end
+
+  test "the agenda keeps a task done from Due under Due", %{conn: conn, user: user} do
+    zone = Marskal.Accounts.timezone(user)
+    today = Dates.today(zone)
+
+    {:ok, task} =
+      Tasks.create_task(
+        user,
+        %{
+          title: "Both",
+          due_at: Dates.from_local(today, nil, :due_at, zone),
+          planned_at: Dates.from_local(today, nil, :planned_at, zone)
+        },
+        command()
+      )
+
+    {:ok, view, _html} = live(conn, ~p"/agenda")
+    view |> element("#task-#{task.id} button[phx-click=complete]") |> render_click()
+
+    assert has_element?(view, "#agenda-due #task-#{task.id}")
+    refute has_element?(view, "#agenda-tasks #task-#{task.id}")
+  end
+
+  test "an empty agenda names the day", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/agenda")
+    assert has_element?(view, "#agenda-empty", "Nothing planned or due today")
+    assert has_element?(view, "#agenda-empty", "planned or due today to have it show up here")
+
+    {:ok, view, _html} = live(conn, ~p"/agenda?date=2031-01-01")
+    assert has_element?(view, "#agenda-empty", "Nothing planned or due Wednesday 1 January 2031")
+    assert has_element?(view, "#agenda-empty", "planned or due that day")
+  end
+
   test "the inspector sets and clears dates in the user's zone", %{conn: conn, user: user} do
     {:ok, task} = Tasks.create_task(user, %{title: "Report", inbox: false}, command())
 
