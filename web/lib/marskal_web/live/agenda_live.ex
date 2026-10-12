@@ -87,10 +87,16 @@ defmodule MarskalWeb.AgendaLive do
         flagged={@task_tags.flagged}
         zone={Marskal.Accounts.timezone(@current_scope.user)}
         mark_inbox
-        empty="Nothing planned."
         actions={[:complete]}
         inspector={@inspector}
-      />
+      >
+        <:empty_state>
+          <.empty_state id="agenda-empty" title="Nothing planned">
+            <:icon><Lucideicons.calendar_check class="icon" /></:icon>
+            Give a task a Planned date to put it on that day.
+          </.empty_state>
+        </:empty_state>
+      </MarskalWeb.TaskComponents.list>
     </Layouts.app>
     """
   end

@@ -75,10 +75,20 @@ defmodule MarskalWeb.OpenTasksLive do
         nested={!@flagged?}
         collapsed={@collapsed}
         mark_inbox={@flagged?}
-        empty={if @flagged?, do: "Nothing flagged.", else: "No open tasks."}
         actions={[:complete]}
         inspector={@inspector}
-      />
+      >
+        <:empty_state>
+          <.empty_state :if={@flagged?} id="flagged-empty" title="Nothing flagged">
+            <:icon><Lucideicons.flag class="icon" /></:icon>
+            Flag a task or project to keep it here.
+          </.empty_state>
+          <.empty_state :if={!@flagged?} id="open-empty" title="Nothing to do">
+            <:icon><Lucideicons.circle_check_big class="icon" /></:icon>
+            Tasks you move out of the inbox show up here until they are done.
+          </.empty_state>
+        </:empty_state>
+      </MarskalWeb.TaskComponents.list>
     </Layouts.app>
     """
   end

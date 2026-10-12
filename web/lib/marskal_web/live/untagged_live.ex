@@ -38,10 +38,15 @@ defmodule MarskalWeb.UntaggedLive do
         flagged={@task_tags.flagged}
         zone={Marskal.Accounts.timezone(@current_scope.user)}
         mark_inbox
-        empty="Every task has a tag."
         actions={[:complete]}
         inspector={@inspector}
-      />
+      >
+        <:empty_state>
+          <.empty_state id="untagged-empty" title="Every task has a tag">
+            <:icon><Lucideicons.tags class="icon" /></:icon>
+          </.empty_state>
+        </:empty_state>
+      </MarskalWeb.TaskComponents.list>
     </Layouts.app>
     """
   end

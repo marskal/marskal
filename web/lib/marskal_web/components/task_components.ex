@@ -7,7 +7,7 @@ defmodule MarskalWeb.TaskComponents do
 
   attr :id, :string, required: true
   attr :tasks, :list, required: true
-  attr :empty, :string, required: true
+  attr :empty, :string, default: nil, doc: "a line to show when there are no tasks"
   attr :actions, :list, required: true
   attr :inspector, :any, default: nil
 
@@ -49,6 +49,8 @@ defmodule MarskalWeb.TaskComponents do
   attr :zone, :string, default: "Europe/Copenhagen", doc: "the user's zone, for date labels"
   attr :repeating, :any, default: MapSet.new(), doc: "ids of tasks in a running series"
   attr :flagged, :any, default: MapSet.new(), doc: "ids of flagged tasks, own flag or project's"
+
+  slot :empty_state, doc: "shown instead of `empty` when there are no tasks"
 
   def list(assigns) do
     assigns =
@@ -343,7 +345,10 @@ defmodule MarskalWeb.TaskComponents do
         padding: 0;
       }
     </style>
-    <p :if={@tasks == []} class="empty">{@empty}</p>
+    <%= if @tasks == [] do %>
+      {render_slot(@empty_state)}
+      <p :if={@empty_state == [] and @empty} class="empty">{@empty}</p>
+    <% end %>
     <ul
       id={@id}
       class="task-list"

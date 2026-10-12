@@ -258,7 +258,7 @@ defmodule MarskalWeb.InspectorLiveTest do
       Tasks.create_task(user, %{"title" => "Paint", "project_id" => project.id}, command())
 
     {:ok, view, _html} = live(conn, ~p"/flagged")
-    assert render(view) =~ "Nothing flagged."
+    assert has_element?(view, "#flagged-empty", "Nothing flagged")
 
     {:ok, view, _html} = live(conn, ~p"/")
     view |> element("#open-tasks li.task-row", "Call") |> render_click()

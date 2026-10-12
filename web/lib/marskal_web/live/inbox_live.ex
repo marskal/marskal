@@ -58,10 +58,16 @@ defmodule MarskalWeb.InboxLive do
         outline
         collapsed={@collapsed}
         zone={Marskal.Accounts.timezone(@current_scope.user)}
-        empty="Nothing in the inbox."
         actions={[:complete]}
         inspector={@inspector}
-      />
+      >
+        <:empty_state>
+          <.empty_state id="inbox-empty" title="The inbox is empty">
+            <:icon><Lucideicons.inbox class="icon" /></:icon>
+            Whatever you capture waits here until you move it to a project.
+          </.empty_state>
+        </:empty_state>
+      </MarskalWeb.TaskComponents.list>
     </Layouts.app>
     """
   end

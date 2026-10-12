@@ -633,7 +633,7 @@ button,
 }
 
 button[type="submit"],
-a.btn-primary {
+.btn-primary:not(.btn-soft) {
   background: var(--accent);
   color: var(--accent-contrast);
   border-color: transparent;
@@ -664,6 +664,44 @@ a.btn {
 
 .empty {
   color: var(--muted);
+}
+
+.empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+.empty-state__icon .icon {
+  width: 2rem;
+  height: 2rem;
+  color: var(--accent);
+  opacity: 0.7;
+}
+
+.empty-state__title {
+  margin: 0.25rem 0 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.empty-state__hint {
+  margin: 0;
+  max-width: 36ch;
+}
+
+.empty-state__actions {
+  justify-content: center;
+  margin: 0.75rem 0 0;
+}
+
+.empty-state__actions button {
+  min-height: 2.75rem;
+  padding-inline: 1rem;
 }
 
 .auth {

@@ -75,6 +75,16 @@ defmodule Marskal.Tasks do
   end
 
   @doc """
+  Whether the project has any live task, open or resolved.
+  """
+  def project_has_tasks?(%User{} = user, project_id) do
+    Task
+    |> where([t], t.user_id == ^user.id and t.project_id == ^project_id)
+    |> where([t], is_nil(t.discarded_at))
+    |> Repo.exists?()
+  end
+
+  @doc """
   Narrows a task query to the user's open tasks: live, To-Do, and not
   resolved along with something above them. A task under a Done or
   Dropped task, at any depth, or in a Done or Dropped project, counts as
