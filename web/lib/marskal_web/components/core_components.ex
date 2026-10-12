@@ -159,6 +159,34 @@ defmodule MarskalWeb.CoreComponents do
   end
 
   @doc """
+  What a list shows when it has nothing in it: an icon, a short heading, a
+  line on what would fill it, and any actions that fit.
+
+  ## Examples
+
+      <.empty_state id="inbox-empty" title="The inbox is empty">
+        <:icon><Lucideicons.inbox class="icon" /></:icon>
+        New captures land here.
+      </.empty_state>
+  """
+  attr :id, :string, default: nil
+  attr :title, :string, required: true
+  slot :icon, required: true
+  slot :inner_block
+  slot :actions
+
+  def empty_state(assigns) do
+    ~H"""
+    <div id={@id} class="empty-state">
+      <span class="empty-state__icon" aria-hidden="true">{render_slot(@icon)}</span>
+      <p class="empty-state__title">{@title}</p>
+      <p :if={@inner_block != []} class="empty-state__hint">{render_slot(@inner_block)}</p>
+      <p :if={@actions != []} class="actions empty-state__actions">{render_slot(@actions)}</p>
+    </div>
+    """
+  end
+
+  @doc """
   Renders a button with navigation support.
 
   ## Examples

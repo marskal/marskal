@@ -42,12 +42,6 @@ defmodule MarskalWeb.ProjectLive do
       </MarskalWeb.NavComponents.page_heading>
       <p :if={@project.url} class="lede"><MarskalWeb.UrlLink.link url={@project.url} text /></p>
       <MarskalWeb.FormattedNotes.block text={@project.notes} class="lede notes" />
-      <p class="actions">
-        <button type="button" phx-click="complete">Done</button>
-        <button type="button" phx-click="drop">Drop</button>
-        <button :if={@project.state != :to_do} type="button" phx-click="reopen">Reopen</button>
-      </p>
-
       <.add_form
         id="new-project-task"
         for={@form}
@@ -71,10 +65,45 @@ defmodule MarskalWeb.ProjectLive do
         outline
         collapsed={@collapsed}
         zone={Marskal.Accounts.timezone(@current_scope.user)}
-        empty="No open tasks in this project."
         actions={[:complete]}
         inspector={@inspector}
       />
+
+      <.empty_state
+        :if={!@open? and @project.state != :to_do}
+        id="project-resolved"
+        title={
+          if @project.state == :done, do: "This project is done", else: "This project is dropped"
+        }
+      >
+        <:icon><Lucideicons.archive class="icon" /></:icon>
+        Its tasks are resolved along with it.
+        <:actions>
+          <button type="button" phx-click="reopen">Reopen</button>
+        </:actions>
+      </.empty_state>
+      <.empty_state
+        :if={!@open? and @project.state == :to_do and @has_tasks?}
+        id="project-finished"
+        title="Nothing left to do"
+      >
+        <:icon><Lucideicons.circle_check_big class="icon" /></:icon>
+        Every task here is resolved. Is the project done too?
+        <:actions>
+          <button type="button" class="btn-primary" phx-click="complete">
+            Mark project done
+          </button>
+          <button type="button" phx-click="drop">Drop project</button>
+        </:actions>
+      </.empty_state>
+      <.empty_state
+        :if={!@open? and @project.state == :to_do and !@has_tasks?}
+        id="project-empty"
+        title="No tasks yet"
+      >
+        <:icon><Lucideicons.list_checks class="icon" /></:icon>
+        What is the next thing to do? Add it above.
+      </.empty_state>
     </Layouts.app>
     """
   end
@@ -141,6 +170,8 @@ defmodule MarskalWeb.ProjectLive do
 
   # Leaves the capture form alone, so a broadcast does not clear typing.
   defp assign_records(socket, user, project) do
+    open_tasks = Tasks.list_project_tasks(user, project.id)
+
     folder =
       if project.project_folder_id do
         Marskal.ProjectFolders.get_folder(user, project.project_folder_id)
@@ -150,6 +181,8 @@ defmodule MarskalWeb.ProjectLive do
     |> assign(:page_title, project.title)
     |> assign(:project, project)
     |> assign(:folder, folder)
-    |> assign_tasks(Tasks.list_project_tasks(user, project.id))
+    |> assign(:open?, open_tasks != [])
+    |> assign(:has_tasks?, open_tasks != [] or Tasks.project_has_tasks?(user, project.id))
+    |> assign_tasks(open_tasks)
   end
 end
