@@ -666,6 +666,26 @@ a.btn {
   color: var(--muted);
 }
 
+/* Due and Planned side by side once each gets 22rem. */
+.agenda-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: 1.5rem 2rem;
+  align-items: start;
+  margin-top: 1rem;
+}
+
+.agenda-section h2 {
+  margin: 0 0 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.agenda-section .empty {
+  margin: 0.5rem 0;
+}
+
 .empty-state {
   display: grid;
   justify-items: center;

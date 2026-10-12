@@ -126,7 +126,8 @@ Default home: **Open tasks** stream. Timezone is stored per user, default
 | **Planned** | On that day’s **agenda**; still normal in open stream / other filters |
 | **Due** | Must-do-by; highlight + notifications if not done |
 
-- Agenda driven by **Planned**. Inbox needs none of the three.
+- Agenda lists **Due** (today: overdue too) and **Planned**; a task with both shows
+  once, under Due. Inbox needs none of the three.
 - **Indefinite defer** replaces On Hold for open-ended pause (tasks and projects).
 - Dates are never copied down. A task with no Planned or Due goes by the nearest task
   above that has one, then its project; it is deferred while anything above it is

@@ -130,20 +130,32 @@ defmodule Marskal.Tasks do
   first. Deferred and unavailable tasks are left out unless
   `unavailable: true`, as in `list_open/2`.
   """
-  def list_planned(%User{} = user, %Date{} = date, opts \\ []) do
+  def list_planned(%User{} = user, %Date{} = date, opts \\ []),
+    do: list_by_day(user, date, :planned_at, Keyword.get(opts, :carry_over, false), opts)
+
+  @doc """
+  Open tasks due on `date` in the user's zone, earliest first, by the Due
+  they go by, their own or inherited. With `overdue: true`, tasks due
+  earlier and still to do come first. Deferred and unavailable tasks are
+  left out unless `unavailable: true`.
+  """
+  def list_due(%User{} = user, %Date{} = date, opts \\ []),
+    do: list_by_day(user, date, :due_at, Keyword.get(opts, :overdue, false), opts)
+
+  defp list_by_day(user, date, field, earlier?, opts) do
     {from, until} = Dates.day_bounds(date, Marskal.Accounts.timezone(user))
 
     tasks =
       Task
       |> where_open(user)
       |> join(:inner, [t], d in ^EffectiveDates.name(), on: d.id == t.id)
-      |> where([t, d], d.planned_at < type(^until, :utc_datetime))
+      |> where([t, d], field(d, ^field) < type(^until, :utc_datetime))
       |> then(fn query ->
-        if Keyword.get(opts, :carry_over, false),
+        if earlier?,
           do: query,
-          else: where(query, [t, d], d.planned_at >= type(^from, :utc_datetime))
+          else: where(query, [t, d], field(d, ^field) >= type(^from, :utc_datetime))
       end)
-      |> order_by([t, d], asc: d.planned_at, asc: t.inserted_at, asc: t.id)
+      |> order_by([t, d], asc: field(d, ^field), asc: t.inserted_at, asc: t.id)
       |> EffectiveDates.with_dates(user)
       |> Repo.all()
 
