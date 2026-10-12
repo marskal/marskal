@@ -12,6 +12,8 @@ defmodule Marskal.MixProject do
       deps: deps(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
       listeners: [Phoenix.CodeReloader],
+      # Files without line numbers, sorted, so moving code does not touch them.
+      gettext: [write_reference_line_numbers: false, sort_by_msgid: :case_sensitive],
       dialyzer: [
         plt_add_apps: [:ex_unit],
         ignore_warnings: ".dialyzer_ignore.exs"
@@ -100,6 +102,7 @@ defmodule Marskal.MixProject do
         "assets.check",
         "deps.unlock --unused",
         "format",
+        "gettext.extract",
         "test",
         "credo --strict",
         "dialyzer",
@@ -109,6 +112,7 @@ defmodule Marskal.MixProject do
       ci: [
         "compile --warnings-as-errors",
         "format --check-formatted",
+        "gettext.extract --check-up-to-date",
         "test",
         "credo --strict",
         "dialyzer",
