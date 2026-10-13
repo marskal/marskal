@@ -571,7 +571,7 @@ defmodule MarskalWeb.ImportLive do
 
   defp total(batch, key) do
     case (batch.stats || %{})[key] do
-      %{} = counts -> counts |> Map.values() |> Enum.sum()
+      %{} = counts -> Enum.sum_by(counts, fn {_, count} -> count end)
       _ -> 0
     end
   end

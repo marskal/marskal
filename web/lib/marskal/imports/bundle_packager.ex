@@ -27,7 +27,7 @@ defmodule Marskal.Imports.BundlePackager do
       end)
       |> Enum.reject(fn {name, _} -> name == [] or List.last(name) == ?/ end)
 
-    total = entries |> Enum.map(fn {_, data} -> byte_size(data) end) |> Enum.sum()
+    total = Enum.sum_by(entries, fn {_, data} -> byte_size(data) end)
     if total > limits.payload_bytes, do: raise(ArgumentError, "Backup is too large.")
 
     case :zip.zip(~c"omnifocus.zip", entries, [:memory]) do

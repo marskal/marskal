@@ -48,6 +48,7 @@ defmodule Marskal.Imports.Applier do
         {:ok, applied}
       end
     rescue
+      # reach:disable-next-line bare_rescue -- whatever stops an import, the user sees it failed
       error ->
         {:error, mark_failed(batch, error)}
     end
@@ -320,7 +321,7 @@ defmodule Marskal.Imports.Applier do
   end
 
   defp tag_all!(user, kind, owner_id, tag_ids) do
-    Enum.filter(tag_ids, fn tag_id ->
+    Enum.flat_map(tag_ids, fn tag_id ->
       result =
         case kind do
           :task -> Tags.tag_task(user, owner_id, tag_id, Ecto.UUID.generate(version: 7))
@@ -329,8 +330,8 @@ defmodule Marskal.Imports.Applier do
 
       # A tag the user deleted since an earlier import is left off.
       case result do
-        {:ok, _} -> true
-        {:error, :not_found} -> false
+        {:ok, _} -> [tag_id]
+        {:error, :not_found} -> []
       end
     end)
   end
@@ -597,11 +598,14 @@ defmodule Marskal.Imports.Applier do
   defp applicable(kind, patch, kept, changeset) do
     bad = MapSet.new(changeset.errors, fn {field, _} -> Atom.to_string(field) end)
 
-    Enum.reduce(Merge.groups(kind), {patch, kept}, fn group, {patch, kept} ->
-      if Enum.any?(group, &MapSet.member?(bad, &1)) and Map.has_key?(patch, hd(group)),
-        do: {Map.drop(patch, group), kept ++ [hd(group)]},
-        else: {patch, kept}
-    end)
+    {patch, dropped} =
+      Enum.reduce(Merge.groups(kind), {patch, []}, fn group, {patch, dropped} ->
+        if Enum.any?(group, &MapSet.member?(bad, &1)) and Map.has_key?(patch, hd(group)),
+          do: {Map.drop(patch, group), [hd(group) | dropped]},
+          else: {patch, dropped}
+      end)
+
+    {patch, kept ++ Enum.reverse(dropped)}
   end
 
   # Before bases were stored: the import's insert, over the defaults it

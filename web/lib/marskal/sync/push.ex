@@ -69,6 +69,7 @@ defmodule Marskal.Sync.Push do
         do: {:ok, rejected(command, "invalid", %{})},
         else: stop(command, error, __STACKTRACE__)
 
+    # reach:disable-next-line bare_rescue -- any other failure halts the push where it is
     error ->
       stop(command, error, __STACKTRACE__)
   end

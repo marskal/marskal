@@ -28,10 +28,7 @@ defmodule Marskal.Imports.TitleLinks do
 
       [[_, _, url] | rest] ->
         plain =
-          links
-          |> Enum.reduce(title, fn [whole, text, url], acc ->
-            String.replace(acc, whole, label(text, url), global: false)
-          end)
+          Regex.replace(@link, title, &plain_link/3)
           |> String.replace(~r/\s+/u, " ")
           |> String.trim()
 
@@ -41,8 +38,13 @@ defmodule Marskal.Imports.TitleLinks do
 
   @doc "Notes with the further links of `split/1` after them, one per line."
   def notes(notes, []), do: notes
-  def notes(nil, links), do: Enum.map_join(links, "\n", &("- " <> &1))
-  def notes(notes, links), do: notes <> "\n\n" <> notes(nil, links)
+  def notes(nil, links), do: link_lines(links)
+  def notes(notes, links), do: notes <> "\n\n" <> link_lines(links)
+
+  defp link_lines(links), do: Enum.map_join(links, "\n", &("- " <> &1))
+
+  defp plain_link(whole, text, url),
+    do: if(Url.valid?(url), do: label(text, url), else: whole)
 
   defp label(text, url) do
     case String.trim(text) do
