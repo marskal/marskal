@@ -231,10 +231,10 @@ defmodule MarskalWeb.TagLive do
 
   defp node_tasks(node), do: node.tasks ++ Enum.flat_map(node.children, &node_tasks/1)
 
-  defp ancestors(tree, tag) do
+  defp ancestors(tree, tag, above \\ []) do
     case tag.parent_id && Tree.get(tree, tag.parent_id) do
-      nil -> []
-      parent -> ancestors(tree, parent) ++ [parent]
+      nil -> above
+      parent -> ancestors(tree, parent, [parent | above])
     end
   end
 

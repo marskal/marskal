@@ -37,7 +37,7 @@ let
   pname = "marskal";
   version = "0.1.0";
 
-  depsHash = "sha256-97x8IoVGjkHvPubBAxUJpMTXvJ6rn4rD6a4W+28aWPI=";
+  depsHash = "sha256-uCqAnm9yEoCR/rXT1CwKNq2BPQaKXKMHKx/xdbPG1aQ=";
 
   src = lib.fileset.toSource {
     root = ../.;
@@ -63,7 +63,7 @@ let
   mdexNativeNifs = {
     x86_64-linux = {
       triple = "x86_64-unknown-linux-gnu";
-      hash = "sha256:55c9b7abfbb6ddc8971fcd438fb792eb87aebaede8056591b6373130827ee448";
+      hash = "sha256:92d39f336119bce948468a1dfc7f02052e38e16323408d1ac92c0ac7261423a8";
     };
   };
 

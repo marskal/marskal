@@ -135,9 +135,6 @@ defmodule Marskal.Imports.OmnifocusAdapter do
       do: raise(ArgumentError, "Backup has too many zip entries.")
 
     Enum.find_value(list, &inner_contents(&1, limits))
-  rescue
-    error in ArgumentError -> reraise error, __STACKTRACE__
-    _ -> nil
   end
 
   defp inner_contents({name, data}, limits) do
@@ -182,12 +179,14 @@ defmodule Marskal.Imports.OmnifocusAdapter do
     "task-to-tag" => :links
   }
 
+  defp record_count(stores), do: Enum.sum_by(stores, fn {_, store} -> map_size(store) end)
+
   defp apply_document(xml, stores, limits) do
     doc = Xml.parse!(xml)
     unless Xml.name(doc) == "omnifocus", do: raise(ArgumentError, "Not an OmniFocus backup.")
 
     Enum.reduce(Xml.children(doc), stores, fn element, stores ->
-      if stores |> Map.values() |> Enum.map(&map_size/1) |> Enum.sum() > limits.records do
+      if record_count(stores) > limits.records do
         raise ArgumentError, "Backup has too many items."
       end
 
@@ -440,14 +439,14 @@ defmodule Marskal.Imports.OmnifocusAdapter do
   end
 
   defp task_nodes(tasks, tag_ids) do
+    rows = Map.values(tasks)
+
     project_ids =
-      tasks
-      |> Map.values()
+      rows
       |> Enum.flat_map(fn row -> if row["project"], do: [row["id"]], else: [] end)
       |> MapSet.new()
 
-    tasks
-    |> Map.values()
+    rows
     |> Enum.sort_by(&{parse_rank(&1["rank"]), &1["id"]})
     |> Enum.flat_map(fn row ->
       if row["project"] do

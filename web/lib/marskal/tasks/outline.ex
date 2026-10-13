@@ -24,8 +24,7 @@ defmodule Marskal.Tasks.Outline do
     do: %{parent_id: parent_id, inbox: inbox, project_id: project_id}
 
   @doc "The group of a parent's subtasks."
-  def children_of(%Task{} = parent),
-    do: %{parent_id: parent.id, inbox: parent.inbox, project_id: parent.project_id}
+  def children_of(%Task{} = parent), do: %{group(parent) | parent_id: parent.id}
 
   @doc """
   The rank for a new task placed by default: the top of the inbox, since

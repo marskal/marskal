@@ -63,17 +63,20 @@ defmodule Marskal.Imports.Merge do
   where the user's value stood against a change in the source.
   """
   def fields(kind, base, current, incoming) do
-    Enum.reduce(groups(kind), {%{}, []}, fn group, {patch, kept} ->
-      b = Map.take(Map.merge(defaults(kind), base), group)
-      c = Map.take(current, group)
-      i = Map.take(incoming, group)
+    {patch, kept} =
+      Enum.reduce(groups(kind), {%{}, []}, fn group, {patch, kept} ->
+        b = Map.take(Map.merge(defaults(kind), base), group)
+        c = Map.take(current, group)
+        i = Map.take(incoming, group)
 
-      cond do
-        i == b or i == c -> {patch, kept}
-        c == b -> {Map.merge(patch, i), kept}
-        true -> {patch, kept ++ [hd(group)]}
-      end
-    end)
+        cond do
+          i == b or i == c -> {patch, kept}
+          c == b -> {Map.merge(patch, i), kept}
+          true -> {patch, [hd(group) | kept]}
+        end
+      end)
+
+    {patch, Enum.reverse(kept)}
   end
 
   # A field the base predates was not set then: it had its default.

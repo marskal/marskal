@@ -57,8 +57,8 @@ defmodule Marskal.Tasks do
     |> Enum.uniq()
   end
 
-  defp available(user, tasks) do
-    deferred = deferred_ids(user, tasks)
+  defp available(user, tasks, now \\ DateTime.utc_now()) do
+    deferred = deferred_ids(user, tasks, now)
 
     tasks
     |> Enum.reject(&MapSet.member?(deferred, &1.id))
@@ -159,7 +159,12 @@ defmodule Marskal.Tasks do
       |> EffectiveDates.with_dates(user)
       |> Repo.all()
 
-    if Keyword.get(opts, :unavailable, false), do: tasks, else: available(user, tasks)
+    # A later day judges Defer at its last instant, so it shows what that
+    # day will hold: a task deferred until within it is on it.
+    now = DateTime.utc_now()
+    at = if DateTime.after?(from, now), do: DateTime.add(until, -1, :second), else: now
+
+    if Keyword.get(opts, :unavailable, false), do: tasks, else: available(user, tasks, at)
   end
 
   @doc """

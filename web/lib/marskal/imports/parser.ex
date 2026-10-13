@@ -25,6 +25,7 @@ defmodule Marskal.Imports.Parser do
     error in ArgumentError ->
       fail!(batch, error.message)
 
+    # reach:disable-next-line bare_rescue -- an unreadable backup of any kind fails the batch
     error ->
       fail!(batch, "Could not read this backup (#{error.__struct__}).")
   end

@@ -419,7 +419,7 @@ defmodule MarskalWeb.TaskComponents do
             aria-label={check_label(task)}
           >
             <span :if={task.state == :dropped} class="check__dropped" aria-hidden="true">
-              <Lucideicons.square_slash class="icon" />
+              <Lucideicons.square_off class="icon" />
             </span>
             <span :if={task.state == :done} class="check__complete" aria-hidden="true">
               <Lucideicons.square_check_big class="icon" />

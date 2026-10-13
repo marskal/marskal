@@ -129,9 +129,10 @@ defmodule Marskal.Imports.Problems do
 
       children =
         for {{kind, name}, rank} <- Enum.with_index(@kinds),
-            MapSet.member?(used, tag_id(kind)),
+            id = tag_id(kind),
+            MapSet.member?(used, id),
             do: %TagNode{
-              source_id: tag_id(kind),
+              source_id: id,
               name: name,
               parent_source_id: @parent,
               state: "active",

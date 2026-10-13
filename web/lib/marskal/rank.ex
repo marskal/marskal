@@ -55,6 +55,7 @@ defmodule Marskal.Rank do
   @digits ~c"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
   @base length(@digits)
   @values @digits |> Enum.with_index() |> Map.new()
+  @chars List.to_tuple(@digits)
 
   @doc "The first rank in an empty list."
   def first, do: between(nil, nil)
@@ -181,5 +182,5 @@ defmodule Marskal.Rank do
     end)
   end
 
-  defp encode(values), do: values |> Enum.map(&Enum.at(@digits, &1)) |> List.to_string()
+  defp encode(values), do: values |> Enum.map(&elem(@chars, &1)) |> List.to_string()
 end
