@@ -14,9 +14,10 @@ defmodule MarskalWeb.AgendaLive do
 
   # The agenda lists what is due and what is planned (ADR 0006), on the
   # user's stored zone (ADR 0014). Today also carries earlier plans and
-  # dues that are still to do, so a missed day is not lost. Deferred and unavailable tasks are hidden
-  # unless ?unavailable=1, as in the open stream. A new day or toggle is a
-  # new view, so kept rows go.
+  # dues that are still to do, so a missed day is not lost. Deferred and
+  # unavailable tasks are hidden unless ?unavailable=1, as in the open
+  # stream; a later day counts what is deferred until within it as
+  # available. A new day or toggle is a new view, so kept rows go.
   @impl true
   def handle_params(params, _uri, socket) do
     zone = Marskal.Accounts.timezone(socket.assigns.current_scope.user)

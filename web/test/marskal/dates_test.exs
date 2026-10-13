@@ -280,6 +280,25 @@ defmodule Marskal.DatesTest do
       assert Tasks.list_planned(user, today) == []
       assert titles(Tasks.list_planned(user, today, unavailable: true)) == ["Deferred"]
     end
+
+    test "a later day shows what is deferred until within it", %{user: user} do
+      zone = Marskal.Accounts.timezone(user)
+      tomorrow = Date.add(Dates.today(zone), 1)
+      {from, until} = Dates.day_bounds(tomorrow, zone)
+      plan = DateTime.add(from, 9, :hour)
+
+      for {title, defer} <- [
+            {"Morning", DateTime.add(from, 8, :hour)},
+            {"Day after", until},
+            {"Someday", nil}
+          ] do
+        attrs = %{title: title, planned_at: plan, defer_until: defer}
+        attrs = if defer, do: attrs, else: Map.put(attrs, :deferred_indefinitely, true)
+        {:ok, _} = Tasks.create_task(user, attrs, command_id())
+      end
+
+      assert titles(Tasks.list_planned(user, tomorrow)) == ["Morning"]
+    end
   end
 
   describe "form params" do
