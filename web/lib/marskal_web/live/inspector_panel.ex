@@ -89,6 +89,30 @@ defmodule MarskalWeb.InspectorPanel do
           gap: 0.3rem;
         }
 
+        .field-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.5rem;
+        }
+
+        .expand {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 1.75rem;
+          height: 1.75rem;
+          margin: -0.3rem 0;
+          padding: 0;
+          border: 0;
+          background: transparent;
+          color: var(--muted);
+        }
+
+        .expand:is(:hover, :focus-visible) {
+          color: var(--text);
+        }
+
         .field label {
           font-size: 0.8rem;
           font-weight: 600;
@@ -359,17 +383,7 @@ defmodule MarskalWeb.InspectorPanel do
           />
           <MarskalWeb.UrlLink.link url={@record.url} text />
         </div>
-        <div class="field">
-          <label for="inspector-task-notes">Notes</label>
-          <textarea
-            id="inspector-task-notes"
-            class="input"
-            name="task[notes]"
-            rows="8"
-            placeholder="Markdown is fine…"
-            phx-debounce="300"
-          >{@record.notes}</textarea>
-        </div>
+        <.notes_field form="task" record={@record} placeholder="Markdown is fine…" />
         <div class="field">
           <label for="inspector-task-location">Location</label>
           <MarskalWeb.TaskComponents.location_select
@@ -437,6 +451,7 @@ defmodule MarskalWeb.InspectorPanel do
           </button>
         </div>
       </form>
+      <.notes_dialog form="task" myself={@myself} record={@record} />
       <.live_component
         module={MarskalWeb.RepeatPanel}
         id="inspector-task-repeat"
@@ -500,17 +515,11 @@ defmodule MarskalWeb.InspectorPanel do
           />
           <MarskalWeb.UrlLink.link url={@record.url} text />
         </div>
-        <div class="field">
-          <label for="inspector-project-notes">Notes</label>
-          <textarea
-            id="inspector-project-notes"
-            class="input"
-            name="project[notes]"
-            rows="8"
-            placeholder="What does done look like? Markdown is fine."
-            phx-debounce="300"
-          >{@record.notes}</textarea>
-        </div>
+        <.notes_field
+          form="project"
+          record={@record}
+          placeholder="What does done look like? Markdown is fine."
+        />
         <div class="field">
           <label for="inspector-project-folder">Folder</label>
           <select id="inspector-project-folder" class="input" name="project[project_folder_id]">
@@ -566,6 +575,7 @@ defmodule MarskalWeb.InspectorPanel do
           <.link navigate={~p"/projects/#{@record.id}"} class="open">Open project</.link>
         </div>
       </form>
+      <.notes_dialog form="project" myself={@myself} record={@record} />
       <.live_component
         module={MarskalWeb.RepeatPanel}
         id="inspector-project-repeat"
@@ -776,6 +786,224 @@ defmodule MarskalWeb.InspectorPanel do
         </ul>
       </form>
     </div>
+    """
+  end
+
+  attr :form, :string, required: true, doc: ~s(the form's param name, "task" or "project")
+  attr :record, :any, required: true
+  attr :placeholder, :string, required: true
+
+  defp notes_field(assigns) do
+    ~H"""
+    <div class="field">
+      <div class="field-head">
+        <label for={"inspector-#{@form}-notes"}>Notes</label>
+        <button
+          type="button"
+          id={"inspector-#{@form}-notes-expand"}
+          class="expand"
+          commandfor={"inspector-#{@form}-notes-dialog"}
+          command="show-modal"
+          aria-label="Edit notes in a larger window"
+          title="Edit notes in a larger window"
+        >
+          <Lucideicons.maximize_2 class="icon" />
+        </button>
+      </div>
+      <textarea
+        id={"inspector-#{@form}-notes"}
+        class="input"
+        name={"#{@form}[notes]"}
+        rows="8"
+        placeholder={@placeholder}
+        phx-debounce="300"
+      >{@record.notes}</textarea>
+    </div>
+    """
+  end
+
+  attr :form, :string, required: true, doc: ~s(the form's param name, "task" or "project")
+  attr :myself, :any, required: true
+  attr :record, :any, required: true
+
+  # The notes again, with room to write and the rendered Markdown beside them.
+  # The dialog has its own form, outside the inspector's, so the notes are not
+  # posted twice; the hook carries the text across as it opens and closes.
+  defp notes_dialog(assigns) do
+    ~H"""
+    <dialog
+      id={"inspector-#{@form}-notes-dialog"}
+      class="notes-dialog"
+      phx-hook=".NotesDialog"
+      phx-mounted={JS.ignore_attributes(["open"])}
+      data-inline={"inspector-#{@form}-notes"}
+      aria-labelledby={"inspector-#{@form}-notes-dialog-title"}
+    >
+      <style :type={MarskalWeb.ColocatedCSS}>
+        @scope (.notes-dialog) {
+          :scope {
+            width: min(72rem, calc(100vw - 2rem));
+            height: min(48rem, calc(100dvh - 2rem));
+            padding: 0;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--bg);
+            color: var(--text);
+          }
+
+          :scope[open] {
+            display: flex;
+            flex-direction: column;
+          }
+
+          :scope::backdrop {
+            background: var(--scrim);
+          }
+
+          header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.6rem 0.6rem 0.6rem 1.1rem;
+            border-bottom: 1px solid var(--border);
+          }
+
+          h2 {
+            flex: 1;
+            min-width: 0;
+            margin: 0;
+            overflow: hidden;
+            font-size: 1rem;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          .close {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.25rem;
+            height: 2.25rem;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: var(--muted);
+          }
+
+          form {
+            flex: 1;
+            min-height: 0;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+          }
+
+          textarea {
+            width: 100%;
+            height: 100%;
+            padding: 1rem 1.1rem;
+            border: 0;
+            background: var(--bg);
+            color: var(--text);
+            font: inherit;
+            line-height: 1.5;
+            resize: none;
+          }
+
+          textarea:focus-visible {
+            outline: none;
+          }
+
+          .preview {
+            display: none;
+            overflow: auto;
+            padding: 1rem 1.1rem;
+            border-left: 1px solid var(--border);
+            background: var(--surface);
+            line-height: 1.5;
+          }
+
+          .preview .empty {
+            margin: 0;
+          }
+
+          @media (min-width: 48rem) {
+            form {
+              grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            }
+
+            .preview {
+              display: block;
+            }
+          }
+        }
+      </style>
+      <header>
+        <h2 id={"inspector-#{@form}-notes-dialog-title"}>Notes · {@record.title}</h2>
+        <button
+          type="button"
+          class="close"
+          commandfor={"inspector-#{@form}-notes-dialog"}
+          command="close"
+          aria-label="Close"
+          title="Close"
+        >
+          <Lucideicons.minimize_2 class="icon" />
+        </button>
+      </header>
+      <form
+        id={"inspector-#{@form}-notes-dialog-form"}
+        phx-change="save"
+        phx-submit="save"
+        phx-target={@myself}
+      >
+        <textarea
+          id={"inspector-#{@form}-notes-wide"}
+          name={"#{@form}[notes]"}
+          aria-label="Notes"
+          placeholder="Markdown is fine…"
+          phx-debounce="300"
+        >{@record.notes}</textarea>
+        <div class="preview" id={"inspector-#{@form}-notes-preview"} aria-label="Preview">
+          <MarskalWeb.FormattedNotes.block text={@record.notes} />
+          <p :if={@record.notes in [nil, ""]} class="empty">The formatted notes show here.</p>
+        </div>
+      </form>
+    </dialog>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".NotesDialog" extension="ts">
+      import {ViewHook} from "phoenix_live_view"
+
+      const outside = (el: Element, event: MouseEvent) => {
+        const box = el.getBoundingClientRect()
+        return event.clientX < box.left || event.clientX > box.right ||
+          event.clientY < box.top || event.clientY > box.bottom
+      }
+
+      // The expand and close buttons open and close the dialog themselves
+      // (commandfor). Opening takes the inspector's text and caret, which may
+      // be ahead of the server; closing hands the text back, and the
+      // inspector's form posts it if a pending save in here has not. A click
+      // on the backdrop closes it too.
+      export default class extends ViewHook<HTMLDialogElement> {
+        mounted() {
+          this.el.addEventListener("toggle", (event) => {
+            const inline = document.getElementById(this.el.dataset.inline ?? "")
+            const wide = this.el.querySelector("textarea")
+            if (!(inline instanceof HTMLTextAreaElement) || !wide) return
+            if ((event as ToggleEvent).newState === "open") {
+              wide.value = inline.value
+              wide.focus()
+              wide.setSelectionRange(inline.selectionStart, inline.selectionEnd)
+            } else if (inline.value !== wide.value) {
+              inline.value = wide.value
+              inline.dispatchEvent(new Event("input", {bubbles: true}))
+            }
+          })
+          this.el.addEventListener("click", (event) => {
+            if (event.target === this.el && outside(this.el, event)) this.el.close()
+          })
+        }
+      }
+    </script>
     """
   end
 
