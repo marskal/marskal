@@ -73,9 +73,10 @@
   /* The default typeface; a user preference may later swap it. */
   --font: "Atkinson Hyperlegible Next Variable", system-ui, -apple-system, "Segoe UI", Roboto,
     Ubuntu, Cantarell, sans-serif;
-  /* Code, and Markdown source where columns must line up. */
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, "DejaVu Sans Mono",
-    monospace;
+  /* Code, and Markdown source where columns must line up. The named faces
+     have the box-drawing characters drawn tables need, which Consolas lacks;
+     elsewhere the system's own monospace. */
+  --font-mono: ui-monospace, Menlo, "Cascadia Mono", monospace;
 }
 
 @media (prefers-color-scheme: dark) {
