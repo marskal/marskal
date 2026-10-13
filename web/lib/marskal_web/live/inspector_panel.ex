@@ -952,13 +952,6 @@ defmodule MarskalWeb.InspectorPanel do
             line-height: 1.5;
           }
 
-          .preview pre {
-            overflow-x: auto;
-            font-family: var(--font-mono);
-            font-size: 0.85rem;
-            line-height: 1.25;
-          }
-
           :scope[data-wrap="true"] .preview pre {
             white-space: pre-wrap;
           }
