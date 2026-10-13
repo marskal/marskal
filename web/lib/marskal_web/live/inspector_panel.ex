@@ -826,24 +826,30 @@ defmodule MarskalWeb.InspectorPanel do
   attr :myself, :any, required: true
   attr :record, :any, required: true
 
-  # The notes again, with room to write and the rendered Markdown beside them.
-  # The dialog has its own form, outside the inspector's, so the notes are not
-  # posted twice; the hook carries the text across as it opens and closes.
+  # The notes again, with the whole window to write in and the rendered
+  # Markdown beside them. The dialog has its own form, outside the
+  # inspector's, so the notes are not posted twice; the hook carries the text
+  # across as it opens and closes. Preview and Wrap are the viewer's choice,
+  # kept in the browser.
   defp notes_dialog(assigns) do
     ~H"""
     <dialog
       id={"inspector-#{@form}-notes-dialog"}
       class="notes-dialog"
       phx-hook=".NotesDialog"
-      phx-mounted={JS.ignore_attributes(["open"])}
+      phx-mounted={JS.ignore_attributes(["open", "data-preview", "data-wrap"])}
       data-inline={"inspector-#{@form}-notes"}
+      data-preview="true"
+      data-wrap="true"
       aria-labelledby={"inspector-#{@form}-notes-dialog-title"}
     >
       <style :type={MarskalWeb.ColocatedCSS}>
         @scope (.notes-dialog) {
           :scope {
-            width: min(72rem, calc(100vw - 2rem));
-            height: min(48rem, calc(100dvh - 2rem));
+            width: calc(100vw - 2rem);
+            max-width: none;
+            height: calc(100dvh - 2rem);
+            max-height: none;
             padding: 0;
             border: 1px solid var(--border);
             border-radius: 12px;
@@ -863,8 +869,8 @@ defmodule MarskalWeb.InspectorPanel do
           header {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            padding: 0.6rem 0.6rem 0.6rem 1.1rem;
+            gap: 0.5rem;
+            padding: 0.5rem 0.5rem 0.5rem 1.1rem;
             border-bottom: 1px solid var(--border);
           }
 
@@ -876,6 +882,23 @@ defmodule MarskalWeb.InspectorPanel do
             font-size: 1rem;
             text-overflow: ellipsis;
             white-space: nowrap;
+          }
+
+          .toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.3rem 0.6rem;
+            border-color: var(--border);
+            background: transparent;
+            color: var(--muted);
+            font-size: 0.85rem;
+          }
+
+          .toggle[aria-pressed="true"] {
+            border-color: var(--border-strong);
+            background: var(--surface);
+            color: var(--text);
           }
 
           .close {
@@ -904,9 +927,16 @@ defmodule MarskalWeb.InspectorPanel do
             border: 0;
             background: var(--bg);
             color: var(--text);
-            font: inherit;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
             line-height: 1.5;
             resize: none;
+          }
+
+          :scope[data-wrap="false"] textarea {
+            white-space: pre;
+            overflow-wrap: normal;
+            overflow-x: auto;
           }
 
           textarea:focus-visible {
@@ -922,23 +952,60 @@ defmodule MarskalWeb.InspectorPanel do
             line-height: 1.5;
           }
 
+          .preview pre {
+            overflow-x: auto;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            line-height: 1.35;
+          }
+
+          :scope[data-wrap="true"] .preview pre {
+            white-space: pre-wrap;
+          }
+
           .preview .empty {
             margin: 0;
           }
 
           @media (min-width: 48rem) {
-            form {
+            :scope[data-preview="true"] form {
               grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
             }
 
-            .preview {
+            :scope[data-preview="true"] .preview {
               display: block;
+            }
+          }
+
+          @media (max-width: 47.99rem) {
+            .toggle.preview-toggle {
+              display: none;
             }
           }
         }
       </style>
       <header>
         <h2 id={"inspector-#{@form}-notes-dialog-title"}>Notes · {@record.title}</h2>
+        <button
+          type="button"
+          id={"inspector-#{@form}-notes-preview-toggle"}
+          class="toggle preview-toggle"
+          data-toggle="preview"
+          aria-pressed="true"
+          phx-mounted={JS.ignore_attributes(["aria-pressed"])}
+        >
+          <Lucideicons.columns_2 class="icon" /> Preview
+        </button>
+        <button
+          type="button"
+          id={"inspector-#{@form}-notes-wrap-toggle"}
+          class="toggle"
+          data-toggle="wrap"
+          aria-pressed="true"
+          phx-mounted={JS.ignore_attributes(["aria-pressed"])}
+        >
+          <Lucideicons.wrap_text class="icon" /> Wrap
+        </button>
         <button
           type="button"
           class="close"
@@ -961,6 +1028,7 @@ defmodule MarskalWeb.InspectorPanel do
           name={"#{@form}[notes]"}
           aria-label="Notes"
           placeholder="Markdown is fine…"
+          spellcheck="false"
           phx-debounce="300"
         >{@record.notes}</textarea>
         <div class="preview" id={"inspector-#{@form}-notes-preview"} aria-label="Preview">
@@ -978,6 +1046,18 @@ defmodule MarskalWeb.InspectorPanel do
           event.clientY < box.top || event.clientY > box.bottom
       }
 
+      const settings = ["preview", "wrap"] as const
+      type Setting = (typeof settings)[number]
+      const storageKey = (setting: Setting) => `marskal:notes-dialog:${setting}`
+
+      const stored = (setting: Setting): string | null => {
+        try {
+          return localStorage.getItem(storageKey(setting))
+        } catch {
+          return null
+        }
+      }
+
       // The expand and close buttons open and close the dialog themselves
       // (commandfor). Opening takes the inspector's text and caret, which may
       // be ahead of the server; closing hands the text back, and the
@@ -985,6 +1065,7 @@ defmodule MarskalWeb.InspectorPanel do
       // on the backdrop closes it too.
       export default class extends ViewHook<HTMLDialogElement> {
         mounted() {
+          for (const setting of settings) this.apply(setting, stored(setting) !== "false")
           this.el.addEventListener("toggle", (event) => {
             const inline = document.getElementById(this.el.dataset.inline ?? "")
             const wide = this.el.querySelector("textarea")
@@ -999,8 +1080,24 @@ defmodule MarskalWeb.InspectorPanel do
             }
           })
           this.el.addEventListener("click", (event) => {
-            if (event.target === this.el && outside(this.el, event)) this.el.close()
+            if (!(event.target instanceof Element)) return
+            const toggle = event.target.closest<HTMLElement>("[data-toggle]")
+            if (toggle) {
+              const setting = toggle.dataset.toggle as Setting
+              const on = this.el.dataset[setting] !== "true"
+              this.apply(setting, on)
+              try {
+                localStorage.setItem(storageKey(setting), String(on))
+              } catch {}
+            } else if (event.target === this.el && outside(this.el, event)) {
+              this.el.close()
+            }
           })
+        }
+
+        apply(setting: Setting, on: boolean) {
+          this.el.dataset[setting] = String(on)
+          this.el.querySelector(`[data-toggle="${setting}"]`)?.setAttribute("aria-pressed", String(on))
         }
       }
     </script>
