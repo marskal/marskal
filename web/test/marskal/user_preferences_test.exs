@@ -12,7 +12,7 @@ defmodule Marskal.UserPreferencesTest do
   end
 
   test "every user has one row, made with the user", %{user: user} do
-    assert %UserPreferences{timezone: "Europe/Copenhagen", week_start: 1} =
+    assert %UserPreferences{timezone: "Europe/Copenhagen", week_start: 1, locale: "en-150"} =
              Accounts.preferences(user)
 
     assert Repo.aggregate(where(UserPreferences, user_id: ^user.id), :count) == 1
@@ -37,6 +37,23 @@ defmodule Marskal.UserPreferencesTest do
 
     assert "is not a known time zone" in errors_on(changeset).timezone
     assert "is invalid" in errors_on(changeset).week_start
+  end
+
+  test "the locale is one Marskal.Cldr knows, and syncs", %{user: user} do
+    {:ok, _} = Accounts.update_preferences(user, %{locale: "en-DK"}, command())
+
+    assert Accounts.locale(user) == "en-DK"
+    assert [%{"locale" => "en-DK"}] = Sync.pull(user, 0).rows["user_preferences"]
+
+    assert {:error, changeset} = Accounts.update_preferences(user, %{locale: "da-DK"}, command())
+    assert "is invalid" in errors_on(changeset).locale
+
+    [%{"id" => id}] = Sync.pull(user, nil).rows["user_preferences"]
+
+    assert [%{status: "applied"}] =
+             Push.push(user, [push(id, "patch", %{"locale" => "en-SE"})])
+
+    assert Accounts.locale(user) == "en-SE"
   end
 
   test "a client patches its own row, and cannot insert or delete one", %{

@@ -35,6 +35,7 @@ This file is **short and actionable**. Rationale and history live in
 | Thunderbird extension | [0024](docs/adr/0024-thunderbird-extension.md) |
 | Flagged tasks & projects | [0025](docs/adr/0025-flagged.md) |
 | Project review | [0026](docs/adr/0026-project-review.md) |
+| Locale for dates and times | [0027](docs/adr/0027-locale-formatting.md) |
 | Repository layout | [0015](docs/adr/0015-repository-layout.md) |
 
 ---
@@ -330,6 +331,9 @@ The repository root is the product, not the web app (ADR 0015).
   `user_id`, made by a trigger, synced as an entity whose id is the user id.
   One typed column per preference. Read with `Accounts.preferences/1`; do not
   add preference columns to `users`.
+- **Dates on screen (ADR 0027):** format through `Marskal.DateFormat` (ex_cldr,
+  the user's `locale` preference), never `Calendar.strftime`. Form inputs keep
+  ISO values. A new locale or ex_cldr version needs `nix/update-cldr-locales`.
 - Tests: state transitions; user isolation; defer/planned/due; outliner/folder structure;
   **recurrence** matrix (ADR 0007); tag inheritance in Phase 2+; sync merge,
   command replay, tombstones, and the shared fixture vectors (ADR 0014).

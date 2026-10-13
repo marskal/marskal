@@ -72,6 +72,8 @@ defmodule MarskalWeb.UserAuth do
   def fetch_current_scope_for_user(conn, _opts) do
     with {token, conn} <- ensure_user_token(conn),
          {user, token_inserted_at} <- Accounts.get_user_by_session_token(token) do
+      Marskal.DateFormat.put_locale(user)
+
       conn
       |> assign(:current_scope, Scope.for_user(user))
       |> maybe_reissue_user_session_token(user, token_inserted_at)
@@ -251,7 +253,8 @@ defmodule MarskalWeb.UserAuth do
   end
 
   defp mount_current_scope(socket, session) do
-    Phoenix.Component.assign_new(socket, :current_scope, fn ->
+    socket
+    |> Phoenix.Component.assign_new(:current_scope, fn ->
       {user, _} =
         if user_token = session["user_token"] do
           Accounts.get_user_by_session_token(user_token)
@@ -259,7 +262,12 @@ defmodule MarskalWeb.UserAuth do
 
       Scope.for_user(user)
     end)
+    |> tap(&put_locale(&1.assigns.current_scope))
   end
+
+  # Each LiveView is a process of its own, so each mount sets the locale.
+  defp put_locale(%Scope{user: %Accounts.User{} = user}), do: Marskal.DateFormat.put_locale(user)
+  defp put_locale(_scope), do: :ok
 
   @doc "Returns the path to redirect to after log in."
   # the user was already logged in, redirect to settings

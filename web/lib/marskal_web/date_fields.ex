@@ -147,7 +147,7 @@ defmodule MarskalWeb.DateFields do
   defp default_hint do
     [:defer_until, :planned_at, :due_at]
     |> Enum.map_join(", ", fn field ->
-      "#{Calendar.strftime(Dates.default_time(field), "%H:%M")} (#{field_word(field)})"
+      "#{Marskal.DateFormat.time(Dates.default_time(field))} (#{field_word(field)})"
     end)
   end
 
@@ -217,13 +217,13 @@ defmodule MarskalWeb.DateFields do
         0 -> "Today"
         1 -> "Tomorrow"
         -1 -> "Yesterday"
-        n when n in 2..6 -> Calendar.strftime(date, "%a")
-        _ when date.year == today.year -> Calendar.strftime(date, "%-d %b")
-        _ -> Calendar.strftime(date, "%-d %b %Y")
+        n when n in 2..6 -> Marskal.DateFormat.date(date, :weekday)
+        _ when date.year == today.year -> Marskal.DateFormat.date(date, :day_month)
+        _ -> Marskal.DateFormat.date(date, :day_month_year)
       end
 
     if Time.compare(time, Dates.default_time(field)) == :eq,
       do: day,
-      else: "#{day} #{Calendar.strftime(time, "%H:%M")}"
+      else: "#{day} #{Marskal.DateFormat.time(time)}"
   end
 end

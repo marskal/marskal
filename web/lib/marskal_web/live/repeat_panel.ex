@@ -1155,7 +1155,7 @@ defmodule MarskalWeb.RepeatPanel do
     do: ", #{count} repetitions"
 
   defp end_text(%Series{ends_at: %DateTime{} = ends_at}, zone),
-    do: ", until #{Calendar.strftime(local_date(ends_at, zone), "%-d %b %Y")}"
+    do: ", until #{Marskal.DateFormat.date(local_date(ends_at, zone), :day_month_year)}"
 
   defp end_text(_series, _zone), do: []
 

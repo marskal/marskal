@@ -27,7 +27,12 @@ defmodule MarskalWeb.ConsentLive do
     case Hydra.get_consent_request(challenge) do
       {:ok, %{"subject" => subject} = request} when subject == user.id ->
         client = request["client"] || %{}
-        today = Calendar.strftime(Date.utc_today(), "%-d %b %Y")
+
+        today =
+          user
+          |> Marskal.Accounts.timezone()
+          |> Marskal.Dates.today()
+          |> Marskal.DateFormat.date(:day_month_year)
 
         {:ok,
          assign(socket,

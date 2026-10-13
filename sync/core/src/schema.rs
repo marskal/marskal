@@ -189,6 +189,12 @@ ALTER TABLE projects ADD COLUMN flagged INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE tasks ADD COLUMN flagged INTEGER NOT NULL DEFAULT 0;
 INSERT OR REPLACE INTO meta (key, value) VALUES ('needs_snapshot', '1');
 "#,
+    // ADR 0027. A preferences row pulled before this has no locale, so the
+    // next pull is a snapshot.
+    r#"
+ALTER TABLE user_preferences ADD COLUMN locale TEXT NOT NULL DEFAULT 'en-150';
+INSERT OR REPLACE INTO meta (key, value) VALUES ('needs_snapshot', '1');
+"#,
 ];
 
 /// Brings the database to the latest schema. `user_version` counts the

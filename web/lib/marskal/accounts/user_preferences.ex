@@ -10,7 +10,7 @@ defmodule Marskal.Accounts.UserPreferences do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @fields [:timezone, :week_start]
+  @fields [:timezone, :week_start, :locale]
 
   # Keyed by the user. Sync names every row by `id`, so here `id` is the
   # user id too; `user_id` is the same column, for owner-scoped queries.
@@ -21,6 +21,8 @@ defmodule Marskal.Accounts.UserPreferences do
     field :timezone, :string, default: "Europe/Copenhagen"
     # The ISO day weeks start on, 1 for Monday. New series take it (ADR 0007).
     field :week_start, :integer, default: 1
+    # The CLDR locale dates and times are formatted in (ADR 0027).
+    field :locale, :string, default: "en-150"
     field :user_id, Ecto.UUID, source: :user_id
 
     timestamps(type: :utc_datetime)
@@ -41,6 +43,7 @@ defmodule Marskal.Accounts.UserPreferences do
       end
     end)
     |> validate_inclusion(:week_start, 1..7)
+    |> validate_inclusion(:locale, Enum.map(Marskal.Cldr.known_locale_names(), &to_string/1))
     |> check_constraint(:week_start, name: :user_preferences_week_start)
   end
 end

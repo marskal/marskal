@@ -129,12 +129,15 @@ pub enum Frequency {
 }
 
 /// The user's preferences, one row keyed by the user id (ADR 0023).
-/// `week_start` is the ISO day weeks start on, 1 for Monday.
+/// `week_start` is the ISO day weeks start on, 1 for Monday. `locale` is
+/// the CLDR locale dates and times are formatted in, such as `en-DK`
+/// (ADR 0027).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct UserPreferences {
     pub id: Uuid,
     pub timezone: String,
     pub week_start: u8,
+    pub locale: String,
     pub inserted_at: Option<String>,
     pub updated_at: Option<String>,
 }

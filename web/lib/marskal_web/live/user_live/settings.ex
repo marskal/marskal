@@ -85,6 +85,15 @@ defmodule MarskalWeb.UserLive.Settings do
         <p>
           Repeats every few weeks keep the day they were made with.
         </p>
+        <.input
+          field={@preferences_form[:locale]}
+          type="select"
+          label="Dates and times"
+          options={locale_options(@current_scope.user)}
+        />
+        <p>
+          The order of day and month, and the clock, as in the region you pick.
+        </p>
       </.form>
 
       <div class="divider" />
@@ -230,6 +239,8 @@ defmodule MarskalWeb.UserLive.Settings do
 
     case Accounts.update_preferences(scope.user, params, Ecto.UUID.generate(version: 7)) do
       {:ok, preferences} ->
+        Marskal.Cldr.put_locale(preferences.locale)
+
         {:noreply,
          socket
          |> assign(:current_scope, %{scope | user: %{scope.user | preferences: preferences}})
@@ -266,7 +277,16 @@ defmodule MarskalWeb.UserLive.Settings do
 
   defp last_used(device, user) do
     {date, _time} = Marskal.Dates.to_local(device.last_used_at, Accounts.timezone(user))
-    "last used " <> Calendar.strftime(date, "%-d %b %Y")
+    "last used " <> Marskal.DateFormat.date(date, :day_month_year)
+  end
+
+  # Each region with now in its format, as an example.
+  defp locale_options(user) do
+    now = DateTime.shift_zone!(DateTime.utc_now(), Accounts.timezone(user))
+
+    for {locale, region} <- Marskal.DateFormat.locales() do
+      {"#{region}: #{Marskal.DateFormat.date_time(now, locale: locale)}", locale}
+    end
   end
 
   defp preferences_form(preferences),

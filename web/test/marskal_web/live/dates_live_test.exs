@@ -103,7 +103,7 @@ defmodule MarskalWeb.DatesLiveTest do
     assert has_element?(view, "#agenda-empty", "planned or due today to have it show up here")
 
     {:ok, view, _html} = live(conn, ~p"/agenda?date=2031-01-01")
-    assert has_element?(view, "#agenda-empty", "Nothing planned or due Wednesday 1 January 2031")
+    assert has_element?(view, "#agenda-empty", "Nothing planned or due Wednesday, 1 January 2031")
     assert has_element?(view, "#agenda-empty", "planned or due that day")
   end
 
