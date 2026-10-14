@@ -21,6 +21,11 @@ msgstr ""
 msgid "Attempting to reconnect"
 msgstr ""
 
+#: lib/marskal_web/components/nav_components.ex
+#, elixir-autogen, elixir-format
+msgid "Contents of %{name}"
+msgstr ""
+
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Something went wrong!"
