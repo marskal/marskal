@@ -36,6 +36,7 @@ This file is **short and actionable**. Rationale and history live in
 | Flagged tasks & projects | [0025](docs/adr/0025-flagged.md) |
 | Project review | [0026](docs/adr/0026-project-review.md) |
 | Locale for dates and times | [0027](docs/adr/0027-locale-formatting.md) |
+| Translatable text | [0028](docs/adr/0028-translatable-text.md) |
 | Repository layout | [0015](docs/adr/0015-repository-layout.md) |
 
 ---
@@ -255,6 +256,12 @@ The repository root is the product, not the web app (ADR 0015).
   free-form repeats stay import problems. Do not add competing-app libraries.
 - **UI (ADR 0012, ADR 0016):** HEEx function components plus plain CSS `@scope`.
   No Tailwind, no daisyUI, no UI kit. Tokens stay on `:root`.
+- **Text (ADR 0028):** new or changed text the user reads goes through Gettext:
+  `gettext`, `ngettext` for counts, `dgettext("errors", …)` for validation.
+  Whole sentences with `%{name}` placeholders, never assembled from pieces.
+  User data, logs, and API codes are not translated; `Marskal` contexts do not
+  call Gettext. Move an old literal over when you change the code around it.
+  `mix precommit` extracts `priv/gettext/*.pot`; commit them.
 - **Icons:** the `lucide_icons` package. Use `<Lucideicons.inbox class="icon" />`.
   Do not inline SVG paths, do not clone the icon repo, and do not add Heroicons.
 - **JavaScript is TypeScript**, erasable syntax only (no enums, namespaces, or
