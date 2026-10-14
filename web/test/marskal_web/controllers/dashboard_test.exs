@@ -5,7 +5,7 @@ defmodule MarskalWeb.DashboardTest do
 
   test "a normal user cannot open the dashboard", %{conn: conn} do
     conn = conn |> log_in_user(user_fixture()) |> get(~p"/dev/dashboard")
-    assert redirected_to(conn) == ~p"/"
+    assert redirected_to(conn) == ~p"/open"
   end
 
   test "a superuser can open the dashboard", %{conn: conn} do

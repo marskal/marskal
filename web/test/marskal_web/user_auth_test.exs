@@ -25,7 +25,7 @@ defmodule MarskalWeb.UserAuthTest do
       conn = UserAuth.log_in_user(conn, user)
       assert token = get_session(conn, :user_token)
       assert get_session(conn, :live_socket_id) == "users_sessions:#{Base.url_encode64(token)}"
-      assert redirected_to(conn) == ~p"/"
+      assert redirected_to(conn) == ~p"/open"
       assert Accounts.get_user_by_session_token(token)
     end
 
@@ -80,12 +80,27 @@ defmodule MarskalWeb.UserAuthTest do
       assert redirected_to(conn) == "/hello"
     end
 
+    test "redirect_home/1 opens the home view", %{conn: conn, user: user} do
+      assert conn
+             |> assign(:current_scope, Scope.for_user(user))
+             |> UserAuth.redirect_home()
+             |> redirected_to() == ~p"/open"
+
+      {:ok, _} =
+        Accounts.update_preferences(user, %{home_view: :agenda}, Ecto.UUID.generate(version: 7))
+
+      assert conn
+             |> assign(:current_scope, Scope.for_user(user))
+             |> UserAuth.redirect_home()
+             |> redirected_to() == ~p"/agenda"
+    end
+
     test "signed_in_path/1 follows the home_view preference", %{user: user} do
-      assert UserAuth.signed_in_path(user) == ~p"/"
+      assert UserAuth.signed_in_path(user) == ~p"/open"
 
       for {home_view, path} <- [
             inbox: ~p"/inbox",
-            open_tasks: ~p"/",
+            open_tasks: ~p"/open",
             agenda: ~p"/agenda",
             flagged: ~p"/flagged"
           ] do
@@ -127,7 +142,7 @@ defmodule MarskalWeb.UserAuthTest do
         |> assign(:current_scope, Scope.for_user(user))
         |> UserAuth.log_in_user(user)
 
-      assert redirected_to(conn) == ~p"/"
+      assert redirected_to(conn) == ~p"/open"
     end
 
     test "writes a cookie if remember_me was set in previous session", %{conn: conn, user: user} do

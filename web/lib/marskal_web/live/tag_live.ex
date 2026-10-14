@@ -14,7 +14,10 @@ defmodule MarskalWeb.TagLive do
 
     case Tags.get_tag(user, id) do
       nil ->
-        {:ok, socket |> put_flash(:error, "That tag is not available.") |> redirect(to: ~p"/")}
+        {:ok,
+         socket
+         |> put_flash(:error, "That tag is not available.")
+         |> MarskalWeb.UserAuth.redirect_home()}
 
       tag ->
         {:ok, socket |> assign(:tag_id, tag.id) |> new_tag_form() |> load()}
@@ -150,7 +153,9 @@ defmodule MarskalWeb.TagLive do
 
     case Tags.outline(user, socket.assigns.tag_id) do
       nil ->
-        socket |> put_flash(:info, "That tag was deleted.") |> push_navigate(to: ~p"/")
+        socket
+        |> put_flash(:info, "That tag was deleted.")
+        |> push_navigate(to: MarskalWeb.UserAuth.signed_in_path(socket))
 
       %{root: root, tree: tree} = outline ->
         outline = keep_rows(user, socket.assigns[:outline], outline)

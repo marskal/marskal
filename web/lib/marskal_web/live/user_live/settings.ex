@@ -97,7 +97,7 @@ defmodule MarskalWeb.UserLive.Settings do
         <.input
           field={@preferences_form[:home_view]}
           type="select"
-          label="After login"
+          label="Home view"
           options={[
             {"Inbox", "inbox"},
             {"Open tasks", "open_tasks"},
@@ -106,7 +106,7 @@ defmodule MarskalWeb.UserLive.Settings do
           ]}
         />
         <p>
-          This page opens when you log in.
+          Select what view is “Home” – where you land when logging in.
         </p>
       </.form>
 

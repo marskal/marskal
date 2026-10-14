@@ -69,7 +69,7 @@ defmodule MarskalWeb.UserLive.SettingsTest do
       lv |> form("#preferences_form", preferences: %{locale: "en-DK"}) |> render_change()
       assert Accounts.locale(Accounts.get_user!(user.id)) == "en-DK"
 
-      {:ok, lv, _html} = live(conn, ~p"/")
+      {:ok, lv, _html} = live(conn, ~p"/open")
       assert render(lv) =~ "16.30"
     end
 

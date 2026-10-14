@@ -61,6 +61,7 @@ defmodule MarskalWeb.UserAuth do
     conn
     |> renew_session(nil)
     |> delete_resp_cookie(@remember_me_cookie, @remember_me_options)
+    # Stay on / so the next login still follows the home view.
     |> redirect(to: ~p"/")
   end
 
@@ -272,16 +273,19 @@ defmodule MarskalWeb.UserAuth do
   @doc """
   The view a login opens, from the user's `home_view` preference.
 
-  A session return path wins over this. With no user, the open tasks.
+  A session return path wins over this. With no home view, the open
+  tasks. With no user, `/`.
   """
   def signed_in_path(%User{} = user) do
     case Accounts.preferences(user).home_view do
       :inbox -> ~p"/inbox"
-      :open_tasks -> ~p"/"
       :agenda -> ~p"/agenda"
       :flagged -> ~p"/flagged"
+      _ -> ~p"/open"
     end
   end
+
+  def signed_in_path(%Scope{user: %User{} = user}), do: signed_in_path(user)
 
   def signed_in_path(%{assigns: %{current_scope: %{user: %User{} = user}}}) do
     signed_in_path(user)
@@ -289,13 +293,26 @@ defmodule MarskalWeb.UserAuth do
 
   def signed_in_path(_conn_or_socket), do: ~p"/"
 
+  @doc """
+  Sends the user to their home view in one step.
+
+  `/` does the same when a request arrives there, and keeps a query.
+  """
+  def redirect_home(%Plug.Conn{} = conn) do
+    redirect(conn, to: signed_in_path(conn))
+  end
+
+  def redirect_home(%Phoenix.LiveView.Socket{} = socket) do
+    Phoenix.LiveView.redirect(socket, to: signed_in_path(socket))
+  end
+
   def require_superuser(conn, _opts) do
     if superuser?(conn) do
       conn
     else
       conn
       |> put_flash(:error, "You must be a superuser to open the dashboard.")
-      |> redirect(to: ~p"/")
+      |> redirect_home()
       |> halt()
     end
   end

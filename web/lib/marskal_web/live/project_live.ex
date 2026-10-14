@@ -13,7 +13,9 @@ defmodule MarskalWeb.ProjectLive do
     case Projects.get_project(user, id) do
       nil ->
         {:ok,
-         socket |> put_flash(:error, "That project is not available.") |> redirect(to: ~p"/")}
+         socket
+         |> put_flash(:error, "That project is not available.")
+         |> MarskalWeb.UserAuth.redirect_home()}
 
       project ->
         {:ok, socket |> MarskalWeb.Outline.attach() |> assign_project(user, project)}

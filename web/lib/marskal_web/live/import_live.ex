@@ -454,7 +454,7 @@ defmodule MarskalWeb.ImportLive do
             </div>
             <p class="actions">
               <.link navigate={~p"/inbox"} class="btn btn-primary">Inbox</.link>
-              <.link navigate={~p"/"} class="btn">Open</.link>
+              <.link navigate={~p"/open"} class="btn">Open</.link>
             </p>
           </div>
       <% end %>

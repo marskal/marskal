@@ -217,7 +217,7 @@ defmodule MarskalWeb.RepeatLiveTest do
     {:ok, _} = Tasks.complete_task(user, task.id, command())
     [next] = Enum.reject(Tasks.list_open(user), &(&1.id == task.id))
 
-    {:ok, view, _html} = live(conn, ~p"/?task=#{next.id}")
+    {:ok, view, _html} = live(conn, ~p"/open?task=#{next.id}")
     assert has_element?(view, "#inspector-task-repeat-summary", "Repeats daily")
 
     view |> element("#inspector-task-repeat-edit") |> render_click()
@@ -233,7 +233,7 @@ defmodule MarskalWeb.RepeatLiveTest do
     assert Recurrence.get_series(user, series.id).stopped_at == nil
 
     view |> element("#inspector-task-repeat-previous") |> render_click()
-    assert_patch(view, ~p"/?task=#{task.id}")
+    assert_patch(view, ~p"/open?task=#{task.id}")
 
     view |> element("#inspector-task-repeat-stop") |> render_click()
     assert Recurrence.get_series(user, series.id) == nil
@@ -247,7 +247,7 @@ defmodule MarskalWeb.RepeatLiveTest do
     {:ok, project} =
       Marskal.Projects.create_project(user, %{title: "Review", due_at: @friday}, command())
 
-    {:ok, view, _html} = live(conn, ~p"/?project=#{project.id}")
+    {:ok, view, _html} = live(conn, ~p"/open?project=#{project.id}")
     view |> element("#inspector-project-repeat-open") |> render_click()
 
     dialog = "#inspector-project-repeat-dialog"
@@ -266,9 +266,9 @@ defmodule MarskalWeb.RepeatLiveTest do
     {:ok, _} = Marskal.Projects.complete_project(user, project.id, command())
     [next] = Enum.reject(Marskal.Projects.list_open(user), &(&1.id == project.id))
 
-    {:ok, view, _html} = live(conn, ~p"/?project=#{next.id}")
+    {:ok, view, _html} = live(conn, ~p"/open?project=#{next.id}")
     view |> element("#inspector-project-repeat-previous") |> render_click()
-    assert_patch(view, ~p"/?project=#{project.id}")
+    assert_patch(view, ~p"/open?project=#{project.id}")
   end
 
   describe "draft_to_attrs/2" do
@@ -305,7 +305,7 @@ defmodule MarskalWeb.RepeatLiveTest do
   end
 
   defp inspect_task(conn, title) do
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, ~p"/open")
     view |> element("#open-tasks li.task-row", title) |> render_click()
     view
   end

@@ -73,10 +73,11 @@ defmodule MarskalWeb.Router do
     get "/imports/todoist/callback", ImportBatchController, :todoist_callback
     post "/imports/:id/apply", ImportBatchController, :apply
     get "/tasks/:id", TaskController, :show
+    get "/", PageController, :home
 
     live_session :require_authenticated_user,
       on_mount: [{MarskalWeb.UserAuth, :require_authenticated}, {MarskalWeb.Inspector, :default}] do
-      live "/", OpenTasksLive, :index
+      live "/open", OpenTasksLive, :index
       live "/imports", ImportLive, :index
       live "/imports/new", ImportLive, :new
       live "/imports/:id", ImportLive, :show
