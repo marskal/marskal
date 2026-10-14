@@ -48,7 +48,7 @@ defmodule MarskalWeb.UserSessionControllerTest do
       user = set_password(user)
 
       {:ok, _} =
-        Accounts.update_preferences(user, %{home: :agenda}, Ecto.UUID.generate(version: 7))
+        Accounts.update_preferences(user, %{home_view: :agenda}, Ecto.UUID.generate(version: 7))
 
       conn =
         post(conn, ~p"/users/log-in", %{

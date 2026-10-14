@@ -3,8 +3,8 @@ use std::sync::{Arc, Mutex};
 
 use jiff::Timestamp;
 use marskal_sync::{
-    Anchor, Clock, Entity, Frequency, Home, Location, Mode, NewProject, NewTask, Op, PullResponse,
-    PullUser, PushResult, PushStatus, Store, TaskFilter, TaskPatch, TaskState,
+    Anchor, Clock, Entity, Frequency, HomeView, Location, Mode, NewProject, NewTask, Op,
+    PullResponse, PullUser, PushResult, PushStatus, Store, TaskFilter, TaskPatch, TaskState,
 };
 use serde_json::{Map, Value, json};
 use uuid::Uuid;
@@ -620,7 +620,7 @@ fn pulled_preferences_read_back() {
         "timezone": "America/New_York",
         "week_start": 7,
         "locale": "en-DK",
-        "home": "agenda",
+        "home_view": "agenda",
         "inserted_at": "2026-10-01T08:00:00Z",
         "updated_at": "2026-10-01T08:00:00Z"
     });
@@ -638,11 +638,11 @@ fn pulled_preferences_read_back() {
     assert_eq!(preferences.timezone, "America/New_York");
     assert_eq!(preferences.week_start, 7);
     assert_eq!(preferences.locale, "en-DK");
-    assert_eq!(preferences.home, Home::Agenda);
+    assert_eq!(preferences.home_view, HomeView::Agenda);
 }
 
 #[test]
-fn a_preferences_row_from_before_home_reads_as_open_tasks() {
+fn a_preferences_row_from_before_home_view_reads_as_open_tasks() {
     let dir = std::env::temp_dir().join(format!("marskal-sync-{}", Uuid::now_v7()));
     std::fs::create_dir_all(&dir).unwrap();
     let path = dir.join("marskal.db");
@@ -654,7 +654,7 @@ fn a_preferences_row_from_before_home_reads_as_open_tasks() {
         "timezone": "Europe/Copenhagen",
         "week_start": 1,
         "locale": "en-150",
-        "home": "inbox",
+        "home_view": "inbox",
         "inserted_at": "2026-10-01T08:00:00Z",
         "updated_at": "2026-10-01T08:00:00Z"
     });
@@ -665,7 +665,10 @@ fn a_preferences_row_from_before_home_reads_as_open_tasks() {
             vec![("user_preferences", row.as_object().unwrap().clone())],
         ))
         .unwrap();
-    assert_eq!(store.preferences().unwrap().unwrap().home, Home::Inbox);
+    assert_eq!(
+        store.preferences().unwrap().unwrap().home_view,
+        HomeView::Inbox
+    );
     drop(store);
 
     let conn = rusqlite::Connection::open(&path).unwrap();
@@ -673,7 +676,7 @@ fn a_preferences_row_from_before_home_reads_as_open_tasks() {
         .query_row("PRAGMA user_version", [], |row| row.get(0))
         .unwrap();
     conn.execute_batch(&format!(
-        "ALTER TABLE user_preferences DROP COLUMN home;
+        "ALTER TABLE user_preferences DROP COLUMN home_view;
          PRAGMA user_version = {version};",
         version = version - 1
     ))
@@ -682,7 +685,10 @@ fn a_preferences_row_from_before_home_reads_as_open_tasks() {
 
     let store = Store::open(&path).unwrap();
     assert_eq!(store.pull_cursor().unwrap(), None);
-    assert_eq!(store.preferences().unwrap().unwrap().home, Home::OpenTasks);
+    assert_eq!(
+        store.preferences().unwrap().unwrap().home_view,
+        HomeView::OpenTasks
+    );
 
     std::fs::remove_dir_all(dir).unwrap();
 }

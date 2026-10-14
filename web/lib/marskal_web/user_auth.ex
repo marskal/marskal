@@ -270,12 +270,12 @@ defmodule MarskalWeb.UserAuth do
   defp put_locale(_scope), do: :ok
 
   @doc """
-  The page a login opens, from the user's `home` preference.
+  The view a login opens, from the user's `home_view` preference.
 
   A session return path wins over this. With no user, the open tasks.
   """
   def signed_in_path(%User{} = user) do
-    case Accounts.preferences(user).home do
+    case Accounts.preferences(user).home_view do
       :inbox -> ~p"/inbox"
       :open_tasks -> ~p"/"
       :agenda -> ~p"/agenda"

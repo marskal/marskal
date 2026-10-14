@@ -33,11 +33,13 @@ defmodule MarskalWeb.UserLive.SettingsTest do
       assert html =~ "After login"
       assert html =~ ~s(<option selected="" value="open_tasks">Open tasks</option>)
 
-      html = lv |> form("#preferences_form", preferences: %{home: "inbox"}) |> render_change()
+      html =
+        lv |> form("#preferences_form", preferences: %{home_view: "inbox"}) |> render_change()
+
       assert html =~ "UserPreferences saved."
       assert html =~ ~s(<option selected="" value="inbox">Inbox</option>)
 
-      assert Accounts.preferences(Accounts.get_user!(user.id)).home == :inbox
+      assert Accounts.preferences(Accounts.get_user!(user.id)).home_view == :inbox
     end
 
     test "sets the locale dates and times are shown in", %{conn: conn} do

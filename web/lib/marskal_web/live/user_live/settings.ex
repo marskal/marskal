@@ -95,7 +95,7 @@ defmodule MarskalWeb.UserLive.Settings do
           The order of day and month, and the clock, as in the region you pick.
         </p>
         <.input
-          field={@preferences_form[:home]}
+          field={@preferences_form[:home_view]}
           type="select"
           label="After login"
           options={[

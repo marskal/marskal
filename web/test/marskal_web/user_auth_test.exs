@@ -66,29 +66,36 @@ defmodule MarskalWeb.UserAuthTest do
 
     test "opens the page chosen in preferences", %{conn: conn, user: user} do
       {:ok, _} =
-        Accounts.update_preferences(user, %{home: :flagged}, Ecto.UUID.generate(version: 7))
+        Accounts.update_preferences(user, %{home_view: :flagged}, Ecto.UUID.generate(version: 7))
 
       conn = UserAuth.log_in_user(conn, user)
       assert redirected_to(conn) == ~p"/flagged"
     end
 
     test "a return path wins over the chosen page", %{conn: conn, user: user} do
-      {:ok, _} = Accounts.update_preferences(user, %{home: :inbox}, Ecto.UUID.generate(version: 7))
+      {:ok, _} =
+        Accounts.update_preferences(user, %{home_view: :inbox}, Ecto.UUID.generate(version: 7))
 
       conn = conn |> put_session(:user_return_to, "/hello") |> UserAuth.log_in_user(user)
       assert redirected_to(conn) == "/hello"
     end
 
-    test "signed_in_path/1 follows the home preference", %{user: user} do
+    test "signed_in_path/1 follows the home_view preference", %{user: user} do
       assert UserAuth.signed_in_path(user) == ~p"/"
 
-      for {home, path} <- [
+      for {home_view, path} <- [
             inbox: ~p"/inbox",
             open_tasks: ~p"/",
             agenda: ~p"/agenda",
             flagged: ~p"/flagged"
           ] do
-        {:ok, _} = Accounts.update_preferences(user, %{home: home}, Ecto.UUID.generate(version: 7))
+        {:ok, _} =
+          Accounts.update_preferences(
+            user,
+            %{home_view: home_view},
+            Ecto.UUID.generate(version: 7)
+          )
+
         assert UserAuth.signed_in_path(user) == path
       end
     end
