@@ -13,7 +13,10 @@ defmodule MarskalWeb.FolderLive do
 
     case ProjectFolders.get_folder(user, id) do
       nil ->
-        {:ok, socket |> put_flash(:error, "That folder is not available.") |> redirect(to: ~p"/")}
+        {:ok,
+         socket
+         |> put_flash(:error, "That folder is not available.")
+         |> MarskalWeb.UserAuth.redirect_home()}
 
       folder ->
         {:ok, assign_folder(socket, user, folder)}

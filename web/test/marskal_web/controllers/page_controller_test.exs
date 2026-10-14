@@ -1,9 +1,42 @@
 defmodule MarskalWeb.PageControllerTest do
   use MarskalWeb.ConnCase
 
+  alias Marskal.Accounts
+
+  import Marskal.AccountsFixtures
+
   test "GET / requires login", %{conn: conn} do
     conn = get(conn, ~p"/")
     assert redirected_to(conn) == ~p"/users/log-in"
+  end
+
+  test "GET / opens the home view", %{conn: conn} do
+    user = user_fixture()
+    conn = log_in_user(conn, user)
+    assert redirected_to(get(conn, ~p"/")) == ~p"/open"
+
+    for {home_view, path} <- [
+          inbox: ~p"/inbox",
+          open_tasks: ~p"/open",
+          agenda: ~p"/agenda",
+          flagged: ~p"/flagged"
+        ] do
+      {:ok, _} =
+        Accounts.update_preferences(user, %{home_view: home_view}, Ecto.UUID.generate(version: 7))
+
+      assert redirected_to(get(conn, ~p"/")) == path
+    end
+  end
+
+  test "GET / keeps a query on that view", %{conn: conn} do
+    user = user_fixture()
+    conn = log_in_user(conn, user)
+    assert redirected_to(get(conn, ~p"/?task=abc")) == "/open?task=abc"
+
+    {:ok, _} =
+      Accounts.update_preferences(user, %{home_view: :agenda}, Ecto.UUID.generate(version: 7))
+
+    assert redirected_to(get(conn, ~p"/?task=abc")) == "/agenda?task=abc"
   end
 
   test "GET /up is healthy", %{conn: conn} do

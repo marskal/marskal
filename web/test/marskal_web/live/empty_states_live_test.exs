@@ -15,7 +15,7 @@ defmodule MarskalWeb.EmptyStatesLiveTest do
   test "each list says what would fill it", %{conn: conn} do
     for {path, id} <- [
           {~p"/inbox", "#inbox-empty"},
-          {~p"/", "#open-empty"},
+          {~p"/open", "#open-empty"},
           {~p"/flagged", "#flagged-empty"},
           {~p"/agenda", "#agenda-empty"},
           {~p"/tags/untagged", "#untagged-empty"}

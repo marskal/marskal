@@ -8,7 +8,9 @@ defmodule MarskalWeb.TaskController do
   def show(conn, %{"id" => id}) do
     case Tasks.get_task(conn.assigns.current_scope.user, id) do
       nil ->
-        conn |> put_flash(:error, "That task is not available.") |> redirect(to: ~p"/")
+        conn
+        |> put_flash(:error, "That task is not available.")
+        |> MarskalWeb.UserAuth.redirect_home()
 
       task ->
         redirect(conn, to: location_path(task))
@@ -19,5 +21,5 @@ defmodule MarskalWeb.TaskController do
     do: ~p"/projects/#{project_id}?#{[task: task.id]}"
 
   defp location_path(%{inbox: true} = task), do: ~p"/inbox?#{[task: task.id]}"
-  defp location_path(task), do: ~p"/?#{[task: task.id]}"
+  defp location_path(task), do: ~p"/open?#{[task: task.id]}"
 end

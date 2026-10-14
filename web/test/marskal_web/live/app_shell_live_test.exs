@@ -13,11 +13,29 @@ defmodule MarskalWeb.AppShellLiveTest do
 
     {:ok, view, _html} = live(conn, ~p"/flagged")
     assert has_element?(view, ".tab-bar a[aria-current=page]", "Flagged")
+
+    {:ok, view, _html} = live(conn, ~p"/open")
+    assert has_element?(view, ".tab-bar a[aria-current=page]", "Open")
+    assert has_element?(view, ~s(.tab-bar a[href="/open"]))
+  end
+
+  test "the logo opens the home view", %{conn: conn} do
+    user = user_fixture()
+
+    {:ok, _} =
+      Marskal.Accounts.update_preferences(
+        user,
+        %{home_view: :flagged},
+        Ecto.UUID.generate(version: 7)
+      )
+
+    {:ok, view, _html} = live(log_in_user(conn, user), ~p"/inbox")
+    assert has_element?(view, ~s(.app-header__brand a[href="/flagged"]))
   end
 
   test "the sidebar holds the account links for the phone drawer", %{conn: conn} do
     user = user_fixture()
-    {:ok, view, _html} = live(log_in_user(conn, user), ~p"/")
+    {:ok, view, _html} = live(log_in_user(conn, user), ~p"/open")
 
     assert has_element?(view, ".app-header__menu[aria-controls=sidebar]")
     assert has_element?(view, "#sidebar .sidebar-account", user.email)
@@ -58,7 +76,7 @@ defmodule MarskalWeb.AppShellLiveTest do
         Ecto.UUID.generate(version: 7)
       )
 
-    {:ok, view, _html} = live(log_in_user(conn, user), ~p"/")
+    {:ok, view, _html} = live(log_in_user(conn, user), ~p"/open")
 
     assert has_element?(view, "#sidebar a[data-opens-inspector]", "Launch")
   end
@@ -84,7 +102,7 @@ defmodule MarskalWeb.AppShellLiveTest do
   end
 
   test "Escape closes a sidebar add field", %{conn: conn} do
-    {:ok, view, _html} = live(log_in_user(conn, user_fixture()), ~p"/")
+    {:ok, view, _html} = live(log_in_user(conn, user_fixture()), ~p"/open")
 
     view |> element("button[aria-label='New folder']") |> render_click()
     assert has_element?(view, "#new-root-folder input[placeholder='New folder']")

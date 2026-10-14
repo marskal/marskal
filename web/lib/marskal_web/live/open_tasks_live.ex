@@ -95,8 +95,8 @@ defmodule MarskalWeb.OpenTasksLive do
 
   defp view_path(true, []), do: ~p"/flagged"
   defp view_path(true, query), do: ~p"/flagged?#{query}"
-  defp view_path(false, []), do: ~p"/"
-  defp view_path(false, query), do: ~p"/?#{query}"
+  defp view_path(false, []), do: ~p"/open"
+  defp view_path(false, query), do: ~p"/open?#{query}"
 
   defp load_tasks(socket) do
     user = socket.assigns.current_scope.user

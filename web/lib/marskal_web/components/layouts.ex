@@ -59,7 +59,7 @@ defmodule MarskalWeb.Layouts do
           <Lucideicons.menu class="icon" />
         </button>
         <div class="app-header__brand">
-          <.link navigate={~p"/"}>
+          <.link navigate={MarskalWeb.UserAuth.signed_in_path(@current_scope)}>
             <img src={~p"/images/icon.svg"} alt="" class="app-header__logo" />
             <span>Marskal</span>
           </.link>
@@ -128,7 +128,7 @@ defmodule MarskalWeb.Layouts do
         <.tab navigate={~p"/inbox"} current={@current_nav == :inbox}>
           <Lucideicons.inbox class="icon" /> Inbox
         </.tab>
-        <.tab navigate={~p"/"} current={@current_nav == :open}>
+        <.tab navigate={~p"/open"} current={@current_nav == :open}>
           <Lucideicons.list class="icon" /> Open
         </.tab>
         <.tab navigate={~p"/agenda"} current={@current_nav == :agenda}>

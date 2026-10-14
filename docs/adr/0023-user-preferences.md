@@ -23,25 +23,25 @@ same field patches, command ids, and change feed as every other row
   not a `jsonb` document: the database checks the values, and two devices
   that change different preferences offline both land, field by field.
 - The row syncs as the entity **`user_preferences`**. Its `id` on the wire
-  is the user id. A client only patches it (`timezone`, `week_start`,
-  `locale`); an
-  insert or a `discarded_at` patch is refused. It lives as long as the
-  user, so it has no `discarded_at` and never needs a tombstone.
+  is the user id. A client only patches it. An insert or a `discarded_at`
+  patch is refused. It lives as long as the user, so it has no
+  `discarded_at` and never needs a tombstone. The columns a client may
+  write are `client_fields/1` on the schema.
 - The pull's `user` block keeps `timezone`, read from the row, for clients
-  from before it.
-- Server code reads them through `Marskal.Accounts.preferences/1` and
-  `timezone/1`. The session and the API token load them with the user.
-- Preferences now: **`timezone`** (IANA, default `Europe/Copenhagen`,
-  ADR 0014), **`week_start`** (ISO day, default 1 for Monday, ADR 0007),
-  and **`locale`** (CLDR, default `en-150`, ADR 0027).
-  A new preference is a migration on both sides and a field in the
-  allow-list.
+  from before the table. Later preferences stay on the row.
+- Server code reads the row through `Marskal.Accounts.preferences/1`. The
+  session and the API token load it with the user.
+- A new preference is a column on this table, a migration on the server
+  and in the client's local schema, and a name in that allow-list. A
+  column added for clients that already pulled asks for a snapshot. What
+  the preference means lives with the feature, in its own ADR when the
+  choice is hard to reverse.
 
 ## Consequences
 
 - `users.timezone` is gone; the migration copies it over.
 - An offline client's local database gets the table, and its next pull is
   a snapshot, since the row predates every cursor.
-- A preference that a series or another row depends on is copied onto that
-  row when it is made, as `week_start` is, so changing the preference
+- A preference that another row depends on is copied onto that row when
+  it is made, as `week_start` is onto a series, so changing the preference
   later does not change what is already there.

@@ -19,7 +19,7 @@ defmodule MarskalWeb.UserLive.RegistrationTest do
         conn
         |> log_in_user(user_fixture())
         |> live(~p"/users/register")
-        |> follow_redirect(conn, ~p"/")
+        |> follow_redirect(conn, ~p"/open")
 
       assert {:ok, _conn} = result
     end
@@ -47,7 +47,7 @@ defmodule MarskalWeb.UserLive.RegistrationTest do
       render_submit(form)
       conn = submit_form(form, conn)
 
-      assert redirected_to(conn) == ~p"/"
+      assert redirected_to(conn) == ~p"/open"
       assert Accounts.get_user_by_email(email).hashed_password
     end
 

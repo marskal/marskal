@@ -26,6 +26,22 @@ defmodule MarskalWeb.UserLive.SettingsTest do
       assert Accounts.preferences(Accounts.get_user!(user.id)).week_start == 7
     end
 
+    test "chooses the page a login opens", %{conn: conn} do
+      user = user_fixture()
+      {:ok, lv, html} = conn |> log_in_user(user) |> live(~p"/users/settings")
+
+      assert html =~ "After login"
+      assert html =~ ~s(<option selected="" value="open_tasks">Open tasks</option>)
+
+      html =
+        lv |> form("#preferences_form", preferences: %{home_view: "inbox"}) |> render_change()
+
+      assert html =~ "UserPreferences saved."
+      assert html =~ ~s(<option selected="" value="inbox">Inbox</option>)
+
+      assert Accounts.preferences(Accounts.get_user!(user.id)).home_view == :inbox
+    end
+
     test "sets the locale dates and times are shown in", %{conn: conn} do
       user = user_fixture()
       zone = Accounts.timezone(user)
@@ -53,7 +69,7 @@ defmodule MarskalWeb.UserLive.SettingsTest do
       lv |> form("#preferences_form", preferences: %{locale: "en-DK"}) |> render_change()
       assert Accounts.locale(Accounts.get_user!(user.id)) == "en-DK"
 
-      {:ok, lv, _html} = live(conn, ~p"/")
+      {:ok, lv, _html} = live(conn, ~p"/open")
       assert render(lv) =~ "16.30"
     end
 

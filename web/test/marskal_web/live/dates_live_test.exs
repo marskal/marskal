@@ -110,7 +110,7 @@ defmodule MarskalWeb.DatesLiveTest do
   test "the inspector sets and clears dates in the user's zone", %{conn: conn, user: user} do
     {:ok, task} = Tasks.create_task(user, %{title: "Report", inbox: false}, command())
 
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, ~p"/open")
     view |> element("#open-tasks li.task-row", "Report") |> render_click()
 
     view
@@ -137,7 +137,7 @@ defmodule MarskalWeb.DatesLiveTest do
   } do
     {:ok, task} = Tasks.create_task(user, %{title: "Paint", inbox: false}, command())
 
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, ~p"/open")
     view |> element("#open-tasks li.task-row", "Paint") |> render_click()
 
     view
@@ -146,10 +146,10 @@ defmodule MarskalWeb.DatesLiveTest do
 
     assert Tasks.get_task(user, task.id).deferred_indefinitely
 
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, ~p"/open")
     refute has_element?(view, "#open-tasks", "Paint")
 
-    {:ok, view, _html} = live(conn, ~p"/?unavailable=1")
+    {:ok, view, _html} = live(conn, ~p"/open?unavailable=1")
     assert has_element?(view, "#open-tasks li.is-unavailable .mark--deferred", "Deferred")
   end
 
@@ -163,7 +163,7 @@ defmodule MarskalWeb.DatesLiveTest do
     assert Tasks.get_task(user, task.id) == nil
     refute has_element?(view, "#project-tasks", "Dig")
 
-    {:ok, view, _html} = live(conn, ~p"/?project=#{project.id}")
+    {:ok, view, _html} = live(conn, ~p"/open?project=#{project.id}")
     view |> element("#inspector-project-delete") |> render_click()
     assert Projects.get_project(user, project.id) == nil
   end

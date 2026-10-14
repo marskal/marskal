@@ -94,6 +94,20 @@ defmodule MarskalWeb.UserLive.Settings do
         <p>
           The order of day and month, and the clock, as in the region you pick.
         </p>
+        <.input
+          field={@preferences_form[:home_view]}
+          type="select"
+          label="Home view"
+          options={[
+            {"Inbox", "inbox"},
+            {"Open tasks", "open_tasks"},
+            {"Agenda", "agenda"},
+            {"Flagged", "flagged"}
+          ]}
+        />
+        <p>
+          Select what view is “Home” – where you land when logging in.
+        </p>
       </.form>
 
       <div class="divider" />

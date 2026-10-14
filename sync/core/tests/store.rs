@@ -3,8 +3,8 @@ use std::sync::{Arc, Mutex};
 
 use jiff::Timestamp;
 use marskal_sync::{
-    Anchor, Clock, Entity, Frequency, Location, Mode, NewProject, NewTask, Op, PullResponse,
-    PullUser, PushResult, PushStatus, Store, TaskFilter, TaskPatch, TaskState,
+    Anchor, Clock, Entity, Frequency, HomeView, Location, Mode, NewProject, NewTask, Op,
+    PullResponse, PullUser, PushResult, PushStatus, Store, TaskFilter, TaskPatch, TaskState,
 };
 use serde_json::{Map, Value, json};
 use uuid::Uuid;
@@ -620,6 +620,7 @@ fn pulled_preferences_read_back() {
         "timezone": "America/New_York",
         "week_start": 7,
         "locale": "en-DK",
+        "home_view": "agenda",
         "inserted_at": "2026-10-01T08:00:00Z",
         "updated_at": "2026-10-01T08:00:00Z"
     });
@@ -637,6 +638,59 @@ fn pulled_preferences_read_back() {
     assert_eq!(preferences.timezone, "America/New_York");
     assert_eq!(preferences.week_start, 7);
     assert_eq!(preferences.locale, "en-DK");
+    assert_eq!(preferences.home_view, HomeView::Agenda);
+}
+
+#[test]
+fn a_preferences_row_from_before_home_view_reads_as_open_tasks() {
+    let dir = std::env::temp_dir().join(format!("marskal-sync-{}", Uuid::now_v7()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("marskal.db");
+
+    let mut store = Store::open(&path).unwrap();
+    let user = Uuid::now_v7();
+    let row = json!({
+        "id": user.to_string(),
+        "timezone": "Europe/Copenhagen",
+        "week_start": 1,
+        "locale": "en-150",
+        "home_view": "inbox",
+        "inserted_at": "2026-10-01T08:00:00Z",
+        "updated_at": "2026-10-01T08:00:00Z"
+    });
+    store
+        .apply_pull(&pull(
+            4,
+            true,
+            vec![("user_preferences", row.as_object().unwrap().clone())],
+        ))
+        .unwrap();
+    assert_eq!(
+        store.preferences().unwrap().unwrap().home_view,
+        HomeView::Inbox
+    );
+    drop(store);
+
+    let conn = rusqlite::Connection::open(&path).unwrap();
+    let version: i64 = conn
+        .query_row("PRAGMA user_version", [], |row| row.get(0))
+        .unwrap();
+    conn.execute_batch(&format!(
+        "ALTER TABLE user_preferences DROP COLUMN home_view;
+         PRAGMA user_version = {version};",
+        version = version - 1
+    ))
+    .unwrap();
+    drop(conn);
+
+    let store = Store::open(&path).unwrap();
+    assert_eq!(store.pull_cursor().unwrap(), None);
+    assert_eq!(
+        store.preferences().unwrap().unwrap().home_view,
+        HomeView::OpenTasks
+    );
+
+    std::fs::remove_dir_all(dir).unwrap();
 }
 
 #[test]

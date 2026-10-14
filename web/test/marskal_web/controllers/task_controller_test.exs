@@ -23,7 +23,9 @@ defmodule MarskalWeb.TaskControllerTest do
              ~p"/projects/#{project.id}?task=#{in_project.id}"
 
     assert redirected_to(get(conn, ~p"/tasks/#{in_inbox.id}")) == ~p"/inbox?task=#{in_inbox.id}"
-    assert redirected_to(get(conn, ~p"/tasks/#{no_project.id}")) == ~p"/?task=#{no_project.id}"
+
+    assert redirected_to(get(conn, ~p"/tasks/#{no_project.id}")) ==
+             ~p"/open?task=#{no_project.id}"
   end
 
   test "another user's task or a malformed id is not available", %{conn: conn} do
@@ -31,7 +33,7 @@ defmodule MarskalWeb.TaskControllerTest do
 
     for id <- [task.id, "not-a-uuid"] do
       conn = get(conn, ~p"/tasks/#{id}")
-      assert redirected_to(conn) == ~p"/"
+      assert redirected_to(conn) == ~p"/open"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) == "That task is not available."
     end
   end

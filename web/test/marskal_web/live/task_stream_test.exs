@@ -32,21 +32,21 @@ defmodule MarskalWeb.TaskStreamTest do
 
     assert has_element?(inbox, "#inbox-tasks", "Milk")
 
-    {:ok, open, _html} = live(conn, ~p"/")
+    {:ok, open, _html} = live(conn, ~p"/open")
     refute has_element?(open, "#open-tasks", "Milk")
 
     inbox |> element("#inbox-tasks li.task-row", "Milk") |> render_click()
     inbox |> form("#inspector-task", task: %{location: "none"}) |> render_change()
     refute has_element?(inbox, "#inbox-tasks", "Milk")
 
-    {:ok, open, _html} = live(conn, ~p"/")
+    {:ok, open, _html} = live(conn, ~p"/open")
     assert has_element?(open, "#open-tasks", "Milk")
 
     open
     |> element("#open-tasks button[aria-label='Mark as done']")
     |> render_click()
 
-    {:ok, open, _html} = live(conn, ~p"/")
+    {:ok, open, _html} = live(conn, ~p"/open")
     refute has_element?(open, "#open-tasks", "Milk")
   end
 
@@ -61,7 +61,7 @@ defmodule MarskalWeb.TaskStreamTest do
 
     check = "#task-#{second.id} button.check"
 
-    {:ok, open, _html} = live(conn, ~p"/")
+    {:ok, open, _html} = live(conn, ~p"/open")
     open |> element(check) |> render_click()
 
     assert has_element?(open, "#open-tasks li.is-resolved", "Second")
@@ -106,11 +106,11 @@ defmodule MarskalWeb.TaskStreamTest do
     {:ok, _} = Marskal.Tags.tag_task(user, task.id, tag.id, command())
     {:ok, _} = Marskal.Tags.set_tag_state(user, tag.id, :on_hold, command())
 
-    {:ok, open, _html} = live(conn, ~p"/")
+    {:ok, open, _html} = live(conn, ~p"/open")
     refute has_element?(open, "#open-tasks", "Ask Anna")
 
     open |> element("a", "Show unavailable") |> render_click()
-    assert_patch(open, ~p"/?unavailable=1")
+    assert_patch(open, ~p"/open?unavailable=1")
     assert has_element?(open, "#open-tasks", "Ask Anna")
 
     open |> element("a", "Hide unavailable") |> render_click()

@@ -12,18 +12,32 @@ defmodule Marskal.UserPreferencesTest do
   end
 
   test "every user has one row, made with the user", %{user: user} do
-    assert %UserPreferences{timezone: "Europe/Copenhagen", week_start: 1, locale: "en-150"} =
-             Accounts.preferences(user)
+    assert %UserPreferences{
+             timezone: "Europe/Copenhagen",
+             week_start: 1,
+             locale: "en-150",
+             home_view: :open_tasks
+           } = Accounts.preferences(user)
 
     assert Repo.aggregate(where(UserPreferences, user_id: ^user.id), :count) == 1
   end
 
   test "a change goes through the change feed, and a bad value is refused", %{user: user} do
     {:ok, preferences} =
-      Accounts.update_preferences(user, %{timezone: "America/New_York", week_start: 7}, command())
+      Accounts.update_preferences(
+        user,
+        %{timezone: "America/New_York", week_start: 7, home_view: :agenda},
+        command()
+      )
 
-    assert [%{"id" => id, "timezone" => "America/New_York", "week_start" => 7}] =
-             Sync.pull(user, 0).rows["user_preferences"]
+    assert [
+             %{
+               "id" => id,
+               "timezone" => "America/New_York",
+               "week_start" => 7,
+               "home_view" => "agenda"
+             }
+           ] = Sync.pull(user, 0).rows["user_preferences"]
 
     assert id == preferences.id
     assert Sync.pull(user, 0).user.timezone == "America/New_York"
@@ -31,12 +45,13 @@ defmodule Marskal.UserPreferencesTest do
     assert {:error, changeset} =
              Accounts.update_preferences(
                user,
-               %{timezone: "Mars/Olympus", week_start: 8},
+               %{timezone: "Mars/Olympus", week_start: 8, home_view: "later"},
                command()
              )
 
     assert "is not a known time zone" in errors_on(changeset).timezone
     assert "is invalid" in errors_on(changeset).week_start
+    assert "is invalid" in errors_on(changeset).home_view
   end
 
   test "the locale is one Marskal.Cldr knows, and syncs", %{user: user} do
@@ -67,18 +82,21 @@ defmodule Marskal.UserPreferencesTest do
              %{status: "applied"},
              %{status: "rejected", reason: "not_found"},
              %{status: "rejected", reason: "field_not_allowed"},
+             %{status: "rejected", reason: "invalid"},
              %{status: "rejected", reason: "field_not_allowed"},
              %{status: "rejected", reason: "invalid"}
            ] =
              Push.push(user, [
-               push(id, "patch", %{"week_start" => 6}),
+               push(id, "patch", %{"week_start" => 6, "home_view" => "inbox"}),
                push(theirs, "patch", %{"week_start" => 6}),
                push(id, "patch", %{"discarded_at" => "2026-10-08T10:00:00Z"}),
+               push(id, "patch", %{"home_view" => "later"}),
                push(Ecto.UUID.generate(version: 7), "insert", %{"week_start" => 6}),
                push(Ecto.UUID.generate(version: 7), "insert", %{})
              ])
 
     assert Accounts.preferences(user).week_start == 6
+    assert Accounts.preferences(user).home_view == :inbox
     assert Accounts.preferences(other).week_start == 1
   end
 

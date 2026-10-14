@@ -24,7 +24,7 @@ defmodule MarskalWeb.NavComponents do
         <.link navigate={~p"/inbox"} class={["in-tab-bar", link_class(@current_nav, :inbox)]}>
           <Lucideicons.inbox class="icon" /> Inbox
         </.link>
-        <.link navigate={~p"/"} class={["in-tab-bar", link_class(@current_nav, :open)]}>
+        <.link navigate={~p"/open"} class={["in-tab-bar", link_class(@current_nav, :open)]}>
           <Lucideicons.list class="icon" /> Open
         </.link>
         <.link navigate={~p"/agenda"} class={["in-tab-bar", link_class(@current_nav, :agenda)]}>

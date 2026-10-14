@@ -116,7 +116,7 @@ defmodule MarskalWeb.OutlineLiveTest do
     second = add(ctx, "Sand", a)
     {:ok, other} = Tasks.create_task(ctx.user, %{title: "Call", inbox: false}, command_id())
 
-    {:ok, view, _html} = live(ctx.conn, ~p"/")
+    {:ok, view, _html} = live(ctx.conn, ~p"/open")
 
     assert rows(view, "#open-tasks") == [other.id, b.id, a.id, first.id, second.id]
     assert has_element?(view, "#task-#{first.id}[data-depth='1']")
@@ -134,7 +134,7 @@ defmodule MarskalWeb.OutlineLiveTest do
     {:ok, _} = Marskal.Tags.update_tag(ctx.user, tag.id, %{state: :on_hold}, command_id())
     {:ok, _} = Marskal.Tags.tag_task(ctx.user, a.id, tag.id, command_id())
 
-    {:ok, view, _html} = live(ctx.conn, ~p"/")
+    {:ok, view, _html} = live(ctx.conn, ~p"/open")
 
     assert rows(view, "#open-tasks") == [a.id, child.id]
     assert has_element?(view, "#task-#{a.id}.is-unavailable")

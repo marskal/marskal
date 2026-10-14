@@ -10,7 +10,8 @@ defmodule Marskal.Accounts.UserPreferences do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @fields [:timezone, :week_start, :locale]
+  @fields [:timezone, :week_start, :locale, :home_view]
+  @home_views [:inbox, :open_tasks, :agenda, :flagged]
 
   # Keyed by the user. Sync names every row by `id`, so here `id` is the
   # user id too; `user_id` is the same column, for owner-scoped queries.
@@ -23,6 +24,8 @@ defmodule Marskal.Accounts.UserPreferences do
     field :week_start, :integer, default: 1
     # The CLDR locale dates and times are formatted in (ADR 0027).
     field :locale, :string, default: "en-150"
+    # The view a login opens, when the session has no return path.
+    field :home_view, Ecto.Enum, values: @home_views, default: :open_tasks
     field :user_id, Ecto.UUID, source: :user_id
 
     timestamps(type: :utc_datetime)
@@ -45,5 +48,6 @@ defmodule Marskal.Accounts.UserPreferences do
     |> validate_inclusion(:week_start, 1..7)
     |> validate_inclusion(:locale, Enum.map(Marskal.Cldr.known_locale_names(), &to_string/1))
     |> check_constraint(:week_start, name: :user_preferences_week_start)
+    |> check_constraint(:home_view, name: :user_preferences_home_view)
   end
 end

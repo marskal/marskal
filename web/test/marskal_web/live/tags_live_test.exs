@@ -21,7 +21,7 @@ defmodule MarskalWeb.TagsLiveTest do
       tag!(user, "Friend", old)
       {:ok, _} = Tags.set_tag_state(user, old.id, :dropped, command())
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/open")
 
       assert has_element?(view, "#sidebar-tags a", "Person")
       assert has_element?(view, "#sidebar-tags a", "Wife")
@@ -30,7 +30,7 @@ defmodule MarskalWeb.TagsLiveTest do
     end
 
     test "a new tag opens its page", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/open")
       refute has_element?(view, "#new-root-tag")
       view |> element("button[aria-label='New tag']") |> render_click()
 
@@ -102,7 +102,7 @@ defmodule MarskalWeb.TagsLiveTest do
       other = user_fixture()
       theirs = tag!(other, "Theirs")
 
-      assert {:error, {:redirect, %{to: "/"}}} = live(conn, ~p"/tags/#{theirs.id}")
+      assert {:error, {:redirect, %{to: "/open"}}} = live(conn, ~p"/tags/#{theirs.id}")
     end
   end
 
@@ -124,7 +124,7 @@ defmodule MarskalWeb.TagsLiveTest do
     {:ok, _} = Tags.tag_project(user, project.id, home.id, command())
     task = task!(user, "Weed", project_id: project.id, tags: [short])
 
-    {:ok, view, _html} = live(conn, ~p"/")
+    {:ok, view, _html} = live(conn, ~p"/open")
 
     assert has_element?(view, "#task-#{task.id} .tag-chips li:not(.is-inherited) a", "Short")
     assert has_element?(view, "#task-#{task.id} .tag-chips li.is-inherited a", "Home")
@@ -136,7 +136,7 @@ defmodule MarskalWeb.TagsLiveTest do
       wife = tag!(user, "Wife", person)
       task = task!(user, "Anniversary")
 
-      {:ok, view, _html} = live(conn, ~p"/?#{[task: task.id]}")
+      {:ok, view, _html} = live(conn, ~p"/open?#{[task: task.id]}")
 
       view
       |> form("#inspector-task-tags-picker", tag_query: "per/wi")
@@ -160,7 +160,7 @@ defmodule MarskalWeb.TagsLiveTest do
       waiting = tag!(user, "Waiting")
       task = task!(user, "Reply")
 
-      {:ok, view, _html} = live(conn, ~p"/?#{[task: task.id]}")
+      {:ok, view, _html} = live(conn, ~p"/open?#{[task: task.id]}")
 
       view |> form("#inspector-task-tags-picker", tag_query: "wai") |> render_change()
       view |> form("#inspector-task-tags-picker", tag_query: "wai") |> render_submit()
@@ -172,7 +172,7 @@ defmodule MarskalWeb.TagsLiveTest do
       lists = tag!(user, "Lists")
       task = task!(user, "Learn Portuguese")
 
-      {:ok, view, _html} = live(conn, ~p"/?#{[task: task.id]}")
+      {:ok, view, _html} = live(conn, ~p"/open?#{[task: task.id]}")
 
       view |> form("#inspector-task-tags-picker", tag_query: "Someday/maybe") |> render_change()
 
@@ -205,7 +205,7 @@ defmodule MarskalWeb.TagsLiveTest do
     test "renames, and deletes the tag", %{conn: conn, user: user} do
       tag = tag!(user, "Wating")
 
-      {:ok, view, _html} = live(conn, ~p"/?#{[tag: tag.id]}")
+      {:ok, view, _html} = live(conn, ~p"/open?#{[tag: tag.id]}")
 
       view |> form("#inspector-tag", tag: %{name: "Waiting"}) |> render_change()
       assert has_element?(view, "#sidebar-tags a", "Waiting")
@@ -220,7 +220,7 @@ defmodule MarskalWeb.TagsLiveTest do
       wife = tag!(user, "Wife", person)
       other = tag!(user, "Other")
 
-      {:ok, view, _html} = live(conn, ~p"/?#{[tag: person.id]}")
+      {:ok, view, _html} = live(conn, ~p"/open?#{[tag: person.id]}")
 
       assert has_element?(view, "#inspector-tag-parent option[value='#{other.id}']")
       refute has_element?(view, "#inspector-tag-parent option[value='#{wife.id}']")
@@ -231,10 +231,10 @@ defmodule MarskalWeb.TagsLiveTest do
   test "opening the inspector keeps the open stream's toggle", %{conn: conn, user: user} do
     task = task!(user, "Anything")
 
-    {:ok, view, _html} = live(conn, ~p"/?#{[unavailable: 1]}")
+    {:ok, view, _html} = live(conn, ~p"/open?#{[unavailable: 1]}")
     view |> element("#task-#{task.id} button.select") |> render_click()
 
-    assert_patch(view, ~p"/?#{[task: task.id, unavailable: 1]}")
+    assert_patch(view, ~p"/open?#{[task: task.id, unavailable: 1]}")
   end
 
   defp tag!(user, name, parent \\ nil) do
