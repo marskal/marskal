@@ -66,6 +66,27 @@ defmodule MarskalWeb.InspectorLiveTest do
     assert render(view) =~ "Select a task, project, folder, or tag to edit."
   end
 
+  test "the wide notes editor saves the notes and previews them", %{conn: conn, user: user} do
+    {:ok, task} = Tasks.create_task(user, %{"title" => "Plan", "inbox" => false}, command())
+
+    {:ok, view, _html} = live(conn, ~p"/")
+    view |> element("#open-tasks li.task-row", "Plan") |> render_click()
+
+    assert has_element?(
+             view,
+             "#inspector-task-notes-expand[commandfor='inspector-task-notes-dialog']"
+           )
+
+    view
+    |> form("#inspector-task-notes-dialog-form", task: %{notes: "Step **one**"})
+    |> render_change()
+
+    assert Tasks.get_task(user, task.id).notes == "Step **one**"
+    assert Tasks.get_task(user, task.id).title == "Plan"
+    assert has_element?(view, "#inspector-task-notes", "Step **one**")
+    assert has_element?(view, "#inspector-task-notes-preview strong", "one")
+  end
+
   test "a done task keeps its row; a moved one leaves at once", %{
     conn: conn,
     user: user
