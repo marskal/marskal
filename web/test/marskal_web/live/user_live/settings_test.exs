@@ -30,7 +30,7 @@ defmodule MarskalWeb.UserLive.SettingsTest do
       user = user_fixture()
       {:ok, lv, html} = conn |> log_in_user(user) |> live(~p"/users/settings")
 
-      assert html =~ "After login"
+      assert html =~ "Home view"
       assert html =~ ~s(<option selected="" value="open_tasks">Open tasks</option>)
 
       html =
