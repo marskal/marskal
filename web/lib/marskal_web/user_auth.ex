@@ -9,7 +9,7 @@ defmodule MarskalWeb.UserAuth do
   import Phoenix.Controller
 
   alias Marskal.Accounts
-  alias Marskal.Accounts.Scope
+  alias Marskal.Accounts.{Scope, User}
 
   # Make the remember me cookie valid for 14 days. This should match
   # the session validity setting in UserToken.
@@ -42,7 +42,7 @@ defmodule MarskalWeb.UserAuth do
     conn
     |> create_or_extend_session(user, params)
     |> delete_session(:user_return_to)
-    |> redirect(to: user_return_to || signed_in_path(conn))
+    |> redirect(to: user_return_to || signed_in_path(user))
   end
 
   @doc """
@@ -269,8 +269,24 @@ defmodule MarskalWeb.UserAuth do
   defp put_locale(%Scope{user: %Accounts.User{} = user}), do: Marskal.DateFormat.put_locale(user)
   defp put_locale(_scope), do: :ok
 
-  @doc "Returns the path to redirect to after log in."
-  # the user was already logged in, redirect to settings
+  @doc """
+  The page a login opens, from the user's `home` preference.
+
+  A session return path wins over this. With no user, the open tasks.
+  """
+  def signed_in_path(%User{} = user) do
+    case Accounts.preferences(user).home do
+      :inbox -> ~p"/inbox"
+      :open_tasks -> ~p"/"
+      :agenda -> ~p"/agenda"
+      :flagged -> ~p"/flagged"
+    end
+  end
+
+  def signed_in_path(%{assigns: %{current_scope: %{user: %User{} = user}}}) do
+    signed_in_path(user)
+  end
+
   def signed_in_path(_conn_or_socket), do: ~p"/"
 
   def require_superuser(conn, _opts) do

@@ -128,16 +128,27 @@ pub enum Frequency {
     Years,
 }
 
+/// The page a login opens.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Home {
+    Inbox,
+    OpenTasks,
+    Agenda,
+    Flagged,
+}
+
 /// The user's preferences, one row keyed by the user id (ADR 0023).
 /// `week_start` is the ISO day weeks start on, 1 for Monday. `locale` is
 /// the CLDR locale dates and times are formatted in, such as `en-DK`
-/// (ADR 0027).
+/// (ADR 0027). `home` is the page a login opens.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct UserPreferences {
     pub id: Uuid,
     pub timezone: String,
     pub week_start: u8,
     pub locale: String,
+    pub home: Home,
     pub inserted_at: Option<String>,
     pub updated_at: Option<String>,
 }

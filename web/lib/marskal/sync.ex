@@ -19,7 +19,7 @@ defmodule Marskal.Sync do
 
   @entities [
     {"user_preferences", Marskal.Accounts.UserPreferences,
-     ~w(id timezone week_start locale inserted_at updated_at)a},
+     ~w(id timezone week_start locale home inserted_at updated_at)a},
     {"recurrence_series", Marskal.Recurrence.Series,
      ~w(id kind mode anchor interval frequency weekdays on_days
         ends_at end_count week_start stopped_at discarded_at inserted_at updated_at)a},

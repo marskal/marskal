@@ -44,6 +44,20 @@ defmodule MarskalWeb.UserSessionControllerTest do
       assert redirected_to(conn) == ~p"/"
     end
 
+    test "opens the page chosen in preferences", %{conn: conn, user: user} do
+      user = set_password(user)
+
+      {:ok, _} =
+        Accounts.update_preferences(user, %{home: :agenda}, Ecto.UUID.generate(version: 7))
+
+      conn =
+        post(conn, ~p"/users/log-in", %{
+          "user" => %{"email" => user.email, "password" => valid_user_password()}
+        })
+
+      assert redirected_to(conn) == ~p"/agenda"
+    end
+
     test "logs the user in with return to", %{conn: conn, user: user} do
       user = set_password(user)
 
