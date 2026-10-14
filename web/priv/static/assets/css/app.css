@@ -332,6 +332,62 @@ h1 {
   gap: 0.25rem;
 }
 
+/* Sidebar rows keep a gutter for the toggle that collapses a folder or tag;
+   what it holds lines up under its name. */
+.sidebar .nav-tree li {
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr);
+  align-items: center;
+}
+
+.sidebar .nav-tree li > a,
+.sidebar .nav-tree li > ul {
+  grid-column: 2;
+}
+
+.sidebar .nav-tree li > ul {
+  margin-left: 0;
+}
+
+.nav-toggle {
+  grid-column: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.nav-toggle:hover,
+.nav-toggle:focus-visible {
+  background: var(--accent-tint);
+  color: var(--accent);
+}
+
+.nav-toggle[aria-expanded="true"] .icon {
+  transform: rotate(90deg);
+}
+
+.nav-toggle[aria-expanded="false"] ~ ul {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .sidebar .nav-tree li {
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+  }
+
+  .nav-toggle {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+}
+
 .sidebar a {
   color: var(--text);
   text-decoration: none;
