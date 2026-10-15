@@ -2,7 +2,7 @@ defmodule Marskal.Imports.BundlePackager do
   @moduledoc """
   Zips a backup uploaded as a folder.
 
-  A `.ofocus-backup` is a macOS package, so the import page's folder picker
+  A `.ofocus-backup` is a macOS package, so a drop on the import page
   posts its files one by one with their relative paths. This packs them into
   the same zip a Finder-compressed backup would be, so the adapter only ever
   reads zips. Paths with `..` or a leading `/` are refused, and file counts
