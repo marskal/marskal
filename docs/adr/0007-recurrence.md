@@ -231,6 +231,33 @@ hard-deleted (ADR 0014), so streaks, completion rates, and lateness can be
 worked out from them later. Skipped slots show as gaps between
 `occurrence_for` values.
 
+**Showing it (2026-10-15).** The repeat menu's History dialog works these
+out at read time (`Marskal.Recurrence.History`); nothing is stored. It is
+meant to encourage a habit, not to punish a vacation.
+
+- **Missed** slots are the rule's slots that passed while an occurrence was
+  still open: stepping from its `occurrence_for` to its first resolution,
+  or to now while it is the open latest. In regular mode these are the
+  slots One at a time skips; on completion, each whole interval it stayed
+  open.
+- **Paused** slots are those between a resolution and the next occurrence
+  that the rule would have filled: the series was paused. They count for
+  nothing, so pausing before a trip costs nothing.
+- **Dropped** is a decision, not a miss: it neither extends nor breaks a
+  streak and leaves strength alone. Its own missed slots still count.
+- **Strength** is the headline: a 0–100 % average over the slots, weighted
+  to recent ones with a half-life of 7 slots. Done counts 1, missed 0. It
+  starts at 0, so a new habit builds up, and one miss dents it rather than
+  resetting it.
+- **Streak** counts Done in a row; a missed slot ends it. The best streak
+  stands beside it.
+- **Rate** is Done over every slot that counted: Done, Dropped, and missed.
+- **Lateness** is the median of `resolved_at` minus `occurrence_for` over
+  Done occurrences.
+- Missed and paused slots come from the rule as it is now. After a rule
+  change they are approximate for the occurrences before it.
+- Deleted occurrences leave the history.
+
 ## Expansion (2026-10-07)
 
 Regular mode follows RFC 5545 recurrence rules, so a rule a calendar user

@@ -240,6 +240,33 @@ defmodule MarskalWeb.RepeatLiveTest do
     assert has_element?(view, "#inspector-task-repeat", "Its series was deleted")
   end
 
+  test "History shows the numbers and the occurrences, and opens one", %{
+    conn: conn,
+    user: user
+  } do
+    task = task_fixture(user, %{due_at: @friday})
+    rule = %{mode: :regular, anchor: :due, interval: 1, frequency: :days}
+    {:ok, _series} = Recurrence.repeat_task(user, task.id, rule, command())
+    # Done days after Friday: the days between were missed.
+    {:ok, _} = Tasks.complete_task(user, task.id, command())
+    [next] = Enum.reject(Tasks.list_open(user), &(&1.id == task.id))
+
+    {:ok, view, _html} = live(conn, ~p"/open?task=#{next.id}")
+    view |> element("#inspector-task-repeat-history") |> render_click()
+
+    dialog = "#inspector-task-repeat-history-dialog"
+    assert has_element?(view, "#{dialog}-streak", "Streak 1 · Best 1")
+    assert has_element?(view, "#{dialog}-counts", "1 done · 0 dropped")
+    assert has_element?(view, "#{dialog}-strength", "Strength")
+    assert has_element?(view, "#{dialog}-entries li.is-done")
+    assert has_element?(view, "#{dialog}-entries li.is-missed")
+    assert has_element?(view, "#{dialog}-entries li.is-open")
+
+    view |> element("#{dialog}-entries li.is-done button") |> render_click()
+    assert_patch(view, ~p"/open?task=#{task.id}")
+    refute has_element?(view, dialog)
+  end
+
   test "a project repeats from its inspector, and its next shows the line", %{
     conn: conn,
     user: user
