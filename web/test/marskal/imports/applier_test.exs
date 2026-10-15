@@ -291,8 +291,8 @@ defmodule Marskal.Imports.ApplierTest do
         <name>Monthly review</name>
         <due>2026-10-30T16:00:00.000Z</due>
         <repetition-rule>FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-1</repetition-rule>
-        <repetition-schedule-type>regularly</repetition-schedule-type>
-        <repetition-anchor-date>due-date</repetition-anchor-date>
+        <repetition-schedule-type>from-assigned</repetition-schedule-type>
+        <repetition-anchor-date>dateDue</repetition-anchor-date>
         <catch-up-automatically>true</catch-up-automatically>
       </task>
       <task id="taskTrash00">
@@ -300,8 +300,8 @@ defmodule Marskal.Imports.ApplierTest do
         <name>Take out the trash</name>
         <due>2026-10-09T15:00:00.000Z</due>
         <repetition-rule>FREQ=WEEKLY;BYDAY=FR</repetition-rule>
-        <repetition-schedule-type>regularly</repetition-schedule-type>
-        <repetition-anchor-date>due-date</repetition-anchor-date>
+        <repetition-schedule-type>from-assigned</repetition-schedule-type>
+        <repetition-anchor-date>dateDue</repetition-anchor-date>
         <catch-up-automatically>true</catch-up-automatically>
       </task>
       <task id="taskPlants0">
@@ -310,15 +310,15 @@ defmodule Marskal.Imports.ApplierTest do
         <start>2026-10-09T06:00:00.000Z</start>
         <repetition-rule>FREQ=WEEKLY;BYDAY=TU</repetition-rule>
         <repetition-schedule-type>from-completion</repetition-schedule-type>
-        <repetition-anchor-date>defer-date</repetition-anchor-date>
+        <repetition-anchor-date>dateToStart</repetition-anchor-date>
       </task>
       <task id="taskHour000">
         <inbox/>
         <name>Stand up</name>
         <due>2026-10-09T15:00:00.000Z</due>
         <repetition-rule>FREQ=DAILY;BYHOUR=9</repetition-rule>
-        <repetition-schedule-type>regularly</repetition-schedule-type>
-        <repetition-anchor-date>due-date</repetition-anchor-date>
+        <repetition-schedule-type>from-assigned</repetition-schedule-type>
+        <repetition-anchor-date>dateDue</repetition-anchor-date>
       </task>
     </omnifocus>
     """

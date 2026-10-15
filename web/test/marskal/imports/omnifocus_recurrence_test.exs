@@ -10,8 +10,8 @@ defmodule Marskal.Imports.OmnifocusRecurrenceTest do
     %{
       "repeat" => rule,
       "due" => @due,
-      "repeat_schedule" => "regularly",
-      "repeat_anchor" => "due-date"
+      "repeat_schedule" => "from-assigned",
+      "repeat_anchor" => "dateDue"
     }
     |> Map.merge(row)
     |> OmnifocusRecurrence.read()
@@ -82,7 +82,7 @@ defmodule Marskal.Imports.OmnifocusRecurrenceTest do
       assert {:ok, %{"mode" => "on_completion", "anchor" => "defer"}, []} =
                read("FREQ=WEEKLY", %{
                  "repeat_schedule" => "from-completion",
-                 "repeat_anchor" => "defer-date",
+                 "repeat_anchor" => "dateToStart",
                  "start" => @due
                })
     end
@@ -103,6 +103,20 @@ defmodule Marskal.Imports.OmnifocusRecurrenceTest do
     test "the oldest keep a short interval" do
       assert {:ok, %{"frequency" => "weeks", "interval" => 2}, []} =
                read("@2w", %{"repeat_schedule" => nil, "repeat_anchor" => nil})
+
+      assert {:ok,
+              %{
+                "mode" => "on_completion",
+                "anchor" => "defer",
+                "frequency" => "weeks",
+                "interval" => 2
+              }, []} =
+               read("~2w", %{
+                 "repeat_method" => "start-after-completion",
+                 "repeat_schedule" => "from-completion",
+                 "repeat_anchor" => "dateToStart",
+                 "start" => @due
+               })
     end
   end
 
@@ -140,7 +154,7 @@ defmodule Marskal.Imports.OmnifocusRecurrenceTest do
 
     test "a repeat without the date it moves" do
       assert read("FREQ=DAILY", %{"due" => nil}) == :error
-      assert read("FREQ=DAILY", %{"repeat_anchor" => "planned-date"}) == :error
+      assert read("FREQ=DAILY", %{"repeat_anchor" => "datePlanned"}) == :error
     end
 
     test "no repeat" do

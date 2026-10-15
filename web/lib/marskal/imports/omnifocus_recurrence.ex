@@ -3,8 +3,9 @@ defmodule Marskal.Imports.OmnifocusRecurrence do
   Reads an OmniFocus repeat into a Marskal rule (ADR 0007, ADR 0013).
 
   OmniFocus stores the rule as an RFC 5545 RRULE in `repetition-rule`, and
-  how it is scheduled beside it: `repetition-schedule-type` (regularly or
-  from completion) with `repetition-anchor-date` (due, defer, or planned)
+  how it is scheduled beside it: `repetition-schedule-type` (`from-assigned`
+  or `from-completion`) with `repetition-anchor-date` (`dateDue`,
+  `dateToStart`, or `datePlanned`)
   and `catch-up-automatically`, or, in older backups, `repetition-method`
   (fixed, start-after-completion, due-after-completion). The oldest keep
   a short interval such as `@1w` in `repeat`.
@@ -266,7 +267,7 @@ defmodule Marskal.Imports.OmnifocusRecurrence do
       {"from-completion", _} ->
         {:ok, "on_completion"}
 
-      {"regularly", _} ->
+      {"from-assigned", _} ->
         {:ok, "regular"}
 
       {nil, method} when method in ["start-after-completion", "due-after-completion"] ->
@@ -282,9 +283,9 @@ defmodule Marskal.Imports.OmnifocusRecurrence do
 
   defp anchor(row, _mode) do
     case {row["repeat_anchor"], row["repeat_method"]} do
-      {"due-date", _} -> {:ok, "due"}
-      {"defer-date", _} -> {:ok, "defer"}
-      {"planned-date", _} -> {:ok, "planned"}
+      {"dateDue", _} -> {:ok, "due"}
+      {"dateToStart", _} -> {:ok, "defer"}
+      {"datePlanned", _} -> {:ok, "planned"}
       {nil, "start-after-completion"} -> {:ok, "defer"}
       {nil, "due-after-completion"} -> {:ok, "due"}
       {nil, _fixed} -> {:ok, first_dated(row)}
