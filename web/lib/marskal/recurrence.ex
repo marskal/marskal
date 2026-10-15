@@ -34,6 +34,7 @@ defmodule Marskal.Recurrence do
   alias Marskal.ProjectFolders.ProjectFolder
   alias Marskal.Projects
   alias Marskal.Projects.Project
+  alias Marskal.Recurrence.History
   alias Marskal.Recurrence.Schedule
   alias Marskal.Recurrence.Series
   alias Marskal.Repo
@@ -205,6 +206,22 @@ defmodule Marskal.Recurrence do
         where: r.series_id == ^series.id and is_nil(r.discarded_at),
         select: max(r.occurrence_for)
     )
+  end
+
+  @doc """
+  The series' history as of `now`: its live occurrences with the slots
+  missed and paused between them, and the numbers worked out from them
+  (`Marskal.Recurrence.History`).
+  """
+  def history(%User{} = user, %Series{} = series, now \\ DateTime.utc_now()) do
+    occurrences =
+      Repo.all(
+        from r in schema(series.kind),
+          where: r.user_id == ^user.id and r.series_id == ^series.id and is_nil(r.discarded_at),
+          order_by: [asc: r.occurrence_for]
+      )
+
+    History.build(series, occurrences, now, Accounts.timezone(user))
   end
 
   @doc "Which of these tasks or projects are in a live series that has not stopped."

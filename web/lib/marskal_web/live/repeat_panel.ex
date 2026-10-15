@@ -66,8 +66,11 @@ defmodule MarskalWeb.RepeatPanel do
       |> assign(assigns)
       |> assign_new(:draft, fn -> nil end)
       |> assign_new(:error, fn -> nil end)
+      |> assign_new(:history, fn -> nil end)
 
-    socket = if new_record?, do: assign(socket, draft: nil, error: nil), else: socket
+    socket =
+      if new_record?, do: assign(socket, draft: nil, error: nil, history: nil), else: socket
+
     %{user: user, record: record} = socket.assigns
     series = record.series_id && Recurrence.get_series(user, record.series_id)
 
@@ -76,7 +79,9 @@ defmodule MarskalWeb.RepeatPanel do
        series: series,
        kind: kind(record),
        previous: series && Recurrence.previous_occurrence(user, record),
-       upcoming: upcoming(series, zone(socket))
+       upcoming: upcoming(series, zone(socket)),
+       # An open History follows changes, as the line does.
+       history: series && socket.assigns.history && Recurrence.history(user, series)
      )}
   end
 
@@ -201,6 +206,15 @@ defmodule MarskalWeb.RepeatPanel do
                 <Lucideicons.repeat class="icon" aria-hidden="true" /> Edit rule…
               </button>
             </li>
+            <li>
+              <button
+                type="button"
+                id={"#{@id}-history"}
+                phx-click={JS.hide(to: "##{@id}-menu") |> JS.push("history", target: @myself)}
+              >
+                <Lucideicons.history class="icon" aria-hidden="true" /> {gettext("History…")}
+              </button>
+            </li>
             <li :if={@previous}>
               <button
                 type="button"
@@ -250,6 +264,17 @@ defmodule MarskalWeb.RepeatPanel do
         running?={@series != nil}
         week_start={week_start(@series, @user)}
         preview={preview(@draft, @series, @record, @user, @zone)}
+        zone={@zone}
+      />
+
+      <.history_dialog
+        :if={@history && @series}
+        id={"#{@id}-history-dialog"}
+        myself={@myself}
+        history={@history}
+        series={@series}
+        kind={@kind}
+        title={@record.title}
         zone={@zone}
       />
     </section>
@@ -562,6 +587,348 @@ defmodule MarskalWeb.RepeatPanel do
     """
   end
 
+  @most_entries 100
+
+  attr :id, :string, required: true
+  attr :myself, :any, required: true
+  attr :history, Marskal.Recurrence.History, required: true
+  attr :series, Series, required: true
+  attr :kind, :atom, required: true
+  attr :title, :string, required: true
+  attr :zone, :string, required: true
+
+  # Opened from the repeat menu (ADR 0007, Showing it). It uses the rule
+  # dialog's hook: Esc and Close both send "cancel".
+  defp history_dialog(assigns) do
+    assigns =
+      assign(assigns,
+        entries: Enum.take(assigns.history.entries, @most_entries),
+        more?: length(assigns.history.entries) > @most_entries
+      )
+
+    ~H"""
+    <dialog
+      id={@id}
+      class="history-dialog"
+      phx-hook=".Dialog"
+      phx-mounted={JS.ignore_attributes(["open"])}
+      aria-labelledby={"#{@id}-title"}
+    >
+      <style :type={MarskalWeb.ColocatedCSS}>
+        @scope (.history-dialog) {
+          :scope {
+            width: min(32rem, calc(100vw - 2rem));
+            max-height: min(40rem, calc(100vh - 2rem));
+            padding: 1.1rem 1.2rem;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--bg);
+            color: var(--text);
+          }
+
+          :scope[open] {
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+          }
+
+          :scope::backdrop {
+            background: color-mix(in srgb, var(--text) 30%, transparent);
+          }
+
+          h2 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+          }
+
+          h2 .icon {
+            color: var(--accent);
+          }
+
+          .stats {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+            margin: 0;
+            padding: 0.7rem 0.9rem;
+            border-radius: 10px;
+            background: color-mix(in srgb, var(--text) 5%, var(--bg));
+          }
+
+          .stats p {
+            margin: 0;
+          }
+
+          .strength {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.05rem;
+            font-weight: 600;
+          }
+
+          .trend {
+            width: 8rem;
+            height: 1.5rem;
+            color: var(--accent);
+          }
+
+          .muted {
+            color: var(--muted);
+          }
+
+          ol {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+          }
+
+          li {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.3rem 0.25rem;
+            border-bottom: 1px solid var(--border);
+          }
+
+          li button {
+            display: flex;
+            flex: 1;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            font: inherit;
+            text-align: left;
+            cursor: pointer;
+          }
+
+          li button:is(:hover, :focus-visible) .slot {
+            text-decoration: underline;
+          }
+
+          .slot {
+            min-width: 7rem;
+          }
+
+          .is-done .icon {
+            color: var(--accent);
+          }
+
+          :is(.is-dropped, .is-missed, .is-paused) {
+            color: var(--muted);
+          }
+
+          .footer {
+            display: flex;
+            justify-content: flex-end;
+          }
+        }
+      </style>
+
+      <h2 id={"#{@id}-title"}>
+        <Lucideicons.history class="icon" aria-hidden="true" />
+        {gettext("History: %{title}", title: @title)}
+      </h2>
+
+      <div class="stats" id={"#{@id}-stats"}>
+        <p class="strength">
+          <span id={"#{@id}-strength"}>
+            {gettext("Strength %{percent}", percent: percent(@history.strength))}
+          </span>
+          <.trend :if={length(@history.trend) > 1} values={@history.trend} />
+        </p>
+        <p id={"#{@id}-streak"}>
+          {gettext("Streak %{streak} · Best %{best}",
+            streak: @history.streak,
+            best: @history.best_streak
+          )}
+        </p>
+        <p id={"#{@id}-counts"}>
+          {gettext("%{done} done · %{dropped} dropped · %{missed} missed",
+            done: @history.done,
+            dropped: @history.dropped,
+            missed: @history.missed
+          )}
+          <span :if={@history.rate} class="muted">
+            · {gettext("%{percent} done", percent: percent(@history.rate))}
+          </span>
+        </p>
+        <p :if={@history.lateness} id={"#{@id}-lateness"} class="muted">
+          {lateness(@series.anchor, @history.lateness)}
+        </p>
+      </div>
+
+      <ol id={"#{@id}-entries"}>
+        <li :for={entry <- @entries} class={entry_class(entry)}>
+          <.history_entry entry={entry} kind={@kind} zone={@zone} myself={@myself} />
+        </li>
+        <li :if={@more?} class="muted">{gettext("Older entries are not shown.")}</li>
+      </ol>
+
+      <div class="footer">
+        <button type="button" id={"#{@id}-close"} phx-click="cancel" phx-target={@myself}>
+          {gettext("Close")}
+        </button>
+      </div>
+    </dialog>
+    """
+  end
+
+  attr :entry, :any, required: true
+  attr :kind, :atom, required: true
+  attr :zone, :string, required: true
+  attr :myself, :any, required: true
+
+  defp history_entry(%{entry: {:occurrence, occurrence}} = assigns) do
+    assigns = assign(assigns, :occurrence, occurrence)
+
+    ~H"""
+    <button
+      type="button"
+      phx-click={
+        JS.push("cancel", target: @myself)
+        |> JS.push("inspect", value: %{type: @kind, id: @occurrence.id})
+      }
+    >
+      <Lucideicons.circle_check_big :if={@occurrence.state == :done} class="icon" aria-hidden="true" />
+      <Lucideicons.minus :if={@occurrence.state == :dropped} class="icon" aria-hidden="true" />
+      <Lucideicons.circle :if={@occurrence.state == :to_do} class="icon" aria-hidden="true" />
+      <span class="slot">{day_label(@occurrence.occurrence_for, @zone)}</span>
+      <span class="muted">{resolution(@occurrence, @zone)}</span>
+    </button>
+    """
+  end
+
+  defp history_entry(%{entry: {:missed, slots}} = assigns) do
+    assigns = assign(assigns, :slots, slots)
+
+    ~H"""
+    <Lucideicons.circle_alert class="icon" aria-hidden="true" />
+    <span :if={length(@slots) == 1} class="slot">{day_label(hd(@slots), @zone)}</span>
+    <span :if={length(@slots) == 1}>{gettext("missed")}</span>
+    <span :if={length(@slots) > 1}>
+      {gettext("Missed %{count} times, %{first} to %{last}",
+        count: length(@slots),
+        first: day_label(hd(@slots), @zone),
+        last: day_label(List.last(@slots), @zone)
+      )}
+    </span>
+    """
+  end
+
+  defp history_entry(%{entry: {:paused, count}} = assigns) do
+    assigns = assign(assigns, :count, count)
+
+    ~H"""
+    <Lucideicons.pause class="icon" aria-hidden="true" />
+    <span>{ngettext("Paused, 1 time skipped", "Paused, %{count} times skipped", @count)}</span>
+    """
+  end
+
+  attr :values, :list, required: true
+
+  # Strength after each counted slot, oldest on the left.
+  defp trend(assigns) do
+    last = length(assigns.values) - 1
+
+    points =
+      assigns.values
+      |> Enum.with_index()
+      |> Enum.map_join(" ", fn {value, index} ->
+        "#{Float.round(index * 100 / last, 2)},#{Float.round(28 - value * 26, 2)}"
+      end)
+
+    assigns = assign(assigns, :points, points)
+
+    ~H"""
+    <svg class="trend" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true">
+      <polyline
+        points={@points}
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        vector-effect="non-scaling-stroke"
+      />
+    </svg>
+    """
+  end
+
+  defp entry_class({:occurrence, %{state: :done}}), do: "is-done"
+  defp entry_class({:occurrence, %{state: :dropped}}), do: "is-dropped"
+  defp entry_class({:occurrence, _open}), do: "is-open"
+  defp entry_class({:missed, _slots}), do: "is-missed"
+  defp entry_class({:paused, _count}), do: "is-paused"
+
+  defp resolution(%{state: :done} = occurrence, zone),
+    do: gettext("done %{when}", when: when_label(occurrence, zone))
+
+  defp resolution(%{state: :dropped} = occurrence, zone),
+    do: gettext("dropped %{when}", when: when_label(occurrence, zone))
+
+  defp resolution(_open, _zone), do: gettext("open")
+
+  # The time alone when it was resolved on its own day.
+  defp when_label(%{resolved_at: at, occurrence_for: slot}, zone) do
+    {date, time} = Dates.to_local(at, zone)
+
+    if date == elem(Dates.to_local(slot, zone), 0),
+      do: Marskal.DateFormat.time(time),
+      else: MarskalWeb.DateFields.short(at, :resolved_at, zone)
+  end
+
+  defp percent(fraction), do: "#{round(fraction * 100)} %"
+
+  # Within a minute counts as on time.
+  defp lateness(anchor, seconds) when abs(seconds) < 60 do
+    case anchor do
+      :due -> gettext("Usually done on time")
+      :planned -> gettext("Usually done at the planned time")
+      :defer -> gettext("Usually done as soon as it starts")
+    end
+  end
+
+  defp lateness(anchor, seconds) do
+    duration = duration(abs(seconds))
+
+    case {anchor, seconds > 0} do
+      {:due, true} ->
+        gettext("Usually done %{duration} late", duration: duration)
+
+      {:due, false} ->
+        gettext("Usually done %{duration} early", duration: duration)
+
+      {:planned, true} ->
+        gettext("Usually done %{duration} after the planned time", duration: duration)
+
+      {:planned, false} ->
+        gettext("Usually done %{duration} before the planned time", duration: duration)
+
+      {:defer, true} ->
+        gettext("Usually done %{duration} after it starts", duration: duration)
+
+      {:defer, false} ->
+        gettext("Usually done %{duration} before it starts", duration: duration)
+    end
+  end
+
+  defp duration(seconds) when seconds < 3600,
+    do: ngettext("1 minute", "%{count} minutes", max(div(seconds, 60), 1))
+
+  defp duration(seconds) when seconds < 2 * 86_400,
+    do: ngettext("1 hour", "%{count} hours", round(seconds / 3600))
+
+  defp duration(seconds), do: ngettext("1 day", "%{count} days", round(seconds / 86_400))
+
   attr :id, :string, required: true
   attr :myself, :any, required: true
   attr :draft, :map, required: true
@@ -734,7 +1101,12 @@ defmodule MarskalWeb.RepeatPanel do
   end
 
   def handle_event("cancel", _params, socket) do
-    {:noreply, assign(socket, draft: nil, error: nil)}
+    {:noreply, assign(socket, draft: nil, error: nil, history: nil)}
+  end
+
+  def handle_event("history", _params, socket) do
+    %{user: user, series: series} = socket.assigns
+    {:noreply, assign(socket, :history, Recurrence.history(user, series))}
   end
 
   def handle_event("change", %{"repeat" => params}, socket) do

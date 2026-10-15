@@ -11,6 +11,37 @@
 msgid ""
 msgstr ""
 
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "%{done} done · %{dropped} dropped · %{missed} missed"
+msgstr ""
+
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "%{percent} done"
+msgstr ""
+
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "1 day"
+msgid_plural "%{count} days"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "1 hour"
+msgid_plural "%{count} hours"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "1 minute"
+msgid_plural "%{count} minutes"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/marskal_web/live/project_live.ex
 #, elixir-autogen, elixir-format
 msgid "1 task"
@@ -82,6 +113,11 @@ msgstr ""
 msgid "Automatic"
 msgstr ""
 
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Close"
+msgstr ""
+
 #: lib/marskal_web/components/nav_components.ex
 #, elixir-autogen, elixir-format
 msgid "Contents of %{name}"
@@ -102,9 +138,29 @@ msgstr ""
 msgid "Dropped"
 msgstr ""
 
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "History: %{title}"
+msgstr ""
+
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "History…"
+msgstr ""
+
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Light"
+msgstr ""
+
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Missed %{count} times, %{first} to %{last}"
+msgstr ""
+
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Older entries are not shown."
 msgstr ""
 
 #: lib/marskal_web/live/project_live.ex
@@ -112,14 +168,76 @@ msgstr ""
 msgid "Open"
 msgstr ""
 
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Paused, 1 time skipped"
+msgid_plural "Paused, %{count} times skipped"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Something went wrong!"
 msgstr ""
 
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Streak %{streak} · Best %{best}"
+msgstr ""
+
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Strength %{percent}"
+msgstr ""
+
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Theme"
+msgstr ""
+
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Usually done %{duration} after it starts"
+msgstr ""
+
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Usually done %{duration} after the planned time"
+msgstr ""
+
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Usually done %{duration} before it starts"
+msgstr ""
+
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Usually done %{duration} before the planned time"
+msgstr ""
+
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Usually done %{duration} early"
+msgstr ""
+
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Usually done %{duration} late"
+msgstr ""
+
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Usually done as soon as it starts"
+msgstr ""
+
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Usually done at the planned time"
+msgstr ""
+
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Usually done on time"
 msgstr ""
 
 #: lib/marskal_web/components/layouts.ex
@@ -130,4 +248,24 @@ msgstr ""
 #: lib/marskal_web/components/core_components.ex
 #, elixir-autogen, elixir-format
 msgid "close"
+msgstr ""
+
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "done %{when}"
+msgstr ""
+
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "dropped %{when}"
+msgstr ""
+
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "missed"
+msgstr ""
+
+#: lib/marskal_web/live/repeat_panel.ex
+#, elixir-autogen, elixir-format
+msgid "open"
 msgstr ""
