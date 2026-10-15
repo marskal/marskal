@@ -22,5 +22,11 @@
   </head>
   <body>
     {@inner_content}
+    <%!-- Outside the LiveView, so it shows over whatever it renders. app.ts
+         unhides it when the server's assets are newer (StaticChanged). --%>
+    <div id="app-updated" class="app-updated" role="status" hidden>
+      <span>{gettext("Marskal has been updated. Reload to use the new version.")}</span>
+      <button type="button" id="app-updated-reload" class="btn-primary">{gettext("Reload")}</button>
+    </div>
   </body>
 </html>

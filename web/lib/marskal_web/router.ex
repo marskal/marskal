@@ -76,7 +76,11 @@ defmodule MarskalWeb.Router do
     get "/", PageController, :home
 
     live_session :require_authenticated_user,
-      on_mount: [{MarskalWeb.UserAuth, :require_authenticated}, {MarskalWeb.Inspector, :default}] do
+      on_mount: [
+        {MarskalWeb.UserAuth, :require_authenticated},
+        {MarskalWeb.Inspector, :default},
+        {MarskalWeb.StaticChanged, :default}
+      ] do
       live "/open", OpenTasksLive, :index
       live "/imports", ImportLive, :index
       live "/imports/new", ImportLive, :new
@@ -103,7 +107,10 @@ defmodule MarskalWeb.Router do
     pipe_through [:browser]
 
     live_session :current_user,
-      on_mount: [{MarskalWeb.UserAuth, :mount_current_scope}] do
+      on_mount: [
+        {MarskalWeb.UserAuth, :mount_current_scope},
+        {MarskalWeb.StaticChanged, :default}
+      ] do
       live "/users/register", UserLive.Registration, :new
       live "/users/log-in", UserLive.Login, :new
       live "/users/log-in/:token", UserLive.Confirmation, :new

@@ -41,6 +41,14 @@ topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
 window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
+// A tab left open across a deploy keeps its old CSS and JS while the new
+// server renders new markup. MarskalWeb.StaticChanged notices on reconnect.
+window.addEventListener("phx:static-changed", () => {
+  const banner = document.getElementById("app-updated")
+  if (banner) banner.hidden = false
+})
+document.getElementById("app-updated-reload")?.addEventListener("click", () => window.location.reload())
+
 // connect if there are any LiveViews on the page
 liveSocket.connect()
 
