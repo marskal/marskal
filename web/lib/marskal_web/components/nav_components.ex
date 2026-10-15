@@ -284,6 +284,7 @@ defmodule MarskalWeb.NavComponents do
   attr :id, :string, required: true
   attr :inspector, :any, default: nil
   slot :inner_block, required: true
+  slot :extra, doc: "sits beside the title and wraps under it when the line is full"
 
   @doc """
   A record page's heading, with a button that opens the record in the
@@ -292,7 +293,10 @@ defmodule MarskalWeb.NavComponents do
   def page_heading(assigns) do
     ~H"""
     <div class="page-heading">
-      <h1>{render_slot(@inner_block)}</h1>
+      <div class="page-heading__main">
+        <h1>{render_slot(@inner_block)}</h1>
+        {render_slot(@extra)}
+      </div>
       <button
         :if={!MarskalWeb.Inspector.selected?(@type, @id, @inspector)}
         type="button"

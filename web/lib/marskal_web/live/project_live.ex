@@ -41,6 +41,9 @@ defmodule MarskalWeb.ProjectLive do
       </p>
       <MarskalWeb.NavComponents.page_heading type={:project} id={@project.id} inspector={@inspector}>
         {@project.title}
+        <:extra>
+          <.project_summary counts={@task_counts} />
+        </:extra>
       </MarskalWeb.NavComponents.page_heading>
       <p :if={@project.url} class="lede"><MarskalWeb.UrlLink.link url={@project.url} text /></p>
       <MarskalWeb.FormattedNotes.block text={@project.notes} class="lede notes" />
@@ -179,12 +182,188 @@ defmodule MarskalWeb.ProjectLive do
         Marskal.ProjectFolders.get_folder(user, project.project_folder_id)
       end
 
+    counts = Tasks.project_task_counts(user, project.id)
+
     socket
     |> assign(:page_title, project.title)
     |> assign(:project, project)
     |> assign(:folder, folder)
     |> assign(:open?, open_tasks != [])
-    |> assign(:has_tasks?, open_tasks != [] or Tasks.project_has_tasks?(user, project.id))
+    |> assign(:task_counts, counts)
+    |> assign(:has_tasks?, counts.total > 0)
     |> assign_tasks(open_tasks)
   end
+
+  attr :counts, :map, required: true
+
+  defp project_summary(assigns) do
+    assigns = assign(assigns, :parts, shown_counts(assigns.counts))
+
+    ~H"""
+    <style :type={MarskalWeb.ColocatedCSS}>
+      @scope (.project-summary) {
+        :scope {
+          display: flex;
+          flex: 0 0 auto;
+          align-items: baseline;
+          max-width: 100%;
+          min-width: 0;
+          color: var(--muted);
+          font-size: 1rem;
+          font-weight: 400;
+          line-height: 1.5;
+          font-variant-numeric: tabular-nums;
+        }
+
+        .line,
+        .counts,
+        .part,
+        .count {
+          display: inline-flex;
+          align-items: center;
+          max-width: 100%;
+        }
+
+        .line {
+          flex-wrap: wrap;
+          gap: 0.35rem 0.5rem;
+        }
+
+        .counts,
+        .part {
+          gap: 0.15rem;
+        }
+
+        .count {
+          gap: 0.2rem;
+        }
+
+        .count .icon {
+          width: 1rem;
+          height: 1rem;
+        }
+
+        .count--open {
+          color: var(--text);
+        }
+
+        .count--dropped {
+          color: var(--muted);
+        }
+
+        .count--done {
+          color: var(--accent);
+        }
+      }
+    </style>
+    <span id="project-summary" class="project-summary">
+      <span class="sr-only">{summary_label(@counts)}</span>
+      <span class="line" aria-hidden="true">
+        <span class="total">{total_label(@counts)}</span>
+        <span :if={@parts != []} class="counts">
+          <span class="paren">(</span>
+          <span :for={{part, index} <- Enum.with_index(@parts)} class="part">
+            <span :if={index > 0} class="sep">/</span>
+            <span class={["count", "count--#{part.state}"]} title={part.label}>
+              <Lucideicons.square :if={part.state == :open} class="icon" />
+              <Lucideicons.square_off :if={part.state == :dropped} class="icon" />
+              <Lucideicons.square_check_big :if={part.state == :done} class="icon" />
+              <span class="n">{part.n}</span>
+            </span>
+          </span>
+          <span class="paren">)</span>
+        </span>
+      </span>
+    </span>
+    """
+  end
+
+  defp shown_counts(counts) do
+    for {state, n, label} <- [
+          {:open, counts.to_do, gettext("Open")},
+          {:dropped, counts.dropped, gettext("Dropped")},
+          {:done, counts.done, gettext("Done")}
+        ],
+        n > 0,
+        do: %{state: state, n: n, label: label}
+  end
+
+  defp total_label(%{total: total}) do
+    ngettext("1 task", "%{count} tasks", total, count: total)
+  end
+
+  defp summary_label(%{to_do: open, dropped: dropped, done: done} = counts)
+       when open > 0 and dropped > 0 and done > 0 do
+    ngettext(
+      "1 task: %{open} open, %{dropped} dropped, and %{done} done",
+      "%{count} tasks: %{open} open, %{dropped} dropped, and %{done} done",
+      counts.total,
+      count: counts.total,
+      open: open,
+      dropped: dropped,
+      done: done
+    )
+  end
+
+  defp summary_label(%{to_do: open, dropped: dropped, done: 0} = counts)
+       when open > 0 and dropped > 0 do
+    ngettext(
+      "1 task: %{open} open and %{dropped} dropped",
+      "%{count} tasks: %{open} open and %{dropped} dropped",
+      counts.total,
+      count: counts.total,
+      open: open,
+      dropped: dropped
+    )
+  end
+
+  defp summary_label(%{to_do: open, dropped: 0, done: done} = counts)
+       when open > 0 and done > 0 do
+    ngettext(
+      "1 task: %{open} open and %{done} done",
+      "%{count} tasks: %{open} open and %{done} done",
+      counts.total,
+      count: counts.total,
+      open: open,
+      done: done
+    )
+  end
+
+  defp summary_label(%{to_do: 0, dropped: dropped, done: done} = counts)
+       when dropped > 0 and done > 0 do
+    ngettext(
+      "1 task: %{dropped} dropped and %{done} done",
+      "%{count} tasks: %{dropped} dropped and %{done} done",
+      counts.total,
+      count: counts.total,
+      dropped: dropped,
+      done: done
+    )
+  end
+
+  defp summary_label(%{to_do: open, dropped: 0, done: 0} = counts) when open > 0 do
+    ngettext("1 task: %{open} open", "%{count} tasks: %{open} open", counts.total,
+      count: counts.total,
+      open: open
+    )
+  end
+
+  defp summary_label(%{to_do: 0, dropped: dropped, done: 0} = counts) when dropped > 0 do
+    ngettext(
+      "1 task: %{dropped} dropped",
+      "%{count} tasks: %{dropped} dropped",
+      counts.total,
+      count: counts.total,
+      dropped: dropped
+    )
+  end
+
+  defp summary_label(%{to_do: 0, dropped: 0, done: done} = counts) when done > 0 do
+    ngettext("1 task: %{done} done", "%{count} tasks: %{done} done", counts.total,
+      count: counts.total,
+      done: done
+    )
+  end
+
+  defp summary_label(counts), do: total_label(counts)
 end

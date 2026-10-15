@@ -214,6 +214,69 @@ defmodule Marskal.TasksTest do
     assert {:error, :not_found} = Tasks.complete_task(user, "not-a-uuid", command_id())
   end
 
+  test "project task counts follow each live task's own state", %{user: user, other: other} do
+    {:ok, project} = Marskal.Projects.create_project(user, %{"title" => "Launch"}, command_id())
+    {:ok, elsewhere} = Marskal.Projects.create_project(user, %{"title" => "Other"}, command_id())
+    {:ok, _} = Tasks.create_task(user, %{title: "Write", project_id: project.id}, command_id())
+
+    {:ok, parent} =
+      Tasks.create_task(user, %{title: "Ship", project_id: project.id}, command_id())
+
+    {:ok, _} =
+      Tasks.create_task(
+        user,
+        %{title: "Announce", project_id: project.id, parent_id: parent.id},
+        command_id()
+      )
+
+    {:ok, _} = Tasks.complete_task(user, parent.id, command_id())
+
+    {:ok, dropped} =
+      Tasks.create_task(user, %{title: "Postpone", project_id: project.id}, command_id())
+
+    {:ok, _} = Tasks.drop_task(user, dropped.id, command_id())
+
+    {:ok, done} =
+      Tasks.create_task(user, %{title: "Draft", project_id: project.id}, command_id())
+
+    {:ok, _} = Tasks.complete_task(user, done.id, command_id())
+
+    {:ok, gone} =
+      Tasks.create_task(user, %{title: "Scratch", project_id: project.id}, command_id())
+
+    {:ok, _} = Tasks.delete_task(user, gone.id, command_id())
+
+    {:ok, _} =
+      Tasks.create_task(user, %{title: "Elsewhere", project_id: elsewhere.id}, command_id())
+
+    {:ok, theirs} = Marskal.Projects.create_project(other, %{"title" => "Theirs"}, command_id())
+
+    {:ok, _} =
+      Tasks.create_task(other, %{title: "Secret", project_id: theirs.id}, command_id())
+
+    # The subtask stays To-Do after its parent is done.
+    assert Tasks.project_task_counts(user, project.id) == %{
+             to_do: 2,
+             dropped: 1,
+             done: 2,
+             total: 5
+           }
+
+    assert Tasks.project_task_counts(user, theirs.id) == %{
+             to_do: 0,
+             dropped: 0,
+             done: 0,
+             total: 0
+           }
+
+    assert Tasks.project_task_counts(user, Ecto.UUID.generate(version: 7)) == %{
+             to_do: 0,
+             dropped: 0,
+             done: 0,
+             total: 0
+           }
+  end
+
   test "the database refuses a task on someone else's project", %{user: user, other: other} do
     {:ok, project} = Marskal.Projects.create_project(other, %{"title" => "Theirs"}, command_id())
     {:ok, task} = Tasks.create_task(user, %{"title" => "Mine"}, command_id())

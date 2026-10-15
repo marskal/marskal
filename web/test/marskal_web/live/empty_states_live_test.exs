@@ -60,6 +60,47 @@ defmodule MarskalWeb.EmptyStatesLiveTest do
     refute has_element?(view, "#project-resolved")
   end
 
+  test "a project heading counts tasks by state", %{conn: conn, user: user} do
+    {:ok, project} = Projects.create_project(user, %{"title" => "Launch"}, command())
+    {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}")
+
+    assert has_element?(view, "#project-summary", "0 tasks")
+    refute has_element?(view, "#project-summary .count")
+
+    view |> form("#new-project-task", task: %{title: "Ship"}) |> render_submit()
+
+    assert has_element?(view, "#project-summary", "1 task")
+    assert has_element?(view, "#project-summary", "1 open")
+    assert has_element?(view, "#project-summary .count--open", "1")
+    refute has_element?(view, "#project-summary .count--dropped")
+    refute has_element?(view, "#project-summary .count--done")
+    [open] = Tasks.list_project_tasks(user, project.id)
+
+    {:ok, dropped} =
+      Tasks.create_task(user, %{"title" => "Skip", "project_id" => project.id}, command())
+
+    {:ok, _} = Tasks.drop_task(user, dropped.id, command())
+
+    {:ok, done} =
+      Tasks.create_task(user, %{"title" => "Wrote", "project_id" => project.id}, command())
+
+    {:ok, _} = Tasks.complete_task(user, done.id, command())
+    {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}")
+
+    assert has_element?(view, "#project-summary", "3 tasks")
+    assert has_element?(view, "#project-summary", "1 open, 1 dropped, and 1 done")
+    assert has_element?(view, "#project-summary .count--open[title=Open]", "1")
+    assert has_element?(view, "#project-summary .count--dropped[title=Dropped]", "1")
+    assert has_element?(view, "#project-summary .count--done[title=Done]", "1")
+
+    view |> element("#task-#{open.id} button[phx-click=complete]") |> render_click()
+
+    assert has_element?(view, "#project-summary", "3 tasks")
+    assert has_element?(view, "#project-summary", "1 dropped and 2 done")
+    refute has_element?(view, "#project-summary .count--open")
+    assert has_element?(view, ".page-heading #project-summary")
+  end
+
   test "Drop project drops it", %{conn: conn, user: user} do
     {:ok, project} = Projects.create_project(user, %{"title" => "Launch"}, command())
 

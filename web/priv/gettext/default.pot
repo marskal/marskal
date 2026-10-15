@@ -11,6 +11,62 @@
 msgid ""
 msgstr ""
 
+#: lib/marskal_web/live/project_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 task"
+msgid_plural "%{count} tasks"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/marskal_web/live/project_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 task: %{done} done"
+msgid_plural "%{count} tasks: %{done} done"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/marskal_web/live/project_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 task: %{dropped} dropped"
+msgid_plural "%{count} tasks: %{dropped} dropped"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/marskal_web/live/project_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 task: %{dropped} dropped and %{done} done"
+msgid_plural "%{count} tasks: %{dropped} dropped and %{done} done"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/marskal_web/live/project_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 task: %{open} open"
+msgid_plural "%{count} tasks: %{open} open"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/marskal_web/live/project_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 task: %{open} open and %{done} done"
+msgid_plural "%{count} tasks: %{open} open and %{done} done"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/marskal_web/live/project_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 task: %{open} open and %{dropped} dropped"
+msgid_plural "%{count} tasks: %{open} open and %{dropped} dropped"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/marskal_web/live/project_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 task: %{open} open, %{dropped} dropped, and %{done} done"
+msgid_plural "%{count} tasks: %{open} open, %{dropped} dropped, and %{done} done"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/marskal_web/components/core_components.ex
 #, elixir-autogen, elixir-format
 msgid "Actions"
@@ -36,9 +92,24 @@ msgstr ""
 msgid "Dark"
 msgstr ""
 
+#: lib/marskal_web/live/project_live.ex
+#, elixir-autogen, elixir-format
+msgid "Done"
+msgstr ""
+
+#: lib/marskal_web/live/project_live.ex
+#, elixir-autogen, elixir-format
+msgid "Dropped"
+msgstr ""
+
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Light"
+msgstr ""
+
+#: lib/marskal_web/live/project_live.ex
+#, elixir-autogen, elixir-format
+msgid "Open"
 msgstr ""
 
 #: lib/marskal_web/components/layouts.ex
