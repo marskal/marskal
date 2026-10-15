@@ -150,7 +150,7 @@ defmodule Marskal.Imports.OmnifocusAdapterTest do
 
              ---
              Imported from OmniFocus:
-             - Repeat: FREQ=WEEKLY;BYDAY=TU (method fixed, schedule from-completion, based on dateDue)
+             - Repeat: FREQ=WEEKLY;BYDAY=TU (method fixed, schedule from-completion, based on dateDue); no Due date for the repeat to move
              - Title continued: and more\
              """
 

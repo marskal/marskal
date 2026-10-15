@@ -153,8 +153,9 @@ defmodule Marskal.Imports.OmnifocusRecurrenceTest do
     end
 
     test "a repeat without the date it moves" do
-      assert read("FREQ=DAILY", %{"due" => nil}) == :error
-      assert read("FREQ=DAILY", %{"repeat_anchor" => "datePlanned"}) == :error
+      assert read("FREQ=DAILY", %{"due" => nil}) == {:undated, "due"}
+      assert read("FREQ=DAILY", %{"repeat_anchor" => "datePlanned"}) == {:undated, "planned"}
+      assert read("FREQ=SECONDLY", %{"due" => nil}) == :error
     end
 
     test "no repeat" do

@@ -49,20 +49,21 @@ defmodule Marskal.Imports.OmnifocusRecurrence do
 
   @doc """
   The rule for a parsed OmniFocus task row, as series attrs, and the
-  differences from OmniFocus's own: `{:ok, rule, changes}`. `:error` when
-  there is no repeat, it cannot be read, or the row lacks the date it
-  would move.
+  differences from OmniFocus's own: `{:ok, rule, changes}`.
+  `{:undated, anchor}` when the rule reads but the row lacks the date it
+  would move, and `:error` when there is no repeat or it cannot be read.
   """
   def read(row) do
     with text when is_binary(text) and text != "" <- row["repeat"],
          {:ok, parts} <- parts(text),
          {:ok, mode} <- mode(row),
          {:ok, anchor} <- anchor(row, mode),
-         true <- dated?(row, anchor),
-         {:ok, rule} <- rule(parts) do
+         {:ok, rule} <- rule(parts),
+         true <- dated?(row, anchor) || {:undated, anchor} do
       {rule, changes} = fit(rule, mode, row)
       {:ok, Map.merge(rule, %{"mode" => mode, "anchor" => anchor}), changes}
     else
+      {:undated, _anchor} = undated -> undated
       _ -> :error
     end
   end

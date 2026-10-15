@@ -17,6 +17,7 @@ defmodule Marskal.Imports.OmnifocusAdapter do
   @inner_zip ~r/\.zip\z/i
   @master_prefix "00000000000000="
   @merge_name ~r/\A[^=]+=[^=+]+\+[^=+]+\+[^=+]+\.zip\z/i
+  @anchor_labels %{"due" => "Due", "defer" => "Defer", "planned" => "Planned"}
 
   def key, do: @source
 
@@ -549,7 +550,7 @@ defmodule Marskal.Imports.OmnifocusAdapter do
   defp recurrence(row) do
     case read_repeat(row) do
       {:ok, rule, _changes} -> rule
-      :error -> nil
+      _ -> nil
     end
   end
 
@@ -564,6 +565,12 @@ defmodule Marskal.Imports.OmnifocusAdapter do
            "#{repeat_text(row)}; imported as a repeat that #{Enum.join(changes, ", and ")}"}
         ]
 
+      {:undated, anchor} ->
+        [
+          {:missing_recurrence, "Repeat",
+           "#{repeat_text(row)}; no #{@anchor_labels[anchor]} date for the repeat to move"}
+        ]
+
       :error ->
         if present?(row["repeat"]),
           do: [{:missing_recurrence, "Repeat", repeat_text(row)}],
@@ -576,6 +583,7 @@ defmodule Marskal.Imports.OmnifocusAdapter do
          true <- Series.valid_rule?(rule) do
       {:ok, rule, changes}
     else
+      {:undated, _anchor} = undated -> undated
       _ -> :error
     end
   end
