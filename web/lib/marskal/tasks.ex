@@ -85,6 +85,29 @@ defmodule Marskal.Tasks do
   end
 
   @doc """
+  How many live tasks a project holds, by each task's own state. Subtasks
+  count. A task that only counts as resolved because a task or the project
+  above it is resolved still counts as To-Do (ADR 0008, ADR 0009).
+  Discarded tasks are left out.
+  """
+  def project_task_counts(%User{} = user, project_id) do
+    counts =
+      Task
+      |> where([t], t.user_id == ^user.id and t.project_id == ^project_id)
+      |> where([t], is_nil(t.discarded_at))
+      |> group_by([t], t.state)
+      |> select([t], {t.state, count(t.id)})
+      |> Repo.all()
+      |> Map.new()
+
+    to_do = Map.get(counts, :to_do, 0)
+    dropped = Map.get(counts, :dropped, 0)
+    done = Map.get(counts, :done, 0)
+
+    %{to_do: to_do, dropped: dropped, done: done, total: to_do + dropped + done}
+  end
+
+  @doc """
   Narrows a task query to the user's open tasks: live, To-Do, and not
   resolved along with something above them. A task under a Done or
   Dropped task, at any depth, or in a Done or Dropped project, counts as
