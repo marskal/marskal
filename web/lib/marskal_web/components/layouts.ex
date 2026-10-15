@@ -64,6 +64,7 @@ defmodule MarskalWeb.Layouts do
             <span>Marskal</span>
           </.link>
         </div>
+        <.theme_toggle />
         <div class="app-header__account">
           <%= if @current_scope && @current_scope.user do %>
             <span class="who">{@current_scope.user.email}</span>
@@ -288,6 +289,102 @@ defmodule MarskalWeb.Layouts do
     <.link navigate={@navigate} class={@current && "is-current"} aria-current={@current && "page"}>
       {render_slot(@inner_block)}
     </.link>
+    """
+  end
+
+  @doc """
+  Light, dark, or the system's scheme, for this browser only. The root
+  layout applies the saved choice before the page paints; this hook saves
+  a new one and marks the pressed button.
+  """
+  def theme_toggle(assigns) do
+    ~H"""
+    <div
+      id="theme-toggle"
+      class="theme-toggle"
+      role="group"
+      aria-label={gettext("Theme")}
+      phx-hook=".ThemeToggle"
+    >
+      <button
+        :for={
+          {theme, label} <- [
+            {"light", gettext("Light")},
+            {"dark", gettext("Dark")},
+            {"auto", gettext("Automatic")}
+          ]
+        }
+        type="button"
+        data-theme-choice={theme}
+        aria-pressed={to_string(theme == "auto")}
+        aria-label={label}
+        title={label}
+        phx-mounted={JS.ignore_attributes("aria-pressed")}
+      >
+        <Lucideicons.sun :if={theme == "light"} class="icon" />
+        <Lucideicons.moon :if={theme == "dark"} class="icon" />
+        <Lucideicons.sun_moon :if={theme == "auto"} class="icon" />
+      </button>
+    </div>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".ThemeToggle" extension="ts">
+      import {ViewHook} from "phoenix_live_view"
+
+      // Must match the script in root.html.heex. Automatic is no entry.
+      const key = "marskal:theme"
+      type Theme = "light" | "dark" | "auto"
+
+      function stored(): Theme {
+        try {
+          const theme = localStorage.getItem(key)
+          return theme === "light" || theme === "dark" ? theme : "auto"
+        } catch {
+          return "auto"
+        }
+      }
+
+      function apply(theme: Theme) {
+        if (theme === "auto") delete document.documentElement.dataset.theme
+        else document.documentElement.dataset.theme = theme
+      }
+
+      export default class extends ViewHook {
+        // Another tab's choice applies here too.
+        onStorage = (event: StorageEvent) => {
+          if (event.key !== key) return
+          apply(stored())
+          this.mark()
+        }
+
+        mounted() {
+          this.mark()
+          window.addEventListener("storage", this.onStorage)
+          this.el.addEventListener("click", (event) => {
+            if (!(event.target instanceof Element)) return
+            const theme = event.target.closest<HTMLElement>("[data-theme-choice]")?.dataset.themeChoice
+            if (theme !== "light" && theme !== "dark" && theme !== "auto") return
+            try {
+              if (theme === "auto") localStorage.removeItem(key)
+              else localStorage.setItem(key, theme)
+            } catch {
+              // Private windows may refuse storage; the choice holds until reload.
+            }
+            apply(theme)
+            this.mark()
+          })
+        }
+
+        destroyed() {
+          window.removeEventListener("storage", this.onStorage)
+        }
+
+        mark() {
+          const current = document.documentElement.dataset.theme ?? "auto"
+          for (const button of this.el.querySelectorAll<HTMLElement>("[data-theme-choice]")) {
+            button.setAttribute("aria-pressed", String(button.dataset.themeChoice === current))
+          }
+        }
+      }
+    </script>
     """
   end
 

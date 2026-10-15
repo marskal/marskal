@@ -8,6 +8,13 @@
     <link rel="icon" href={~p"/images/icon.svg"} type="image/svg+xml" />
     <link rel="icon" href={~p"/images/icon.png"} type="image/png" sizes="512x512" />
     <link rel="apple-touch-icon" href={~p"/images/icon.png"} sizes="512x512" />
+    <%!-- Before the stylesheet, so a chosen theme paints without a flash. --%>
+    <script nonce={@conn.assigns[:csp_nonce]}>
+      try {
+        const theme = localStorage.getItem("marskal:theme")
+        if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme
+      } catch {}
+    </script>
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
     <link phx-track-static rel="stylesheet" href={~p"/assets/js/app.css"} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
