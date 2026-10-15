@@ -120,6 +120,18 @@ defmodule Marskal.Recurrence.Series do
   def anchor_field(%__MODULE__{anchor: :planned}), do: :planned_at
   def anchor_field(%__MODULE__{anchor: :due}), do: :due_at
 
+  @doc """
+  Whether `attrs` make a rule a series would take, without a user: for an
+  import to tell a repeat it read from one to report. The week start
+  defaults to Monday.
+  """
+  def valid_rule?(attrs) do
+    %__MODULE__{}
+    |> cast(Map.put_new(attrs, "week_start", 1), @rule)
+    |> validate_rule()
+    |> Map.fetch!(:valid?)
+  end
+
   def create_changeset(series, user, attrs) do
     series
     |> cast(attrs, [:id, :kind | @rule])

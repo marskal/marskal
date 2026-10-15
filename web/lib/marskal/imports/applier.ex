@@ -419,6 +419,7 @@ defmodule Marskal.Imports.Applier do
 
         tags = tag_all!(batch.user, :project, project.id, source_tags(node, acc))
         base = Merge.snapshot(:project, project) |> Map.put("tag_ids", Enum.sort(tags))
+        repeat!(batch.user, project, node)
 
         acc
         |> record!(batch, :project, node, %{project_id: project.id}, base)
@@ -456,6 +457,8 @@ defmodule Marskal.Imports.Applier do
           at: desired["resolved_at"]
         )
     end
+
+    repeat!(user, Projects.get_project(user, project.id), node)
 
     current_tags = live_tag_ids(Tags.ProjectTag, :project_id, project.id)
     tags = source_tags(node, acc)
@@ -568,19 +571,27 @@ defmodule Marskal.Imports.Applier do
   defp series_dates(%Tasks.Task{series_id: nil}, patch), do: patch
   defp series_dates(_task, patch), do: Map.drop(patch, @dates)
 
-  # The task becomes the first occurrence of the rule its source repeats
-  # by. A rule that would not take, such as one on a date the user has
-  # cleared, is left out: a failed command would undo the whole import.
-  defp repeat!(_user, _task, %{recurrence: nil}), do: :ok
-  defp repeat!(_user, %Tasks.Task{series_id: id}, _node) when is_binary(id), do: :ok
-  defp repeat!(_user, %Tasks.Task{state: state}, _node) when state != :to_do, do: :ok
+  # The task or project becomes the first occurrence of the rule its
+  # source repeats by. A rule that would not take, such as one on a date
+  # the user has cleared, is left out: a failed command would undo the
+  # whole import.
+  defp repeat!(_user, _record, %{recurrence: nil}), do: :ok
+  defp repeat!(_user, %{series_id: id}, _node) when is_binary(id), do: :ok
+  defp repeat!(_user, %{state: state}, _node) when state != :to_do, do: :ok
 
-  defp repeat!(user, task, %{recurrence: rule}) do
-    changeset = Series.create_changeset(%Series{}, user, Map.put(rule, "kind", "task"))
+  defp repeat!(user, record, %{recurrence: rule}) do
+    kind = if match?(%Projects.Project{}, record), do: "project", else: "task"
+    changeset = Series.create_changeset(%Series{}, user, Map.put(rule, "kind", kind))
     series = Ecto.Changeset.apply_changes(changeset)
 
-    if changeset.valid? and Map.fetch!(task, Series.anchor_field(series)) do
-      {:ok, _series} = Recurrence.repeat_task(user, task.id, rule, Ecto.UUID.generate(version: 7))
+    if changeset.valid? and Map.fetch!(record, Series.anchor_field(series)) do
+      command = Ecto.UUID.generate(version: 7)
+
+      {:ok, _series} =
+        case kind do
+          "task" -> Recurrence.repeat_task(user, record.id, rule, command)
+          "project" -> Recurrence.repeat_project(user, record.id, rule, command)
+        end
     end
 
     :ok

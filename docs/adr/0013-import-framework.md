@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted; amended 2026-10-04 (re-import updates); amended 2026-10-07 (import problems); amended 2026-10-09 (Todoist repeats)
+Accepted; amended 2026-10-04 (re-import updates); amended 2026-10-07 (import problems); amended 2026-10-09 (Todoist repeats); amended 2026-10-16 (OmniFocus repeats)
 
 The framework stands and is ported to Elixir ([ADR 0016](0016-elixir-phoenix-web.md)):
 `Imports.Graph`, `Imports.OmnifocusAdapter`, and Oban jobs in place of Active
@@ -95,7 +95,8 @@ What an import cannot carry over is easy to find and fix
 (`Marskal.Imports.Problems`).
 
 - The item gets a tag under **Import problems**, one per kind: Missing
-  recurrence, Missing section, Shortened title, Shortened notes. The tag view
+  recurrence, Approximate repeat rule, Missing section, Shortened title,
+  Shortened notes. The tag view
   then lists everything to fix, and the user removes the tag when done.
 - Its notes end with a block saying what is missing, e.g. the repeat rule as
   the source stores it, or the rest of a title past the title limit:
@@ -134,7 +135,32 @@ month and nth weekdays, days of the year, and `every!` as after completion.
   "every 3rd workday until june", is not read yet. It could be later,
   through Todoist's own date parser or a language model.
 - OmniFocus repeats stay problems. Its RRULE text maps more directly and
-  can follow the same way.
+  can follow the same way (it does, below).
+
+### OmniFocus repeats (amended 2026-10-16)
+
+OmniFocus stores a repeat as an RFC 5545 RRULE, with how it is scheduled
+beside it. `Marskal.Imports.OmnifocusRecurrence` reads it into a rule
+(ADR 0007), on the date OmniFocus names, for tasks and projects alike.
+
+- FREQ and INTERVAL, weekdays (BYDAY) for a weekly rule, days of the month
+  and nth weekdays for a monthly one (BYMONTHDAY, BYDAY with an ordinal, and
+  BYSETPOS over the work or weekend days), the same with BYMONTH for a
+  yearly one, COUNT, UNTIL, and WKST.
+- Mode and anchor come from `repetition-schedule-type` and
+  `repetition-anchor-date`, or, in older backups, `repetition-method`: fixed
+  is regular on the Due date (Defer, then Planned, without one),
+  start-after-completion is on completion on Defer, due-after-completion on
+  Due. The oldest backups' short form, `@1w`, is read too.
+- Where Marskal has no exact match, the closest rule is imported and the
+  item gets an **Approximate repeat rule** problem saying what differs: a
+  repeat from completion with days keeps its interval but not the days
+  (ADR 0007 has no day limits after completion), and a regular one with
+  catch-up off skips passed dates, as every regular series does.
+- Anything else (BYHOUR, BYWEEKNO, BYDAY without an ordinal in a month), or a
+  repeat without the date it moves, stays a Missing recurrence problem.
+- Re-import works as for Todoist: a task or project becomes a first
+  occurrence once, and its series then owns its dates.
 
 ## Consequences
 

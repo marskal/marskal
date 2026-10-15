@@ -5,11 +5,13 @@ defmodule Marskal.Imports.OmnifocusAdapter do
   alias Marskal.Imports.Graph
   alias Marskal.Imports.Limits
   alias Marskal.Imports.OmnifocusNote
+  alias Marskal.Imports.OmnifocusRecurrence
   alias Marskal.Imports.Problems
   alias Marskal.Imports.ProjectNode
   alias Marskal.Imports.TagNode
   alias Marskal.Imports.TaskNode
   alias Marskal.Imports.Xml
+  alias Marskal.Recurrence.Series
 
   @source "omnifocus"
   @inner_zip ~r/\.zip\z/i
@@ -428,6 +430,7 @@ defmodule Marskal.Imports.OmnifocusAdapter do
             resolved_at: row["completed"],
             flagged: row["flagged"] == true,
             tag_source_ids: Map.get(tag_ids, row["id"], []),
+            recurrence: recurrence(row),
             extras: extras_for(row),
             problems: problems_for(row)
           }
@@ -472,6 +475,7 @@ defmodule Marskal.Imports.OmnifocusAdapter do
             resolved_at: row["completed"],
             flagged: row["flagged"] == true,
             tag_source_ids: Map.get(tag_ids, row["id"], []),
+            recurrence: recurrence(row),
             extras: row |> extras_for() |> compact(),
             problems: problems_for(row)
           }
@@ -539,11 +543,41 @@ defmodule Marskal.Imports.OmnifocusAdapter do
     end)
   end
 
-  # Marskal series are not made from an import yet (ADR 0007).
+  # A repeat Marskal can carry becomes a rule; one it can only come close
+  # to is marked with what differs, and one it cannot read stays for the
+  # user to set up (ADR 0007).
+  defp recurrence(row) do
+    case read_repeat(row) do
+      {:ok, rule, _changes} -> rule
+      :error -> nil
+    end
+  end
+
   defp problems_for(row) do
-    if present?(row["repeat"]),
-      do: [{:missing_recurrence, "Repeat", repeat_text(row)}],
-      else: []
+    case read_repeat(row) do
+      {:ok, _rule, []} ->
+        []
+
+      {:ok, _rule, changes} ->
+        [
+          {:approximate_recurrence, "Repeat",
+           "#{repeat_text(row)}; imported as a repeat that #{Enum.join(changes, ", and ")}"}
+        ]
+
+      :error ->
+        if present?(row["repeat"]),
+          do: [{:missing_recurrence, "Repeat", repeat_text(row)}],
+          else: []
+    end
+  end
+
+  defp read_repeat(row) do
+    with {:ok, rule, changes} <- OmnifocusRecurrence.read(row),
+         true <- Series.valid_rule?(rule) do
+      {:ok, rule, changes}
+    else
+      _ -> :error
+    end
   end
 
   # The rule as OmniFocus stores it, with how it is scheduled.

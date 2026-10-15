@@ -27,6 +27,7 @@ defmodule Marskal.Imports.Problems do
   @parent "problem"
   @kinds [
     missing_recurrence: "Missing repeat rule",
+    approximate_recurrence: "Approximate repeat rule",
     missing_section: "Missing section",
     shortened_title: "Shortened title",
     shortened_notes: "Shortened notes"
