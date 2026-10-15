@@ -18,6 +18,8 @@ defmodule Marskal.Imports.ProjectNode do
     :planned,
     :due,
     :resolved_at,
+    # As on a task node: the project becomes the series' first occurrence.
+    :recurrence,
     deferred_indefinitely: false,
     tag_source_ids: [],
     flagged: false,

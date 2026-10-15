@@ -133,7 +133,7 @@ defmodule Marskal.Imports.OmnifocusAdapterTest do
         <repetition-rule>FREQ=WEEKLY;BYDAY=TU</repetition-rule>
         <repetition-method>fixed</repetition-method>
         <repetition-schedule-type>from-completion</repetition-schedule-type>
-        <repetition-anchor-date>due-date</repetition-anchor-date>
+        <repetition-anchor-date>dateDue</repetition-anchor-date>
         <catch-up-automatically>false</catch-up-automatically>
       </task>
     </omnifocus>
@@ -150,13 +150,13 @@ defmodule Marskal.Imports.OmnifocusAdapterTest do
 
              ---
              Imported from OmniFocus:
-             - Repeat: FREQ=WEEKLY;BYDAY=TU (method fixed, schedule from-completion, based on due-date)
+             - Repeat: FREQ=WEEKLY;BYDAY=TU (method fixed, schedule from-completion, based on dateDue); no Due date for the repeat to move
              - Title continued: and more\
              """
 
     assert task.tag_source_ids == ["problem:missing-recurrence", "problem:shortened-title"]
     assert task.extras["repeat_schedule"] == "from-completion"
-    assert task.extras["repeat_anchor"] == "due-date"
+    assert task.extras["repeat_anchor"] == "dateDue"
 
     assert Enum.map(graph.tags, & &1.name) ==
              ["Import problems", "Missing repeat rule", "Shortened title"]

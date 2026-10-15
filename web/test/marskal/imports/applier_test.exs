@@ -10,6 +10,8 @@ defmodule Marskal.Imports.ApplierTest do
   alias Marskal.Imports.Parser
   alias Marskal.ProjectFolders.ProjectFolder
   alias Marskal.Projects.Project
+  alias Marskal.Recurrence
+  alias Marskal.Recurrence.Series
   alias Marskal.Tags
   alias Marskal.Tags.Tag
   alias Marskal.Tasks
@@ -280,6 +282,80 @@ defmodule Marskal.Imports.ApplierTest do
              1
   end
 
+  describe "repeats" do
+    @repeats_xml """
+    <?xml version="1.0" encoding="UTF-8"?>
+    <omnifocus>
+      <task id="projReview0">
+        <project><status>active</status></project>
+        <name>Monthly review</name>
+        <due>2026-10-30T16:00:00.000Z</due>
+        <repetition-rule>FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-1</repetition-rule>
+        <repetition-schedule-type>from-assigned</repetition-schedule-type>
+        <repetition-anchor-date>dateDue</repetition-anchor-date>
+        <catch-up-automatically>true</catch-up-automatically>
+      </task>
+      <task id="taskTrash00">
+        <inbox/>
+        <name>Take out the trash</name>
+        <due>2026-10-09T15:00:00.000Z</due>
+        <repetition-rule>FREQ=WEEKLY;BYDAY=FR</repetition-rule>
+        <repetition-schedule-type>from-assigned</repetition-schedule-type>
+        <repetition-anchor-date>dateDue</repetition-anchor-date>
+        <catch-up-automatically>true</catch-up-automatically>
+      </task>
+      <task id="taskPlants0">
+        <inbox/>
+        <name>Water the plants</name>
+        <start>2026-10-09T06:00:00.000Z</start>
+        <repetition-rule>FREQ=WEEKLY;BYDAY=TU</repetition-rule>
+        <repetition-schedule-type>from-completion</repetition-schedule-type>
+        <repetition-anchor-date>dateToStart</repetition-anchor-date>
+      </task>
+      <task id="taskHour000">
+        <inbox/>
+        <name>Stand up</name>
+        <due>2026-10-09T15:00:00.000Z</due>
+        <repetition-rule>FREQ=DAILY;BYHOUR=9</repetition-rule>
+        <repetition-schedule-type>from-assigned</repetition-schedule-type>
+        <repetition-anchor-date>dateDue</repetition-anchor-date>
+      </task>
+    </omnifocus>
+    """
+
+    test "a repeat Marskal can carry makes a series; one it can only come close to is marked",
+         %{user: user} do
+      batch = preview!(user, OmnifocusBackup.zip_with_xml(@repeats_xml), "x.ofocus-backup")
+      assert {:ok, batch} = Applier.call(batch)
+
+      trash = task!(batch, "taskTrash00")
+      assert trash.occurrence_for == trash.due_at
+
+      assert %Series{kind: :task, mode: :regular, anchor: :due, frequency: :weeks, weekdays: [5]} =
+               Recurrence.get_series(user, trash.series_id)
+
+      assert tag_names(trash) == []
+
+      review = project!(batch, "projReview0")
+
+      assert %Series{kind: :project, frequency: :months, on_days: ["-1:work_day"]} =
+               Recurrence.get_series(user, review.series_id)
+
+      plants = task!(batch, "taskPlants0")
+
+      assert %Series{mode: :on_completion, anchor: :defer, frequency: :weeks, weekdays: []} =
+               Recurrence.get_series(user, plants.series_id)
+
+      assert tag_names(plants) == ["Approximate repeat rule"]
+      assert plants.notes =~ "FREQ=WEEKLY;BYDAY=TU"
+      assert plants.notes =~ "without its days"
+
+      hour = task!(batch, "taskHour000")
+      assert hour.series_id == nil
+      assert tag_names(hour) == ["Missing repeat rule"]
+    end
+  end
+
   test "does not import into another user", %{user: user, other: other} do
     batch = preview!(user, OmnifocusBackup.compact_backup(), "OmniFocus.ofocus-backup")
     assert {:ok, _} = Applier.call(batch)
@@ -319,6 +395,23 @@ defmodule Marskal.Imports.ApplierTest do
       |> Repo.insert()
 
     Parser.call(batch)
+  end
+
+  defp tag_names(task_or_project) do
+    {schema, field} =
+      case task_or_project do
+        %Task{} -> {Tags.TaskTag, :task_id}
+        %Project{} -> {Tags.ProjectTag, :project_id}
+      end
+
+    Repo.all(
+      from l in schema,
+        join: t in Tag,
+        on: t.id == l.tag_id,
+        where: field(l, ^field) == ^task_or_project.id and is_nil(l.discarded_at),
+        order_by: t.name,
+        select: t.name
+    )
   end
 
   defp folder!(batch, source_id) do

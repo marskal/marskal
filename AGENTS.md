@@ -252,8 +252,10 @@ The repository root is the product, not the web app (ADR 0015).
   updates existing `(user, source, source_id)` items by a three-way merge
   against `import_items.fields`: the user's edits win, and an item the
   user deleted is imported again as a new record. A Todoist repeat in a form
-  `Imports.TodoistRecurrence` reads makes the task a series' first occurrence;
-  free-form repeats stay import problems. Do not add competing-app libraries.
+  `Imports.TodoistRecurrence` reads, or an OmniFocus RRULE
+  `Imports.OmnifocusRecurrence` reads, makes the task or project a series'
+  first occurrence; a closest fit is marked "Approximate repeat rule", and
+  what is not read stays an import problem. Do not add competing-app libraries.
 - **UI (ADR 0012, ADR 0016):** HEEx function components plus plain CSS `@scope`.
   No Tailwind, no daisyUI, no UI kit. Tokens stay on `:root`.
 - **Text (ADR 0028):** new or changed text the user reads goes through Gettext:
