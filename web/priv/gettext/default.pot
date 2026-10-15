@@ -153,6 +153,11 @@ msgstr ""
 msgid "Light"
 msgstr ""
 
+#: lib/marskal_web/components/layouts/root.html.heex
+#, elixir-autogen, elixir-format
+msgid "Marskal has been updated. Reload to use the new version."
+msgstr ""
+
 #: lib/marskal_web/live/repeat_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Missed %{count} times, %{first} to %{last}"
@@ -174,6 +179,11 @@ msgid "Paused, 1 time skipped"
 msgid_plural "Paused, %{count} times skipped"
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/marskal_web/components/layouts/root.html.heex
+#, elixir-autogen, elixir-format
+msgid "Reload"
+msgstr ""
 
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format

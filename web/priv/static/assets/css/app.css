@@ -944,11 +944,39 @@ a.btn {
   }
 }
 
+/* Shown to a tab left open across a deploy (MarskalWeb.StaticChanged). */
+.app-updated {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  width: max-content;
+  max-width: calc(100% - 2rem);
+  padding: 0.6rem 0.6rem 0.6rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 0.5rem 1.5rem var(--shadow);
+  transform: translateX(-50%);
+}
+
+.app-updated[hidden] {
+  display: none;
+}
+
 @media (max-width: 720px) {
   #flash-group {
     top: calc(3.75rem + env(safe-area-inset-top));
     right: 0.75rem;
     width: calc(100% - 1.5rem);
+  }
+
+  /* Above the tab bar. */
+  .app-updated {
+    bottom: calc(4.5rem + env(safe-area-inset-bottom));
   }
 }
 
