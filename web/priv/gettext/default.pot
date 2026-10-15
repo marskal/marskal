@@ -113,6 +113,11 @@ msgstr ""
 msgid "Automatic"
 msgstr ""
 
+#: lib/marskal_web/live/import_live.ex
+#, elixir-autogen, elixir-format
+msgid "Choose zip"
+msgstr ""
+
 #: lib/marskal_web/live/repeat_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Close"
@@ -131,6 +136,16 @@ msgstr ""
 #: lib/marskal_web/live/project_live.ex
 #, elixir-autogen, elixir-format
 msgid "Done"
+msgstr ""
+
+#: lib/marskal_web/live/import_live.ex
+#, elixir-autogen, elixir-format
+msgid "Drag the .ofocus-backup here from Finder. It looks like a file, but it is a folder, so a file picker cannot choose it. To use the picker, compress it in Finder first and choose the zip."
+msgstr ""
+
+#: lib/marskal_web/live/import_live.ex
+#, elixir-autogen, elixir-format
+msgid "Drop your OmniFocus backup here"
 msgstr ""
 
 #: lib/marskal_web/live/project_live.ex

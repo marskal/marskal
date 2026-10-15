@@ -185,10 +185,9 @@ defmodule MarskalWeb.ImportLive do
           <p class="lede"><.link navigate={~p"/imports"}>Import</.link></p>
           <h1>OmniFocus backup</h1>
           <p class="lede">
-            Drop the <code>.ofocus-backup</code>
-            here. It looks like a file in Finder, but it is a folder.
-            You can also choose a zip, or the <code>00000000000000=….zip</code>
-            inside the package.
+            {gettext(
+              "Drag the .ofocus-backup here from Finder. It looks like a file, but it is a folder, so a file picker cannot choose it. To use the picker, compress it in Finder first and choose the zip."
+            )}
           </p>
           <form
             id="backup-drop"
@@ -200,11 +199,10 @@ defmodule MarskalWeb.ImportLive do
           >
             <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
             <div class="backup-drop" data-dropzone>
-              <p class="backup-drop__prompt">Drop your OmniFocus backup here</p>
+              <p class="backup-drop__prompt">{gettext("Drop your OmniFocus backup here")}</p>
               <p class="backup-drop__status" data-status></p>
               <div class="backup-drop__actions">
-                <button type="button" data-pick-file>Choose zip</button>
-                <button type="button" data-pick-directory>Choose backup package</button>
+                <button type="button" data-pick-file>{gettext("Choose zip")}</button>
               </div>
             </div>
             <input
@@ -214,7 +212,6 @@ defmodule MarskalWeb.ImportLive do
               class="backup-drop__hidden"
               data-file
             />
-            <input type="file" class="backup-drop__hidden" webkitdirectory directory data-directory />
             <button type="submit">Upload and preview</button>
           </form>
           <script :type={Phoenix.LiveView.ColocatedHook} name=".BackupDrop" extension="ts">
@@ -229,26 +226,15 @@ defmodule MarskalWeb.ImportLive do
                 const dropzone = form.querySelector<HTMLElement>("[data-dropzone]")
                 const status = form.querySelector("[data-status]")
                 const fileInput = form.querySelector<HTMLInputElement>("[data-file]")
-                const directoryInput = form.querySelector<HTMLInputElement>("[data-directory]")
                 const setStatus: SetStatus = (text) => { if (status) status.textContent = text }
 
                 form.querySelector("[data-pick-file]")?.addEventListener("click", () => fileInput?.click())
-                form.querySelector("[data-pick-directory]")?.addEventListener("click", () => directoryInput?.click())
 
                 fileInput?.addEventListener("change", () => {
                   const file = fileInput.files?.[0]
                   if (!file) return
                   setStatus(file.name)
                   form.requestSubmit()
-                })
-
-                directoryInput?.addEventListener("change", () => {
-                  const files = Array.from(directoryInput.files || [])
-                  if (!files.length) return
-                  submitBundle(form, files.map((file) => ({
-                    file,
-                    path: file.webkitRelativePath || file.name
-                  })), setStatus)
                 })
 
                 dropzone?.addEventListener("dragover", (event) => {
