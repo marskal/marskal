@@ -7,7 +7,8 @@
  * bronze ramp take hue 76 from the bronze in the logo; --bronze-500 is its
  * main colour. Components use the role tokens below the ramps, never a ramp
  * step directly. Text pairs meet WCAG AA in both schemes, and input
- * borders 3:1.
+ * borders 3:1. A role token holds both schemes in light-dark(); the
+ * system picks, unless the header's theme control set data-theme.
  */
 :root {
   color-scheme: light dark;
@@ -50,23 +51,23 @@
   --bronze-600: oklch(52.0% 0.085 76);
   --bronze-800: oklch(35.0% 0.04 76);
 
-  --bg: var(--stone-50);
-  --surface: var(--stone-0);
-  --text: var(--stone-950);
-  --muted: var(--stone-600);
-  --border: var(--stone-200);
-  --border-strong: var(--stone-450);
-  --accent: var(--teal-700);
-  --accent-strong: var(--teal-800);
-  --accent-contrast: var(--stone-0);
-  --accent-tint: var(--teal-50);
-  --accent-tint-strong: var(--teal-100);
-  --danger: var(--red-600);
-  --danger-bg: var(--red-100);
-  --notice-bg: var(--teal-50);
-  --flag: var(--bronze-600);
-  --scrim: oklch(15.5% 0.008 76 / 0.45);
-  --shadow: oklch(15.5% 0.008 76 / 0.18);
+  --bg: light-dark(var(--stone-50), var(--stone-950));
+  --surface: light-dark(var(--stone-0), var(--stone-900));
+  --text: light-dark(var(--stone-950), var(--stone-50));
+  --muted: light-dark(var(--stone-600), var(--stone-400));
+  --border: light-dark(var(--stone-200), var(--stone-800));
+  --border-strong: light-dark(var(--stone-450), var(--stone-500));
+  --accent: light-dark(var(--teal-700), var(--teal-300));
+  --accent-strong: light-dark(var(--teal-800), var(--teal-200));
+  --accent-contrast: light-dark(var(--stone-0), var(--teal-950));
+  --accent-tint: light-dark(var(--teal-50), var(--teal-950));
+  --accent-tint-strong: light-dark(var(--teal-100), var(--teal-900));
+  --danger: light-dark(var(--red-600), var(--red-300));
+  --danger-bg: light-dark(var(--red-100), var(--red-900));
+  --notice-bg: light-dark(var(--teal-50), var(--teal-900));
+  --flag: light-dark(var(--bronze-600), var(--bronze-300));
+  --scrim: light-dark(oklch(15.5% 0.008 76 / 0.45), oklch(0% 0 0 / 0.6));
+  --shadow: light-dark(oklch(15.5% 0.008 76 / 0.18), oklch(0% 0 0 / 0.5));
 
   --radius: 8px;
   --space: 1rem;
@@ -79,26 +80,12 @@
   --font-mono: ui-monospace, Menlo, "Cascadia Mono", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: var(--stone-950);
-    --surface: var(--stone-900);
-    --text: var(--stone-50);
-    --muted: var(--stone-400);
-    --border: var(--stone-800);
-    --border-strong: var(--stone-500);
-    --accent: var(--teal-300);
-    --accent-strong: var(--teal-200);
-    --accent-contrast: var(--teal-950);
-    --accent-tint: var(--teal-950);
-    --accent-tint-strong: var(--teal-900);
-    --danger: var(--red-300);
-    --danger-bg: var(--red-900);
-    --notice-bg: var(--teal-900);
-    --flag: var(--bronze-300);
-    --scrim: oklch(0% 0 0 / 0.6);
-    --shadow: oklch(0% 0 0 / 0.5);
-  }
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 *,
@@ -639,8 +626,42 @@ h1 {
   align-items: center;
 }
 
-.app-header__account {
+.theme-toggle {
+  display: inline-flex;
+  gap: 0.125rem;
   margin-left: auto;
+  padding: 0.125rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.theme-toggle button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.theme-toggle button:hover {
+  color: var(--text);
+}
+
+.theme-toggle button[aria-pressed="true"] {
+  background: var(--accent-tint-strong);
+  color: var(--accent);
+}
+
+@media (max-width: 720px) {
+  .theme-toggle button {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
 }
 
 .app-nav a {
