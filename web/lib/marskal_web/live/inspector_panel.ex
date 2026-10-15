@@ -353,7 +353,14 @@ defmodule MarskalWeb.InspectorPanel do
     ~H"""
     <section class="inspector-form" data-inspect-type="task" data-inspect-id={@record.id}>
       <p :if={@error} class="errors" role="alert">{@error}</p>
-      <form id="inspector-task" class="form" phx-change="save" phx-submit="save" phx-target={@myself}>
+      <form
+        id="inspector-task"
+        class="form"
+        phx-change="save"
+        data-autosave
+        phx-submit="save"
+        phx-target={@myself}
+      >
         <div class="field">
           <label for="inspector-task-title">Title</label>
           <input
@@ -483,6 +490,7 @@ defmodule MarskalWeb.InspectorPanel do
         id="inspector-project"
         class="form"
         phx-change="save"
+        data-autosave
         phx-submit="save"
         phx-target={@myself}
       >
@@ -602,6 +610,7 @@ defmodule MarskalWeb.InspectorPanel do
         id="inspector-folder"
         class="form"
         phx-change="save"
+        data-autosave
         phx-submit="save"
         phx-target={@myself}
       >
@@ -658,7 +667,14 @@ defmodule MarskalWeb.InspectorPanel do
     ~H"""
     <section class="inspector-form" data-inspect-type="tag" data-inspect-id={@record.id}>
       <p :if={@error} class="errors" role="alert">{@error}</p>
-      <form id="inspector-tag" class="form" phx-change="save" phx-submit="save" phx-target={@myself}>
+      <form
+        id="inspector-tag"
+        class="form"
+        phx-change="save"
+        data-autosave
+        phx-submit="save"
+        phx-target={@myself}
+      >
         <div class="field">
           <label for="inspector-tag-name">Name</label>
           <input
@@ -1013,6 +1029,7 @@ defmodule MarskalWeb.InspectorPanel do
       <form
         id={"inspector-#{@form}-notes-dialog-form"}
         phx-change="save"
+        data-autosave
         phx-submit="save"
         phx-target={@myself}
       >

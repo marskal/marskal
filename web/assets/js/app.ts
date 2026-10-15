@@ -43,10 +43,54 @@ window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
 // A tab left open across a deploy keeps its old CSS and JS while the new
 // server renders new markup. MarskalWeb.StaticChanged notices on reconnect.
+// Such a tab reloads by itself a few seconds after it goes to the
+// background, unless that would lose something: an open dialog, a change
+// still on its way to the server, or text typed into a field that saves
+// only when submitted. Forms marked data-autosave save as you type, so the
+// wait lets their last edit land; LiveView does not refresh a textarea's
+// default text, so their fields are not compared.
+const settle = 5000
+let updated = false
+let pending: number | undefined
+
+function unsaved(): boolean {
+  if (document.querySelector("dialog[open], .phx-change-loading, .phx-submit-loading")) return true
+
+  return Array.from(document.querySelectorAll("input, textarea, select")).some(field => {
+    if (field.closest("[data-autosave]")) return false
+    if (field instanceof HTMLSelectElement)
+      return Array.from(field.options).some(option => option.selected !== option.defaultSelected)
+    if (field instanceof HTMLInputElement && (field.type === "checkbox" || field.type === "radio"))
+      return field.checked !== field.defaultChecked
+    if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement)
+      return field.value !== field.defaultValue
+    return false
+  })
+}
+
+function onVisibility() {
+  if (document.hidden) {
+    if (updated) scheduleReload()
+  } else {
+    // Back in view: never reload under the user's eyes.
+    window.clearTimeout(pending)
+  }
+}
+
+function scheduleReload() {
+  window.clearTimeout(pending)
+  pending = window.setTimeout(() => {
+    if (document.hidden && !unsaved()) window.location.reload()
+  }, settle)
+}
+
 window.addEventListener("phx:static-changed", () => {
+  updated = true
   const banner = document.getElementById("app-updated")
   if (banner) banner.hidden = false
+  onVisibility()
 })
+document.addEventListener("visibilitychange", onVisibility)
 document.getElementById("app-updated-reload")?.addEventListener("click", () => window.location.reload())
 
 // connect if there are any LiveViews on the page
