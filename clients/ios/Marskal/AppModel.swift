@@ -12,13 +12,18 @@ final class AppModel {
     private(set) var open: [TaskItem] = []
     private(set) var preferences: Preferences?
     private(set) var lastSyncedAt: Date?
+    private(set) var projects: [ProjectItem] = []
     private(set) var pending: UInt64 = 0
     private(set) var syncing = false
+    /// The last sync could not reach the server. Changes wait in the outbox.
+    private(set) var offline = false
     private(set) var signingIn = false
     var problem: Problem?
 
     private var store: Store?
     private var syncTask: Task<Void, Never>?
+    private var soonTask: Task<Void, Never>?
+    private var syncAgain = false
     private let tokens: TokenStore
     private let defaults: UserDefaults
 
@@ -74,7 +79,8 @@ final class AppModel {
     /// server has not taken yet.
     func signOut() async {
         guard let session else { return }
-        syncTask?.cancel()
+        soonTask?.cancel()
+        soonTask = nil
         await syncTask?.value
         store?.close()
         store = nil
@@ -84,6 +90,8 @@ final class AppModel {
         self.session = nil
         inbox = []
         open = []
+        projects = []
+        offline = false
         preferences = nil
         lastSyncedAt = nil
         pending = 0
@@ -119,6 +127,10 @@ final class AppModel {
     func deactivate() async {
         let application = UIApplication.shared
         let id = application.beginBackgroundTask(withName: "Close the database")
+        // Send what is waiting now rather than when the app comes back.
+        soonTask?.cancel()
+        soonTask = nil
+        if pending > 0 { sync() }
         await syncTask?.value
         store?.close()
         store = nil
@@ -135,22 +147,29 @@ final class AppModel {
 
     // MARK: Sync and reads
 
-    /// Starts a sync, or joins the one under way.
-    func sync() {
-        guard syncTask == nil, let session, let store else { return }
+    /// Starts a sync. One under way runs again when it finishes, to send
+    /// what changed meanwhile. An unreachable server is reported only when
+    /// the user asked for the sync; otherwise the app shows it is offline.
+    func sync(asked: Bool = false) {
+        guard let session, let store else { return }
+        guard syncTask == nil else {
+            syncAgain = true
+            return
+        }
         syncing = true
         syncTask = Task {
-            defer {
-                syncing = false
-                syncTask = nil
-            }
             do {
                 _ = try await session.sync(store)
+                offline = false
             } catch let error as ServerError {
-                if error == .notSignedIn {
+                switch error {
+                case .notSignedIn:
                     signedOutOnServer()
                     problem = .signedOut
-                } else {
+                case .network:
+                    offline = true
+                    if asked { problem = Problem(error) }
+                default:
                     problem = Problem(error)
                 }
             } catch StoreError.OtherAccount {
@@ -160,22 +179,72 @@ final class AppModel {
             } catch {
                 problem = .database
             }
+            syncing = false
+            syncTask = nil
             reload()
+
+            if syncAgain {
+                syncAgain = false
+                sync()
+            }
+        }
+    }
+
+    /// Syncs a moment after a change, so a burst of changes goes in one push.
+    private func syncSoon() {
+        soonTask?.cancel()
+        soonTask = Task {
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
+            soonTask = nil
+            sync()
         }
     }
 
     /// Waits for a sync to finish, for pull to refresh.
     func refresh() async {
-        sync()
+        sync(asked: true)
         await syncTask?.value
     }
 
-    /// Reads the lists again, if anything changed since the last read.
+    // MARK: Changes
+
+    /// Captures a task in the Inbox.
+    func capture(_ title: String) {
+        change { _ = try $0.addTask(new: NewTask(title: title)) }
+    }
+
+    /// Marks a task Done, Dropped, or To-Do again.
+    func setState(_ task: TaskItem, _ state: TaskState) {
+        change { try $0.setTaskState(id: task.id, state: state) }
+    }
+
+    /// Moves a task to the Inbox, No project, or a project.
+    func move(_ task: TaskItem, to location: Location) {
+        change { try $0.moveTask(id: task.id, location: location) }
+    }
+
+    // Applies a change here, where it shows at once, and sends it soon.
+    private func change(_ apply: (Store) throws -> Void) {
+        guard let store else { return }
+        do {
+            try apply(store)
+        } catch StoreError.Invalid(let message), StoreError.NotFound(let message) {
+            problem = .invalid(message)
+        } catch {
+            problem = .database
+        }
+        reload()
+        syncSoon()
+    }
+
+    /// Reads the lists again.
     func reload() {
         guard let store else { return }
         do {
             inbox = try store.tasks(filter: .inbox)
             open = try store.tasks(filter: .open(unavailable: false))
+            projects = try store.projects().filter { $0.state == .toDo }
             preferences = try store.preferences()
             let status = try store.status()
             lastSyncedAt = status.lastSyncedAt
@@ -196,6 +265,7 @@ enum Problem: Identifiable, Equatable {
     case otherAccount
     case database
     case server(Int)
+    case invalid(String)
 
     var id: String { "\(self)" }
 
@@ -220,6 +290,7 @@ enum Problem: Identifiable, Equatable {
         case .otherAccount: String(localized: "This data belongs to another account")
         case .database: String(localized: "The local data could not be read")
         case .server: String(localized: "The server could not sync")
+        case .invalid: String(localized: "That change could not be made")
         }
     }
 
@@ -239,6 +310,9 @@ enum Problem: Identifiable, Equatable {
             String(localized: "Try closing and opening the app again.")
         case .server(let status):
             String(localized: "The server answered with status \(status). Your changes are kept and sent later.")
+        case .invalid(let reason):
+            // The engine's reason, in English, as the server would give it.
+            reason
         }
     }
 }
