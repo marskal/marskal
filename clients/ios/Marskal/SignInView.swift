@@ -7,7 +7,6 @@ import SwiftUI
 struct SignInView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.webAuthenticationSession) private var webAuthenticationSession
-    @AppStorage(AppModel.serverKey) private var lastServer: URL?
     @State private var address = ""
 
     var body: some View {
@@ -43,7 +42,7 @@ struct SignInView: View {
             .navigationTitle(Text(verbatim: "Marskal"))
         }
         .onAppear {
-            if address.isEmpty { address = lastServer?.absoluteString ?? Self.defaultAddress }
+            if address.isEmpty { address = Self.defaultAddress }
         }
     }
 

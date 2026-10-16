@@ -1,0 +1,54 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Buy milk" : {
+
+    },
+    "Call the dentist" : {
+
+    },
+    "Choose the tasks to show." : {
+
+    },
+    "Flagged" : {
+
+    },
+    "Inbox" : {
+
+    },
+    "List" : {
+
+    },
+    "Mark Task Done" : {
+
+    },
+    "Mark “%@” Done" : {
+
+    },
+    "Nothing to do" : {
+
+    },
+    "Open Marskal to see your tasks" : {
+
+    },
+    "Open Tasks" : {
+
+    },
+    "Sign in in the Marskal app" : {
+
+    },
+    "Task" : {
+
+    },
+    "Tasks" : {
+
+    },
+    "Water the plants" : {
+
+    },
+    "Your Inbox, open tasks, or flagged tasks. Check a task off right here." : {
+
+    }
+  },
+  "version" : "1.0"
+}

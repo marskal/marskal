@@ -1,4 +1,6 @@
+import AppIntents
 import BackgroundTasks
+import MarskalKit
 import SwiftUI
 
 @main
@@ -56,4 +58,8 @@ struct RootView: View {
             Alert(title: Text(problem.title), message: Text(problem.message))
         }
     }
+}
+
+struct AppIntents: AppIntentsPackage {
+    static var includedPackages: [any AppIntentsPackage.Type] { [MarskalKitIntents.self] }
 }

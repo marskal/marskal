@@ -4,10 +4,8 @@ import Foundation
 /// Where the local database lives: one SQLite file per server, in the App
 /// Group the app and the widget share (ADR 0029).
 public enum Database {
-    public static let appGroup = "group.app.marskal"
-
     public static func url(server: URL) -> URL {
-        let base = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup)
+        let base = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppGroup.id)
             ?? URL.applicationSupportDirectory
         let directory = base.appending(path: "Library/Application Support/Marskal", directoryHint: .isDirectory)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

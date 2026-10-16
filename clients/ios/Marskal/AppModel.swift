@@ -2,6 +2,7 @@ import Foundation
 import MarskalKit
 import Observation
 import UIKit
+import WidgetKit
 
 /// The app's state: which server it is signed in to, the local database
 /// while the app is in the foreground, and what the lists show.
@@ -25,15 +26,11 @@ final class AppModel {
     private var soonTask: Task<Void, Never>?
     private var syncAgain = false
     private let tokens: TokenStore
-    private let defaults: UserDefaults
-
-    static let serverKey = "server"
     static let refreshTask = "app.marskal.ios.sync"
 
-    init(tokens: TokenStore = KeychainTokenStore(), defaults: UserDefaults = .standard) {
+    init(tokens: TokenStore = KeychainTokenStore()) {
         self.tokens = tokens
-        self.defaults = defaults
-        if let saved = defaults.url(forKey: Self.serverKey) {
+        if let saved = AppGroup.server {
             let session = Session(server: saved, tokens: tokens)
             if session.isSignedIn { self.session = session }
         }
@@ -65,7 +62,7 @@ final class AppModel {
 
             let session = Session(server: server, tokens: tokens)
             await session.signedIn(new, endpoints: signIn.endpoints)
-            defaults.set(server, forKey: Self.serverKey)
+            AppGroup.server = server
             self.session = session
             activate()
         } catch let error as ServerError {
@@ -86,7 +83,8 @@ final class AppModel {
         store = nil
         await session.signOut()
         Database.remove(server: session.server)
-        defaults.removeObject(forKey: Self.serverKey)
+        AppGroup.server = nil
+        WidgetCenter.shared.reloadAllTimelines()
         self.session = nil
         inbox = []
         open = []
@@ -182,6 +180,7 @@ final class AppModel {
             syncing = false
             syncTask = nil
             reload()
+            WidgetCenter.shared.reloadAllTimelines()
 
             if syncAgain {
                 syncAgain = false
@@ -235,6 +234,7 @@ final class AppModel {
             problem = .database
         }
         reload()
+        WidgetCenter.shared.reloadAllTimelines()
         syncSoon()
     }
 
