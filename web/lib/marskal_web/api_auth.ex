@@ -12,14 +12,20 @@ defmodule MarskalWeb.APIAuth do
 
   def init(opts), do: opts
 
-  @doc "Sets `current_scope`, `device`, and `oauth_scopes` from the access token."
+  @doc """
+  Sets `current_scope`, `device`, and `oauth_scopes` from the access token,
+  and the token itself as `access_token`, for a stream that checks it again
+  (ADR 0030).
+  """
   def call(conn, _opts) do
     with ["Bearer " <> token] <- get_req_header(conn, "authorization"),
-         {:ok, user, device, scopes} <- Marskal.Devices.authenticate(String.trim(token)) do
+         token = String.trim(token),
+         {:ok, user, device, scopes} <- Marskal.Devices.authenticate(token) do
       conn
       |> assign(:current_scope, Scope.for_user(user))
       |> assign(:device, device)
       |> assign(:oauth_scopes, scopes)
+      |> assign(:access_token, token)
     else
       [] -> deny(conn, 401, ~s(Bearer realm="marskal"))
       _ -> deny(conn, 401, ~s(Bearer realm="marskal", error="invalid_token"))

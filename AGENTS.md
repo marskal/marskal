@@ -38,6 +38,7 @@ This file is **short and actionable**. Rationale and history live in
 | Locale for dates and times | [0027](docs/adr/0027-locale-formatting.md) |
 | Translatable text | [0028](docs/adr/0028-translatable-text.md) |
 | iOS app (`clients/ios`, `sync/ffi`) | [0029](docs/adr/0029-ios-app.md) |
+| Sync event stream (SSE) | [0030](docs/adr/0030-sync-event-stream.md) |
 | Repository layout | [0015](docs/adr/0015-repository-layout.md) |
 
 ---
@@ -341,6 +342,8 @@ The repository root is the product, not the web app (ADR 0015).
   `offline_access`, `sync:read`, `sync:write`; one device per consent. Pull returns current rows after a cursor, or a snapshot. Push applies
   commands in order; each entity has an allow-list of client-writable fields
   (`client_fields/1` beside its changeset), dispatched by `Marskal.Sync.Push`. A rejected command is not retried.
+  `GET /sync/events` is Server-Sent Events (ADR 0030): the latest cursor when
+  the user's data changes, and the client pulls. Clients do not poll.
 - **Preferences (ADR 0023):** one `user_preferences` row per user, keyed by
   `user_id`, made by a trigger, synced as an entity whose id is the user id.
   One typed column per preference. Read with `Accounts.preferences/1`; do not

@@ -38,6 +38,7 @@ This directory holds **ADRs** — durable decisions and their context.
 | [0027](0027-locale-formatting.md) | Locale for dates and times | Accepted |
 | [0028](0028-translatable-text.md) | Translatable text | Accepted |
 | [0029](0029-ios-app.md) | iOS app | Accepted |
+| [0030](0030-sync-event-stream.md) | Sync event stream | Accepted |
 
 ## When to add an ADR
 
