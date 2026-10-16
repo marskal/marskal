@@ -52,5 +52,24 @@ defmodule Marskal.SyncFixturesTest do
     end
   end
 
+  test "date_input.json" do
+    for v <- read("date_input.json")["parse"] do
+      result =
+        Marskal.DateInput.parse(v["text"], NaiveDateTime.from_iso8601!(v["now"]),
+          week_start: v["week_start"],
+          order: String.to_existing_atom(v["order"])
+        )
+
+      expected =
+        case v["result"] do
+          "ok" -> {:ok, Date.from_iso8601!(v["date"]), v["time"] && Time.from_iso8601!(v["time"])}
+          "blank" -> :blank
+          "error" -> :error
+        end
+
+      assert result == expected, "#{inspect(v["text"])} at #{v["now"]}: #{v["why"]}"
+    end
+  end
+
   defp read(name), do: @fixtures |> Path.join(name) |> File.read!() |> Jason.decode!()
 end
