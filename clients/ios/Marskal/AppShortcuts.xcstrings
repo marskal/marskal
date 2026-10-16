@@ -1,0 +1,73 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "${applicationName} Inbox" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "${applicationName} indbakke"
+          }
+        },
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "${applicationName} Inbox",
+              "Add to ${applicationName} Inbox",
+              "Add to my ${applicationName} Inbox",
+              "Add a task to ${applicationName}",
+              "Capture in ${applicationName}"
+            ]
+          }
+        }
+      }
+    },
+    "Add a task to ${applicationName}" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tilføj en opgave i ${applicationName}"
+          }
+        }
+      }
+    },
+    "Add to ${applicationName} Inbox" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tilføj til ${applicationName} indbakke"
+          }
+        }
+      }
+    },
+    "Add to my ${applicationName} Inbox" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tilføj til min ${applicationName} indbakke"
+          }
+        }
+      }
+    },
+    "Capture in ${applicationName}" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notér i ${applicationName}"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

@@ -52,13 +52,34 @@
 
     },
     "Add to Inbox" : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tilføj til indbakke"
+          }
+        }
+      }
     },
     "Added “%@” to the Inbox." : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tilføjede “%@” til indbakken."
+          }
+        }
+      }
     },
     "Adds a task to your Marskal Inbox." : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tilføjer en opgave til din Marskal-indbakke."
+          }
+        }
+      }
     },
     "Cancel" : {
 
@@ -91,7 +112,14 @@
 
     },
     "Marskal could not read its data. Open the app and try again." : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marskal kunne ikke læse sine data. Åbn appen, og prøv igen."
+          }
+        }
+      }
     },
     "More" : {
 
@@ -155,7 +183,14 @@
 
     },
     "Sign in to Marskal in the app first." : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Log ind i Marskal-appen først."
+          }
+        }
+      }
     },
     "Sign out to remove it from this device, then sign in again." : {
 
@@ -209,7 +244,14 @@
 
     },
     "Title" : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Titel"
+          }
+        }
+      }
     },
     "Try closing and opening the app again." : {
 
@@ -218,7 +260,14 @@
 
     },
     "What do you want to add?" : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hvad vil du tilføje?"
+          }
+        }
+      }
     },
     "You were signed out" : {
 

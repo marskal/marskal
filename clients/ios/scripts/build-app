@@ -37,4 +37,12 @@ for target in Marskal MarskalWidget; do
     "$target/Localizable.xcstrings" --stringsdata "$objects"/*.stringsdata "$kit"/*.stringsdata
 done
 
+# The Siri phrases have a catalog of their own.
+objects=$intermediates/Marskal.build/Debug-iphonesimulator/Marskal.build/Objects-normal/arm64
+xcode xcrun xcstringstool sync \
+  Marskal/AppShortcuts.xcstrings --stringsdata "$objects/ExtractedAppShortcutsMetadata.stringsdata"
+
+# In Xcode's own format, whatever wrote them, so they diff by content.
+xcode xcrun swift scripts/format-xcstrings.swift */*.xcstrings
+
 echo "Built Marskal.app for the simulator"

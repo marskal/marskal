@@ -45,6 +45,8 @@ targets:
     info:
       path: Marskal/Info.plist
       properties:
+        # The languages the app is translated into (ADR 0028, 0029).
+        CFBundleLocalizations: [en, da]
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
@@ -82,6 +84,7 @@ targets:
     info:
       path: MarskalWidget/Info.plist
       properties:
+        CFBundleLocalizations: [en, da]
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     entitlements:
