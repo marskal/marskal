@@ -1,6 +1,28 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%lld tasks added to the Inbox": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld task added to the Inbox"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld tasks added to the Inbox"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%llu changes on this device have not reached the server, and will be lost.": {
       "localizations": {
         "en": {
@@ -23,12 +45,48 @@
         }
       }
     },
+    "Add": {},
+    "Add to Inbox": {},
+    "Cancel": {},
     "Check the address and your connection. Your changes are kept and sent later.": {},
+    "Close": {},
+    "Current": {},
+    "Done": {},
+    "Drop": {},
+    "Flagged": {},
     "Inbox": {},
+    "Mark “%@” Done": {},
     "More": {},
+    "Move": {},
+    "Move To": {},
+    "Move…": {},
     "Not synced yet": {},
     "Nothing to do": {},
+    "Offline": {},
+    "Offline, %llu changes waiting": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Offline, %llu change waiting"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Offline, %llu changes waiting"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Open Tasks": {},
+    "Projects": {},
     "Server": {},
     "Server address": {},
     "Sign In": {},
@@ -38,6 +96,7 @@
     "Sign-in did not finish": {},
     "Synced %@": {},
     "Syncing…": {},
+    "That change could not be made": {},
     "That is not a server address": {},
     "The address you open Marskal at in a browser.": {},
     "The local data could not be read": {},
@@ -48,6 +107,7 @@
     "The tasks on this device are removed. They stay on the server.": {},
     "This data belongs to another account": {},
     "This device was signed out on the server. Sign in again to keep syncing.": {},
+    "Title": {},
     "Try closing and opening the app again.": {},
     "Type the address you open Marskal at in a browser, such as marskal.example.": {},
     "You were signed out": {}

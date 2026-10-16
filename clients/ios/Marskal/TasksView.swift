@@ -2,9 +2,11 @@ import MarskalKit
 import SwiftUI
 
 /// The Inbox and the open tasks, read from the local database. Capture
-/// and check-off come next.
+/// with the add button; check a task off with its circle or a swipe.
 struct TasksView: View {
     @Environment(AppModel.self) private var model
+    @State private var capturing = false
+    @State private var moving: TaskItem?
     @State private var confirmingSignOut = false
 
     var body: some View {
@@ -12,13 +14,16 @@ struct TasksView: View {
             List {
                 if !model.inbox.isEmpty {
                     Section("Inbox") {
-                        ForEach(model.inbox, id: \.id) { TaskRow(task: $0) }
+                        ForEach(model.inbox, id: \.id) { row($0) }
                     }
                 }
-                Section("Open Tasks") {
-                    ForEach(model.open, id: \.id) { TaskRow(task: $0) }
+                if !model.open.isEmpty {
+                    Section("Open Tasks") {
+                        ForEach(model.open, id: \.id) { row($0) }
+                    }
                 }
             }
+            .animation(.default, value: model.inbox.map(\.id) + model.open.map(\.id))
             .overlay {
                 if model.inbox.isEmpty && model.open.isEmpty && !model.syncing {
                     ContentUnavailableView("Nothing to do", systemImage: "checkmark.circle")
@@ -39,6 +44,15 @@ struct TasksView: View {
                 ToolbarItem(placement: .status) {
                     SyncStatus()
                 }
+                ToolbarItem(placement: .bottomBar) {
+                    Button("Add to Inbox", systemImage: "plus") { capturing = true }
+                }
+            }
+            .sheet(isPresented: $capturing) {
+                CaptureSheet()
+            }
+            .sheet(item: $moving) { task in
+                MoveSheet(task: task)
             }
             .confirmationDialog("Sign out?", isPresented: $confirmingSignOut, titleVisibility: .visible) {
                 Button("Sign Out", role: .destructive) {
@@ -53,21 +67,184 @@ struct TasksView: View {
             }
         }
     }
+
+    private func row(_ task: TaskItem) -> some View {
+        TaskRow(task: task) { model.setState(task, .done) }
+            .swipeActions(edge: .leading) {
+                Button("Done", systemImage: "checkmark") { model.setState(task, .done) }
+                    .tint(.green)
+            }
+            .swipeActions(edge: .trailing) {
+                Button("Drop", systemImage: "xmark") { model.setState(task, .dropped) }
+                    .tint(.gray)
+                Button("Move", systemImage: "folder") { moving = task }
+                    .tint(.indigo)
+            }
+            .contextMenu {
+                Button("Done", systemImage: "checkmark") { model.setState(task, .done) }
+                Button("Drop", systemImage: "xmark") { model.setState(task, .dropped) }
+                Button("Move…", systemImage: "folder") { moving = task }
+            }
+    }
 }
+
+extension TaskItem: @retroactive Identifiable {}
 
 private struct TaskRow: View {
     let task: TaskItem
+    let complete: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(task.title)
-            if let project = task.project {
-                Text(project)
-                    .font(.footnote)
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Button(action: complete) {
+                Image(systemName: "circle")
+                    .font(.title3)
                     .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel(Text("Mark “\(task.title)” Done"))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(task.title)
+                if let project = task.project {
+                    Text(project)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if task.flagged {
+                Spacer()
+                Image(systemName: "flag.fill")
+                    .foregroundStyle(.orange)
+                    .accessibilityLabel(Text("Flagged"))
             }
         }
         .padding(.leading, CGFloat(task.depth) * 16)
+    }
+}
+
+/// Quick capture: return adds the title to the Inbox and clears the
+/// field for the next; Add adds it and closes.
+private struct CaptureSheet: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    @State private var title = ""
+    @State private var added = 0
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                // One line: return adds the task and keeps the field for
+                // the next. The Add button adds and closes.
+                TextField("Title", text: $title)
+                    .focused($focused)
+                    .submitLabel(.next)
+                    .onSubmit {
+                        add()
+                        focused = true
+                    }
+
+                if added > 0 {
+                    Text("\(added) tasks added to the Inbox")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("Add to Inbox")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close", role: .close) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add", role: .confirm) {
+                        add()
+                        dismiss()
+                    }
+                    .disabled(trimmed.isEmpty)
+                }
+            }
+            .onAppear { focused = true }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private var trimmed: String {
+        title.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func add() {
+        guard !trimmed.isEmpty else { return }
+        model.capture(trimmed)
+        title = ""
+        added += 1
+    }
+}
+
+/// Where a task can go: the Inbox, No project, or an open project
+/// (ADR 0017).
+private struct MoveSheet: View {
+    let task: TaskItem
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    choice("Inbox", systemImage: "tray", .inbox)
+                    choice("No Project", systemImage: "circle.dashed", .noProject)
+                }
+                if !model.projects.isEmpty {
+                    Section("Projects") {
+                        ForEach(model.projects, id: \.id) { project in
+                            choice(project.title, systemImage: "folder", .project(id: project.id))
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Move To")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel", role: .cancel) { dismiss() }
+                }
+            }
+        }
+    }
+
+    private var current: Location {
+        if task.inbox { return .inbox }
+        if let id = task.projectId { return .project(id: id) }
+        return .noProject
+    }
+
+    private func choice(_ title: LocalizedStringKey, systemImage: String, _ location: Location) -> some View {
+        label(Label(title, systemImage: systemImage), location)
+    }
+
+    // A project's title is the user's own text, not translated.
+    private func choice(_ title: String, systemImage: String, _ location: Location) -> some View {
+        label(Label(title, systemImage: systemImage), location)
+    }
+
+    private func label(_ label: Label<Text, Image>, _ location: Location) -> some View {
+        Button {
+            if location != current { model.move(task, to: location) }
+            dismiss()
+        } label: {
+            HStack {
+                label
+                Spacer()
+                if location == current {
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(.tint)
+                        .accessibilityLabel(Text("Current"))
+                }
+            }
+        }
+        .foregroundStyle(.primary)
     }
 }
 
@@ -78,6 +255,12 @@ private struct SyncStatus: View {
         Group {
             if model.syncing {
                 Text("Syncing…")
+            } else if model.offline {
+                if model.pending > 0 {
+                    Text("Offline, \(model.pending) changes waiting")
+                } else {
+                    Text("Offline")
+                }
             } else if let at = model.lastSyncedAt {
                 Text("Synced \(at, format: .relative(presentation: .named))")
             } else {
