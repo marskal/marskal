@@ -36,6 +36,15 @@ xcrun simctl launch booted app.marskal.ios
 A debug build offers the dev server, `http://marskal.localhost:8275`
 (`devenv up` in `web/`), on its sign-in screen.
 
+## Translations
+
+Text lives in String Catalogs: `Marskal/Localizable.xcstrings`,
+`MarskalWidget/Localizable.xcstrings`, and the Siri phrases in
+`Marskal/AppShortcuts.xcstrings`. `scripts/build-app` adds new source
+strings to them; a translation is a `da` entry beside each key. The app
+declares its languages in `project.yml` (`CFBundleLocalizations`). A Siri
+phrase must keep `${applicationName}`.
+
 ## Install on a phone
 
 Connect the phone, unlock it, and trust this Mac. Developer Mode must be on
