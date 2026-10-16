@@ -1101,6 +1101,28 @@
       "why": "how the field shows a day and time in Danish"
     },
     {
+      "text": "Oct 16, 2026, 4:30 PM",
+      "now": "2026-10-16T10:37:00",
+      "week_start": 1,
+      "order": "mdy",
+      "language": "en",
+      "result": "ok",
+      "date": "2026-10-16",
+      "time": "16:30:00",
+      "why": "a US label, a narrow no-break space before PM"
+    },
+    {
+      "text": "16 Oct\t14:00",
+      "now": "2026-10-16T10:37:00",
+      "week_start": 1,
+      "order": "dmy",
+      "language": "en",
+      "result": "ok",
+      "date": "2026-10-16",
+      "time": "14:00:00",
+      "why": "a no-break space and a tab split words"
+    },
+    {
       "text": "1w 14:00",
       "now": "2026-10-16T10:37:00",
       "week_start": 1,

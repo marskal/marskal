@@ -159,7 +159,7 @@ defmodule Marskal.DateInput do
   defp words(text) do
     case :unicode.characters_to_nfc_binary(text) do
       text when is_binary(text) ->
-        text |> String.downcase() |> String.replace(",", " ") |> String.split()
+        text |> String.downcase() |> String.split(~r/[\s,]+/u, trim: true)
 
       _ ->
         []
