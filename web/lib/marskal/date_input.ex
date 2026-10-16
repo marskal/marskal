@@ -13,6 +13,9 @@ defmodule Marskal.DateInput do
 
   @type order :: :dmy | :mdy | :ymd
   @type day_month :: :dm | :md
+
+  # "tonight" is today at the `evening:` time, unless a time is typed with it.
+  @evening ~T[19:00:00]
   @type result :: {:ok, Date.t(), Time.t() | nil} | :blank | :error
 
   # The words of each language. English is always read; another language's
@@ -26,6 +29,8 @@ defmodule Marskal.DateInput do
         -1 => ~w(yesterday)
       },
       now: ~w(now),
+      evening: ["tonight"],
+      evening_words: ~w(evening night),
       next: ~w(next),
       within: ~w(in),
       clock: ~w(at @),
@@ -70,6 +75,8 @@ defmodule Marskal.DateInput do
         -1 => ["i går", "igår"]
       },
       now: ~w(nu),
+      evening: ["i aften", "iaften"],
+      evening_words: ~w(aften),
       next: ~w(næste),
       within: ~w(om),
       clock: ~w(kl kl. klokken),
@@ -125,6 +132,8 @@ defmodule Marskal.DateInput do
                  months: lookup.(:months),
                  units: lookup.(:units),
                  now: list.(:now),
+                 evening: list.(:evening),
+                 evening_words: list.(:evening_words),
                  next: list.(:next),
                  within: list.(:within),
                  clock: list.(:clock)
@@ -141,6 +150,8 @@ defmodule Marskal.DateInput do
   day first when `order` is, and `language:`, the locale's language ("en"
   when not given or not known). A locale may write the two differently:
   Swedish English is "2033-11-22" and "22/11".
+  `evening:` is the time "tonight" means, 19:00 when not given; the field
+  being typed in sets it (`Marskal.Dates.evening_time/1`).
 
   Blank text is `:blank`, which clears the field.
   """
@@ -151,6 +162,7 @@ defmodule Marskal.DateInput do
       today: NaiveDateTime.to_date(now),
       week_start: Keyword.fetch!(opts, :week_start),
       order: Keyword.fetch!(opts, :order),
+      evening: Keyword.get(opts, :evening, @evening),
       day_month:
         Keyword.get_lazy(opts, :day_month, fn ->
           if opts[:order] == :dmy, do: :dm, else: :md
@@ -182,6 +194,8 @@ defmodule Marskal.DateInput do
       {:none, time} -> {:ok, ctx.today, time}
       {{:ok, date}, time} -> {:ok, date, time}
       {{:ok, date, time}, nil} -> {:ok, date, time}
+      {{:evening, date}, nil} -> {:ok, date, ctx.evening}
+      {{:evening, date}, time} -> {:ok, date, time}
       _ -> :error
     end
   end
@@ -265,15 +279,37 @@ defmodule Marskal.DateInput do
 
   defp day([], _ctx), do: :none
 
-  defp day([word | rest] = words, ctx) do
-    offset = Map.get(ctx.words.days, Enum.join(words, " "))
+  defp day(words, ctx) do
+    phrase = phrase(Enum.join(words, " "), ctx)
+    {before, [last]} = Enum.split(words, -1)
 
     cond do
-      offset -> {:ok, Date.add(ctx.today, offset)}
+      phrase -> phrase
+      last in ctx.words.evening_words -> evening(day(before, ctx), ctx)
+      true -> named_day(words, ctx)
+    end
+  end
+
+  # "tue evening", "tomorrow night", "i morgen aften": that day's evening.
+  # Alone, the word is tonight.
+  defp evening(:none, ctx), do: {:evening, ctx.today}
+  defp evening({:ok, date}, _ctx), do: {:evening, date}
+  defp evening(_day, _ctx), do: :error
+
+  defp named_day([word | rest] = words, ctx) do
+    cond do
       rest == [] and word in ctx.words.now -> {:ok, ctx.today, minute(ctx.now)}
       rest != [] and word in ctx.words.within -> relative(rest, ctx)
       match?([_], rest) and word in ctx.words.next -> next(hd(rest), ctx)
       true -> on_or_after(words, ctx)
+    end
+  end
+
+  # "tomorrow", "i morgen", "tonight": a day named in words.
+  defp phrase(phrase, ctx) do
+    case Map.fetch(ctx.words.days, phrase) do
+      {:ok, offset} -> {:ok, Date.add(ctx.today, offset)}
+      :error -> if phrase in ctx.words.evening, do: {:evening, ctx.today}
     end
   end
 

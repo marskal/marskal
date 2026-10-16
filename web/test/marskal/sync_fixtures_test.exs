@@ -59,6 +59,7 @@ defmodule Marskal.SyncFixturesTest do
           week_start: v["week_start"],
           order: String.to_existing_atom(v["order"]),
           day_month: String.to_existing_atom(v["day_month"]),
+          evening: Time.from_iso8601!(v["evening"]),
           language: v["language"]
         )
 

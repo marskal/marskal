@@ -58,6 +58,8 @@ a word table in `Marskal.DateInput` and the Rust library, and a locale.
 |-------|-------|
 | `today` `tod`, `tomorrow` `tom`, `yesterday` | That day |
 | `now` | Today at this minute |
+| `tonight` | Today in the evening: Defer 17:00, Planned 19:00, Due 23:00; or at the time typed with it |
+| `tue evening`, `tomorrow night`, `24/12 evening` | That day in the evening, as `tonight` |
 | `mon` … `sun`, full names | The next one after today; on that weekday, a week on |
 | `next fri` | That weekday in next week, by the week start |
 | `next week` / `month` / `year` | The first day of it |
@@ -71,9 +73,12 @@ a word table in `Marskal.DateInput` and the Rust library, and a locale.
 | `14:00`, `2pm`, `2:30 pm`, `at 9`, `@9` | A time, at the end or the start; alone, today |
 | `fri 14.30` | A dotted time only after a day; alone, `24.12` is a date |
 
-In Danish: `i dag`, `i morgen`, `i overmorgen`, `i går`, `nu`, `man` …
+In Danish: `i dag`, `i morgen`, `i overmorgen`, `i går`, `i aften`, `tirsdag aften`, `nu`, `man` …
 `søn`, `næste fre`, `næste uge`, `om 3 dage`, `2 uger`, `1 md`, `2t`,
 `maj`, `okt`, `kl 9`, `kl. 9.30`.
+
+The evening a field means is passed to the reader, as its default time is
+not, since "tonight" names a time where a day alone names none.
 
 `m` is a month; minutes are `min`. A bare number after a day is a day of
 the month, not an hour: `tom 9` is an error, `tom kl 9` is not. A day with

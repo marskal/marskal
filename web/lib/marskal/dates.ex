@@ -21,11 +21,21 @@ defmodule Marskal.Dates do
     resolved_at: ~T[00:00:00]
   }
 
+  # The time "tonight" means in each field (ADR 0032).
+  @evening_times %{
+    defer_until: ~T[17:00:00],
+    planned_at: ~T[19:00:00],
+    due_at: ~T[23:00:00]
+  }
+
   @doc "The date fields a patch may carry."
   def fields, do: @fields
 
   @doc "The wall-clock time a day gets when no time is picked."
   def default_time(field), do: Map.fetch!(@default_times, field)
+
+  @doc "The wall-clock time \"tonight\" means in a field: when work is put off till, planned for, or due by."
+  def evening_time(field), do: Map.fetch!(@evening_times, field)
 
   ## Predicates
 
