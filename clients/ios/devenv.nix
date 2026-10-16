@@ -11,5 +11,8 @@
     ];
   };
 
-  packages = [ pkgs.xcodegen ];
+  packages = [
+    pkgs.xcodegen
+    pkgs.jq # scripts/install-phone reads the device list
+  ];
 }
