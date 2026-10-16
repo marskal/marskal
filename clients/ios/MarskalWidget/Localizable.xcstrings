@@ -1,6 +1,18 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Add ${taskTitle} to the Inbox" : {
+
+    },
+    "Add to Inbox" : {
+
+    },
+    "Added “%@” to the Inbox." : {
+
+    },
+    "Adds a task to your Marskal Inbox." : {
+
+    },
     "Buy milk" : {
 
     },
@@ -25,6 +37,9 @@
     "Mark “%@” Done" : {
 
     },
+    "Marskal could not read its data. Open the app and try again." : {
+
+    },
     "Nothing to do" : {
 
     },
@@ -37,13 +52,22 @@
     "Sign in in the Marskal app" : {
 
     },
+    "Sign in to Marskal in the app first." : {
+
+    },
     "Task" : {
 
     },
     "Tasks" : {
 
     },
+    "Title" : {
+
+    },
     "Water the plants" : {
+
+    },
+    "What do you want to add?" : {
 
     },
     "Your Inbox, open tasks, or flagged tasks. Check a task off right here." : {

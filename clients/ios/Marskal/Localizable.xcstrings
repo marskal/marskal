@@ -48,7 +48,16 @@
     "Add" : {
 
     },
+    "Add ${taskTitle} to the Inbox" : {
+
+    },
     "Add to Inbox" : {
+
+    },
+    "Added “%@” to the Inbox." : {
+
+    },
+    "Adds a task to your Marskal Inbox." : {
 
     },
     "Cancel" : {
@@ -79,6 +88,9 @@
 
     },
     "Mark “%@” Done" : {
+
+    },
+    "Marskal could not read its data. Open the app and try again." : {
 
     },
     "More" : {
@@ -142,6 +154,9 @@
     "Sign Out" : {
 
     },
+    "Sign in to Marskal in the app first." : {
+
+    },
     "Sign out to remove it from this device, then sign in again." : {
 
     },
@@ -200,6 +215,9 @@
 
     },
     "Type the address you open Marskal at in a browser, such as marskal.example." : {
+
+    },
+    "What do you want to add?" : {
 
     },
     "You were signed out" : {
