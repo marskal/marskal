@@ -28,9 +28,22 @@ Alternatives considered:
 
 - **Polling.** Rejected as the way to stay current. It is late by up to its
   interval, and costs a request each time whether anything changed or not.
-- **WebSocket.** Rejected. It is two-way, and nothing goes from client to
-  server on it: push stays a POST. It needs the upgrade handshake and the
-  proxy's support for it.
+- **WebSocket.** Rejected. The nudge goes one way, and a WebSocket is a
+  framing protocol each client implements, where an event stream is an
+  HTTP response read line by line. An event stream resumes with
+  `Last-Event-ID` and runs unchanged over HTTP/2; a WebSocket needs its
+  own reconnect bookkeeping, and RFC 8441 to use HTTP/2. (The proxy is no
+  reason: nginx already upgrades connections for LiveView.)
+- **Pushes over the same WebSocket**, one connection both ways. Rejected.
+  The widget, Siri and Shortcuts, background refresh, a one-off terminal
+  command, and the mail extension each send a command and exit, so every
+  client keeps `POST /sync/push` and a socket would be a second path. Over a
+  socket a batch needs its own ids to match its results, its own timeouts
+  and replay after a dropped connection, and token refresh in the middle of
+  a connection; HTTP gives each request its token, status, and answer. A
+  push already reuses the client's TLS connection, so there is little
+  latency to win. Revisit when shared folders bring live collaboration,
+  where both directions carry traffic.
 - **Phoenix Channels.** Rejected. Every client would speak the Channels
   protocol (joins, heartbeats, message references) for one kind of message,
   one way.
