@@ -359,7 +359,7 @@ The repository root is the product, not the web app (ADR 0015).
   the user's `locale` preference), never `Calendar.strftime`. Form inputs keep
   ISO values. A new locale or ex_cldr version needs `nix/update-cldr-locales`.
 - **Typed dates (ADR 0032):** one text field per date, read by
-  `Marskal.DateInput` (English and Danish words, the locale's numeric order).
+  `Marskal.DateInput` (English words, plus the locale's language: `da`).
   The grammar is shared with Rust through `sync/fixtures/date_input.json`.
 - Tests: state transitions; user isolation; defer/planned/due; outliner/folder structure;
   **recurrence** matrix (ADR 0007); tag inheritance in Phase 2+; sync merge,

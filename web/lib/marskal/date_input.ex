@@ -1,12 +1,12 @@
 defmodule Marskal.DateInput do
   @moduledoc """
   A day, and maybe a time, as a person types it (ADR 0032): "tom", "fri",
-  "1w", "24/12", "24 dec 14:00", "i morgen kl 9". The words are English and
-  Danish, whatever the locale.
+  "1w", "24/12", "24 dec 14:00", and with a Danish locale "i morgen kl 9".
+  English words are always read, and the words of the locale's language.
 
   Pure: the caller passes now on the user's wall clock, the first day of
-  their week (1 = Monday … 7 = Sunday), and the order their locale writes a
-  numeric date in. A day with no time read leaves the time `nil`, for the
+  their week (1 = Monday … 7 = Sunday), and their locale's language and the
+  order it writes a numeric date in. A day with no time read leaves the time `nil`, for the
   field's default (`Marskal.Dates.default_time/1`). The Rust client library
   must read the same way; both run `sync/fixtures/date_input.json`.
   """
@@ -14,55 +14,129 @@ defmodule Marskal.DateInput do
   @type order :: :dmy | :mdy | :ymd
   @type result :: {:ok, Date.t(), Time.t() | nil} | :blank | :error
 
-  @today ~w(today tod idag)
-  @tomorrow ~w(tomorrow tom tmr tmrw imorgen)
-  @yesterday ~w(yesterday igår)
-  @now ~w(now nu)
-  @next ~w(next næste)
-  @within ~w(in om)
-  @clock_markers ~w(at kl kl. klokken @)
-
-  @weekdays %{
-    1 => ~w(mon monday man mandag),
-    2 => ~w(tue tues tuesday tir tirs tirsdag),
-    3 => ~w(wed weds wednesday ons onsdag),
-    4 => ~w(thu thur thurs thursday tor tors torsdag),
-    5 => ~w(fri friday fre fredag),
-    6 => ~w(sat saturday lør lørdag),
-    7 => ~w(sun sunday søn søndag)
+  # The words of each language. English is always read; another language's
+  # words are read as well when the user's locale is in it. Phrases of more
+  # than one word are matched whole.
+  @languages %{
+    "en" => %{
+      days: %{
+        0 => ~w(today tod),
+        1 => ~w(tomorrow tom tmr tmrw),
+        -1 => ~w(yesterday)
+      },
+      now: ~w(now),
+      next: ~w(next),
+      within: ~w(in),
+      clock: ~w(at @),
+      periods: %{week: ~w(week), month: ~w(month), year: ~w(year)},
+      weekdays: %{
+        1 => ~w(mon monday),
+        2 => ~w(tue tues tuesday),
+        3 => ~w(wed weds wednesday),
+        4 => ~w(thu thur thurs thursday),
+        5 => ~w(fri friday),
+        6 => ~w(sat saturday),
+        7 => ~w(sun sunday)
+      },
+      months: %{
+        1 => ~w(jan january),
+        2 => ~w(feb february),
+        3 => ~w(mar march),
+        4 => ~w(apr april),
+        5 => ~w(may),
+        6 => ~w(jun june),
+        7 => ~w(jul july),
+        8 => ~w(aug august),
+        9 => ~w(sep sept september),
+        10 => ~w(oct october),
+        11 => ~w(nov november),
+        12 => ~w(dec december)
+      },
+      units: %{
+        day: ~w(d day days),
+        week: ~w(w wk wks week weeks),
+        month: ~w(m mo mos month months),
+        year: ~w(y yr yrs year years),
+        hour: ~w(h hr hrs hour hours),
+        minute: ~w(min mins minute minutes)
+      }
+    },
+    "da" => %{
+      days: %{
+        0 => ["i dag", "idag"],
+        1 => ["i morgen", "imorgen"],
+        2 => ["i overmorgen", "overmorgen"],
+        -1 => ["i går", "igår"]
+      },
+      now: ~w(nu),
+      next: ~w(næste),
+      within: ~w(om),
+      clock: ~w(kl kl. klokken),
+      periods: %{week: ~w(uge), month: ~w(måned), year: ~w(år)},
+      weekdays: %{
+        1 => ~w(man mandag),
+        2 => ~w(tir tirs tirsdag),
+        3 => ~w(ons onsdag),
+        4 => ~w(tor tors torsdag),
+        5 => ~w(fre fredag),
+        6 => ~w(lør lørdag),
+        7 => ~w(søn søndag)
+      },
+      months: %{
+        1 => ~w(januar),
+        2 => ~w(februar),
+        3 => ~w(marts),
+        5 => ~w(maj),
+        6 => ~w(juni),
+        7 => ~w(juli),
+        10 => ~w(okt oktober)
+      },
+      units: %{
+        day: ~w(dag dage),
+        week: ~w(uge uger),
+        month: ~w(md mdr måned måneder),
+        year: ~w(år),
+        hour: ~w(t time timer),
+        minute: ~w(minut minutter)
+      }
+    }
   }
 
-  @months %{
-    1 => ~w(jan january januar),
-    2 => ~w(feb february februar),
-    3 => ~w(mar march marts),
-    4 => ~w(apr april),
-    5 => ~w(may maj),
-    6 => ~w(jun june juni),
-    7 => ~w(jul july juli),
-    8 => ~w(aug august),
-    9 => ~w(sep sept september),
-    10 => ~w(oct october okt oktober),
-    11 => ~w(nov november),
-    12 => ~w(dec december)
-  }
+  # Each language's words, English's added, as word => meaning.
+  @lexicons Map.new(@languages, fn {language, _} ->
+              sources = Enum.uniq([@languages["en"], @languages[language]])
 
-  @units %{
-    day: ~w(d day days dag dage),
-    week: ~w(w wk wks week weeks uge uger),
-    month: ~w(m mo mos month months md mdr måned måneder),
-    year: ~w(y yr yrs year years år),
-    hour: ~w(h hr hrs hour hours t time timer),
-    minute: ~w(min mins minute minutes minut minutter)
-  }
+              lookup = fn key ->
+                for source <- sources,
+                    {meaning, words} <- source[key],
+                    word <- words,
+                    into: %{},
+                    do: {word, meaning}
+              end
 
-  @weekday_names for {n, names} <- @weekdays, name <- names, into: %{}, do: {name, n}
-  @month_names for {n, names} <- @months, name <- names, into: %{}, do: {name, n}
-  @unit_names for {unit, names} <- @units, name <- names, into: %{}, do: {name, unit}
+              list = fn key -> Enum.flat_map(sources, & &1[key]) end
+
+              {language,
+               %{
+                 days: lookup.(:days),
+                 periods: lookup.(:periods),
+                 weekdays: lookup.(:weekdays),
+                 months: lookup.(:months),
+                 units: lookup.(:units),
+                 now: list.(:now),
+                 next: list.(:next),
+                 within: list.(:within),
+                 clock: list.(:clock)
+               }}
+            end)
+
+  @doc "The languages whose words are read besides English."
+  def languages, do: @languages |> Map.keys() |> List.delete("en")
 
   @doc """
-  Reads `text`. `now` is a `NaiveDateTime` on the user's wall clock;
-  `opts` are `week_start:` (1..7) and `order:` (`:dmy`, `:mdy`, `:ymd`).
+  Reads `text`. `now` is a `NaiveDateTime` on the user's wall clock.
+  `opts` are `week_start:` (1..7), `order:` (`:dmy`, `:mdy`, `:ymd`), and
+  `language:`, the locale's language ("en" when not given or not known).
 
   Blank text is `:blank`, which clears the field.
   """
@@ -72,7 +146,8 @@ defmodule Marskal.DateInput do
       now: now,
       today: NaiveDateTime.to_date(now),
       week_start: Keyword.fetch!(opts, :week_start),
-      order: Keyword.fetch!(opts, :order)
+      order: Keyword.fetch!(opts, :order),
+      words: Map.get(@lexicons, Keyword.get(opts, :language, "en"), @lexicons["en"])
     }
 
     case words(text) do
@@ -92,7 +167,7 @@ defmodule Marskal.DateInput do
   end
 
   defp read(words, ctx) do
-    {day_words, time} = split_time(words)
+    {day_words, time} = split_time(words, ctx.words.clock)
 
     case {day(day_words, ctx), time} do
       {:none, nil} -> :error
@@ -108,49 +183,46 @@ defmodule Marskal.DateInput do
   # A time at the end ("fri 14:00", "tom kl 9", "24/12 2pm"), else at the
   # start ("14:00 fri"). A dotted time ("14.30") is read only after a day,
   # since alone it is a date.
-  defp split_time(words) do
-    with :none <- time_at_end(words),
-         :none <- time_at_start(words) do
+  defp split_time(words, markers) do
+    with {_, nil} <- time_at_end(words, markers),
+         {_, nil} <- time_at_start(words, markers) do
       {words, nil}
     end
   end
 
-  defp time_at_end(words) do
-    case Enum.reverse(words) do
-      [token, marker | rest] when marker in @clock_markers ->
-        found(clock(token, bare: true, dot: true), Enum.reverse(rest))
-
-      [ampm, token | rest] when ampm in ~w(am pm) ->
-        found(clock(token <> ampm, []), Enum.reverse(rest))
-
-      ["@" <> token | rest] ->
-        found(clock(token, bare: true, dot: true), Enum.reverse(rest))
-
-      [token | rest] ->
-        found(clock(token, dot: rest != []), Enum.reverse(rest))
-
-      [] ->
-        :none
-    end
+  defp time_at_end(words, markers) do
+    {rest, time} = clock_words(Enum.reverse(words), markers, true)
+    {Enum.reverse(rest), time}
   end
 
-  defp time_at_start(words) do
+  defp time_at_start(words, markers), do: clock_words(words, markers, false)
+
+  # The time at the head of `words`, which are reversed when `at_end`.
+  defp clock_words(words, markers, at_end) do
     case words do
-      [marker, token | rest] when marker in @clock_markers ->
-        found(clock(token, bare: true, dot: true), rest)
+      [first, second | rest] ->
+        {marker, token} = if at_end, do: {second, first}, else: {first, second}
+        {ampm, hour} = if at_end, do: {first, second}, else: {second, first}
 
-      [token, ampm | rest] when ampm in ~w(am pm) ->
-        found(clock(token <> ampm, []), rest)
+        cond do
+          marker in markers -> found(clock(token, bare: true, dot: true), rest)
+          ampm in ~w(am pm) -> found(clock(hour <> ampm, []), rest)
+          true -> one_clock_word(words, at_end)
+        end
 
-      ["@" <> token | rest] ->
-        found(clock(token, bare: true, dot: true), rest)
-
-      [token | rest] ->
-        found(clock(token, []), rest)
+      words ->
+        one_clock_word(words, at_end)
     end
   end
 
-  defp found(nil, _rest), do: :none
+  defp one_clock_word(["@" <> token | rest], _at_end),
+    do: found(clock(token, bare: true, dot: true), rest)
+
+  defp one_clock_word([token | rest], at_end),
+    do: found(clock(token, dot: at_end and rest != []), rest)
+
+  defp one_clock_word([], _at_end), do: {[], nil}
+
   defp found(time, rest), do: {rest, time}
 
   # "14:30", "2pm", "2:30pm"; "14.30" with `dot:`, "14" with `bare:`.
@@ -184,45 +256,38 @@ defmodule Marskal.DateInput do
   ## The day
 
   defp day([], _ctx), do: :none
-  defp day([word], ctx) when word in @now, do: {:ok, ctx.today, minute(ctx.now)}
-  defp day([word], ctx) when word in @today, do: {:ok, ctx.today}
-  defp day(["i", "dag"], ctx), do: {:ok, ctx.today}
-  defp day([word], ctx) when word in @tomorrow, do: {:ok, Date.add(ctx.today, 1)}
-  defp day(["i", "morgen"], ctx), do: {:ok, Date.add(ctx.today, 1)}
-  defp day([word], ctx) when word in @yesterday, do: {:ok, Date.add(ctx.today, -1)}
-  defp day(["i", "går"], ctx), do: {:ok, Date.add(ctx.today, -1)}
-  defp day(["overmorgen"], ctx), do: {:ok, Date.add(ctx.today, 2)}
-  defp day(["i", "overmorgen"], ctx), do: {:ok, Date.add(ctx.today, 2)}
-  defp day([word | rest], ctx) when word in @within and rest != [], do: relative(rest, ctx)
 
-  defp day([next, word], ctx) when next in @next do
-    next_week = Date.add(week_start(ctx.today, ctx.week_start), 7)
+  defp day([word | rest] = words, ctx) do
+    offset = Map.get(ctx.words.days, Enum.join(words, " "))
 
     cond do
-      word in ~w(week uge) ->
-        {:ok, next_week}
-
-      word in ~w(month måned) ->
-        {:ok, ctx.today |> Date.beginning_of_month() |> Date.shift(month: 1)}
-
-      word in ~w(year år) ->
-        {:ok, Date.new!(ctx.today.year + 1, 1, 1)}
-
-      weekday = weekday(word) ->
-        {:ok, Date.add(next_week, Integer.mod(weekday - ctx.week_start, 7))}
-
-      true ->
-        :error
+      offset -> {:ok, Date.add(ctx.today, offset)}
+      rest == [] and word in ctx.words.now -> {:ok, ctx.today, minute(ctx.now)}
+      rest != [] and word in ctx.words.within -> relative(rest, ctx)
+      match?([_], rest) and word in ctx.words.next -> next(hd(rest), ctx)
+      true -> on_or_after(words, ctx)
     end
   end
 
-  defp day([word | rest] = words, ctx) do
-    weekday = weekday(word)
+  # A weekday, a date, a weekday and a date, or a step.
+  defp on_or_after([word | rest] = words, ctx) do
+    case {weekday(word, ctx), rest} do
+      {nil, _} -> with :error <- date(words, ctx), do: relative(words, ctx)
+      {weekday, []} -> {:ok, next_weekday(ctx.today, weekday)}
+      {weekday, rest} -> on_weekday(date(rest, ctx), weekday)
+    end
+  end
 
-    cond do
-      weekday && rest == [] -> {:ok, next_weekday(ctx.today, weekday)}
-      weekday -> on_weekday(date(rest, ctx), weekday)
-      true -> with :error <- date(words, ctx), do: relative(words, ctx)
+  # "next fri", "next week": in the week after this one, by the week start.
+  defp next(word, ctx) do
+    next_week = Date.add(week_start(ctx.today, ctx.week_start), 7)
+
+    case {Map.get(ctx.words.periods, word), weekday(word, ctx)} do
+      {:week, _} -> {:ok, next_week}
+      {:month, _} -> {:ok, ctx.today |> Date.beginning_of_month() |> Date.shift(month: 1)}
+      {:year, _} -> {:ok, Date.new!(ctx.today.year + 1, 1, 1)}
+      {nil, nil} -> :error
+      {nil, weekday} -> {:ok, Date.add(next_week, Integer.mod(weekday - ctx.week_start, 7))}
     end
   end
 
@@ -243,7 +308,7 @@ defmodule Marskal.DateInput do
   # "1w", "+3d", "-1d", "2 weeks", "in 3h", "om 2 dage".
   defp relative(words, ctx) do
     with [_, sign, count, unit] <- Regex.run(~r/^([+-]?)(\d+)(\D+)$/u, Enum.join(words)),
-         {:ok, unit} <- Map.fetch(@unit_names, unit) do
+         {:ok, unit} <- Map.fetch(ctx.words.units, unit) do
       count = if sign == "-", do: -int(count), else: int(count)
       step(unit, count, ctx)
     else
@@ -272,14 +337,14 @@ defmodule Marskal.DateInput do
   end
 
   defp date([a, b], ctx) do
-    case named(a, b) do
+    case named(a, b, ctx) do
       {month, day} -> upcoming(month, day, ctx.today)
       nil -> :error
     end
   end
 
-  defp date([a, b, year], _ctx) do
-    case {named(a, b), year(year)} do
+  defp date([a, b, year], ctx) do
+    case {named(a, b, ctx), year(year)} do
       {{month, day}, year} when is_integer(year) -> exact(year, month, day)
       _ -> :error
     end
@@ -288,8 +353,8 @@ defmodule Marskal.DateInput do
   defp date(_words, _ctx), do: :error
 
   # "24 dec" or "dec 24", as {month, day}.
-  defp named(a, b) do
-    case {ordinal(a), month(b), month(a), ordinal(b)} do
+  defp named(a, b, ctx) do
+    case {ordinal(a), month(b, ctx), month(a, ctx), ordinal(b)} do
       {day, month, _, _} when is_integer(day) and is_integer(month) -> {month, day}
       {_, _, month, day} when is_integer(day) and is_integer(month) -> {month, day}
       _ -> nil
@@ -360,8 +425,8 @@ defmodule Marskal.DateInput do
 
   ## Words
 
-  defp weekday(word), do: Map.get(@weekday_names, String.trim_trailing(word, "."))
-  defp month(word), do: Map.get(@month_names, String.trim_trailing(word, "."))
+  defp weekday(word, ctx), do: Map.get(ctx.words.weekdays, String.trim_trailing(word, "."))
+  defp month(word, ctx), do: Map.get(ctx.words.months, String.trim_trailing(word, "."))
 
   # "24", "24.", "24th", "1st", "2nd", "3rd".
   defp ordinal(token) do

@@ -26,6 +26,12 @@ defmodule Marskal.DateFormatTest do
     assert DateFormat.date(@date, :long_year, locale: "en-GB") == "Sunday, 11 October 2026"
   end
 
+  test "da writes Danish names" do
+    assert DateFormat.date(@date, :day_month_year, locale: "da") == "11. okt. 2026"
+    assert DateFormat.date(@date, :weekday, locale: "da") == "søn."
+    assert DateFormat.time(@time, locale: "da") == "16.30"
+  end
+
   test "without a locale it uses the process's" do
     Marskal.Cldr.put_locale("en-DK")
     assert DateFormat.time(@time) == "16.30"

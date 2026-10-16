@@ -2,8 +2,9 @@ defmodule Marskal.DateFormat do
   @moduledoc """
   Dates and times as the user reads them, in their locale (ADR 0027).
 
-  The words are English; the locale sets the order of day and month, the
-  clock, and the separators. Each function takes the locale from
+  The locale sets the order of day and month, the clock, and the
+  separators. The words are English, except in `da`, whose month and
+  weekday names are Danish. Each function takes the locale from
   `Marskal.Cldr.get_locale/0` unless `locale:` is given. A LiveView or
   request sets it from the user's preference (`put_locale/1`); code with no
   request, such as a notification, passes it.
@@ -53,6 +54,7 @@ defmodule Marskal.DateFormat do
   defp locale(opts), do: Keyword.get_lazy(opts, :locale, &Marskal.Cldr.get_locale/0)
 
   @regions %{
+    "da" => "Danish",
     "en" => "United States",
     "en-150" => "Europe",
     "en-AT" => "Austria",

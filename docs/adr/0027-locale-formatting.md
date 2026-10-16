@@ -4,6 +4,9 @@
 
 Accepted
 
+Amended by [ADR 0032](0032-date-shorthand.md): a `da` locale writes
+Danish month and weekday names, and typed dates read its words.
+
 ## Context
 
 Dates and times were formatted with fixed `strftime` patterns: "11 Oct",
