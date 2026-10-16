@@ -12,6 +12,7 @@ struct MarskalShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: AddToInboxIntent(),
             phrases: [
+                "\(.applicationName) Inbox",
                 "Add to \(.applicationName) Inbox",
                 "Add to my \(.applicationName) Inbox",
                 "Add a task to \(.applicationName)",
