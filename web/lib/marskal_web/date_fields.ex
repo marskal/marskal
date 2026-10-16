@@ -22,6 +22,10 @@ defmodule MarskalWeb.DateFields do
     default: %{},
     doc: "what each field's typed text reads as, by key, from `preview/3`"
 
+  attr :calendar, :map,
+    default: nil,
+    doc: "the open calendar, from `open_calendar/3`, or nil"
+
   attr :inherited, :map,
     default: nil,
     doc:
@@ -45,6 +49,7 @@ defmodule MarskalWeb.DateFields do
         zone={@zone}
         target={@target}
         preview={@previews["defer"]}
+        calendar={@calendar}
         disabled={@record.deferred_indefinitely}
       />
       <p :if={inherited_defer(@record, @inherited, @zone)} class="hint inherited">
@@ -69,6 +74,7 @@ defmodule MarskalWeb.DateFields do
         zone={@zone}
         target={@target}
         preview={@previews["planned"]}
+        calendar={@calendar}
       />
       <p :if={inherited(@record, @inherited, :planned_at, @zone)} class="hint inherited">
         {inherited(@record, @inherited, :planned_at, @zone)}
@@ -82,6 +88,7 @@ defmodule MarskalWeb.DateFields do
         zone={@zone}
         target={@target}
         preview={@previews["due"]}
+        calendar={@calendar}
       />
       <p :if={inherited(@record, @inherited, :due_at, @zone)} class="hint inherited">
         {inherited(@record, @inherited, :due_at, @zone)}
@@ -102,6 +109,7 @@ defmodule MarskalWeb.DateFields do
   attr :zone, :string, required: true
   attr :target, :any, required: true
   attr :preview, :any, default: nil
+  attr :calendar, :map, default: nil
   attr :disabled, :boolean, default: false
 
   defp day_time(assigns) do
@@ -118,31 +126,57 @@ defmodule MarskalWeb.DateFields do
         key: key,
         date: date && Date.to_iso8601(date),
         time: time && Calendar.strftime(time, "%H:%M"),
-        saved: text(Map.fetch!(assigns.record, assigns.field), assigns.field, assigns.zone)
+        saved: text(Map.fetch!(assigns.record, assigns.field), assigns.field, assigns.zone),
+        open: match?(%{key: ^key}, assigns.calendar)
       )
 
     ~H"""
     <div class="day-time">
       <label for={"#{@id}-#{@key}"}>{@label}</label>
-      <input type="hidden" name={"#{@form}[#{@key}_date]"} value={@date} disabled={@disabled} />
-      <input type="hidden" name={"#{@form}[#{@key}_time]"} value={@time} disabled={@disabled} />
-      <input
-        id={"#{@id}-#{@key}"}
-        class="input"
-        type="text"
-        name={"#{@form}[#{@key}_text]"}
-        value={typed(@preview) || @saved}
-        data-saved={@saved}
-        disabled={@disabled}
-        autocomplete="off"
-        spellcheck="false"
-        phx-debounce="150"
-        phx-hook=".DateText"
-        phx-target={@target}
-        data-key={@key}
-        data-commit
-        aria-describedby={"#{@id}-#{@key}-reads"}
-        aria-invalid={to_string(error?(@preview))}
+      <div class="day-time__entry">
+        <input type="hidden" name={"#{@form}[#{@key}_date]"} value={@date} disabled={@disabled} />
+        <input type="hidden" name={"#{@form}[#{@key}_time]"} value={@time} disabled={@disabled} />
+        <input
+          id={"#{@id}-#{@key}"}
+          class="input"
+          type="text"
+          name={"#{@form}[#{@key}_text]"}
+          value={typed(@preview) || @saved}
+          data-saved={@saved}
+          disabled={@disabled}
+          autocomplete="off"
+          spellcheck="false"
+          phx-debounce="150"
+          phx-hook=".DateText"
+          phx-target={@target}
+          data-key={@key}
+          data-commit
+          aria-describedby={"#{@id}-#{@key}-reads"}
+          aria-invalid={to_string(error?(@preview))}
+        />
+        <button
+          type="button"
+          id={"#{@id}-#{@key}-calendar-toggle"}
+          class="day-time__pick"
+          phx-click={if(@open, do: "calendar-close", else: "calendar-open")}
+          phx-value-key={@key}
+          phx-target={@target}
+          disabled={@disabled}
+          aria-expanded={to_string(@open)}
+          aria-controls={"#{@id}-#{@key}-calendar"}
+          aria-label={gettext("Pick a day for %{field}", field: @label)}
+        >
+          <Lucideicons.calendar_days class="icon" />
+        </button>
+      </div>
+      <.month
+        :if={@open}
+        id={"#{@id}-#{@key}-calendar"}
+        key={@key}
+        label={@label}
+        calendar={@calendar}
+        selected={@date && Date.from_iso8601!(@date)}
+        target={@target}
       />
       <p
         id={"#{@id}-#{@key}-reads"}
@@ -183,6 +217,187 @@ defmodule MarskalWeb.DateFields do
             if (reply.text !== undefined) this.el.value = reply.text
           })
         }
+      }
+    </script>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :key, :string, required: true
+  attr :label, :string, required: true
+  attr :calendar, :map, required: true
+  attr :selected, :any, required: true
+  attr :target, :any, required: true
+
+  # A month to pick a day from, its weeks starting on the user's first day.
+  defp month(assigns) do
+    %{month: month, week_start: week_start} = assigns.calendar
+    first = Date.add(month, -Integer.mod(Date.day_of_week(month) - week_start, 7))
+    days = Enum.map(0..41, &Date.add(first, &1))
+
+    assigns =
+      assign(assigns,
+        weeks: Enum.chunk_every(days, 7),
+        weekdays: Enum.take(days, 7)
+      )
+
+    ~H"""
+    <div
+      id={@id}
+      class="calendar"
+      role="dialog"
+      aria-label={@label}
+      phx-hook=".Calendar"
+      phx-click-away="calendar-close"
+      phx-target={@target}
+    >
+      <div class="calendar__head">
+        <button
+          type="button"
+          id={"#{@id}-previous"}
+          phx-click="calendar-month"
+          phx-value-step="-1"
+          phx-target={@target}
+          aria-label={gettext("Previous month")}
+        >
+          <Lucideicons.chevron_left class="icon" />
+        </button>
+        <p class="calendar__month" aria-live="polite">
+          {Marskal.DateFormat.date(@calendar.month, :month_year)}
+        </p>
+        <button
+          type="button"
+          id={"#{@id}-next"}
+          phx-click="calendar-month"
+          phx-value-step="1"
+          phx-target={@target}
+          aria-label={gettext("Next month")}
+        >
+          <Lucideicons.chevron_right class="icon" />
+        </button>
+      </div>
+      <table class="calendar__grid" role="grid">
+        <thead>
+          <tr>
+            <th :for={day <- @weekdays} scope="col" abbr={Marskal.DateFormat.date(day, :weekday_long)}>
+              {Marskal.DateFormat.date(day, :weekday)}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr :for={week <- @weeks}>
+            <td :for={day <- week}>
+              <button
+                type="button"
+                id={"#{@id}-#{Date.to_iso8601(day)}"}
+                class={[
+                  "calendar__day",
+                  day.month != @calendar.month.month && "calendar__day--outside",
+                  day == @calendar.today && "calendar__day--today",
+                  day == @selected && "calendar__day--selected"
+                ]}
+                phx-click="calendar-pick"
+                phx-value-key={@key}
+                phx-value-date={Date.to_iso8601(day)}
+                phx-target={@target}
+                tabindex={if(day == (@selected || @calendar.today), do: "0", else: "-1")}
+                aria-label={Marskal.DateFormat.date(day, :long_year)}
+                aria-current={day == @calendar.today && "date"}
+                aria-pressed={to_string(day == @selected)}
+                data-date={Date.to_iso8601(day)}
+              >
+                {day.day}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".Calendar" extension="ts">
+      import {ViewHook} from "phoenix_live_view"
+
+      // The month grid takes focus when it opens. Arrow keys move a day or
+      // a week, Page Up and Down a month, and Esc closes it without also
+      // closing the inspector. A move past the month asks the server for
+      // the next one and lands on the same day there. Closed by a pick or
+      // Esc, it hands focus back to its button; a click elsewhere keeps it
+      // there.
+      export default class extends ViewHook {
+        wanted?: string
+        refocus = false
+
+        mounted() {
+          this.el.addEventListener("click", (event) => {
+            if ((event.target as Element).closest("button[data-date]")) this.refocus = true
+          })
+          this.focusDay()
+          this.el.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") {
+              event.preventDefault()
+              event.stopPropagation()
+              this.refocus = true
+              this.pushEventTo(this.el, "calendar-close", {})
+              return
+            }
+            const button = (event.target as Element).closest<HTMLButtonElement>("button[data-date]")
+            if (!button?.dataset.date) return
+            const steps: Record<string, number> = {ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7}
+            if (event.key in steps) {
+              event.preventDefault()
+              this.move(addDays(button.dataset.date, steps[event.key]))
+            } else if (event.key === "PageUp" || event.key === "PageDown") {
+              event.preventDefault()
+              this.move(addMonths(button.dataset.date, event.key === "PageUp" ? -1 : 1))
+            }
+          })
+        }
+
+        updated() {
+          this.focusDay()
+        }
+
+        destroyed() {
+          if (this.refocus) document.getElementById(`${this.el.id}-toggle`)?.focus()
+        }
+
+        move(date: string) {
+          const target = this.el.querySelector<HTMLButtonElement>(`button[data-date="${date}"]:not(.calendar__day--outside)`)
+          if (target) {
+            this.focus(target)
+          } else {
+            this.wanted = date
+            const step = date < (this.el.querySelector<HTMLButtonElement>("button[data-date]:not(.calendar__day--outside)")?.dataset.date ?? "") ? -1 : 1
+            this.pushEventTo(this.el, "calendar-month", {step: String(step)})
+          }
+        }
+
+        focusDay() {
+          const date = this.wanted
+          this.wanted = undefined
+          const target =
+            (date && this.el.querySelector<HTMLButtonElement>(`button[data-date="${date}"]`)) ||
+            this.el.querySelector<HTMLButtonElement>("button[tabindex='0']:not(.calendar__day--outside)") ||
+            this.el.querySelector<HTMLButtonElement>("button[data-date]:not(.calendar__day--outside)")
+          if (target) this.focus(target)
+        }
+
+        focus(target: HTMLButtonElement) {
+          for (const button of this.el.querySelectorAll<HTMLButtonElement>("button[data-date]")) button.tabIndex = -1
+          target.tabIndex = 0
+          target.focus()
+        }
+      }
+
+      function addDays(iso: string, days: number): string {
+        const date = new Date(`${iso}T12:00:00Z`)
+        date.setUTCDate(date.getUTCDate() + days)
+        return date.toISOString().slice(0, 10)
+      }
+
+      function addMonths(iso: string, months: number): string {
+        const [year, month, day] = iso.split("-").map(Number)
+        const last = new Date(Date.UTC(year, month - 1 + months + 1, 0)).getUTCDate()
+        return new Date(Date.UTC(year, month - 1 + months, Math.min(day, last))).toISOString().slice(0, 10)
       }
     </script>
     """
@@ -242,6 +457,49 @@ defmodule MarskalWeb.DateFields do
       :error ->
         :error
     end
+  end
+
+  @doc """
+  The calendar for the field `key`, at the month of its stored day, else
+  this month.
+  """
+  def open_calendar(key, record, user) do
+    preferences = Marskal.Accounts.preferences(user)
+    today = Dates.today(preferences.timezone)
+
+    day =
+      case Map.fetch!(record, field(key)) do
+        nil -> today
+        at -> at |> Dates.to_local(preferences.timezone) |> elem(0)
+      end
+
+    %{
+      key: key,
+      month: Date.beginning_of_month(day),
+      week_start: preferences.week_start,
+      today: today
+    }
+  end
+
+  @doc "The calendar a month earlier or later."
+  def step_calendar(calendar, step),
+    do: %{calendar | month: Date.shift(calendar.month, month: step)}
+
+  @doc """
+  The attrs that picking `date` in the calendar for `key` means. The stored
+  time of day is kept; a field with none takes its default.
+  """
+  def pick(key, %Date{} = date, record, user) do
+    field = field(key)
+    zone = Marskal.Accounts.timezone(user)
+
+    time =
+      case Map.fetch!(record, field) do
+        nil -> nil
+        at -> at |> Dates.to_local(zone) |> elem(1)
+      end
+
+    %{Atom.to_string(field) => Dates.from_local(date, time, field, zone)}
   end
 
   @doc """

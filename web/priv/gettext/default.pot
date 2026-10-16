@@ -543,6 +543,11 @@ msgstr ""
 
 #: lib/marskal_web/date_fields.ex
 #, elixir-autogen, elixir-format
+msgid "Next month"
+msgstr ""
+
+#: lib/marskal_web/date_fields.ex
+#, elixir-autogen, elixir-format
 msgid "No date"
 msgstr ""
 
@@ -584,6 +589,11 @@ msgid_plural "Paused, %{count} times skipped"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/marskal_web/date_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Pick a day for %{field}"
+msgstr ""
+
 #: lib/marskal_web/live/go_to.ex
 #, elixir-autogen, elixir-format
 msgid "Places"
@@ -597,6 +607,11 @@ msgstr ""
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Previous and next row"
+msgstr ""
+
+#: lib/marskal_web/date_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Previous month"
 msgstr ""
 
 #: lib/marskal_web/live/user_live/registration.ex

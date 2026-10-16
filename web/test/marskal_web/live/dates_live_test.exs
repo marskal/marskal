@@ -232,6 +232,56 @@ defmodule MarskalWeb.DatesLiveTest do
              Dates.from_local(tomorrow, nil, :planned_at, zone)
   end
 
+  test "the calendar picks a day and keeps the stored time", %{conn: conn, user: user} do
+    due_at = ~U[2030-12-24 08:15:00Z]
+
+    {:ok, task} =
+      Tasks.create_task(user, %{title: "Report", inbox: false, due_at: due_at}, command())
+
+    {:ok, view, _html} = live(conn, ~p"/open")
+    view |> element("#open-tasks li.task-row", "Report") |> render_click()
+
+    view |> element("#inspector-task-dates-due-calendar-toggle") |> render_click()
+    assert has_element?(view, "#inspector-task-dates-due-calendar", "December 2030")
+
+    assert has_element?(
+             view,
+             "#inspector-task-dates-due-calendar-2030-12-24.calendar__day--selected"
+           )
+
+    view |> element("#inspector-task-dates-due-calendar-next") |> render_click()
+    assert has_element?(view, "#inspector-task-dates-due-calendar", "January 2031")
+
+    view |> element("#inspector-task-dates-due-calendar-2031-01-07") |> render_click()
+
+    assert Tasks.get_task(user, task.id).due_at == ~U[2031-01-07 08:15:00Z]
+    refute has_element?(view, "#inspector-task-dates-due-calendar")
+    assert has_element?(view, "#inspector-task-dates-due[value='7 Jan 2031, 09:15']")
+  end
+
+  test "the calendar starts on the user's week start, at this month", %{
+    conn: conn,
+    user: user
+  } do
+    {:ok, _} = Marskal.Accounts.update_preferences(user, %{week_start: 7}, command())
+    {:ok, _task} = Tasks.create_task(user, %{title: "Report", inbox: false}, command())
+
+    {:ok, view, _html} = live(conn, ~p"/open")
+    view |> element("#open-tasks li.task-row", "Report") |> render_click()
+    view |> element("#inspector-task-dates-planned-calendar-toggle") |> render_click()
+
+    today = user |> Marskal.Accounts.timezone() |> Dates.today()
+    assert has_element?(view, "#inspector-task-dates-planned-calendar th:first-child", "Sun")
+
+    assert has_element?(
+             view,
+             "#inspector-task-dates-planned-calendar-#{today}.calendar__day--today"
+           )
+
+    view |> element("#inspector-task-dates-planned-calendar-toggle") |> render_click()
+    refute has_element?(view, "#inspector-task-dates-planned-calendar")
+  end
+
   test "deferring from the inspector hides the task from the open stream", %{
     conn: conn,
     user: user
