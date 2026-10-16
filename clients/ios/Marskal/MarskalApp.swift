@@ -59,7 +59,3 @@ struct RootView: View {
         }
     }
 }
-
-struct AppIntents: AppIntentsPackage {
-    static var includedPackages: [any AppIntentsPackage.Type] { [MarskalKitIntents.self] }
-}

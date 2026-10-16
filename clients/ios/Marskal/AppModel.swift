@@ -30,6 +30,11 @@ final class AppModel {
 
     init(tokens: TokenStore = KeychainTokenStore()) {
         self.tokens = tokens
+        // An intent in this process, such as Add to Inbox from Siri,
+        // changed the database.
+        NotificationCenter.default.addObserver(forName: .marskalStoreChanged, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.reload() }
+        }
         if let saved = AppGroup.server {
             let session = Session(server: saved, tokens: tokens)
             if session.isSignedIn { self.session = session }
