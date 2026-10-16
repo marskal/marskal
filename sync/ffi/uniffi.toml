@@ -1,0 +1,19 @@
+# Swift bindings for the iOS app (ADR 0029).
+[bindings.swift]
+module_name = "MarskalCore"
+ffi_module_name = "MarskalCoreFFI"
+ffi_module_filename = "MarskalCoreFFI"
+
+# Unix milliseconds in Rust, Date in Swift.
+[bindings.swift.custom_types.Timestamp]
+type_name = "Date"
+imports = ["Foundation"]
+lift = "Date(timeIntervalSince1970: Double({}) / 1000)"
+lower = "Int64(({}.timeIntervalSince1970 * 1000).rounded())"
+
+# A UUID string in Rust, UUID in Swift. Rust only sends valid ones.
+[bindings.swift.custom_types.Uuid]
+type_name = "UUID"
+imports = ["Foundation"]
+lift = "UUID(uuidString: {})!"
+lower = "{}.uuidString.lowercased()"

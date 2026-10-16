@@ -1,0 +1,7 @@
+.devenv*
+.envrc
+/build
+# Made by scripts/build-core and XcodeGen (ADR 0029).
+/MarskalKit/Frameworks
+/MarskalKit/Sources/MarskalCore/MarskalCore.swift
+*.xcodeproj
