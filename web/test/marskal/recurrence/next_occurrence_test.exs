@@ -256,7 +256,13 @@ defmodule Marskal.Recurrence.NextOccurrenceTest do
 
       {:ok, _} = Tasks.drop_task(user, first.id, command())
       assert [%Task{occurrence_for: slot}] = later_occurrences(series, first)
-      assert slot == DateTime.add(first.occurrence_for, 7, :day)
+
+      # A week on the user's clock, which is not 7 × 24 hours across a
+      # change to or from summer time.
+      {slot_day, slot_time} = Dates.to_local(slot, "Europe/Copenhagen")
+      {first_day, first_time} = Dates.to_local(first.occurrence_for, "Europe/Copenhagen")
+      assert Date.diff(slot_day, first_day) == 7
+      assert slot_time == first_time
     end
 
     test "finishing late skips the slots that passed", %{user: user} do
