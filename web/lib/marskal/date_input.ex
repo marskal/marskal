@@ -6,12 +6,13 @@ defmodule Marskal.DateInput do
 
   Pure: the caller passes now on the user's wall clock, the first day of
   their week (1 = Monday … 7 = Sunday), and their locale's language and the
-  order it writes a numeric date in. A day with no time read leaves the time `nil`, for the
+  orders it writes numeric dates in, with a year and without. A day with no time read leaves the time `nil`, for the
   field's default (`Marskal.Dates.default_time/1`). The Rust client library
   must read the same way; both run `sync/fixtures/date_input.json`.
   """
 
   @type order :: :dmy | :mdy | :ymd
+  @type day_month :: :dm | :md
   @type result :: {:ok, Date.t(), Time.t() | nil} | :blank | :error
 
   # The words of each language. English is always read; another language's
@@ -135,8 +136,11 @@ defmodule Marskal.DateInput do
 
   @doc """
   Reads `text`. `now` is a `NaiveDateTime` on the user's wall clock.
-  `opts` are `week_start:` (1..7), `order:` (`:dmy`, `:mdy`, `:ymd`), and
-  `language:`, the locale's language ("en" when not given or not known).
+  `opts` are `week_start:` (1..7), `order:` (`:dmy`, `:mdy`, `:ymd`) for a
+  date with a year, `day_month:` (`:dm`, `:md`) for one without, by default
+  day first when `order` is, and `language:`, the locale's language ("en"
+  when not given or not known). A locale may write the two differently:
+  Swedish English is "2033-11-22" and "22/11".
 
   Blank text is `:blank`, which clears the field.
   """
@@ -147,6 +151,10 @@ defmodule Marskal.DateInput do
       today: NaiveDateTime.to_date(now),
       week_start: Keyword.fetch!(opts, :week_start),
       order: Keyword.fetch!(opts, :order),
+      day_month:
+        Keyword.get_lazy(opts, :day_month, fn ->
+          if opts[:order] == :dmy, do: :dm, else: :md
+        end),
       words: Map.get(@lexicons, Keyword.get(opts, :language, "en"), @lexicons["en"])
     }
 
@@ -373,7 +381,7 @@ defmodule Marskal.DateInput do
         numeric_date(:ymd, Enum.map(parts, &int/1), ctx)
 
       {[_], [a, b]} when a <= 2 and b <= 2 ->
-        numeric_date(ctx.order, Enum.map(parts, &int/1), ctx)
+        numeric_date(ctx.day_month, Enum.map(parts, &int/1), ctx)
 
       {[_], [a, b, c]} when a <= 2 and b <= 2 and c in [2, 4] ->
         numeric_date(ctx.order, Enum.map(parts, &int/1), ctx)
@@ -383,8 +391,8 @@ defmodule Marskal.DateInput do
     end
   end
 
-  defp numeric_date(:dmy, [day, month], ctx), do: upcoming(month, day, ctx.today)
-  defp numeric_date(_order, [month, day], ctx), do: upcoming(month, day, ctx.today)
+  defp numeric_date(:dm, [day, month], ctx), do: upcoming(month, day, ctx.today)
+  defp numeric_date(:md, [month, day], ctx), do: upcoming(month, day, ctx.today)
   defp numeric_date(:dmy, [day, month, year], _ctx), do: exact(century(year), month, day)
   defp numeric_date(:mdy, [month, day, year], _ctx), do: exact(century(year), month, day)
   defp numeric_date(:ymd, [year, month, day], _ctx), do: exact(century(year), month, day)

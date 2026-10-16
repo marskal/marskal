@@ -41,9 +41,10 @@ medium form ("16 Oct 2026", "Oct 16, 2026"), with the time when it is not
 the field's default. That label reads back as the same day.
 
 **`Marskal.DateInput.parse/3`** reads the text. It is pure: the caller passes
-now on the user's wall clock, the week start, and the locale's numeric order
-(day-month-year, month-day-year, or year-month-day), and the locale's
-language. It gives a day and an optional time, blank, or an error. English
+now on the user's wall clock, the week start, the locale's numeric orders
+with a year (day-month-year, month-day-year, or year-month-day) and without
+(day-month or month-day, which a year-first locale may write either way),
+and the locale's language. It gives a day and an optional time, blank, or an error. English
 words are always read; the words of the locale's language are read as well.
 Case and Unicode normalisation do not matter.
 
@@ -62,7 +63,7 @@ a word table in `Marskal.DateInput` and the Rust library, and a locale.
 | `next week` / `month` / `year` | The first day of it |
 | `3d` `1w` `2m` `1y` `+3d` `-1d` `2 weeks` `in 3 days` | Days, weeks, months, years on; a month on from the 31st clamps |
 | `3h` `90 min` | Hours or minutes on from now, with that time |
-| `24/12` `24.12` `24-12`, `24/12/27` | By the locale's order; without a year, the next one from today |
+| `24/12` `24.12` `24-12`, `24/12/27` | In the locale's orders; without a year, the next one from today |
 | `2026-12-24` | Year, month, day, in any locale |
 | `24`, `24.`, `3rd` | The next day with that day of the month |
 | `24 dec`, `dec 24`, `24. dec 2027` | Month names |

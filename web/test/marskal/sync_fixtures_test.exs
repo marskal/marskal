@@ -58,6 +58,7 @@ defmodule Marskal.SyncFixturesTest do
         Marskal.DateInput.parse(v["text"], NaiveDateTime.from_iso8601!(v["now"]),
           week_start: v["week_start"],
           order: String.to_existing_atom(v["order"]),
+          day_month: String.to_existing_atom(v["day_month"]),
           language: v["language"]
         )
 
