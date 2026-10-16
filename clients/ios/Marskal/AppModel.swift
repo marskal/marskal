@@ -24,6 +24,7 @@ final class AppModel {
     private var store: Store?
     private var syncTask: Task<Void, Never>?
     private var soonTask: Task<Void, Never>?
+    private var listenTask: Task<Void, Never>?
     private var syncAgain = false
     private let tokens: TokenStore
     static let refreshTask = "app.marskal.ios.sync"
@@ -81,6 +82,8 @@ final class AppModel {
     /// server has not taken yet.
     func signOut() async {
         guard let session else { return }
+        listenTask?.cancel()
+        listenTask = nil
         soonTask?.cancel()
         soonTask = nil
         await syncTask?.value
@@ -103,6 +106,8 @@ final class AppModel {
     // The grant was revoked or expired. The database stays, with any
     // changes not yet sent: signing in again to this server sends them.
     private func signedOutOnServer() {
+        listenTask?.cancel()
+        listenTask = nil
         store?.close()
         store = nil
         session = nil
@@ -123,6 +128,24 @@ final class AppModel {
         }
         reload()
         sync()
+        listen()
+    }
+
+    /// Keeps the sync event stream open while the app is in the foreground,
+    /// and pulls when the server's cursor passes ours (ADR 0030).
+    private func listen() {
+        guard listenTask == nil, let session else { return }
+        listenTask = Task { [weak self] in
+            await session.listen { [weak self] cursor in
+                await self?.changed(on: cursor)
+            }
+        }
+    }
+
+    private func changed(on cursor: Int64) {
+        // Our own push comes back too; the cursor shows nothing is new.
+        if let ours = try? store?.pullCursor(), cursor <= ours { return }
+        sync()
     }
 
     /// Finishes a sync under way, then closes the database, so the
@@ -130,6 +153,8 @@ final class AppModel {
     func deactivate() async {
         let application = UIApplication.shared
         let id = application.beginBackgroundTask(withName: "Close the database")
+        listenTask?.cancel()
+        listenTask = nil
         // Send what is waiting now rather than when the app comes back.
         soonTask?.cancel()
         soonTask = nil

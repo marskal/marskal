@@ -8,6 +8,7 @@ import MarskalCore
 public actor Session {
     public nonisolated let server: URL
     private let http: HTTP
+    var urlSession: URLSession { http.session }
     private let tokens: TokenStore
     private let clock: @Sendable () -> Date
     private var endpoints: Endpoints?
@@ -123,14 +124,14 @@ public actor Session {
         throw ServerError.notSignedIn
     }
 
-    private func accessToken() async throws -> String {
+    func accessToken() async throws -> String {
         guard let current = tokens.load(server: server) else { throw ServerError.notSignedIn }
         if !current.expired(at: clock()) { return current.access }
         return try await refreshed(after: current.access)
     }
 
     // A refresh, unless another call already replaced `rejected`.
-    private func refreshed(after rejected: String) async throws -> String {
+    func refreshed(after rejected: String) async throws -> String {
         if let refreshing { return try await refreshing.value.access }
         guard let current = tokens.load(server: server) else { throw ServerError.notSignedIn }
         if current.access != rejected { return current.access }
