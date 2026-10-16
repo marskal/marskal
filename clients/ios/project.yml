@@ -46,6 +46,10 @@ targets:
     info:
       path: Marskal/Info.plist
       properties:
+        # From MARKETING_VERSION and CURRENT_PROJECT_VERSION above; XcodeGen
+        # would write 1.0 and 1.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         # The languages the app is translated into (ADR 0028, 0029).
         CFBundleLocalizations: [en, da]
         UILaunchScreen: {}
@@ -85,6 +89,9 @@ targets:
     info:
       path: MarskalWidget/Info.plist
       properties:
+        # An extension's versions match its app's.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleLocalizations: [en, da]
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
