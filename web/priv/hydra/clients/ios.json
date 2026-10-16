@@ -1,0 +1,9 @@
+{
+  "client_id": "marskal-ios",
+  "client_name": "Marskal for iOS",
+  "token_endpoint_auth_method": "none",
+  "grant_types": ["authorization_code", "refresh_token"],
+  "response_types": ["code"],
+  "redirect_uris": ["app.marskal.ios:/oauth/callback"],
+  "scope": "offline_access sync:read sync:write"
+}

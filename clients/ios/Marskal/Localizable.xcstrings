@@ -1,0 +1,56 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "%llu changes on this device have not reached the server, and will be lost.": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%llu change on this device has not reached the server, and will be lost."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%llu changes on this device have not reached the server, and will be lost."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Check the address and your connection. Your changes are kept and sent later.": {},
+    "Inbox": {},
+    "More": {},
+    "Not synced yet": {},
+    "Nothing to do": {},
+    "Open Tasks": {},
+    "Server": {},
+    "Server address": {},
+    "Sign In": {},
+    "Sign Out": {},
+    "Sign out to remove it from this device, then sign in again.": {},
+    "Sign out?": {},
+    "Sign-in did not finish": {},
+    "Synced %@": {},
+    "Syncing…": {},
+    "That is not a server address": {},
+    "The address you open Marskal at in a browser.": {},
+    "The local data could not be read": {},
+    "The server answered with status %lld. Your changes are kept and sent later.": {},
+    "The server answered “%@”. Try signing in again.": {},
+    "The server could not be reached": {},
+    "The server could not sync": {},
+    "The tasks on this device are removed. They stay on the server.": {},
+    "This data belongs to another account": {},
+    "This device was signed out on the server. Sign in again to keep syncing.": {},
+    "Try closing and opening the app again.": {},
+    "Type the address you open Marskal at in a browser, such as marskal.example.": {},
+    "You were signed out": {}
+  },
+  "version": "1.0"
+}
