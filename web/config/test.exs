@@ -61,3 +61,9 @@ config :phoenix_live_view,
 # Sort query params output of verified routes for robust url comparisons
 config :phoenix,
   sort_verified_routes_query_params: true
+
+# The sync event stream on short timers (ADR 0030).
+config :marskal, MarskalWeb.SyncEvents,
+  keep_alive: 60_000,
+  recheck: 100,
+  coalesce: 20

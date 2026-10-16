@@ -8,7 +8,7 @@ defmodule MarskalWeb.SyncController do
   alias Marskal.Sync
   alias Marskal.Sync.Push
 
-  plug :require_scope, "sync:read" when action == :pull
+  plug :require_scope, "sync:read" when action in [:pull, :events]
   plug :require_scope, "sync:write" when action == :push
 
   def pull(conn, params) do
@@ -27,6 +27,12 @@ defmodule MarskalWeb.SyncController do
   end
 
   def push(conn, _params), do: conn |> put_status(400) |> json(%{error: "invalid_request"})
+
+  @doc "Server-Sent Events saying when to pull (ADR 0030)."
+  def events(conn, _params) do
+    ["Bearer " <> token] = get_req_header(conn, "authorization")
+    MarskalWeb.SyncEvents.stream(conn, String.trim(token))
+  end
 
   defp cursor(nil), do: {:ok, nil}
 

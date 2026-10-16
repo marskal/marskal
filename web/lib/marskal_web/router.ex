@@ -32,11 +32,23 @@ defmodule MarskalWeb.Router do
     plug MarskalWeb.APIAuth
   end
 
+  # The event stream answers text/event-stream, not JSON (ADR 0030).
+  pipeline :api_events do
+    plug MarskalWeb.SecurityHeaders
+    plug MarskalWeb.APIAuth
+  end
+
   scope "/api/v1", MarskalWeb do
     pipe_through :api_auth
 
     get "/sync/pull", SyncController, :pull
     post "/sync/push", SyncController, :push
+  end
+
+  scope "/api/v1", MarskalWeb do
+    pipe_through :api_events
+
+    get "/sync/events", SyncController, :events
   end
 
   # Hydra serves the OAuth metadata (ADR 0021); this points there.
