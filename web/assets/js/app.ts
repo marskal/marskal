@@ -55,7 +55,9 @@ window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 // still on its way to the server, or text typed into a field that saves
 // only when submitted. Forms marked data-autosave save as you type, so the
 // wait lets their last edit land; LiveView does not refresh a textarea's
-// default text, so their fields are not compared.
+// default text, so their fields are not compared. A field marked
+// data-commit in them saves only on Enter or blur, so it is compared with
+// its data-saved text.
 const settle = 5000
 let updated = false
 let pending: number | undefined
@@ -64,11 +66,13 @@ function unsaved(): boolean {
   if (document.querySelector("dialog[open], .phx-change-loading, .phx-submit-loading")) return true
 
   return Array.from(document.querySelectorAll("input, textarea, select")).some(field => {
-    if (field.closest("[data-autosave]")) return false
+    if (field.closest("[data-autosave]") && !field.hasAttribute("data-commit")) return false
     if (field instanceof HTMLSelectElement)
       return Array.from(field.options).some(option => option.selected !== option.defaultSelected)
     if (field instanceof HTMLInputElement && (field.type === "checkbox" || field.type === "radio"))
       return field.checked !== field.defaultChecked
+    if (field instanceof HTMLInputElement && field.hasAttribute("data-commit"))
+      return field.value !== field.dataset.saved
     if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement)
       return field.value !== field.defaultValue
     return false

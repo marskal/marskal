@@ -11,6 +11,11 @@
 msgid ""
 msgstr ""
 
+#: lib/marskal_web/date_fields.ex
+#, elixir-autogen, elixir-format
+msgid "%{day}, %{time}"
+msgstr ""
+
 #: lib/marskal_web/live/repeat_panel.ex
 #, elixir-autogen, elixir-format
 msgid "%{done} done · %{dropped} dropped · %{missed} missed"
@@ -98,6 +103,11 @@ msgid_plural "%{count} tasks: %{open} open, %{dropped} dropped, and %{done} done
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/marskal_web/date_fields.ex
+#, elixir-autogen, elixir-format
+msgid "A day with no time starts at %{times}."
+msgstr ""
+
 #: lib/marskal_web/live/user_live/settings.ex
 #, elixir-autogen, elixir-format
 msgid "A link to confirm your email change has been sent to the new address."
@@ -146,6 +156,11 @@ msgstr ""
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Back from the sidebar"
+msgstr ""
+
+#: lib/marskal_web/date_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Can't read that as a day."
 msgstr ""
 
 #: lib/marskal_web/live/user_live/check_email.ex
@@ -234,6 +249,16 @@ msgstr ""
 msgid "Dark"
 msgstr ""
 
+#: lib/marskal_web/date_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Defer indefinitely"
+msgstr ""
+
+#: lib/marskal_web/date_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Defer until"
+msgstr ""
+
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Deferred"
@@ -276,6 +301,11 @@ msgstr ""
 #: lib/marskal_web/task_keys.ex
 #, elixir-autogen, elixir-format
 msgid "Dropped “%{title}”."
+msgstr ""
+
+#: lib/marskal_web/date_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Due"
 msgstr ""
 
 #: lib/marskal_web/components/keys_help.ex
@@ -511,6 +541,11 @@ msgstr ""
 msgid "New task below"
 msgstr ""
 
+#: lib/marskal_web/date_fields.ex
+#, elixir-autogen, elixir-format
+msgid "No date"
+msgstr ""
+
 #: lib/marskal_web/live/folder_live.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing in this folder yet."
@@ -552,6 +587,11 @@ msgstr[1] ""
 #: lib/marskal_web/live/go_to.ex
 #, elixir-autogen, elixir-format
 msgid "Places"
+msgstr ""
+
+#: lib/marskal_web/date_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Planned"
 msgstr ""
 
 #: lib/marskal_web/components/keys_help.ex
@@ -704,6 +744,11 @@ msgstr ""
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Theme"
+msgstr ""
+
+#: lib/marskal_web/date_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Type a day such as “tom”, “fri”, “1w”, or “24/12 14:00”."
 msgstr ""
 
 #: lib/marskal_web/live/go_to.ex

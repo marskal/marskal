@@ -36,9 +36,10 @@ Alternatives considered:
 
 ## Decision
 
-**One text field per date.** It shows the stored day in the locale's
-medium form ("16 Oct 2026", "Oct 16, 2026"), with the time when it is not
-the field's default. That label reads back as the same day.
+**One text field per date.** It shows the stored day and time in the
+locale's medium form ("16 Oct 2026, 17:00", "Oct 16, 2026, 5:00 PM"), so
+a day typed without a time shows the time it took. That label reads back
+as the same instant.
 
 **`Marskal.DateInput.parse/3`** reads the text. It is pure: the caller passes
 now on the user's wall clock, the week start, the locale's numeric orders

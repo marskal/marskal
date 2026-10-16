@@ -16,6 +16,8 @@ defmodule MarskalWeb.InspectorPanel do
   defp task_states, do: [{"To-Do", "to_do"}, {"Done", "done"}, {"Dropped", "dropped"}]
   defp folder_states, do: [{"Active", "active"}, {"Dropped", "dropped"}]
 
+  @date_texts %{"defer_text" => "defer", "planned_text" => "planned", "due_text" => "due"}
+
   defp tag_states,
     do: [{"Active", "active"}, {"On hold", "on_hold"}, {"Dropped", "dropped"}]
 
@@ -40,7 +42,8 @@ defmodule MarskalWeb.InspectorPanel do
   defp reload(socket) do
     %{user: user, selection: selection} = socket.assigns
     record = load(user, selection)
-    error = if socket.assigns[:loaded_selection] == selection, do: socket.assigns[:error]
+    same? = socket.assigns[:loaded_selection] == selection
+    error = if same?, do: socket.assigns[:error]
 
     picker =
       if socket.assigns[:loaded_selection] == selection,
@@ -53,6 +56,7 @@ defmodule MarskalWeb.InspectorPanel do
     |> assign(:tagging, tagging(user, record))
     |> assign(:outline, outline(user, record))
     |> assign(:picker, picker || %{query: "", results: []})
+    |> assign(:date_previews, if(same?, do: socket.assigns[:date_previews] || %{}, else: %{}))
     |> assign(:error, error)
     |> assign(:loaded_selection, selection)
     |> assign(:loaded, {selection, socket.assigns[:change_version]})
@@ -245,10 +249,12 @@ defmodule MarskalWeb.InspectorPanel do
           gap: 0.3rem;
         }
 
-        .day-time__inputs {
-          display: grid;
-          grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-          gap: 0.4rem;
+        .reads:empty {
+          display: none;
+        }
+
+        .reads--error {
+          color: var(--danger);
         }
 
         .indefinite,
@@ -303,6 +309,7 @@ defmodule MarskalWeb.InspectorPanel do
         tagging={@tagging}
         picker={@picker}
         outline={@outline}
+        date_previews={@date_previews}
       />
       <.project_form
         :if={match?(%Projects.Project{}, @record)}
@@ -315,6 +322,7 @@ defmodule MarskalWeb.InspectorPanel do
         error={@error}
         tagging={@tagging}
         picker={@picker}
+        date_previews={@date_previews}
       />
       <.folder_form
         :if={match?(%ProjectFolders.ProjectFolder{}, @record)}
@@ -345,6 +353,8 @@ defmodule MarskalWeb.InspectorPanel do
   attr :outline, :map,
     default: %{},
     doc: "the task's parent, the dates it goes by, and whether it is resolved from above"
+
+  attr :date_previews, :map, default: %{}
 
   attr :user, :any, required: true
   attr :change_version, :any, default: nil
@@ -443,6 +453,8 @@ defmodule MarskalWeb.InspectorPanel do
           id="inspector-task-dates"
           record={@record}
           zone={@zone}
+          target={@myself}
+          previews={@date_previews}
           inherited={@outline[:dates]}
         />
         <div class="actions">
@@ -481,6 +493,7 @@ defmodule MarskalWeb.InspectorPanel do
   attr :zone, :string, required: true
   attr :user, :any, required: true
   attr :change_version, :any, default: nil
+  attr :date_previews, :map, default: %{}
 
   defp project_form(assigns) do
     ~H"""
@@ -568,6 +581,8 @@ defmodule MarskalWeb.InspectorPanel do
           id="inspector-project-dates"
           record={@record}
           zone={@zone}
+          target={@myself}
+          previews={@date_previews}
         />
         <div class="actions">
           <button
@@ -1137,6 +1152,16 @@ defmodule MarskalWeb.InspectorPanel do
   end
 
   @impl true
+  # Typing in a date field reads the text and shows what it means; it
+  # saves on date-commit (ADR 0032).
+  def handle_event("save", %{"_target" => [form, target]} = params, socket)
+      when is_map_key(@date_texts, target) and form in ["task", "project"] do
+    %{user: user, record: record} = socket.assigns
+    key = Map.fetch!(@date_texts, target)
+    preview = MarskalWeb.DateFields.preview(key, params[form][target] || "", record, user)
+    {:noreply, update(socket, :date_previews, &Map.put(&1, key, preview))}
+  end
+
   def handle_event("save", %{"task" => params}, socket) do
     attrs =
       params
@@ -1165,6 +1190,24 @@ defmodule MarskalWeb.InspectorPanel do
   def handle_event("save", %{"tag" => params}, socket) do
     attrs = Map.take(params, ["name", "parent_id", "state"])
     save(socket, &Tags.update_tag(&1, &2, drop_blank_title(attrs, "name"), &3))
+  end
+
+  def handle_event("date-commit", %{"key" => key, "text" => text}, socket)
+      when key in ["defer", "planned", "due"] do
+    %{user: user, record: record} = socket.assigns
+
+    case MarskalWeb.DateFields.commit(key, text, record, user) do
+      {:ok, attrs} ->
+        {:noreply, socket} = save(socket, &update_dates(record, &1, &2, attrs, &3))
+        socket = update(socket, :date_previews, &Map.delete(&1, key))
+        field = MarskalWeb.DateFields.field(key)
+        zone = Marskal.Accounts.timezone(user)
+        text = MarskalWeb.DateFields.text(Map.fetch!(socket.assigns.record, field), field, zone)
+        {:reply, %{text: text}, socket}
+
+      :error ->
+        {:reply, %{}, update(socket, :date_previews, &Map.put(&1, key, {:error, text}))}
+    end
   end
 
   def handle_event("delete", _params, socket) do
@@ -1229,6 +1272,12 @@ defmodule MarskalWeb.InspectorPanel do
         {:noreply, assign(socket, :error, "Could not save.")}
     end
   end
+
+  defp update_dates(%Tasks.Task{}, user, id, attrs, command),
+    do: Tasks.update_task(user, id, attrs, command)
+
+  defp update_dates(%Projects.Project{}, user, id, attrs, command),
+    do: Projects.update_project(user, id, attrs, command)
 
   # A cleared name is an edit in progress, not a rename to nothing.
   defp drop_blank_title(attrs, key) do

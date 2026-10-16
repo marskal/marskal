@@ -113,22 +113,123 @@ defmodule MarskalWeb.DatesLiveTest do
     {:ok, view, _html} = live(conn, ~p"/open")
     view |> element("#open-tasks li.task-row", "Report") |> render_click()
 
-    view
-    |> form("#inspector-task", task: %{due_date: "2026-10-02"})
-    |> render_change()
+    commit = fn text ->
+      view
+      |> element("#inspector-task-dates-due")
+      |> render_hook("date-commit", %{"key" => "due", "text" => text})
+    end
 
+    commit.("2026-10-02")
     assert Tasks.get_task(user, task.id).due_at == ~U[2026-10-02 15:00:00Z]
-    assert has_element?(view, "#inspector-task-dates-due-time[value='17:00']")
+    assert has_element?(view, "#inspector-task-dates-due[value='2 Oct 2026, 17:00']")
     assert has_element?(view, "#open-tasks .mark--due")
 
-    view
-    |> form("#inspector-task", task: %{due_date: "2026-10-02", due_time: "08:15"})
-    |> render_change()
-
+    commit.("2026-10-02 08:15")
     assert Tasks.get_task(user, task.id).due_at == ~U[2026-10-02 06:15:00Z]
 
-    view |> form("#inspector-task", task: %{due_date: ""}) |> render_change()
+    commit.("")
     assert Tasks.get_task(user, task.id).due_at == nil
+  end
+
+  test "a typed date shows what it reads and saves on commit", %{conn: conn, user: user} do
+    {:ok, task} = Tasks.create_task(user, %{title: "Report", inbox: false}, command())
+
+    {:ok, view, _html} = live(conn, ~p"/open")
+    view |> element("#open-tasks li.task-row", "Report") |> render_click()
+
+    view
+    |> form("#inspector-task", task: %{due_text: "24/12/2030 9:15"})
+    |> render_change(%{"_target" => ["task", "due_text"]})
+
+    assert has_element?(view, "#inspector-task-dates-due-reads", "24 December 2030")
+    assert Tasks.get_task(user, task.id).due_at == nil
+
+    view
+    |> element("#inspector-task-dates-due")
+    |> render_hook("date-commit", %{"key" => "due", "text" => "24/12/2030 9:15"})
+
+    assert Tasks.get_task(user, task.id).due_at == ~U[2030-12-24 08:15:00Z]
+    assert has_element?(view, "#inspector-task-dates-due[value='24 Dec 2030, 09:15']")
+    refute has_element?(view, "#inspector-task-dates-due-reads", "24 December")
+  end
+
+  test "tonight is the field's evening", %{conn: conn, user: user} do
+    {:ok, task} = Tasks.create_task(user, %{title: "Report", inbox: false}, command())
+
+    {:ok, view, _html} = live(conn, ~p"/open")
+    view |> element("#open-tasks li.task-row", "Report") |> render_click()
+
+    for {key, field} <- [{"defer", :defer_until}, {"planned", :planned_at}, {"due", :due_at}] do
+      view
+      |> element("#inspector-task-dates-#{key}")
+      |> render_hook("date-commit", %{"key" => key, "text" => "tue evening"})
+
+      zone = Marskal.Accounts.timezone(user)
+      {_date, time} = Tasks.get_task(user, task.id) |> Map.fetch!(field) |> Dates.to_local(zone)
+      assert time == Dates.evening_time(field)
+    end
+  end
+
+  test "an unreadable date is not saved", %{conn: conn, user: user} do
+    due_at = ~U[2030-12-24 16:00:00Z]
+
+    {:ok, task} =
+      Tasks.create_task(user, %{title: "Report", inbox: false, due_at: due_at}, command())
+
+    {:ok, view, _html} = live(conn, ~p"/open")
+    view |> element("#open-tasks li.task-row", "Report") |> render_click()
+
+    view
+    |> element("#inspector-task-dates-due")
+    |> render_hook("date-commit", %{"key" => "due", "text" => "someday soon"})
+
+    assert has_element?(view, "#inspector-task-dates-due-reads.reads--error")
+
+    assert has_element?(
+             view,
+             "#inspector-task-dates-due[aria-invalid='true'][value='someday soon']"
+           )
+
+    assert Tasks.get_task(user, task.id).due_at == due_at
+  end
+
+  test "a project's dates are typed the same way", %{conn: conn, user: user} do
+    {:ok, project} = Projects.create_project(user, %{title: "Garden"}, command())
+
+    {:ok, view, _html} = live(conn, ~p"/open?project=#{project.id}")
+
+    view
+    |> element("#inspector-project-dates-planned")
+    |> render_hook("date-commit", %{"key" => "planned", "text" => "2031-03-01"})
+
+    assert Projects.get_project(user, project.id).planned_at == ~U[2031-03-01 08:00:00Z]
+  end
+
+  test "Danish words are read with a Danish locale", %{conn: conn, user: user} do
+    {:ok, task} = Tasks.create_task(user, %{title: "Report", inbox: false}, command())
+
+    {:ok, view, _html} = live(conn, ~p"/open")
+    view |> element("#open-tasks li.task-row", "Report") |> render_click()
+
+    view
+    |> element("#inspector-task-dates-planned")
+    |> render_hook("date-commit", %{"key" => "planned", "text" => "i morgen"})
+
+    assert Tasks.get_task(user, task.id).planned_at == nil
+
+    {:ok, _} = Marskal.Accounts.update_preferences(user, %{locale: "da"}, command())
+    {:ok, view, _html} = live(conn, ~p"/open")
+    view |> element("#open-tasks li.task-row", "Report") |> render_click()
+
+    view
+    |> element("#inspector-task-dates-planned")
+    |> render_hook("date-commit", %{"key" => "planned", "text" => "i morgen"})
+
+    zone = Marskal.Accounts.timezone(user)
+    tomorrow = zone |> Dates.today() |> Date.add(1)
+
+    assert Tasks.get_task(user, task.id).planned_at ==
+             Dates.from_local(tomorrow, nil, :planned_at, zone)
   end
 
   test "deferring from the inspector hides the task from the open stream", %{
