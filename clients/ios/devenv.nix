@@ -1,0 +1,15 @@
+{ pkgs, ... }:
+{
+  # The iOS app (ADR 0029). Xcode and xcodebuild come from the host; this
+  # shell adds Rust with the iOS targets, for sync/ffi, and XcodeGen.
+  languages.rust = {
+    enable = true;
+    channel = "stable";
+    targets = [
+      "aarch64-apple-ios"
+      "aarch64-apple-ios-sim"
+    ];
+  };
+
+  packages = [ pkgs.xcodegen ];
+}
