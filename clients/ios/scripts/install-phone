@@ -31,7 +31,8 @@ trap 'rm -f "$devices"' EXIT
 xcode xcrun devicectl list devices --json-output "$devices" >/dev/null
 device=${MARSKAL_DEVICE:-$(
   jq -r '[.result.devices[]
-          | select(.hardwareProperties.reality == "physical")
+          | select(.hardwareProperties.reality == "physical" and .hardwareProperties.platform == "iOS"
+                   and .connectionProperties.tunnelState != "unavailable")
           | .hardwareProperties.udid][0] // empty' "$devices"
 )}
 if [ -z "$device" ]; then
