@@ -7,3 +7,5 @@
 *.xcodeproj
 /Marskal/Info.plist
 /Marskal/Marskal.entitlements
+/MarskalWidget/Info.plist
+/MarskalWidget/MarskalWidget.entitlements

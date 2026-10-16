@@ -33,6 +33,7 @@ targets:
     dependencies:
       - package: MarskalKit
         product: MarskalKit
+      - target: MarskalWidget
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.marskal.ios
@@ -58,6 +59,30 @@ targets:
               NSExceptionAllowsInsecureHTTPLoads: true
     entitlements:
       path: Marskal/Marskal.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.app.marskal
+
+  MarskalWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - MarskalWidget
+    dependencies:
+      - package: MarskalKit
+        product: MarskalKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.marskal.ios.widget
+        TARGETED_DEVICE_FAMILY: "1"
+        INFOPLIST_KEY_CFBundleDisplayName: Marskal
+    info:
+      path: MarskalWidget/Info.plist
+      properties:
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: MarskalWidget/MarskalWidget.entitlements
       properties:
         com.apple.security.application-groups:
           - group.app.marskal

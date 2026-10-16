@@ -20,8 +20,21 @@ xcode xcodebuild build \
   -destination "generic/platform=iOS Simulator" \
   -derivedDataPath build/derived -quiet
 
-objects=build/derived/Build/Intermediates.noindex/Marskal.build/Debug-iphonesimulator/Marskal.build/Objects-normal/arm64
-xcode xcrun xcstringstool sync \
-  Marskal/Localizable.xcstrings --stringsdata "$objects"/*.stringsdata
+# Each target's catalog takes its own strings and MarskalKit's, such as
+# the App Intents' titles, which are looked up in the running target.
+# Xcode does not extract a package's strings, so they are read from the
+# source. MarskalKit writes them out in full: LocalizedStringResource("…").
+kit=build/kit-strings
+rm -rf "$kit"
+mkdir -p "$kit"
+xcode xcrun xcstringstool extract --modern-localizable-strings \
+  MarskalKit/Sources/MarskalKit/*.swift --output-directory "$kit"
+
+intermediates=build/derived/Build/Intermediates.noindex
+for target in Marskal MarskalWidget; do
+  objects=$intermediates/Marskal.build/Debug-iphonesimulator/$target.build/Objects-normal/arm64
+  xcode xcrun xcstringstool sync \
+    "$target/Localizable.xcstrings" --stringsdata "$objects"/*.stringsdata "$kit"/*.stringsdata
+done
 
 echo "Built Marskal.app for the simulator"
