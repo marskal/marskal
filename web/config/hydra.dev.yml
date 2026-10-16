@@ -37,6 +37,10 @@ ttl:
   device_user_code: 10m
 
 oauth2:
+  # A public client signing in through a browser proves it started the
+  # sign-in (ADR 0029).
+  pkce:
+    enforced_for_public_clients: true
   grant:
     refresh_token:
       # The command line and the terminal UI share a grant (ADR 0020).

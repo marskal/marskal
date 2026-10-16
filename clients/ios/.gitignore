@@ -5,3 +5,5 @@
 /MarskalKit/Frameworks
 /MarskalKit/Sources/MarskalCore/MarskalCore.swift
 *.xcodeproj
+/Marskal/Info.plist
+/Marskal/Marskal.entitlements

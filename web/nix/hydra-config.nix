@@ -39,6 +39,9 @@
     device_user_code = "10m";
   };
   oauth2 = {
+    # A public client signing in through a browser proves it started the
+    # sign-in (ADR 0029).
+    pkce.enforced_for_public_clients = true;
     # The command line and a terminal UI share one grant (ADR 0020).
     grant.refresh_token.rotation_grace_period = "30s";
     device_authorization = {

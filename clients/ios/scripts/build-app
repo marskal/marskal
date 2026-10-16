@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Generates the Xcode project, builds the app for the simulator, and
+# brings the String Catalog up to date with the strings in the source
+# (ADR 0029). Xcode does the last step itself; xcodebuild does not.
+#
+# Run from the clients/ios devenv shell, after scripts/build-core.
+
+set -euo pipefail
+
+ios=$(cd "$(dirname "$0")/.." && pwd)
+cd "$ios"
+
+xcodegen generate --quiet
+
+# Xcode with none of the Nix shell's compiler and linker settings.
+xcode() { /usr/bin/env -i HOME="$HOME" PATH=/usr/bin:/bin:/usr/sbin:/sbin "$@"; }
+
+xcode xcodebuild build \
+  -project Marskal.xcodeproj -scheme Marskal \
+  -destination "generic/platform=iOS Simulator" \
+  -derivedDataPath build/derived -quiet
+
+objects=build/derived/Build/Intermediates.noindex/Marskal.build/Debug-iphonesimulator/Marskal.build/Objects-normal/arm64
+xcode xcrun xcstringstool sync \
+  Marskal/Localizable.xcstrings --stringsdata "$objects"/*.stringsdata
+
+echo "Built Marskal.app for the simulator"

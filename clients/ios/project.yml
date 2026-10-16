@@ -1,0 +1,73 @@
+# The Xcode project, for XcodeGen (ADR 0029). `xcodegen` writes
+# Marskal.xcodeproj from this; the project is not committed or edited.
+name: Marskal
+
+options:
+  bundleIdPrefix: app.marskal
+  deploymentTarget:
+    iOS: "27.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: 0.1.0
+    CURRENT_PROJECT_VERSION: 1
+    # Apple silicon only; no Intel simulator.
+    EXCLUDED_ARCHS[sdk=iphonesimulator*]: x86_64
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    SWIFT_EMIT_LOC_STRINGS: YES
+    CODE_SIGN_STYLE: Automatic
+
+packages:
+  MarskalKit:
+    path: MarskalKit
+
+targets:
+  Marskal:
+    type: application
+    platform: iOS
+    sources:
+      - Marskal
+    dependencies:
+      - package: MarskalKit
+        product: MarskalKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.marskal.ios
+        TARGETED_DEVICE_FAMILY: "1"
+        INFOPLIST_KEY_CFBundleDisplayName: Marskal
+    info:
+      path: Marskal/Info.plist
+      properties:
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIBackgroundModes:
+          - fetch
+        BGTaskSchedulerPermittedIdentifiers:
+          - app.marskal.ios.sync
+        NSAppTransportSecurity:
+          # Plain http only to this machine, for the dev server at
+          # marskal.localhost.
+          NSAllowsLocalNetworking: true
+          NSExceptionDomains:
+            localhost:
+              NSIncludesSubdomains: true
+              NSExceptionAllowsInsecureHTTPLoads: true
+    entitlements:
+      path: Marskal/Marskal.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.app.marskal
+
+schemes:
+  Marskal:
+    build:
+      targets:
+        Marskal: all
+    run:
+      config: Debug
+    test:
+      config: Debug
