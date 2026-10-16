@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Builds the app for a phone connected to this Mac, signed by the team in
+# MARSKAL_DEVELOPMENT_TEAM, installs it, and opens it (ADR 0029). With a free Apple
+# account the install stops working after seven days; run this again.
+#
+# Run from the clients/ios devenv shell, after scripts/build-core. The
+# phone must be unlocked, trust this Mac, and have Developer Mode on.
+
+set -euo pipefail
+
+ios=$(cd "$(dirname "$0")/.." && pwd)
+cd "$ios"
+
+if [ -z "${MARSKAL_DEVELOPMENT_TEAM:-}" ]; then
+  cat >&2 <<'MSG'
+No team to sign with. Put your Apple team ID in clients/ios/devenv.local.nix:
+
+  { env.MARSKAL_DEVELOPMENT_TEAM = "ABCDE12345"; }
+
+and run this again. The README says where to find the ID.
+MSG
+  exit 1
+fi
+
+# Xcode with none of the Nix shell's compiler and linker settings.
+xcode() { /usr/bin/env -i HOME="$HOME" PATH=/usr/bin:/bin:/usr/sbin:/sbin "$@"; }
+
+# The first connected physical device, unless MARSKAL_DEVICE names one.
+devices=$(mktemp)
+trap 'rm -f "$devices"' EXIT
+xcode xcrun devicectl list devices --json-output "$devices" >/dev/null
+device=${MARSKAL_DEVICE:-$(
+  jq -r '[.result.devices[]
+          | select(.hardwareProperties.reality == "physical")
+          | .hardwareProperties.udid][0] // empty' "$devices"
+)}
+if [ -z "$device" ]; then
+  echo "No phone found. Connect it, unlock it, and trust this Mac." >&2
+  exit 1
+fi
+
+xcodegen generate --quiet
+
+xcode xcodebuild build \
+  -project Marskal.xcodeproj -scheme Marskal -configuration Debug \
+  -destination "id=$device" \
+  -derivedDataPath build/derived \
+  -allowProvisioningUpdates -allowProvisioningDeviceRegistration \
+  -quiet
+
+app=build/derived/Build/Products/Debug-iphoneos/Marskal.app
+xcode xcrun devicectl device install app --device "$device" "$app"
+xcode xcrun devicectl device process launch --device "$device" app.marskal.ios
+
+echo "Installed Marskal on $device"

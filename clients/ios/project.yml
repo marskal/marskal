@@ -19,6 +19,9 @@ settings:
     LOCALIZATION_PREFERS_STRING_CATALOGS: YES
     SWIFT_EMIT_LOC_STRINGS: YES
     CODE_SIGN_STYLE: Automatic
+    # The team that signs a phone build, from the environment, so no one's
+    # team is in the repository. Set it in devenv.local.nix (README).
+    DEVELOPMENT_TEAM: ${MARSKAL_DEVELOPMENT_TEAM}
 
 packages:
   MarskalKit:

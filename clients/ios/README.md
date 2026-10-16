@@ -36,6 +36,39 @@ xcrun simctl launch booted app.marskal.ios
 A debug build offers the dev server, `http://marskal.localhost:8275`
 (`devenv up` in `web/`), on its sign-in screen.
 
+## Install on a phone
+
+Connect the phone, unlock it, and trust this Mac. Developer Mode must be on
+(Settings → Privacy & Security, shown once the phone has been connected to
+Xcode).
+
+A phone build is signed by your Apple team, which stays out of the
+repository. Put its ID in `devenv.local.nix` here, which devenv reads and
+git ignores:
+
+```nix
+{ env.MARSKAL_DEVELOPMENT_TEAM = "ABCDE12345"; }
+```
+
+Xcode does not show the ID of a free account's Personal Team. Create an
+Apple Development certificate (Xcode → Settings → Apple Accounts → your
+team → Manage Certificates → +), then read the ID from it:
+
+```sh
+security find-certificate -c "Apple Development" -p | openssl x509 -noout -subject
+```
+
+It is the `OU`. Then:
+
+```sh
+devenv shell -- scripts/install-phone
+```
+
+With a free account the install stops opening after seven days: run it
+again. The first time, trust the developer profile on the phone under
+Settings → General → VPN & Device Management. Sign in to a deployed server;
+the dev server at `marskal.localhost` is reachable only from this Mac.
+
 ## Test
 
 The tests run on an Apple silicon simulator. Install the iOS runtime once,
