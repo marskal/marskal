@@ -30,8 +30,7 @@ defmodule MarskalWeb.SyncController do
 
   @doc "Server-Sent Events saying when to pull (ADR 0030)."
   def events(conn, _params) do
-    ["Bearer " <> token] = get_req_header(conn, "authorization")
-    MarskalWeb.SyncEvents.stream(conn, String.trim(token))
+    MarskalWeb.SyncEvents.stream(conn, conn.assigns.access_token)
   end
 
   defp cursor(nil), do: {:ok, nil}
