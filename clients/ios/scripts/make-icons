@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Makes the app icon from the web app's logo, web/priv/static/images/icon.svg
+# (ADR 0029): the logo as it is, on its black square; for dark mode, the
+# emblem alone on transparency, for iOS's dark backdrop; and a grayscale of
+# that for tinted icons. Run it from the clients/ios devenv shell when the
+# logo changes, and commit the PNGs.
+
+set -euo pipefail
+
+ios=$(cd "$(dirname "$0")/.." && pwd)
+svg=$ios/../../web/priv/static/images/icon.svg
+out=$ios/Marskal/Assets.xcassets/AppIcon.appiconset
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+
+# The logo's first path is its black square.
+grep -v 'd="M 0 0 L 2048 0 L 2048 2048 L 0 2048 L 0 0 z"' "$svg" > "$work/emblem.svg"
+
+resvg -w 1024 -h 1024 "$svg" "$work/icon.png"
+resvg -w 1024 -h 1024 "$work/emblem.svg" "$work/icon-dark.png"
+
+# An App Store icon has no alpha channel.
+magick "$work/icon.png" -background black -alpha remove -alpha off "PNG24:$out/icon.png"
+magick "$work/icon-dark.png" -strip "$out/icon-dark.png"
+magick "$work/icon-dark.png" -colorspace Gray -strip "$out/icon-tinted.png"
+
+echo "Made the app icon in $out"
