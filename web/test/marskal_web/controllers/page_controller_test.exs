@@ -5,6 +5,20 @@ defmodule MarskalWeb.PageControllerTest do
 
   import Marskal.AccountsFixtures
 
+  test "pages link the web app manifest, which names its icons", %{conn: conn} do
+    html = conn |> get(~p"/users/log-in") |> html_response(200)
+    assert html =~ ~s|rel="manifest" href="/manifest.webmanifest"|
+
+    conn = get(build_conn(), ~p"/manifest.webmanifest")
+    assert response_content_type(conn, :json) =~ "application/manifest+json"
+    manifest = Jason.decode!(response(conn, 200))
+    assert manifest["display"] == "standalone"
+
+    for %{"src" => src} <- manifest["icons"] do
+      assert build_conn() |> get(src) |> response(200)
+    end
+  end
+
   test "GET / requires login", %{conn: conn} do
     conn = get(conn, ~p"/")
     assert redirected_to(conn) == ~p"/users/log-in"
