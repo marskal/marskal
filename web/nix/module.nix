@@ -124,7 +124,10 @@ in
         Environment file with `SECRET_KEY_BASE` and `RELEASE_COOKIE`.
         Created with random values when missing. Optional Todoist import
         credentials (`TODOIST_CLIENT_ID`, `TODOIST_CLIENT_SECRET`, and
-        `TODOIST_REDIRECT_URI`) can be added to the same file.
+        `TODOIST_REDIRECT_URI`) can be added to the same file, and so can
+        mail: `MAILER_ADAPTER` names a Swoosh adapter, `MAILER_FROM` is the
+        sender, and each other `MAILER_<KEY>` is an adapter option
+        (`MAILER_ADAPTER=Scaleway`, `MAILER_PROJECT_ID`, `MAILER_SECRET_KEY`).
       '';
     };
 
