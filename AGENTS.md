@@ -224,6 +224,9 @@ The repository root is the product, not the web app (ADR 0015).
 - **`devenv up`** (from `web/`) starts Postgres + Phoenix (`processes.server`).
   Postgres is that managed `services.postgres` process — never `pg_ctl start` /
   `start-postgres` against `web/.devenv/state/postgres` (it orphans a second cluster).
+- Seed accounts are in `web/priv/repo/seeds.exs`. **`mts@marskal.example` is the
+  user's own**: an agent testing in a browser signs in as **`kvp@marskal.example`**,
+  and leaves mts@'s data and preferences alone.
 
 ### Elixir
 
