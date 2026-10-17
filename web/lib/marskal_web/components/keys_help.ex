@@ -22,7 +22,7 @@ defmodule MarskalWeb.KeysHelp do
     ~H"""
     <dialog
       id="keys-help"
-      class="keys-help"
+      class={["keys-help", @keymap == :vim && "has-vim"]}
       aria-labelledby="keys-help-heading"
       phx-hook=".Keys"
       phx-mounted={JS.ignore_attributes("open")}
@@ -40,6 +40,11 @@ defmodule MarskalWeb.KeysHelp do
             border-radius: 12px;
             background: var(--surface);
             color: var(--text);
+          }
+
+          /* Room for the third column. */
+          :scope.has-vim {
+            width: min(100% - 2rem, 46em);
           }
 
           :scope::backdrop {
@@ -76,7 +81,7 @@ defmodule MarskalWeb.KeysHelp do
           td {
             padding: 0.3em 0.75em 0.3em 0;
             text-align: left;
-            vertical-align: top;
+            vertical-align: middle;
           }
 
           thead th {
@@ -84,14 +89,45 @@ defmodule MarskalWeb.KeysHelp do
             font-weight: 500;
           }
 
-          kbd {
-            display: inline-block;
-            min-width: 1.5em;
-            padding: 0 0.3em;
-            border: 1px solid var(--border);
-            border-radius: 4px;
+          .keys {
+            display: inline-flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.4em 0.6em;
+          }
+
+          /* A chord or a sequence: its keys, close together. */
+          .keys > kbd:has(kbd) {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.2em;
             font: inherit;
-            font-size: 0.95em;
+          }
+
+          .plus {
+            color: var(--muted);
+            font-size: 0.85em;
+          }
+
+          /* A keycap: a lighter top face over a deeper bottom edge. */
+          kbd kbd,
+          .keys > kbd:not(:has(kbd)) {
+            display: inline-block;
+            min-width: 1.9em;
+            padding: 0.1em 0.45em 0.2em;
+            border: 1px solid var(--border-strong);
+            border-radius: 0.35em;
+            background: linear-gradient(
+              var(--surface),
+              color-mix(in oklch, var(--surface), var(--text) 6%)
+            );
+            box-shadow:
+              inset 0 -0.18em 0 color-mix(in oklch, var(--surface), var(--text) 12%),
+              0 1px 1px var(--shadow);
+            color: var(--text);
+            font: inherit;
+            font-size: 0.9em;
+            line-height: 1.3;
             text-align: center;
           }
 
@@ -119,16 +155,8 @@ defmodule MarskalWeb.KeysHelp do
         <tbody>
           <tr :for={{action, keys, vim} <- @rows}>
             <th scope="row">{action}</th>
-            <td>
-              <span :for={{key, index} <- Enum.with_index(keys)}>
-                {if index > 0, do: " "}<kbd>{key}</kbd>
-              </span>
-            </td>
-            <td :if={@keymap == :vim}>
-              <span :for={{key, index} <- Enum.with_index(vim)}>
-                {if index > 0, do: " "}<kbd>{key}</kbd>
-              </span>
-            </td>
+            <td><.keys keys={keys} /></td>
+            <td :if={@keymap == :vim}><.keys keys={vim} /></td>
           </tr>
         </tbody>
       </table>
@@ -206,17 +234,49 @@ defmodule MarskalWeb.KeysHelp do
     """
   end
 
+  attr :keys, :list, required: true
+
+  # Each entry is a key, {:chord, keys} held together, or {:seq, keys}
+  # pressed in turn.
+  defp keys(assigns) do
+    ~H"""
+    <span :if={@keys != []} class="keys">
+      <%= for key <- @keys do %>
+        <%= case key do %>
+          <% {:chord, parts} -> %>
+            <kbd>
+              <%= for {part, index} <- Enum.with_index(parts) do %>
+                <span :if={index > 0} class="plus" aria-hidden="true">+</span><kbd>{part}</kbd>
+              <% end %>
+            </kbd>
+          <% {:seq, parts} -> %>
+            <kbd><kbd :for={part <- parts}>{part}</kbd></kbd>
+          <% key -> %>
+            <kbd>{key}</kbd>
+        <% end %>
+      <% end %>
+    </span>
+    """
+  end
+
   # {action, keys in both maps, keys Vim adds}
   defp rows do
     [
       {gettext("Previous and next task"), ["↑", "↓"], ["k", "j"]},
-      {gettext("First and last task"), [gettext("Home"), gettext("End")], ["gg", "G"]},
+      {gettext("First and last task"), [gettext("Home"), gettext("End")],
+       [{:seq, ["g", "g"]}, "G"]},
       {gettext("Collapse and expand"), ["←", "→"], ["h", "l"]},
-      {gettext("Indent and outdent"), [gettext("Tab"), gettext("Shift-Tab"), "Cmd-]", "Cmd-["],
-       [">", "<"]},
-      {gettext("Move among siblings"), ["Alt-↑", "Alt-↓"], ["K", "J"]},
+      {gettext("Indent and outdent"),
+       [
+         gettext("Tab"),
+         {:chord, [gettext("Shift"), gettext("Tab")]},
+         {:chord, ["Cmd", "]"]},
+         {:chord, ["Cmd", "["]}
+       ], [">", "<"]},
+      {gettext("Move among siblings"), [{:chord, ["Alt", "↑"]}, {:chord, ["Alt", "↓"]}],
+       ["K", "J"]},
       {gettext("Complete or reopen"), [gettext("Space")], ["x"]},
-      {gettext("Drop"), [gettext("Delete")], ["dd"]},
+      {gettext("Drop"), [gettext("Delete")], [{:seq, ["d", "d"]}]},
       {gettext("Flag"), ["f"], []},
       {gettext("New task below"), ["n"], ["o"]},
       {gettext("New task above"), [], ["O"]},

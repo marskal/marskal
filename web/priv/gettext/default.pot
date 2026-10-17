@@ -333,7 +333,7 @@ msgstr ""
 
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
-msgid "Shift-Tab"
+msgid "Shift"
 msgstr ""
 
 #: lib/marskal_web/components/keys_help.ex
