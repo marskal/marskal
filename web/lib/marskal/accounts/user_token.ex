@@ -166,6 +166,25 @@ defmodule Marskal.Accounts.UserToken do
     end
   end
 
+  @doc """
+  Tokens past the validity of their context at `now`. No lookup accepts
+  them, and nothing else deletes those left unused
+  (`Marskal.Accounts.ExpireTokensJob`).
+  """
+  def expired_query(now) do
+    session = DateTime.add(now, -@session_validity_in_days, :day)
+    confirm = DateTime.add(now, -@confirm_validity_in_days, :day)
+    reset = DateTime.add(now, -@reset_password_validity_in_hours, :hour)
+    change = DateTime.add(now, -@change_email_validity_in_days, :day)
+
+    from t in UserToken,
+      where:
+        (t.context == "session" and t.inserted_at < ^session) or
+          (t.context == "confirm" and t.inserted_at < ^confirm) or
+          (t.context == "reset_password" and t.inserted_at < ^reset) or
+          (like(t.context, "change:%") and t.inserted_at < ^change)
+  end
+
   defp by_token_and_context_query(token, context) do
     from UserToken, where: [token: ^token, context: ^context]
   end

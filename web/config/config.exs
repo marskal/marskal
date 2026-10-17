@@ -58,7 +58,8 @@ config :marskal, Oban,
     {Oban.Plugins.Cron,
      crontab: [
        {"@hourly", Marskal.Imports.ExpireJob},
-       {"@daily", Marskal.Accounts.ExpireUnconfirmedJob}
+       {"@daily", Marskal.Accounts.ExpireUnconfirmedJob},
+       {"@daily", Marskal.Accounts.ExpireTokensJob}
      ]}
   ]
 

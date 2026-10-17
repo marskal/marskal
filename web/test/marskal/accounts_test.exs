@@ -374,6 +374,45 @@ defmodule Marskal.AccountsTest do
     end
   end
 
+  describe "delete_expired_tokens/1" do
+    test "deletes each context's tokens past its validity, and keeps the rest" do
+      user = user_fixture()
+      now = DateTime.utc_now(:second)
+
+      tokens = [
+        {"session", -15, :day, :expired},
+        {"session", -13, :day, :valid},
+        {"reset_password", -2, :hour, :expired},
+        {"reset_password", -30, :minute, :valid},
+        {"confirm", -8, :day, :expired},
+        {"confirm", -6, :day, :valid},
+        {"change:#{user.email}", -8, :day, :expired},
+        {"change:#{user.email}", -6, :day, :valid}
+      ]
+
+      for {context, amount, unit, _} <- tokens do
+        Repo.insert!(%UserToken{
+          token: :crypto.strong_rand_bytes(32),
+          context: context,
+          user_id: user.id,
+          inserted_at: DateTime.add(now, amount, unit)
+        })
+      end
+
+      expired = Enum.count(tokens, &(elem(&1, 3) == :expired))
+      assert {^expired, _} = Accounts.delete_expired_tokens(now)
+
+      left = Repo.all(from t in UserToken, select: t.context) |> Enum.frequencies()
+
+      assert left == %{
+               "session" => 1,
+               "reset_password" => 1,
+               "confirm" => 1,
+               "change:#{user.email}" => 1
+             }
+    end
+  end
+
   describe "reset_user_password/2" do
     test "sets the password and ends every token" do
       user = password_user_fixture()

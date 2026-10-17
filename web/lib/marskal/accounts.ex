@@ -349,6 +349,14 @@ defmodule Marskal.Accounts do
   end
 
   @doc """
+  Deletes tokens past their validity: sessions nobody logged out of, and
+  links nobody followed.
+  """
+  def delete_expired_tokens(now \\ DateTime.utc_now(:second)) do
+    Repo.delete_all(UserToken.expired_query(now))
+  end
+
+  @doc """
   Deletes the signed token with the given context.
   """
   def delete_user_session_token(token) do
