@@ -2,6 +2,8 @@ defmodule MarskalWeb.UserSessionControllerTest do
   use MarskalWeb.ConnCase, async: true
 
   import Marskal.AccountsFixtures
+  import Swoosh.TestAssertions
+
   alias Marskal.Accounts
 
   setup do
@@ -86,54 +88,67 @@ defmodule MarskalWeb.UserSessionControllerTest do
     end
   end
 
-  describe "POST /users/log-in - magic link" do
-    test "logs the user in", %{conn: conn, user: user} do
-      {token, _hashed_token} = generate_user_magic_link_token(user)
+  describe "POST /users/log-in - unconfirmed account" do
+    test "refuses to log in and sends a fresh link", %{conn: conn} do
+      user = registered_user_fixture()
 
       conn =
         post(conn, ~p"/users/log-in", %{
-          "user" => %{"token" => token}
+          "user" => %{"email" => user.email, "password" => valid_user_password()}
         })
 
-      assert get_session(conn, :user_token)
-      assert redirected_to(conn) == ~p"/open"
-
-      # Now do a logged in request and assert on the menu
-      conn = get(conn, ~p"/open")
-      response = html_response(conn, 200)
-      assert response =~ user.email
-      assert response =~ ~p"/users/settings"
-      assert response =~ ~p"/users/log-out"
+      refute get_session(conn, :user_token)
+      assert redirected_to(conn) == ~p"/users/check-email"
+      assert Phoenix.Flash.get(conn.assigns.flash, :check_email) == "unconfirmed"
+      assert_email_sent(to: [{"", user.email}], subject: "Confirm your Marskal account")
     end
 
-    test "confirms unconfirmed user", %{conn: conn, unconfirmed_user: user} do
-      {token, _hashed_token} = generate_user_magic_link_token(user)
-      refute user.confirmed_at
+    test "sends at most one link a minute", %{conn: conn} do
+      user = registered_user_fixture()
+      {:ok, _token} = Accounts.build_confirmation_token(user)
 
+      post(conn, ~p"/users/log-in", %{
+        "user" => %{"email" => user.email, "password" => valid_user_password()}
+      })
+
+      assert_no_email_sent()
+    end
+  end
+
+  describe "POST /users/confirm" do
+    setup do
+      user = registered_user_fixture()
+      {:ok, token} = Accounts.build_confirmation_token(user)
+      %{pending: user, token: token}
+    end
+
+    test "confirms with the password and logs in", %{conn: conn, pending: user, token: token} do
       conn =
-        post(conn, ~p"/users/log-in", %{
-          "user" => %{"token" => token},
-          "_action" => "confirmed"
+        post(conn, ~p"/users/confirm", %{
+          "user" => %{"token" => token, "password" => valid_user_password()}
         })
 
       assert get_session(conn, :user_token)
       assert redirected_to(conn) == ~p"/open"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "User confirmed successfully."
-
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Your account is confirmed."
       assert Accounts.get_user!(user.id).confirmed_at
-
-      # Now do a logged in request and assert on the menu
-      conn = get(conn, ~p"/open")
-      response = html_response(conn, 200)
-      assert response =~ user.email
-      assert response =~ ~p"/users/settings"
-      assert response =~ ~p"/users/log-out"
     end
 
-    test "redirects to login page when magic link is invalid", %{conn: conn} do
+    test "sends a wrong password back to the link", %{conn: conn, pending: user, token: token} do
       conn =
-        post(conn, ~p"/users/log-in", %{
-          "user" => %{"token" => "invalid"}
+        post(conn, ~p"/users/confirm", %{
+          "user" => %{"token" => token, "password" => "wrong one!"}
+        })
+
+      refute get_session(conn, :user_token)
+      assert redirected_to(conn) == ~p"/users/confirm/#{token}"
+      refute Accounts.get_user!(user.id).confirmed_at
+    end
+
+    test "refuses a bad link", %{conn: conn} do
+      conn =
+        post(conn, ~p"/users/confirm", %{
+          "user" => %{"token" => "invalid", "password" => valid_user_password()}
         })
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) ==

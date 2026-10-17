@@ -3,24 +3,25 @@ defmodule MarskalWeb.UserLive.Registration do
 
   alias Marskal.Accounts
   alias Marskal.Accounts.User
+  alias MarskalWeb.UserLive.CheckEmail
+  alias MarskalWeb.UserNotifier
 
   @impl true
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash} current_scope={@current_scope} inspector={assigns[:inspector]}>
-      <h1>Register</h1>
+      <h1>{gettext("Register")}</h1>
       <p class="lede">
-        Already registered? <.link navigate={~p"/users/log-in"}>Log in</.link>
+        {gettext("Already registered?")}
+        <.link navigate={~p"/users/log-in"}>{gettext("Log in")}</.link>
       </p>
 
       <.form
         for={@form}
         id="registration_form"
         class="auth"
-        action={~p"/users/log-in"}
         phx-submit="save"
         phx-change="validate"
-        phx-trigger-action={@trigger_submit}
       >
         <div>
           <label for={@form[:email].id}>Email</label>
@@ -61,22 +62,20 @@ defmodule MarskalWeb.UserLive.Registration do
   def mount(_params, _session, socket) do
     changeset = Accounts.change_user_registration(%User{}, %{})
 
-    {:ok,
-     socket
-     |> assign(:trigger_submit, false)
-     |> assign_form(changeset), temporary_assigns: [form: nil]}
+    {:ok, assign_form(socket, changeset), temporary_assigns: [form: nil]}
   end
 
   @impl true
   def handle_event("save", %{"user" => user_params}, socket) do
     case Accounts.register_user(user_params) do
-      {:ok, _user} ->
-        changeset = Accounts.change_user_registration(%User{}, user_params)
+      {:ok, user} ->
+        {:ok, token} = Accounts.build_confirmation_token(user)
+        UserNotifier.deliver_confirmation_instructions(user, token)
 
         {:noreply,
          socket
-         |> assign(:trigger_submit, true)
-         |> assign_form(changeset)}
+         |> CheckEmail.put_flash_for("registered", user.email)
+         |> push_navigate(to: ~p"/users/check-email")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign_form(socket, changeset)}

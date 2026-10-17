@@ -49,6 +49,9 @@ defmodule MarskalWeb.UserLive.Login do
         </label>
         <button type="submit">Log in</button>
       </.form>
+      <p>
+        <.link navigate={~p"/users/reset-password"}>{gettext("Forgot your password?")}</.link>
+      </p>
     </Layouts.app>
     """
   end

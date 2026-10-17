@@ -98,6 +98,11 @@ msgid_plural "%{count} tasks: %{open} open, %{dropped} dropped, and %{done} done
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "A link to confirm your email change has been sent to the new address."
+msgstr ""
+
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Action"
@@ -108,6 +113,11 @@ msgstr ""
 msgid "Actions"
 msgstr ""
 
+#: lib/marskal_web/live/user_live/registration.ex
+#, elixir-autogen, elixir-format
+msgid "Already registered?"
+msgstr ""
+
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
@@ -116,6 +126,16 @@ msgstr ""
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Automatic"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/check_email.ex
+#, elixir-autogen, elixir-format
+msgid "Check your email"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/reset_password.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a new password"
 msgstr ""
 
 #: lib/marskal_web/live/import_live.ex
@@ -137,6 +157,31 @@ msgstr ""
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Complete or reopen"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm and log in"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/reset_password.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm new password"
+msgstr ""
+
+#: lib/marskal_web/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your Marskal account"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your account"
+msgstr ""
+
+#: lib/marskal_web/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your new email address"
 msgstr ""
 
 #: lib/marskal_web/components/nav_components.ex
@@ -229,6 +274,42 @@ msgstr ""
 msgid "Go to the list"
 msgstr ""
 
+#: lib/marskal_web/live/user_live/forgot_password.ex
+#, elixir-autogen, elixir-format
+msgid "Email"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Enter the password you chose for %{email}."
+msgstr ""
+
+#: lib/marskal_web/live/user_live/reset_password.ex
+#, elixir-autogen, elixir-format
+msgid "For %{email}."
+msgstr ""
+
+#: lib/marskal_web/live/user_live/confirmation.ex
+#: lib/marskal_web/live/user_live/login.ex
+#, elixir-autogen, elixir-format
+msgid "Forgot your password?"
+msgstr ""
+
+#: lib/marskal_web/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{email},\n\nOpen this link to choose a new password for your Marskal account:\n\n%{url}\n\nThe link works for an hour. If you didn't ask for this, ignore this email; your password stays as it is.\n"
+msgstr ""
+
+#: lib/marskal_web/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{email},\n\nOpen this link to confirm your Marskal account. You'll be asked for the password you chose:\n\n%{url}\n\nThe link works for 7 days. If you didn't create an account, ignore this email and the account is deleted when the link expires.\n"
+msgstr ""
+
+#: lib/marskal_web/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{email},\n\nOpen this link to make this the email address of your Marskal account:\n\n%{url}\n\nIf you didn't ask for this change, ignore this email.\n"
+msgstr ""
+
 #: lib/marskal_web/live/repeat_panel.ex
 #, elixir-autogen, elixir-format
 msgid "History: %{title}"
@@ -269,9 +350,29 @@ msgstr ""
 msgid "Keys act on the focused task, not while you type. Off a Mac, Cmd is Ctrl."
 msgstr ""
 
+#: lib/marskal_web/live/user_live/check_email.ex
+#, elixir-autogen, elixir-format
+msgid "If %{email} has an account, we've sent it a link to choose a new password."
+msgstr ""
+
+#: lib/marskal_web/controllers/user_session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid email or password"
+msgstr ""
+
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Light"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/registration.ex
+#, elixir-autogen, elixir-format
+msgid "Log in"
+msgstr ""
+
+#: lib/marskal_web/controllers/user_session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Logged out successfully."
 msgstr ""
 
 #: lib/marskal_web/components/layouts/root.html.heex
@@ -304,6 +405,11 @@ msgstr ""
 msgid "New task below"
 msgstr ""
 
+#: lib/marskal_web/live/user_live/reset_password.ex
+#, elixir-autogen, elixir-format
+msgid "New password"
+msgstr ""
+
 #: lib/marskal_web/live/repeat_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Older entries are not shown."
@@ -312,6 +418,16 @@ msgstr ""
 #: lib/marskal_web/live/project_live.ex
 #, elixir-autogen, elixir-format
 msgid "Open"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Password"
+msgstr ""
+
+#: lib/marskal_web/controllers/user_session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Password updated successfully!"
 msgstr ""
 
 #: lib/marskal_web/live/repeat_panel.ex
@@ -324,6 +440,11 @@ msgstr[1] ""
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Previous and next task"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/registration.ex
+#, elixir-autogen, elixir-format
+msgid "Register"
 msgstr ""
 
 #: lib/marskal_web/components/layouts/root.html.heex
@@ -339,6 +460,26 @@ msgstr ""
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Show this help"
+msgstr ""
+
+#: lib/marskal_web/user_notifier.ex
+#, elixir-autogen, elixir-format
+msgid "Reset your Marskal password"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/forgot_password.ex
+#, elixir-autogen, elixir-format
+msgid "Reset your password"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/forgot_password.ex
+#, elixir-autogen, elixir-format
+msgid "Send the link"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/reset_password.ex
+#, elixir-autogen, elixir-format
+msgid "Set password"
 msgstr ""
 
 #: lib/marskal_web/components/layouts.ex
@@ -361,6 +502,11 @@ msgstr ""
 msgid "Standard uses the arrow keys, Space to complete, Delete to drop, f to flag, and n for a new task. Vim-style adds j, k, x, dd, and others. Press ? on any page for the full list."
 msgstr ""
 
+#: lib/marskal_web/live/user_live/confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Stay logged in"
+msgstr ""
+
 #: lib/marskal_web/live/repeat_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Streak %{streak} · Best %{best}"
@@ -374,6 +520,28 @@ msgstr ""
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Tab"
+msgstr ""
+
+#: lib/marskal_web/controllers/user_session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "That isn't this account's password."
+msgstr ""
+
+#: lib/marskal_web/controllers/user_session_controller.ex
+#: lib/marskal_web/live/user_live/confirmation.ex
+#: lib/marskal_web/live/user_live/reset_password.ex
+#, elixir-autogen, elixir-format
+msgid "The link is invalid or it has expired."
+msgstr ""
+
+#: lib/marskal_web/live/user_live/check_email.ex
+#, elixir-autogen, elixir-format
+msgid "The link works for 7 days."
+msgstr ""
+
+#: lib/marskal_web/live/user_live/check_email.ex
+#, elixir-autogen, elixir-format
+msgid "The link works for an hour."
 msgstr ""
 
 #: lib/marskal_web/components/layouts.ex
@@ -435,6 +603,36 @@ msgstr ""
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "We can't find the internet"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/forgot_password.ex
+#, elixir-autogen, elixir-format
+msgid "We'll email you a link to choose a new one."
+msgstr ""
+
+#: lib/marskal_web/live/user_live/check_email.ex
+#, elixir-autogen, elixir-format
+msgid "We've sent a link to %{email}. Open it to confirm your account."
+msgstr ""
+
+#: lib/marskal_web/controllers/user_session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Welcome back!"
+msgstr ""
+
+#: lib/marskal_web/controllers/user_session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Your account is confirmed."
+msgstr ""
+
+#: lib/marskal_web/live/user_live/check_email.ex
+#, elixir-autogen, elixir-format
+msgid "Your account isn't confirmed yet. Open the link we sent to %{email}."
+msgstr ""
+
+#: lib/marskal_web/live/user_live/reset_password.ex
+#, elixir-autogen, elixir-format
+msgid "Your password is changed. Log in with the new one."
 msgstr ""
 
 #: lib/marskal_web/components/core_components.ex

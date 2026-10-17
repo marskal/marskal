@@ -3,6 +3,7 @@ defmodule MarskalWeb.UserLive.RegistrationTest do
 
   import Phoenix.LiveViewTest
   import Marskal.AccountsFixtures
+  import Swoosh.TestAssertions
 
   alias Marskal.Accounts
 
@@ -38,17 +39,28 @@ defmodule MarskalWeb.UserLive.RegistrationTest do
   end
 
   describe "register user" do
-    test "creates account and logs in", %{conn: conn} do
+    test "creates an unconfirmed account and emails the link", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/users/register")
 
       email = unique_user_email()
-      form = form(lv, "#registration_form", user: valid_user_attributes(email: email))
 
-      render_submit(form)
-      conn = submit_form(form, conn)
+      {:ok, check, html} =
+        lv
+        |> form("#registration_form", user: valid_user_attributes(email: email))
+        |> render_submit()
+        |> follow_redirect(conn, ~p"/users/check-email")
 
-      assert redirected_to(conn) == ~p"/open"
-      assert Accounts.get_user_by_email(email).hashed_password
+      assert html =~ "Open it to confirm your account."
+      assert html =~ email
+      refute has_element?(check, "form")
+      user = Accounts.get_user_by_email(email)
+      assert user.hashed_password
+      refute user.confirmed_at
+
+      assert_email_sent(fn sent ->
+        assert sent.to == [{"", email}]
+        assert sent.text_body =~ "/users/confirm/"
+      end)
     end
 
     test "renders errors for duplicated email", %{conn: conn} do
