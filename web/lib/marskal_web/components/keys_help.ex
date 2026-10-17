@@ -141,10 +141,11 @@ defmodule MarskalWeb.KeysHelp do
       export default class extends ViewHook<HTMLDialogElement> {
         lastRow: string | null = null
 
-        // The row last focused, else the first on the page.
+        // The selected row, else the row last focused, else the first.
         focusList(): boolean {
           const last = this.lastRow && document.getElementById(this.lastRow)
           const title =
+            document.querySelector<HTMLElement>(".app-main .task-row.is-selected button.select") ||
             (last instanceof HTMLElement && last.querySelector<HTMLElement>("button.select")) ||
             document.querySelector<HTMLElement>(rowTitle)
           if (!title) return false
@@ -208,7 +209,7 @@ defmodule MarskalWeb.KeysHelp do
       {gettext("Drop"), [gettext("Delete")], ["dd"]},
       {gettext("Flag"), ["f"], []},
       {gettext("New task"), ["n"], ["o"]},
-      {gettext("Open the task"), [gettext("Enter")], []},
+      {gettext("Edit in the inspector"), [gettext("Enter")], []},
       {gettext("Go to the list"), ["↓", gettext("Esc")], ["j"]},
       {gettext("Show this help"), ["?"], []}
     ]

@@ -198,6 +198,11 @@ defmodule MarskalWeb.Layouts do
           }
           if (!this.el.classList.contains("is-inspector-open")) return
           event.preventDefault()
+          // Closing from inside the inspector hands focus back to its row.
+          const panel = this.el.querySelector(".app-inspector")
+          if (panel?.contains(document.activeElement)) {
+            this.el.querySelector<HTMLElement>(".task-row.is-selected button.select")?.focus()
+          }
           this.pushEvent("close-inspector", {})
         }
 
@@ -270,7 +275,9 @@ defmodule MarskalWeb.Layouts do
           const narrow = this.narrow.matches
           panel.toggleAttribute("inert", narrow && !open)
           document.body.classList.toggle("inspector-open", narrow && open)
-          if (open && !this.wasOpen) panel.focus({preventScroll: true})
+          // A sheet takes focus as it opens. Beside the list, focus stays
+          // on the row, so the list keys go on from there (ADR 0031).
+          if (open && !this.wasOpen && narrow) panel.focus({preventScroll: true})
           this.wasOpen = open
         }
       }

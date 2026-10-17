@@ -36,9 +36,16 @@ are the product, so they are recorded here.
   flag, not a flag inherited from its project (ADR 0025). **New** focuses
   the page's add field, or the inbox capture when the page has none. A
   title is required, so the key does not insert a blank task.
+- One current row. A click and the movement keys both select it, and it
+  has one highlight. Where the inspector is a pane beside the list, it
+  shows the current row, and focus stays on the list, so the keys go on
+  from a clicked row. Enter moves focus into the inspector to edit, and
+  Escape there closes it and returns to the row. Where the inspector is a
+  sheet over the list, the keys move the highlight only, and Enter opens
+  the sheet.
 - Getting to the list takes no mouse. With nothing focused, Down (and `j`
-  in Vim-style) focuses the row last focused, or the first. Escape in a task add
-  field does the same.
+  in Vim-style) focuses the current row, else the row last focused, else
+  the first. Escape in a task add field does the same.
 - `?` opens a reference of the keys, for the user's map, on any page.
 
 | Action | Standard | Vim-style, as well |
@@ -52,12 +59,12 @@ are the product, so they are recorded here.
 | Drop | Delete, Backspace | `dd` |
 | Flag | `f` | |
 | New task | `n` | `o` |
+| Edit in the inspector | Enter | |
 | Go to the list | Down, or Escape in an add field | `j` |
 | Show the keys | `?` | |
 
-Cmd-] and Cmd-[ are Ctrl-] and Ctrl-[ off a Mac, as before. Enter still
-opens the focused row. Escape still closes the inspector and the phone
-navigation.
+Cmd-] and Cmd-[ are Ctrl-] and Ctrl-[ off a Mac, as before. Escape still
+closes the inspector and the phone navigation.
 
 ## Consequences
 
@@ -67,6 +74,9 @@ navigation.
 - `gg` and `dd` are the only two-key sequences, and a sequence waits one
   second. Another key after the first does that key's own action, so a
   single `d` does nothing.
+- Moving with the keys replaces the browser history entry for the
+  selection, rather than adding one per row, and the inspector loads once
+  the keys pause.
 - Down on a page with nothing focused moves to the list instead of
   scrolling. Once a row has focus, the page scrolls with it.
 - The terminal UI and the iOS app can read the same preference. This ADR

@@ -191,6 +191,11 @@ msgstr ""
 
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
+msgid "Edit in the inspector"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
 msgid "End"
 msgstr ""
 
@@ -292,11 +297,6 @@ msgstr ""
 #: lib/marskal_web/live/project_live.ex
 #, elixir-autogen, elixir-format
 msgid "Open"
-msgstr ""
-
-#: lib/marskal_web/components/keys_help.ex
-#, elixir-autogen, elixir-format
-msgid "Open the task"
 msgstr ""
 
 #: lib/marskal_web/live/repeat_panel.ex

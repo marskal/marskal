@@ -139,7 +139,10 @@ defmodule MarskalWeb.TaskComponents do
           color: var(--muted);
         }
 
-        :scope.is-selected {
+        /* One highlight for the current row, however it was reached: a click
+           selects it, and so do the keys (ADR 0031). Where the keys only
+           move focus, the focused row takes the same tint. */
+        :scope:is(.is-selected, :has(button.select:focus-visible)) {
           background: var(--accent-tint);
         }
 
@@ -156,9 +159,7 @@ defmodule MarskalWeb.TaskComponents do
         }
 
         button.select:focus-visible {
-          outline: 2px solid var(--accent);
-          outline-offset: 2px;
-          border-radius: 2px;
+          outline: none;
         }
 
         .check:focus-visible {
@@ -560,6 +561,7 @@ defmodule MarskalWeb.TaskComponents do
         | "drop"
         | "flag"
         | "new"
+        | "open"
 
       const shared: Record<string, Action> = {
         ArrowUp: "move-prev",
@@ -573,6 +575,7 @@ defmodule MarskalWeb.TaskComponents do
         Backspace: "drop",
         f: "flag",
         n: "new",
+        Enter: "open",
       }
 
       const vim: Record<string, Action> = {
@@ -606,6 +609,10 @@ defmodule MarskalWeb.TaskComponents do
       }
 
       const outlineOnly: Action[] = ["indent", "outdent", "sibling-up", "sibling-down"]
+
+      // Where the inspector is a pane beside the list, rather than a sheet
+      // over it. Must match the `.Inspector` hook in layouts.ex.
+      const narrow = window.matchMedia("(max-width: 64rem)")
 
       const command = (event: KeyboardEvent) => event.metaKey || event.ctrlKey
 
@@ -685,6 +692,7 @@ defmodule MarskalWeb.TaskComponents do
         focusId: string | null = null
         prefix: Prefix | null = null
         prefixTimer = 0
+        selectTimer = 0
         sortable: Sortable | null = null
         drag: {
           el: HTMLElement
@@ -791,15 +799,58 @@ defmodule MarskalWeb.TaskComponents do
           return undefined
         }
 
+        // The focused row is the selected one, and the inspector pane shows
+        // it. The highlight moves at once; the inspector follows when the
+        // keys pause, and replaces the history entry rather than adding one.
+        // Where the inspector is a sheet, the keys only move the highlight.
+        select(row: HTMLElement) {
+          if (narrow.matches) return
+          for (const other of document.querySelectorAll(".task-row.is-selected")) {
+            other.classList.remove("is-selected")
+          }
+          row.classList.add("is-selected")
+          window.clearTimeout(this.selectTimer)
+          const id = row.dataset.inspectId
+          this.selectTimer = window.setTimeout(
+            () => this.pushEvent("inspect", {type: "task", id, replace: true}),
+            150,
+          )
+        }
+
+        // Enter opens the row in the inspector and, beside the list, moves
+        // focus there to edit. A sheet takes focus as it opens.
+        open(id: string) {
+          window.clearTimeout(this.selectTimer)
+          this.pushEvent("inspect", {type: "task", id, replace: !narrow.matches})
+          if (!narrow.matches) document.querySelector<HTMLElement>(".app-inspector")?.focus()
+        }
+
+        // A click selects the row, and focus stays on the list so the keys
+        // go on from there.
+        onClick = (event: MouseEvent) => {
+          if (narrow.matches || !(event.target instanceof Element)) return
+          if (event.target.closest("a, input, textarea, select, button:not(.select), .drag-handle")) return
+          const row = event.target.closest<HTMLElement>(".task-row")
+          if (!row || !this.el.contains(row)) return
+          row.querySelector<HTMLElement>("button.select")?.focus({preventScroll: true})
+        }
+
         run(name: Action, row: HTMLElement, id: string) {
           if (name.startsWith("move-")) {
             const next = this.target(name, row)
-            if (next && next !== row) next.querySelector<HTMLElement>("button.select")?.focus()
+            if (!next || next === row) return
+            next.querySelector<HTMLElement>("button.select")?.focus()
+            this.select(next)
             return
           }
 
           if (name === "new") {
             focusNew()
+            return
+          }
+
+          if (name === "open") {
+            this.open(id)
             return
           }
 
@@ -836,6 +887,7 @@ defmodule MarskalWeb.TaskComponents do
 
         mounted() {
           this.el.addEventListener("keydown", this.onKeydown)
+          this.el.addEventListener("click", this.onClick)
           const outline = this.el.hasAttribute("data-outline")
           const nested = this.el.hasAttribute("data-nested")
           if (!outline && !nested) return
@@ -873,7 +925,9 @@ defmodule MarskalWeb.TaskComponents do
 
         destroyed() {
           this.clearPrefix()
+          window.clearTimeout(this.selectTimer)
           this.el.removeEventListener("keydown", this.onKeydown)
+          this.el.removeEventListener("click", this.onClick)
           this.el.removeEventListener("pointerdown", this.onPointerDown)
           document.removeEventListener("pointermove", this.onPointerMove)
           this.sortable?.destroy()
