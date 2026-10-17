@@ -3,7 +3,8 @@
 #   mix run priv/repo/seeds.exs
 #
 # Sign in as:
-#   mts@marskal.example / H3mm3l1gh3d  — superuser, folders, projects, tasks
+#   mts@marskal.example / H3mm3l1gh3d  — superuser, folders, projects, tasks;
+#                                        en-DK dates, agenda home, Vim-style keys
 #   kvp@marskal.example / H3mm3l1gh3d  — second user, one open task
 #
 # Existing tasks are left in place. Folders and projects are added when
@@ -30,6 +31,11 @@ defmodule Marskal.DevSeed do
         })
         |> Marskal.Repo.insert!()
     end
+  end
+
+  # Set on every run, so a session that changed them gets them back.
+  def preferences!(user, attrs) do
+    {:ok, _} = Marskal.Accounts.update_preferences(user, attrs, Ecto.UUID.generate(version: 7))
   end
 
   def tasks!(user, rows) do
@@ -163,6 +169,7 @@ end
 dev = Marskal.DevSeed.user!("mts@marskal.example", true, password)
 other = Marskal.DevSeed.user!("kvp@marskal.example", false, password)
 
+Marskal.DevSeed.preferences!(dev, %{locale: "en-DK", home_view: :agenda, keymap: :vim})
 Marskal.DevSeed.structure!(dev)
 
 Marskal.DevSeed.tasks!(dev, [
