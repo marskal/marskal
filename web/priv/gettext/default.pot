@@ -244,6 +244,11 @@ msgstr ""
 msgid "Edit in the inspector"
 msgstr ""
 
+#: lib/marskal_web/live/user_live/forgot_password.ex
+#, elixir-autogen, elixir-format
+msgid "Email"
+msgstr ""
+
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "End"
@@ -252,6 +257,11 @@ msgstr ""
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Enter"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Enter the password you chose for %{email}."
 msgstr ""
 
 #: lib/marskal_web/components/keys_help.ex
@@ -269,21 +279,6 @@ msgstr ""
 msgid "Flag"
 msgstr ""
 
-#: lib/marskal_web/components/keys_help.ex
-#, elixir-autogen, elixir-format
-msgid "Go to the list"
-msgstr ""
-
-#: lib/marskal_web/live/user_live/forgot_password.ex
-#, elixir-autogen, elixir-format
-msgid "Email"
-msgstr ""
-
-#: lib/marskal_web/live/user_live/confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Enter the password you chose for %{email}."
-msgstr ""
-
 #: lib/marskal_web/live/user_live/reset_password.ex
 #, elixir-autogen, elixir-format
 msgid "For %{email}."
@@ -293,6 +288,11 @@ msgstr ""
 #: lib/marskal_web/live/user_live/login.ex
 #, elixir-autogen, elixir-format
 msgid "Forgot your password?"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Go to the list"
 msgstr ""
 
 #: lib/marskal_web/user_notifier.ex
@@ -325,9 +325,19 @@ msgstr ""
 msgid "Home"
 msgstr ""
 
+#: lib/marskal_web/live/user_live/check_email.ex
+#, elixir-autogen, elixir-format
+msgid "If %{email} has an account, we've sent it a link to choose a new password."
+msgstr ""
+
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Indent and outdent"
+msgstr ""
+
+#: lib/marskal_web/controllers/user_session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid email or password"
 msgstr ""
 
 #: lib/marskal_web/components/keys_help.ex
@@ -348,16 +358,6 @@ msgstr ""
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Keys act on the focused task, not while you type. Off a Mac, Cmd is Ctrl."
-msgstr ""
-
-#: lib/marskal_web/live/user_live/check_email.ex
-#, elixir-autogen, elixir-format
-msgid "If %{email} has an account, we've sent it a link to choose a new password."
-msgstr ""
-
-#: lib/marskal_web/controllers/user_session_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid email or password"
 msgstr ""
 
 #: lib/marskal_web/components/layouts.ex
@@ -390,6 +390,11 @@ msgstr ""
 msgid "Move among siblings"
 msgstr ""
 
+#: lib/marskal_web/live/user_live/reset_password.ex
+#, elixir-autogen, elixir-format
+msgid "New password"
+msgstr ""
+
 #: lib/marskal_web/components/task_components.ex
 #, elixir-autogen, elixir-format
 msgid "New task"
@@ -403,11 +408,6 @@ msgstr ""
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "New task below"
-msgstr ""
-
-#: lib/marskal_web/live/user_live/reset_password.ex
-#, elixir-autogen, elixir-format
-msgid "New password"
 msgstr ""
 
 #: lib/marskal_web/live/repeat_panel.ex
@@ -452,16 +452,6 @@ msgstr ""
 msgid "Reload"
 msgstr ""
 
-#: lib/marskal_web/components/keys_help.ex
-#, elixir-autogen, elixir-format
-msgid "Shift"
-msgstr ""
-
-#: lib/marskal_web/components/keys_help.ex
-#, elixir-autogen, elixir-format
-msgid "Show this help"
-msgstr ""
-
 #: lib/marskal_web/user_notifier.ex
 #, elixir-autogen, elixir-format
 msgid "Reset your Marskal password"
@@ -480,6 +470,16 @@ msgstr ""
 #: lib/marskal_web/live/user_live/reset_password.ex
 #, elixir-autogen, elixir-format
 msgid "Set password"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Shift"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Show this help"
 msgstr ""
 
 #: lib/marskal_web/components/layouts.ex
