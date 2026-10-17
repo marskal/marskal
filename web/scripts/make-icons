@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Makes the web app manifest's icons from the logo, priv/static/images/icon.svg:
+# the logo at 192 px (the 512 px icon.png is already beside it), and a
+# maskable 512 px one with the logo at 70 % on black, inside the circle a
+# launcher may crop it to. Run it when the logo changes, and commit the PNGs.
+
+set -euo pipefail
+
+images=$(cd "$(dirname "$0")/.." && pwd)/priv/static/images
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+
+nix shell nixpkgs#resvg nixpkgs#imagemagick -c bash -euo pipefail -c '
+  images=$1 work=$2
+  resvg -w 192 -h 192 "$images/icon.svg" "$work/icon-192.png"
+  resvg -w 358 -h 358 "$images/icon.svg" "$work/logo.png"
+  magick "$work/icon-192.png" -strip "$images/icon-192.png"
+  magick "$work/logo.png" -background black -gravity center -extent 512x512 \
+    -alpha remove -alpha off -strip "PNG24:$images/icon-maskable.png"
+' _ "$images" "$work"
+
+echo "Made the manifest icons in $images"

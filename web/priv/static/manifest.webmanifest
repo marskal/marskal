@@ -1,0 +1,22 @@
+{
+  "id": "/",
+  "name": "Marskal",
+  "short_name": "Marskal",
+  "description": "Tasks, projects, and plans.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#faf5ef",
+  "theme_color": "#125a48",
+  "icons": [
+    { "src": "/images/icon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "/images/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/images/icon.png", "sizes": "512x512", "type": "image/png" },
+    {
+      "src": "/images/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
