@@ -579,7 +579,6 @@ defmodule MarskalWeb.TaskComponents do
         | "check"
         | "drop"
         | "flag"
-        | "new"
         | "new-below"
         | "new-above"
         | "open"
@@ -595,7 +594,7 @@ defmodule MarskalWeb.TaskComponents do
         Delete: "drop",
         Backspace: "drop",
         f: "flag",
-        n: "new",
+        n: "new-below",
         Enter: "open",
       }
 
@@ -866,16 +865,11 @@ defmodule MarskalWeb.TaskComponents do
             return
           }
 
-          // On an outline, `o` and `O` add a task inline beside the row.
-          // Other lists have no place for it, so they use the add field.
+          // On an outline, `n` (and `o`) and `O` add a task inline beside the
+          // row. Other lists have no place for it, so they use the add field.
           if (name === "new-below" || name === "new-above") {
             if (!this.el.hasAttribute("data-outline")) focusNew()
             else this.pushEvent("inline-new", {id, where: name === "new-below" ? "below" : "above"})
-            return
-          }
-
-          if (name === "new") {
-            focusNew()
             return
           }
 

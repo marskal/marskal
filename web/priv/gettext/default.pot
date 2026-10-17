@@ -289,7 +289,6 @@ msgstr ""
 msgid "Move among siblings"
 msgstr ""
 
-#: lib/marskal_web/components/keys_help.ex
 #: lib/marskal_web/components/task_components.ex
 #, elixir-autogen, elixir-format
 msgid "New task"
@@ -297,7 +296,12 @@ msgstr ""
 
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
-msgid "New task below and above"
+msgid "New task above"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "New task below"
 msgstr ""
 
 #: lib/marskal_web/live/repeat_panel.ex
