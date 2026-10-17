@@ -92,6 +92,26 @@ defmodule MarskalWeb.UserLive.SettingsTest do
 
       assert conn.resp_body =~ "You must re-authenticate to access this page."
     end
+
+    test "logging in again goes back to the settings page", %{conn: conn} do
+      user = user_fixture() |> set_password()
+
+      conn =
+        conn
+        |> log_in_user(user,
+          token_authenticated_at: DateTime.add(DateTime.utc_now(:second), -11, :minute)
+        )
+        |> get(~p"/users/settings")
+
+      assert redirected_to(conn) == ~p"/users/log-in"
+
+      conn =
+        post(recycle(conn), ~p"/users/log-in", %{
+          "user" => %{"email" => user.email, "password" => valid_user_password()}
+        })
+
+      assert redirected_to(conn) == ~p"/users/settings"
+    end
   end
 
   describe "update email form" do
