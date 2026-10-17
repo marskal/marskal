@@ -606,6 +606,8 @@ defmodule MarskalWeb.TaskComponents do
         l: "expand",
         ">": "indent",
         "<": "outdent",
+        L: "indent",
+        H: "outdent",
         K: "sibling-up",
         J: "sibling-down",
         x: "check",

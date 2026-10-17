@@ -272,7 +272,7 @@ defmodule MarskalWeb.KeysHelp do
          {:chord, [gettext("Shift"), gettext("Tab")]},
          {:chord, ["Cmd", "]"]},
          {:chord, ["Cmd", "["]}
-       ], [">", "<"]},
+       ], [">", "<", "L", "H"]},
       {gettext("Move among siblings"), [{:chord, ["Alt", "↑"]}, {:chord, ["Alt", "↓"]}],
        ["K", "J"]},
       {gettext("Complete or reopen"), [gettext("Space")], ["x"]},

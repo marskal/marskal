@@ -59,7 +59,7 @@ are the product, so they are recorded here.
 | Previous and next row | Up, Down | `k`, `j` |
 | First and last row | Home, End | `gg`, `G` |
 | Collapse and expand | Left, Right | `h`, `l` |
-| Indent and outdent | Tab, Shift-Tab, Cmd-], Cmd-[ | `>`, `<` |
+| Indent and outdent | Tab, Shift-Tab, Cmd-], Cmd-[ | `>`, `<`, or `L`, `H` |
 | Move among siblings | Alt-Up, Alt-Down | `K`, `J` |
 | Check | Space | `x` |
 | Drop | Delete, Backspace | `dd` |
