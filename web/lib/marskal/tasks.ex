@@ -262,8 +262,9 @@ defmodule Marskal.Tasks do
   @doc """
   A new task. With `parent_id` it is a subtask and lives where its parent
   does, whatever location is given. With `after_id` it goes right after
-  that sibling; otherwise at the top of the inbox or the bottom of
-  anywhere else. A `rank` from a client is kept as given.
+  that sibling, and with `before_id` right before it; otherwise at the
+  top of the inbox or the bottom of anywhere else. A `rank` from a client
+  is kept as given.
   `at:` is as for `update_task/5`.
   """
   def create_task(%User{} = user, attrs, command_id, opts \\ []) when is_map(attrs) do
@@ -271,7 +272,7 @@ defmodule Marskal.Tasks do
       changeset =
         %Task{}
         |> Task.create_changeset(user, attrs, opts)
-        |> place_new(user, attr(attrs, :after_id))
+        |> place_new(user, placement(attrs))
 
       case Repo.insert(changeset) do
         {:ok, task} -> {:ok, task, changeset}
@@ -545,12 +546,12 @@ defmodule Marskal.Tasks do
   end
 
   # A new subtask lives where its parent does. Ranks from a client stand.
-  defp place_new(%Ecto.Changeset{valid?: false} = changeset, _user, _after_id), do: changeset
+  defp place_new(%Ecto.Changeset{valid?: false} = changeset, _user, _placement), do: changeset
 
-  defp place_new(changeset, user, after_id) do
+  defp place_new(changeset, user, placement) do
     changeset
     |> inherit_parent_location(user)
-    |> assign_rank(user, after_id)
+    |> assign_rank(user, placement)
   end
 
   defp inherit_parent_location(changeset, user) do
@@ -572,27 +573,43 @@ defmodule Marskal.Tasks do
     end
   end
 
-  defp assign_rank(%{valid?: false} = changeset, _user, _after_id), do: changeset
+  defp assign_rank(%{valid?: false} = changeset, _user, _placement), do: changeset
 
-  defp assign_rank(changeset, user, after_id) do
+  defp assign_rank(changeset, user, placement) do
     if Ecto.Changeset.get_change(changeset, :rank) do
       changeset
     else
-      put_new_rank(changeset, user, after_id)
+      put_new_rank(changeset, user, placement)
     end
   end
 
-  defp put_new_rank(changeset, user, after_id) do
+  defp put_new_rank(changeset, user, placement) do
     group = Outline.group(Ecto.Changeset.apply_changes(changeset))
 
-    case new_rank(user, group, after_id) do
-      {:ok, rank} -> Ecto.Changeset.put_change(changeset, :rank, rank)
-      {:error, _} -> Ecto.Changeset.add_error(changeset, :after_id, "must be a sibling")
+    case new_rank(user, group, placement) do
+      {:ok, rank} ->
+        Ecto.Changeset.put_change(changeset, :rank, rank)
+
+      {:error, _} ->
+        Ecto.Changeset.add_error(changeset, placement_field(placement), "must be a sibling")
     end
   end
 
+  # Right after one sibling, right before one, or where a new task goes.
+  defp placement(attrs) do
+    cond do
+      id = attr(attrs, :after_id) -> {:after, id}
+      id = attr(attrs, :before_id) -> {:before, id}
+      true -> nil
+    end
+  end
+
+  defp placement_field({:before, _id}), do: :before_id
+  defp placement_field(_placement), do: :after_id
+
   defp new_rank(user, group, nil), do: {:ok, Outline.default_rank(user, group)}
-  defp new_rank(user, group, after_id), do: Outline.rank_after(user, group, after_id)
+  defp new_rank(user, group, {:after, id}), do: Outline.rank_after(user, group, id)
+  defp new_rank(user, group, {:before, id}), do: Outline.rank_before(user, group, id)
 
   # Moving to another location leaves the parent behind: the task goes to
   # the top of the new location, placed as a new task would be.

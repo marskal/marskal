@@ -208,7 +208,8 @@ defmodule MarskalWeb.KeysHelp do
       {gettext("Complete or reopen"), [gettext("Space")], ["x"]},
       {gettext("Drop"), [gettext("Delete")], ["dd"]},
       {gettext("Flag"), ["f"], []},
-      {gettext("New task"), ["n"], ["o"]},
+      {gettext("New task"), ["n"], []},
+      {gettext("New task below and above"), [], ["o", "O"]},
       {gettext("Edit in the inspector"), [gettext("Enter")], []},
       {gettext("Go to the list"), ["↓", gettext("Esc")], ["j"]},
       {gettext("Show this help"), ["?"], []}

@@ -50,6 +50,10 @@ defmodule MarskalWeb.TaskComponents do
   attr :repeating, :any, default: MapSet.new(), doc: "ids of tasks in a running series"
   attr :flagged, :any, default: MapSet.new(), doc: "ids of flagged tasks, own flag or project's"
 
+  attr :new_row, :map,
+    default: nil,
+    doc: "the task being added inline on an outline, from `MarskalWeb.Outline`"
+
   slot :empty_state, doc: "shown instead of `empty` when there are no tasks"
 
   def list(assigns) do
@@ -363,156 +367,171 @@ defmodule MarskalWeb.TaskComponents do
       data-outline={@outline}
       data-nested={@nested}
     >
-      <li
-        :for={%{task: task, dates: d, depth: depth, children?: children?} <- @rows}
-        id={"task-#{task.id}"}
-        class={[
-          "task-row",
-          MarskalWeb.Inspector.selected?(:task, task.id, @inspector) && "is-selected",
-          (MapSet.member?(@unavailable, task.id) or MapSet.member?(@deferred, task.id)) &&
-            "is-unavailable",
-          (task.state != :to_do or MapSet.member?(@resolved, task.id)) && "is-resolved"
-        ]}
-        style={depth > 0 && "--depth: #{depth}"}
-        data-depth={(@outline or @nested) && depth}
-        data-inspect-type="task"
-        data-inspect-id={task.id}
-        aria-current={MarskalWeb.Inspector.selected?(:task, task.id, @inspector) && "true"}
-        phx-click="inspect"
-        phx-value-type="task"
-        phx-value-id={task.id}
-      >
-        <%!-- The keys move a row too; this is for pointers. Its own no-op
-             click keeps a grab from opening the inspector. --%>
-        <span
-          :if={@outline}
-          class="drag-handle"
-          aria-hidden="true"
-          title="Drag to move"
-          phx-click={JS.dispatch("outline:noop")}
+      <%= for %{task: task, dates: d, depth: depth, children?: children?} <- @rows do %>
+        <.new_row
+          :if={new_row_at?(@new_row, task.id, :above)}
+          anchor_id={task.id}
+          depth={depth}
+          outline={@outline}
+          disclosures={@disclosures}
+        />
+        <li
+          id={"task-#{task.id}"}
+          class={[
+            "task-row",
+            MarskalWeb.Inspector.selected?(:task, task.id, @inspector) && "is-selected",
+            (MapSet.member?(@unavailable, task.id) or MapSet.member?(@deferred, task.id)) &&
+              "is-unavailable",
+            (task.state != :to_do or MapSet.member?(@resolved, task.id)) && "is-resolved"
+          ]}
+          style={depth > 0 && "--depth: #{depth}"}
+          data-depth={(@outline or @nested) && depth}
+          data-inspect-type="task"
+          data-inspect-id={task.id}
+          aria-current={MarskalWeb.Inspector.selected?(:task, task.id, @inspector) && "true"}
+          phx-click="inspect"
+          phx-value-type="task"
+          phx-value-id={task.id}
         >
-          <Lucideicons.grip_vertical class="icon" />
-        </span>
-        <span :if={@disclosures} class="disclosure">
-          <button
-            :if={children?}
-            type="button"
-            phx-click="outline-toggle"
-            phx-value-id={task.id}
-            aria-expanded={to_string(not MapSet.member?(@collapsed, task.id))}
-            aria-label={
-              if MapSet.member?(@collapsed, task.id), do: "Show subtasks", else: "Hide subtasks"
-            }
+          <%!-- The keys move a row too; this is for pointers. Its own no-op
+             click keeps a grab from opening the inspector. --%>
+          <span
+            :if={@outline}
+            class="drag-handle"
+            aria-hidden="true"
+            title="Drag to move"
+            phx-click={JS.dispatch("outline:noop")}
           >
-            <Lucideicons.chevron_right
-              :if={MapSet.member?(@collapsed, task.id)}
-              class="icon"
-              aria-hidden="true"
-            />
-            <Lucideicons.chevron_down
-              :if={not MapSet.member?(@collapsed, task.id)}
-              class="icon"
-              aria-hidden="true"
-            />
-          </button>
-        </span>
-        <span :if={:complete in @actions} class="check-form">
-          <button
-            type="button"
-            class={check_class(task)}
-            phx-click={check_event(task)}
-            phx-value-id={task.id}
-            title={check_label(task)}
-            aria-label={check_label(task)}
-          >
-            <span :if={task.state == :dropped} class="check__dropped" aria-hidden="true">
-              <Lucideicons.square_off class="icon" />
-            </span>
-            <span :if={task.state == :done} class="check__complete" aria-hidden="true">
-              <Lucideicons.square_check_big class="icon" />
-            </span>
-            <span :if={task.state == :to_do} class="check__idle" aria-hidden="true">
-              <Lucideicons.square class="icon" />
-            </span>
-            <span :if={task.state == :to_do} class="check__hint" aria-hidden="true">
-              <Lucideicons.square_check_big class="icon" />
-            </span>
-          </button>
-        </span>
-        <div class="body">
-          <button
-            type="button"
-            class="select title"
-            phx-click="inspect"
-            phx-value-type="task"
-            phx-value-id={task.id}
-          >
-            <span :if={!(@outline or @nested) && @parents[task.id]} class="crumb">
-              {@parents[task.id].title}<span class="chevron" aria-hidden="true">›</span>
-            </span>
-            {task.title}
-          </button>
-          <MarskalWeb.UrlLink.link url={task.url} />
-          <div class="meta">
-            <span
-              :if={
-                (@mark_inbox and task.inbox) or d.planned_at != nil or d.due_at != nil or
-                  MapSet.member?(@unavailable, task.id) or MapSet.member?(@deferred, task.id) or
-                  MapSet.member?(@repeating, task.id) or
-                  MapSet.member?(@flagged, task.id)
+            <Lucideicons.grip_vertical class="icon" />
+          </span>
+          <span :if={@disclosures} class="disclosure">
+            <button
+              :if={children?}
+              type="button"
+              phx-click="outline-toggle"
+              phx-value-id={task.id}
+              aria-expanded={to_string(not MapSet.member?(@collapsed, task.id))}
+              aria-label={
+                if MapSet.member?(@collapsed, task.id), do: "Show subtasks", else: "Hide subtasks"
               }
-              class="marks"
             >
+              <Lucideicons.chevron_right
+                :if={MapSet.member?(@collapsed, task.id)}
+                class="icon"
+                aria-hidden="true"
+              />
+              <Lucideicons.chevron_down
+                :if={not MapSet.member?(@collapsed, task.id)}
+                class="icon"
+                aria-hidden="true"
+              />
+            </button>
+          </span>
+          <span :if={:complete in @actions} class="check-form">
+            <button
+              type="button"
+              class={check_class(task)}
+              phx-click={check_event(task)}
+              phx-value-id={task.id}
+              title={check_label(task)}
+              aria-label={check_label(task)}
+            >
+              <span :if={task.state == :dropped} class="check__dropped" aria-hidden="true">
+                <Lucideicons.square_off class="icon" />
+              </span>
+              <span :if={task.state == :done} class="check__complete" aria-hidden="true">
+                <Lucideicons.square_check_big class="icon" />
+              </span>
+              <span :if={task.state == :to_do} class="check__idle" aria-hidden="true">
+                <Lucideicons.square class="icon" />
+              </span>
+              <span :if={task.state == :to_do} class="check__hint" aria-hidden="true">
+                <Lucideicons.square_check_big class="icon" />
+              </span>
+            </button>
+          </span>
+          <div class="body">
+            <button
+              type="button"
+              class="select title"
+              phx-click="inspect"
+              phx-value-type="task"
+              phx-value-id={task.id}
+            >
+              <span :if={!(@outline or @nested) && @parents[task.id]} class="crumb">
+                {@parents[task.id].title}<span class="chevron" aria-hidden="true">›</span>
+              </span>
+              {task.title}
+            </button>
+            <MarskalWeb.UrlLink.link url={task.url} />
+            <div class="meta">
               <span
-                :if={MapSet.member?(@flagged, task.id)}
-                class="mark mark--flag"
-                title={flag_label(task)}
+                :if={
+                  (@mark_inbox and task.inbox) or d.planned_at != nil or d.due_at != nil or
+                    MapSet.member?(@unavailable, task.id) or MapSet.member?(@deferred, task.id) or
+                    MapSet.member?(@repeating, task.id) or
+                    MapSet.member?(@flagged, task.id)
+                }
+                class="marks"
               >
-                <Lucideicons.flag class="icon" aria-label={flag_label(task)} />
+                <span
+                  :if={MapSet.member?(@flagged, task.id)}
+                  class="mark mark--flag"
+                  title={flag_label(task)}
+                >
+                  <Lucideicons.flag class="icon" aria-label={flag_label(task)} />
+                </span>
+                <span
+                  :if={MapSet.member?(@repeating, task.id)}
+                  class="mark mark--repeat"
+                  title="Repeats"
+                >
+                  <Lucideicons.repeat class="icon" aria-label="Repeats" />
+                </span>
+                <span :if={@mark_inbox and task.inbox} class="mark mark--inbox">Inbox</span>
+                <span :if={MapSet.member?(@unavailable, task.id)} class="mark mark--unavailable">
+                  Unavailable
+                </span>
+                <span :if={MapSet.member?(@deferred, task.id)} class="mark mark--deferred">
+                  {deferred_label(d, @zone, @today, @now)}
+                </span>
+                <span
+                  :if={d.planned_at}
+                  class={[
+                    "mark mark--planned",
+                    planned_today?(task, d, @zone, @today) && "mark--today",
+                    inherited?(task, d, :planned_at) && "mark--inherited"
+                  ]}
+                  title={inherited?(task, d, :planned_at) && @inherited_hint}
+                >
+                  Planned {MarskalWeb.DateFields.short(d.planned_at, :planned_at, @zone, @today)}
+                </span>
+                <span
+                  :if={d.due_at}
+                  class={[
+                    "mark mark--due",
+                    Marskal.Dates.overdue?(%{state: task.state, due_at: d.due_at}, @now) &&
+                      "mark--overdue",
+                    inherited?(task, d, :due_at) && "mark--inherited"
+                  ]}
+                  title={inherited?(task, d, :due_at) && @inherited_hint}
+                >
+                  Due {MarskalWeb.DateFields.short(d.due_at, :due_at, @zone, @today)}
+                </span>
               </span>
-              <span
-                :if={MapSet.member?(@repeating, task.id)}
-                class="mark mark--repeat"
-                title="Repeats"
-              >
-                <Lucideicons.repeat class="icon" aria-label="Repeats" />
-              </span>
-              <span :if={@mark_inbox and task.inbox} class="mark mark--inbox">Inbox</span>
-              <span :if={MapSet.member?(@unavailable, task.id)} class="mark mark--unavailable">
-                Unavailable
-              </span>
-              <span :if={MapSet.member?(@deferred, task.id)} class="mark mark--deferred">
-                {deferred_label(d, @zone, @today, @now)}
-              </span>
-              <span
-                :if={d.planned_at}
-                class={[
-                  "mark mark--planned",
-                  planned_today?(task, d, @zone, @today) && "mark--today",
-                  inherited?(task, d, :planned_at) && "mark--inherited"
-                ]}
-                title={inherited?(task, d, :planned_at) && @inherited_hint}
-              >
-                Planned {MarskalWeb.DateFields.short(d.planned_at, :planned_at, @zone, @today)}
-              </span>
-              <span
-                :if={d.due_at}
-                class={[
-                  "mark mark--due",
-                  Marskal.Dates.overdue?(%{state: task.state, due_at: d.due_at}, @now) &&
-                    "mark--overdue",
-                  inherited?(task, d, :due_at) && "mark--inherited"
-                ]}
-                title={inherited?(task, d, :due_at) && @inherited_hint}
-              >
-                Due {MarskalWeb.DateFields.short(d.due_at, :due_at, @zone, @today)}
-              </span>
-            </span>
-            <MarskalWeb.TagComponents.chips entries={Map.get(@tags, task.id, [])} />
+              <MarskalWeb.TagComponents.chips entries={Map.get(@tags, task.id, [])} />
+            </div>
+            <MarskalWeb.FormattedNotes.block text={task.notes} />
           </div>
-          <MarskalWeb.FormattedNotes.block text={task.notes} />
-        </div>
-      </li>
+        </li>
+        <.new_row
+          :if={new_row_at?(@new_row, task.id, :below)}
+          anchor_id={task.id}
+          depth={depth + if(@new_row.child?, do: 1, else: 0)}
+          outline={@outline}
+          disclosures={@disclosures}
+        />
+      <% end %>
     </ul>
     <script :type={Phoenix.LiveView.ColocatedHook} name=".Outline" extension="ts">
       import {ViewHook} from "phoenix_live_view"
@@ -561,6 +580,8 @@ defmodule MarskalWeb.TaskComponents do
         | "drop"
         | "flag"
         | "new"
+        | "new-below"
+        | "new-above"
         | "open"
 
       const shared: Record<string, Action> = {
@@ -589,7 +610,8 @@ defmodule MarskalWeb.TaskComponents do
         K: "sibling-up",
         J: "sibling-down",
         x: "check",
-        o: "new",
+        o: "new-below",
+        O: "new-above",
       }
 
       // What a completed sequence does.
@@ -844,6 +866,14 @@ defmodule MarskalWeb.TaskComponents do
             return
           }
 
+          // On an outline, `o` and `O` add a task inline beside the row.
+          // Other lists have no place for it, so they use the add field.
+          if (name === "new-below" || name === "new-above") {
+            if (!this.el.hasAttribute("data-outline")) focusNew()
+            else this.pushEvent("inline-new", {id, where: name === "new-below" ? "below" : "above"})
+            return
+          }
+
           if (name === "new") {
             focusNew()
             return
@@ -888,6 +918,13 @@ defmodule MarskalWeb.TaskComponents do
         mounted() {
           this.el.addEventListener("keydown", this.onKeydown)
           this.el.addEventListener("click", this.onClick)
+          // Back to a row when an inline new task closes.
+          this.handleEvent("outline-focus", ({id}: {id: string}) => {
+            const row = this.el.querySelector<HTMLElement>(`#task-${CSS.escape(id)}`)
+            if (!row) return
+            row.querySelector<HTMLElement>("button.select")?.focus()
+            this.select(row)
+          })
           const outline = this.el.hasAttribute("data-outline")
           const nested = this.el.hasAttribute("data-nested")
           if (!outline && !nested) return
@@ -934,6 +971,99 @@ defmodule MarskalWeb.TaskComponents do
         }
       }
     </script>
+    """
+  end
+
+  defp new_row_at?(%{anchor_id: id, where: :above}, id, :above), do: true
+  defp new_row_at?(%{anchor_id: id, where: :below}, id, :below), do: true
+  defp new_row_at?(_new_row, _id, _where), do: false
+
+  attr :anchor_id, :string, required: true
+  attr :depth, :integer, required: true
+  attr :outline, :boolean, required: true
+  attr :disclosures, :boolean, required: true
+
+  # A task being added inline, by `o` and `O` (ADR 0031). Enter adds it and
+  # opens the next below it; Escape, or leaving it empty, ends.
+  defp new_row(assigns) do
+    ~H"""
+    <li id="task-new" class="task-new" style={@depth > 0 && "--depth: #{@depth}"}>
+      <style :type={MarskalWeb.ColocatedCSS}>
+        @scope (.task-new) {
+          :scope {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.6rem 0.5rem;
+            border-bottom: 1px solid var(--border);
+          }
+
+          :scope[style*="--depth"] {
+            margin-inline-start: calc(var(--depth) * 1.75rem);
+          }
+
+          .handle-space {
+            flex: 0 0 1rem;
+            margin-inline: -0.5rem -0.6rem;
+          }
+
+          .disclosure-space {
+            flex: 0 0 1.5rem;
+            margin-inline-end: -0.5rem;
+          }
+
+          .check-space {
+            display: inline-grid;
+            flex: 0 0 2rem;
+            place-items: center;
+            height: 2rem;
+            color: var(--muted);
+          }
+
+          .check-space .icon {
+            width: 1.5rem;
+            height: 1.5rem;
+          }
+
+          form {
+            flex: 1 1 auto;
+            margin: 0;
+          }
+
+          input[type="text"] {
+            width: 100%;
+            padding: 0;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            color: inherit;
+            font: inherit;
+          }
+
+          input[type="text"]:focus-visible {
+            outline: none;
+          }
+        }
+      </style>
+      <span :if={@outline} class="handle-space" aria-hidden="true"></span>
+      <span :if={@disclosures} class="disclosure-space" aria-hidden="true"></span>
+      <span class="check-space" aria-hidden="true"><Lucideicons.square class="icon" /></span>
+      <form id="task-new-form" phx-submit="inline-create">
+        <input
+          id={"task-new-title-#{@anchor_id}"}
+          type="text"
+          name="title"
+          autocomplete="off"
+          enterkeyhint="next"
+          placeholder={gettext("New task")}
+          aria-label={gettext("New task")}
+          phx-mounted={JS.focus()}
+          phx-keydown="inline-cancel"
+          phx-key="Escape"
+          phx-blur="inline-blur"
+        />
+      </form>
+    </li>
     """
   end
 

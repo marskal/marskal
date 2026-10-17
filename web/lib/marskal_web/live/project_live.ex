@@ -70,6 +70,7 @@ defmodule MarskalWeb.ProjectLive do
         flagged={@task_tags.flagged}
         outline
         collapsed={@collapsed}
+        new_row={@new_row}
         zone={Marskal.Accounts.timezone(@current_scope.user)}
         actions={[:complete]}
         inspector={@inspector}

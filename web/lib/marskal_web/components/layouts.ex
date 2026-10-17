@@ -190,7 +190,7 @@ defmodule MarskalWeb.Layouts do
         onKeydown = (event: KeyboardEvent) => {
           if (event.key !== "Escape") return
           if (document.querySelector("dialog[open]")) return
-          if (event.target instanceof Element && event.target.closest(".add-form")) return
+          if (event.target instanceof Element && event.target.closest(".add-form, .task-new")) return
           if (document.body.classList.contains("nav-open")) {
             event.preventDefault()
             this.setNav(false)

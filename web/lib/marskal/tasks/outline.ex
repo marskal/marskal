@@ -67,6 +67,24 @@ defmodule Marskal.Tasks.Outline do
     end
   end
 
+  @doc "The rank right before sibling `before_id`."
+  def rank_before(user, group, before_id) do
+    case sibling(user, group, before_id) do
+      %Task{rank: rank} ->
+        previous =
+          user
+          |> siblings(group, nil)
+          |> where([t], t.rank < ^rank)
+          |> select([t], max(t.rank))
+          |> Repo.one()
+
+        {:ok, Rank.between(previous, rank)}
+
+      nil ->
+        {:error, :not_a_sibling}
+    end
+  end
+
   @doc "The sibling just before `task`, if there is one."
   def previous_sibling(user, %Task{} = task) do
     user

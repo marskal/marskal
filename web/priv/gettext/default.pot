@@ -144,6 +144,11 @@ msgstr ""
 msgid "Contents of %{name}"
 msgstr ""
 
+#: lib/marskal_web/outline.ex
+#, elixir-autogen, elixir-format
+msgid "Could not add the task."
+msgstr ""
+
 #: lib/marskal_web/task_keys.ex
 #, elixir-autogen, elixir-format
 msgid "Could not update task."
@@ -285,8 +290,14 @@ msgid "Move among siblings"
 msgstr ""
 
 #: lib/marskal_web/components/keys_help.ex
+#: lib/marskal_web/components/task_components.ex
 #, elixir-autogen, elixir-format
 msgid "New task"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "New task below and above"
 msgstr ""
 
 #: lib/marskal_web/live/repeat_panel.ex

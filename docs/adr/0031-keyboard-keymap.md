@@ -36,6 +36,13 @@ are the product, so they are recorded here.
   flag, not a flag inherited from its project (ADR 0025). **New** focuses
   the page's add field, or the inbox capture when the page has none. A
   title is required, so the key does not insert a blank task.
+- **New below** (`o`) and **New above** (`O`) add a task inline on an
+  outline, as a sibling of the current row. Below a row whose subtasks
+  show, the new task is its first subtask, where it reads on screen.
+  Enter adds it and opens the next row below it; Escape, or leaving the
+  row empty, ends and returns to the last row. Nothing is saved until
+  there is a title. A list without an outline has no place to put it, so
+  there the keys act as **New**.
 - One current row. A click and the movement keys both select it, and it
   has one highlight. Where the inspector is a pane beside the list, it
   shows the current row, and focus stays on the list, so the keys go on
@@ -58,7 +65,8 @@ are the product, so they are recorded here.
 | Check | Space | `x` |
 | Drop | Delete, Backspace | `dd` |
 | Flag | `f` | |
-| New task | `n` | `o` |
+| New task | `n` | |
+| New task below, above | | `o`, `O` |
 | Edit in the inspector | Enter | |
 | Go to the list | Down, or Escape in an add field | `j` |
 | Show the keys | `?` | |
