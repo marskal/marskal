@@ -14,7 +14,7 @@ config :marskal, Marskal.Repo,
   username: System.get_env("PGUSER") || System.get_env("USER") || "postgres",
   password: System.get_env("PGPASSWORD"),
   hostname: System.get_env("PGHOST") || "127.0.0.1",
-  port: String.to_integer(System.get_env("PGPORT") || "5432"),
+  port: String.to_integer(System.get_env("PGPORT") || "8271"),
   database: "marskal_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2

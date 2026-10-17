@@ -36,6 +36,7 @@ in
     enable = true;
     package = pkgs.postgresql_18;
     listen_addresses = "127.0.0.1";
+    port = 8271; # off the default, so other devenvs do not clash
     initialDatabases = [
       { name = "marskal_dev"; }
       { name = "marskal_test"; }

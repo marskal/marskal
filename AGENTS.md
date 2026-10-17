@@ -221,6 +221,7 @@ The repository root is the product, not the web app (ADR 0015).
 - From `web/`: `devenv shell` before Mix work. Prefer editing `web/devenv.nix`
   over global installs. Do not float `pkgs.elixir`.
 - Dev URL: **http://marskal.localhost:8275** (port **8275** ≈ TASK on phone keypad).
+  Postgres listens on **8271**, off the default so other devenvs do not clash.
 - **`devenv up`** (from `web/`) starts Postgres + Phoenix (`processes.server`).
   Postgres is that managed `services.postgres` process — never `pg_ctl start` /
   `start-postgres` against `web/.devenv/state/postgres` (it orphans a second cluster).
