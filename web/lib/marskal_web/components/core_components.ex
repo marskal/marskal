@@ -62,7 +62,8 @@ defmodule MarskalWeb.CoreComponents do
       :if={msg = render_slot(@inner_block) || Phoenix.Flash.get(@flash, @kind)}
       id={@id}
       phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
-      phx-hook={@kind == :info && ".AutoHide"}
+      phx-hook=".AutoHide"
+      data-auto-hide={@kind == :info}
       role={if(@kind == :error, do: "alert", else: "status")}
       class={["toast", "toast--#{@kind}"]}
       {@rest}
@@ -81,11 +82,13 @@ defmodule MarskalWeb.CoreComponents do
       import {ViewHook} from "phoenix_live_view"
 
       // A notice clears itself after a while, unless the pointer or focus is
-      // on it. An error stays until it is closed.
+      // on it. An error stays until it is closed. The hook name must be a
+      // literal for LiveView to resolve it, so errors carry it too and opt out.
       export default class extends ViewHook {
         timer?: number
 
         mounted() {
+          if (!this.el.hasAttribute("data-auto-hide")) return
           this.el.addEventListener("pointerenter", this.stop)
           this.el.addEventListener("focusin", this.stop)
           this.el.addEventListener("pointerleave", this.start)
@@ -94,7 +97,7 @@ defmodule MarskalWeb.CoreComponents do
         }
 
         updated() {
-          this.start()
+          if (this.el.hasAttribute("data-auto-hide")) this.start()
         }
 
         destroyed() {
