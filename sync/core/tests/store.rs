@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 
 use jiff::Timestamp;
 use marskal_sync::{
-    Anchor, Clock, Entity, Frequency, HomeView, Location, Mode, NewProject, NewTask, Op,
+    Anchor, Clock, Entity, Frequency, HomeView, Keymap, Location, Mode, NewProject, NewTask, Op,
     PullResponse, PullUser, PushResult, PushStatus, Store, TaskFilter, TaskPatch, TaskState,
 };
 use serde_json::{Map, Value, json};
@@ -621,6 +621,7 @@ fn pulled_preferences_read_back() {
         "week_start": 7,
         "locale": "en-DK",
         "home_view": "agenda",
+        "keymap": "vim",
         "inserted_at": "2026-10-01T08:00:00Z",
         "updated_at": "2026-10-01T08:00:00Z"
     });
@@ -639,6 +640,7 @@ fn pulled_preferences_read_back() {
     assert_eq!(preferences.week_start, 7);
     assert_eq!(preferences.locale, "en-DK");
     assert_eq!(preferences.home_view, HomeView::Agenda);
+    assert_eq!(preferences.keymap, Keymap::Vim);
 }
 
 #[test]
@@ -676,19 +678,19 @@ fn a_preferences_row_from_before_home_view_reads_as_open_tasks() {
         .query_row("PRAGMA user_version", [], |row| row.get(0))
         .unwrap();
     conn.execute_batch(&format!(
-        "ALTER TABLE user_preferences DROP COLUMN home_view;
+        "ALTER TABLE user_preferences DROP COLUMN keymap;
+         ALTER TABLE user_preferences DROP COLUMN home_view;
          PRAGMA user_version = {version};",
-        version = version - 1
+        version = version - 2
     ))
     .unwrap();
     drop(conn);
 
     let store = Store::open(&path).unwrap();
     assert_eq!(store.pull_cursor().unwrap(), None);
-    assert_eq!(
-        store.preferences().unwrap().unwrap().home_view,
-        HomeView::OpenTasks
-    );
+    let preferences = store.preferences().unwrap().unwrap();
+    assert_eq!(preferences.home_view, HomeView::OpenTasks);
+    assert_eq!(preferences.keymap, Keymap::Standard);
 
     std::fs::remove_dir_all(dir).unwrap();
 }

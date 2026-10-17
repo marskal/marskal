@@ -201,6 +201,12 @@ INSERT OR REPLACE INTO meta (key, value) VALUES ('needs_snapshot', '1');
 ALTER TABLE user_preferences ADD COLUMN home_view TEXT NOT NULL DEFAULT 'open_tasks';
 INSERT OR REPLACE INTO meta (key, value) VALUES ('needs_snapshot', '1');
 "#,
+    // ADR 0031. Preferences pulled before this have no keymap, so the next
+    // pull is a snapshot. The default is the standard map.
+    r#"
+ALTER TABLE user_preferences ADD COLUMN keymap TEXT NOT NULL DEFAULT 'standard';
+INSERT OR REPLACE INTO meta (key, value) VALUES ('needs_snapshot', '1');
+"#,
 ];
 
 /// Brings the database to the latest schema. `user_version` counts the

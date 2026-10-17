@@ -16,7 +16,8 @@ defmodule Marskal.UserPreferencesTest do
              timezone: "Europe/Copenhagen",
              week_start: 1,
              locale: "en-150",
-             home_view: :open_tasks
+             home_view: :open_tasks,
+             keymap: :standard
            } = Accounts.preferences(user)
 
     assert Repo.aggregate(where(UserPreferences, user_id: ^user.id), :count) == 1
@@ -52,6 +53,22 @@ defmodule Marskal.UserPreferencesTest do
     assert "is not a known time zone" in errors_on(changeset).timezone
     assert "is invalid" in errors_on(changeset).week_start
     assert "is invalid" in errors_on(changeset).home_view
+
+    assert {:error, changeset} = Accounts.update_preferences(user, %{keymap: "emacs"}, command())
+    assert "is invalid" in errors_on(changeset).keymap
+  end
+
+  test "the keymap syncs, and a client may patch it", %{user: user} do
+    {:ok, _} = Accounts.update_preferences(user, %{keymap: :vim}, command())
+
+    assert [%{"keymap" => "vim"}] = Sync.pull(user, 0).rows["user_preferences"]
+
+    [%{"id" => id}] = Sync.pull(user, nil).rows["user_preferences"]
+
+    assert [%{status: "applied"}] =
+             Push.push(user, [push(id, "patch", %{"keymap" => "standard"})])
+
+    assert Accounts.preferences(user).keymap == :standard
   end
 
   test "the locale is one Marskal.Cldr knows, and syncs", %{user: user} do

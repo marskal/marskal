@@ -31,8 +31,8 @@ pub use clock::{Clock, SystemClock};
 pub use entity::Entity;
 pub use error::{Error, Result};
 pub use model::{
-    Anchor, Folder, FolderState, Frequency, HomeView, Link, Mode, Project, ProjectState, Rejection,
-    Series, SeriesKind, Tag, TagState, Task, TaskState, UserPreferences,
+    Anchor, Folder, FolderState, Frequency, HomeView, Keymap, Link, Mode, Project, ProjectState,
+    Rejection, Series, SeriesKind, Tag, TagState, Task, TaskState, UserPreferences,
 };
 pub use ops::{Location, NewProject, NewTask, TaskPatch};
 pub use pull::{Gone, PullResponse, PullUser};

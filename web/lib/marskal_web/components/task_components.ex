@@ -155,6 +155,12 @@ defmodule MarskalWeb.TaskComponents do
           cursor: pointer;
         }
 
+        button.select:focus-visible {
+          outline: 2px solid var(--accent);
+          outline-offset: 2px;
+          border-radius: 2px;
+        }
+
         .check:focus-visible {
           outline: 2px solid var(--accent);
           outline-offset: 2px;
@@ -533,19 +539,118 @@ defmodule MarskalWeb.TaskComponents do
         }
       }
 
-      // The row keys of an outliner: Tab and Shift-Tab indent and outdent,
-      // as do the macOS-style Cmd-] and Cmd-[ (Ctrl off a Mac).
-      // Alt-Up and Alt-Down move among siblings, Up and Down move focus.
-      const command = (e: KeyboardEvent) => e.metaKey || e.ctrlKey
-      const plain = (e: KeyboardEvent) => !command(e) && !e.altKey
+      // List keys (ADR 0031). Both maps share the arrows, Space, Delete,
+      // and the outline chords. Vim adds letters, and only while a row is
+      // focused: a text field keeps what is typed. `gg` and `dd` are the
+      // two-key sequences; another key after the first does its own action.
+      type Map = "standard" | "vim"
+      type Prefix = "g" | "d"
+      type Action =
+        | "move-prev"
+        | "move-next"
+        | "move-first"
+        | "move-last"
+        | "collapse"
+        | "expand"
+        | "indent"
+        | "outdent"
+        | "sibling-up"
+        | "sibling-down"
+        | "check"
+        | "drop"
+        | "flag"
+        | "new"
 
-      const bracket = (e: KeyboardEvent, key: "[" | "]") => command(e) && !e.altKey && e.key === key
+      const shared: Record<string, Action> = {
+        ArrowUp: "move-prev",
+        ArrowDown: "move-next",
+        Home: "move-first",
+        End: "move-last",
+        ArrowLeft: "collapse",
+        ArrowRight: "expand",
+        " ": "check",
+        Delete: "drop",
+        Backspace: "drop",
+        f: "flag",
+        n: "new",
+      }
 
-      const moves: Record<string, (event: KeyboardEvent) => boolean> = {
-        "outline-indent": (e) => (plain(e) && e.key === "Tab" && !e.shiftKey) || bracket(e, "]"),
-        "outline-outdent": (e) => (plain(e) && e.key === "Tab" && e.shiftKey) || bracket(e, "["),
-        "outline-up": (e) => e.altKey && !command(e) && e.key === "ArrowUp",
-        "outline-down": (e) => e.altKey && !command(e) && e.key === "ArrowDown",
+      const vim: Record<string, Action> = {
+        k: "move-prev",
+        j: "move-next",
+        G: "move-last",
+        h: "collapse",
+        l: "expand",
+        ">": "indent",
+        "<": "outdent",
+        K: "sibling-up",
+        J: "sibling-down",
+        x: "check",
+        o: "new",
+      }
+
+      // What a completed sequence does.
+      const sequences: Record<Prefix, Action> = {g: "move-first", d: "drop"}
+
+      // The server event each row action sends. Movement and New stay here.
+      const events: Partial<Record<Action, string>> = {
+        collapse: "outline-toggle",
+        expand: "outline-toggle",
+        indent: "outline-indent",
+        outdent: "outline-outdent",
+        "sibling-up": "outline-up",
+        "sibling-down": "outline-down",
+        check: "task-check",
+        drop: "task-drop",
+        flag: "task-flag",
+      }
+
+      const outlineOnly: Action[] = ["indent", "outdent", "sibling-up", "sibling-down"]
+
+      const command = (event: KeyboardEvent) => event.metaKey || event.ctrlKey
+
+      function keymap(): Map {
+        return document.getElementById("app-shell")?.dataset.keymap === "vim" ? "vim" : "standard"
+      }
+
+      function typing(event: KeyboardEvent): boolean {
+        const target = event.target
+        if (!(target instanceof HTMLElement)) return true
+        return Boolean(
+          target.closest("input, textarea, select, [contenteditable]:not([contenteditable='false'])"),
+        )
+      }
+
+      function binding(event: KeyboardEvent, map: Map): Action | Prefix | null {
+        const cmd = command(event)
+
+        if (event.key === "Tab" && !cmd && !event.altKey) return event.shiftKey ? "outdent" : "indent"
+        if (cmd && !event.altKey && event.key === "]") return "indent"
+        if (cmd && !event.altKey && event.key === "[") return "outdent"
+        if (event.altKey && !cmd && event.key === "ArrowUp") return "sibling-up"
+        if (event.altKey && !cmd && event.key === "ArrowDown") return "sibling-down"
+        if (cmd || event.altKey) return null
+
+        const action = shared[event.key]
+        if (action) return action
+        if (map !== "vim") return null
+        if (event.key === "g" || event.key === "d") return event.key
+        return vim[event.key] ?? null
+      }
+
+      // The page's own task field wins, so a project task is not captured
+      // into the inbox. Anywhere else, the inbox sheet opens, and its
+      // title field takes focus.
+      function focusNew() {
+        const field = document.querySelector<HTMLElement>("[data-new-task] input[type='text']")
+        if (field) {
+          field.focus()
+          return
+        }
+        const dialog = document.getElementById("quick-capture-sheet")
+        if (!(dialog instanceof HTMLDialogElement)) return
+        dialog.showModal()
+        dialog.querySelector<HTMLElement>("input[type='text']")?.focus()
       }
 
       type Row = {id: string; depth: number}
@@ -578,6 +683,8 @@ defmodule MarskalWeb.TaskComponents do
 
       export default class extends ViewHook<HTMLUListElement> {
         focusId: string | null = null
+        prefix: Prefix | null = null
+        prefixTimer = 0
         sortable: Sortable | null = null
         drag: {
           el: HTMLElement
@@ -654,38 +761,90 @@ defmodule MarskalWeb.TaskComponents do
           this.pushEvent("outline-place", {id: this.focusId, ...place})
         }
 
-        onKeydown = (event: KeyboardEvent) => {
-          if (!(event.target instanceof HTMLElement)) return
-          const row = event.target.closest<HTMLElement>(".task-row")
-          const id = row?.dataset.inspectId
-          if (!row || !id) return
+        clearPrefix() {
+          window.clearTimeout(this.prefixTimer)
+          this.prefix = null
+        }
 
-          const move = Object.keys(moves).find((name) => moves[name]?.(event))
-          if (move) {
-            event.preventDefault()
-            this.focusId = id
-            this.pushEvent(move, {id})
+        // Indent and reorder belong to an outline. Collapse only when the
+        // row can change: Left closes an open row, Right opens a closed one.
+        allowed(name: Action, row: HTMLElement): boolean {
+          if (outlineOnly.includes(name) && !this.el.hasAttribute("data-outline")) return false
+          if (name !== "collapse" && name !== "expand") return true
+          const button = row.querySelector(".disclosure button")
+          if (!button) return false
+          const expanded = button.getAttribute("aria-expanded") === "true"
+          return name === "collapse" ? expanded : !expanded
+        }
+
+        rows(): HTMLElement[] {
+          return Array.from(this.el.querySelectorAll<HTMLElement>(":scope > .task-row"))
+        }
+
+        target(name: Action, row: HTMLElement): HTMLElement | undefined {
+          const rows = this.rows()
+          const index = rows.indexOf(row)
+          if (name === "move-prev") return rows[index - 1]
+          if (name === "move-next") return rows[index + 1]
+          if (name === "move-first") return rows[0]
+          if (name === "move-last") return rows[rows.length - 1]
+          return undefined
+        }
+
+        run(name: Action, row: HTMLElement, id: string) {
+          if (name.startsWith("move-")) {
+            const next = this.target(name, row)
+            if (next && next !== row) next.querySelector<HTMLElement>("button.select")?.focus()
             return
           }
 
-          if (!plain(event) || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) return
-          const rows = Array.from(this.el.querySelectorAll<HTMLElement>(":scope > .task-row"))
-          const next = rows[rows.indexOf(row) + (event.key === "ArrowUp" ? -1 : 1)]
-          if (!next) return
+          if (name === "new") {
+            focusNew()
+            return
+          }
+
+          const eventName = events[name]
+          if (!eventName) return
+          this.focusId = id
+          this.pushEvent(eventName, {id})
+        }
+
+        onKeydown = (event: KeyboardEvent) => {
+          if (typing(event) || document.querySelector("dialog[open]")) return
+          if (!(event.target instanceof HTMLElement)) return
+          const row = event.target.closest<HTMLElement>(".task-row")
+          if (!row || !this.el.contains(row)) return
+          const id = row.dataset.inspectId
+          if (!id) return
+
+          let name = binding(event, keymap())
+          const prefix = this.prefix
+          if (prefix) {
+            this.clearPrefix()
+            if (name === prefix) name = sequences[prefix]
+          }
+          if (name === "g" || name === "d") {
+            this.prefix = name
+            this.prefixTimer = window.setTimeout(() => this.clearPrefix(), 1000)
+            event.preventDefault()
+            return
+          }
+          if (!name || !this.allowed(name, row)) return
           event.preventDefault()
-          next.querySelector<HTMLElement>("button.select")?.focus()
+          this.run(name, row, id)
         }
 
         mounted() {
+          this.el.addEventListener("keydown", this.onKeydown)
           const outline = this.el.hasAttribute("data-outline")
-          if (!outline && !this.el.hasAttribute("data-nested")) return
+          const nested = this.el.hasAttribute("data-nested")
+          if (!outline && !nested) return
           this.handleEvent("outline-collapsed", ({ids}: {ids: string[]}) => save(ids))
           const ids = load()
           if (ids.length) this.pushEvent("outline-collapsed", {ids})
 
           // A nested list only collapses; its rows do not move.
           if (!outline) return
-          this.el.addEventListener("keydown", this.onKeydown)
           this.el.addEventListener("pointerdown", this.onPointerDown)
           document.addEventListener("pointermove", this.onPointerMove)
 
@@ -713,6 +872,7 @@ defmodule MarskalWeb.TaskComponents do
         }
 
         destroyed() {
+          this.clearPrefix()
           this.el.removeEventListener("keydown", this.onKeydown)
           this.el.removeEventListener("pointerdown", this.onPointerDown)
           document.removeEventListener("pointermove", this.onPointerMove)

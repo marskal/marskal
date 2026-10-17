@@ -42,6 +42,7 @@ defmodule MarskalWeb.InboxLive do
         command_id={@command_id}
         autofocus
         phx-submit="create"
+        data-new-task="task"
       />
 
       <MarskalWeb.TaskComponents.list

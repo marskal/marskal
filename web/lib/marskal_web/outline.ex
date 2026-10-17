@@ -1,9 +1,10 @@
 defmodule MarskalWeb.Outline do
   @moduledoc """
   The outline events of a task list shown with `outline: true`: collapse,
-  and the keyboard moves from the `.Outline` hook (ADR 0009).
+  and the keyboard moves from the `.Outline` hook (ADR 0009, ADR 0031).
 
-  `attach/1` adds them to a LiveView. A move goes through `Marskal.Tasks`,
+  `attach/1` adds them to a LiveView, and the task actions those keys
+  send (`MarskalWeb.TaskKeys`). A move goes through `Marskal.Tasks`,
   and the change broadcast reloads the list, as any other write does.
   Collapsed ids belong to the browser: the hook sends its saved set on
   mount and saves what the server sends back after each toggle.
@@ -26,6 +27,7 @@ defmodule MarskalWeb.Outline do
   def attach(socket) do
     socket
     |> assign(:collapsed, MapSet.new())
+    |> MarskalWeb.TaskKeys.attach()
     |> attach_hook(:outline, :handle_event, &handle_event/3)
   end
 

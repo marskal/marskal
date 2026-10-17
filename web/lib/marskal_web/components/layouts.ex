@@ -44,6 +44,7 @@ defmodule MarskalWeb.Layouts do
     <div
       id="app-shell"
       class={["app", @inspector && "is-inspector-open"]}
+      data-keymap={keymap(@current_scope)}
       phx-hook=".Inspector"
     >
       <header class="app-header">
@@ -139,6 +140,11 @@ defmodule MarskalWeb.Layouts do
           <Lucideicons.flag class="icon" /> Flagged
         </.tab>
       </nav>
+
+      <MarskalWeb.KeysHelp.dialog
+        :if={@current_scope && @current_scope.user}
+        keymap={keymap(@current_scope)}
+      />
 
       <.live_component
         :if={@nav && @current_nav != :inbox}
@@ -273,6 +279,12 @@ defmodule MarskalWeb.Layouts do
     <.flash_group flash={@flash} />
     """
   end
+
+  # The keyboard map for list navigation (ADR 0031), from the preferences
+  # the session preloads. A signed-out page has none, and the standard map
+  # is the default.
+  defp keymap(%{user: user}) when not is_nil(user), do: Marskal.Accounts.preferences(user).keymap
+  defp keymap(_scope), do: :standard
 
   defp inspector_title(%{type: :task}), do: "Task"
   defp inspector_title(%{type: :project}), do: "Project"

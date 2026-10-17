@@ -39,6 +39,7 @@ This file is **short and actionable**. Rationale and history live in
 | Translatable text | [0028](docs/adr/0028-translatable-text.md) |
 | iOS app (`clients/ios`, `sync/ffi`) | [0029](docs/adr/0029-ios-app.md) |
 | Sync event stream (SSE) | [0030](docs/adr/0030-sync-event-stream.md) |
+| Keyboard keymap | [0031](docs/adr/0031-keyboard-keymap.md) |
 | Repository layout | [0015](docs/adr/0015-repository-layout.md) |
 
 ---
