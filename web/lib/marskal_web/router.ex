@@ -108,11 +108,26 @@ defmodule MarskalWeb.Router do
       live "/device/done", DeviceLive, :done
       live "/oauth/error", DeviceLive, :error
       live "/oauth/consent", ConsentLive, :show
-      live "/users/settings", UserLive.Settings, :edit
-      live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email
     end
 
     post "/users/update-password", UserSessionController, :update_password
+  end
+
+  # Pages that need a recent login. They are a live session of their own,
+  # so reaching one is always a request the plug sees, and the login page
+  # can send the user back.
+  scope "/", MarskalWeb do
+    pipe_through [:browser, :require_authenticated_user, :require_sudo_mode]
+
+    live_session :require_sudo_mode,
+      on_mount: [
+        {MarskalWeb.UserAuth, :require_authenticated},
+        {MarskalWeb.Inspector, :default},
+        {MarskalWeb.StaticChanged, :default}
+      ] do
+      live "/users/settings", UserLive.Settings, :edit
+      live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email
+    end
   end
 
   scope "/", MarskalWeb do

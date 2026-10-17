@@ -336,6 +336,25 @@ defmodule MarskalWeb.UserAuth do
     end
   end
 
+  @doc """
+  Plug for routes that need a recent login, such as the settings page.
+
+  It sends the user to log in again and back to the page afterwards. The
+  `:require_sudo_mode` hook checks the same on a LiveView, but a LiveView
+  cannot keep the path for afterwards, so the plug goes first.
+  """
+  def require_sudo_mode(conn, _opts) do
+    if Accounts.sudo_mode?(conn.assigns.current_scope.user, -10) do
+      conn
+    else
+      conn
+      |> put_flash(:error, "You must re-authenticate to access this page.")
+      |> maybe_store_return_to()
+      |> redirect(to: ~p"/users/log-in")
+      |> halt()
+    end
+  end
+
   defp maybe_store_return_to(%{method: "GET"} = conn) do
     put_session(conn, :user_return_to, current_path(conn))
   end

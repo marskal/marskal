@@ -376,6 +376,34 @@ defmodule MarskalWeb.UserAuthTest do
     end
   end
 
+  describe "require_sudo_mode/2" do
+    test "sends an old login to log in again, and keeps the path", %{conn: conn} do
+      user = user_fixture()
+      user = %{user | authenticated_at: DateTime.add(DateTime.utc_now(:second), -11, :minute)}
+
+      conn =
+        %{conn | path_info: ["users", "settings"], query_string: ""}
+        |> assign(:current_scope, Scope.for_user(user))
+        |> fetch_flash()
+        |> UserAuth.require_sudo_mode([])
+
+      assert conn.halted
+      assert redirected_to(conn) == ~p"/users/log-in"
+      assert get_session(conn, :user_return_to) == "/users/settings"
+    end
+
+    test "lets a recent login through", %{conn: conn} do
+      user = %{user_fixture() | authenticated_at: DateTime.utc_now(:second)}
+
+      conn =
+        conn
+        |> assign(:current_scope, Scope.for_user(user))
+        |> UserAuth.require_sudo_mode([])
+
+      refute conn.halted
+    end
+  end
+
   describe "require_authenticated_user/2" do
     setup %{conn: conn} do
       %{conn: UserAuth.fetch_current_scope_for_user(conn, [])}
