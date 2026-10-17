@@ -46,11 +46,13 @@ defmodule MarskalWeb.TaskKeysLiveTest do
     {:ok, view, _html} = live(ctx.conn, ~p"/projects/#{ctx.project.id}")
     assert has_element?(view, "#keys-help", "Keyboard shortcuts")
     refute has_element?(view, "#keys-help kbd", "dd")
+    refute has_element?(view, "#keys-help th", "New task above")
 
     {:ok, _} = Accounts.update_preferences(ctx.user, %{keymap: :vim}, command_id())
     {:ok, view, html} = live(ctx.conn, ~p"/projects/#{ctx.project.id}")
     assert html =~ ~s(data-keymap="vim")
     assert has_element?(view, "#keys-help kbd", "dd")
+    assert has_element?(view, "#keys-help th", "New task above")
   end
 
   test "a list without an outline still takes the keys", ctx do

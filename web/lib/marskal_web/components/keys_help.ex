@@ -10,7 +10,14 @@ defmodule MarskalWeb.KeysHelp do
   attr :keymap, :atom, required: true
 
   def dialog(assigns) do
-    assigns = assign(assigns, :rows, rows())
+    # An action only Vim-style has, such as New task above, is left out of
+    # the standard map's list.
+    rows =
+      if assigns.keymap == :vim,
+        do: rows(),
+        else: Enum.reject(rows(), fn {_action, keys, _vim} -> keys == [] end)
+
+    assigns = assign(assigns, :rows, rows)
 
     ~H"""
     <dialog
@@ -22,10 +29,13 @@ defmodule MarskalWeb.KeysHelp do
     >
       <style :type={MarskalWeb.ColocatedCSS}>
         @scope (.keys-help) {
+          /* The type grows with the window, so the table stays readable on a
+             large monitor; sizes below are in em to follow it. */
           :scope {
-            width: min(100% - 2rem, 34rem);
+            width: min(100% - 2rem, 36em);
             max-height: calc(100% - 2rem);
-            padding: 1rem 1.25rem 1.25rem;
+            padding: 1em 1.25em 1.25em;
+            font-size: clamp(0.875rem, 0.5rem + 0.6vw, 1.25rem);
             border: 1px solid var(--border);
             border-radius: 12px;
             background: var(--surface);
@@ -37,8 +47,8 @@ defmodule MarskalWeb.KeysHelp do
           }
 
           h2 {
-            margin: 0 0 0.75rem;
-            font-size: 1rem;
+            margin: 0 0 0.75em;
+            font-size: 1.15em;
           }
 
           .close {
@@ -59,12 +69,12 @@ defmodule MarskalWeb.KeysHelp do
           table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.875rem;
+            font-size: 1em;
           }
 
           th,
           td {
-            padding: 0.3rem 0.5rem 0.3rem 0;
+            padding: 0.3em 0.75em 0.3em 0;
             text-align: left;
             vertical-align: top;
           }
@@ -81,14 +91,14 @@ defmodule MarskalWeb.KeysHelp do
             border: 1px solid var(--border);
             border-radius: 4px;
             font: inherit;
-            font-size: 0.8125rem;
+            font-size: 0.95em;
             text-align: center;
           }
 
           p {
-            margin: 0.75rem 0 0;
+            margin: 0.75em 0 0;
             color: var(--muted);
-            font-size: 0.8125rem;
+            font-size: 0.9em;
           }
         }
       </style>
