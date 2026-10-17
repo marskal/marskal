@@ -39,6 +39,7 @@ This file is **short and actionable**. Rationale and history live in
 | Translatable text | [0028](docs/adr/0028-translatable-text.md) |
 | iOS app (`clients/ios`, `sync/ffi`) | [0029](docs/adr/0029-ios-app.md) |
 | Sync event stream (SSE) | [0030](docs/adr/0030-sync-event-stream.md) |
+| Keyboard keymap | [0031](docs/adr/0031-keyboard-keymap.md) |
 | Repository layout | [0015](docs/adr/0015-repository-layout.md) |
 
 ---
@@ -223,6 +224,9 @@ The repository root is the product, not the web app (ADR 0015).
 - **`devenv up`** (from `web/`) starts Postgres + Phoenix (`processes.server`).
   Postgres is that managed `services.postgres` process — never `pg_ctl start` /
   `start-postgres` against `web/.devenv/state/postgres` (it orphans a second cluster).
+- Seed accounts are in `web/priv/repo/seeds.exs`. **`mts@marskal.example` is the
+  user's own**: an agent testing in a browser signs in as **`kvp@marskal.example`**,
+  and leaves mts@'s data and preferences alone.
 
 ### Elixir
 

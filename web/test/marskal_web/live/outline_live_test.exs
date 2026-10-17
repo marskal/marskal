@@ -160,6 +160,84 @@ defmodule MarskalWeb.OutlineLiveTest do
     assert has_element?(view, "#inspector-task-resolved-above")
   end
 
+  describe "a task added inline" do
+    test "o adds below, and Enter opens the next row below the new task", ctx do
+      [a, b] = add(ctx, ["A", "B"])
+      {:ok, view, _html} = live(ctx.conn, ~p"/projects/#{ctx.project.id}")
+
+      render_hook(view, "inline-new", %{"id" => a.id, "where" => "below"})
+      assert has_element?(view, "#task-#{a.id} + #task-new input[name=title]")
+
+      view |> form("#task-new-form", %{"title" => "One"}) |> render_submit()
+      view |> form("#task-new-form", %{"title" => "Two"}) |> render_submit()
+
+      [one, two] = Enum.map(["One", "Two"], &find(ctx, &1))
+      assert rows(view) == [a.id, one.id, two.id, b.id]
+      assert has_element?(view, "#task-#{two.id} + #task-new")
+
+      render_hook(view, "inline-cancel", %{})
+      refute has_element?(view, "#task-new")
+      assert_push_event(view, "outline-focus", %{id: id})
+      assert id == two.id
+    end
+
+    test "O adds above, as a sibling at the same depth", ctx do
+      [a] = add(ctx, ["A"])
+      child = add(ctx, "Child", a)
+      {:ok, view, _html} = live(ctx.conn, ~p"/projects/#{ctx.project.id}")
+
+      render_hook(view, "inline-new", %{"id" => child.id, "where" => "above"})
+      assert has_element?(view, "#task-new[style*='--depth: 1'] + #task-#{child.id}")
+      view |> form("#task-new-form", %{"title" => "Before"}) |> render_submit()
+
+      before = find(ctx, "Before")
+      assert before.parent_id == a.id
+      assert rows(view) == [a.id, before.id, child.id]
+    end
+
+    test "below an open parent, the new task is its first subtask", ctx do
+      [a, b] = add(ctx, ["A", "B"])
+      child = add(ctx, "Child", a)
+      {:ok, view, _html} = live(ctx.conn, ~p"/projects/#{ctx.project.id}")
+
+      render_hook(view, "inline-new", %{"id" => a.id, "where" => "below"})
+      view |> form("#task-new-form", %{"title" => "First"}) |> render_submit()
+
+      first = find(ctx, "First")
+      assert first.parent_id == a.id
+      assert rows(view) == [a.id, first.id, child.id, b.id]
+    end
+
+    test "an empty row saves nothing and closes", ctx do
+      [a] = add(ctx, ["A"])
+      {:ok, view, _html} = live(ctx.conn, ~p"/projects/#{ctx.project.id}")
+
+      render_hook(view, "inline-new", %{"id" => a.id, "where" => "below"})
+      render_blur(element(view, "#task-new input"), %{"value" => "  "})
+      refute has_element?(view, "#task-new")
+
+      render_hook(view, "inline-new", %{"id" => a.id, "where" => "below"})
+      view |> form("#task-new-form", %{"title" => ""}) |> render_submit()
+      refute has_element?(view, "#task-new")
+      assert rows(view) == [a.id]
+    end
+
+    test "the inbox adds inline too", ctx do
+      {:ok, a} = Tasks.create_task(ctx.user, %{"title" => "A"}, command_id())
+      {:ok, view, _html} = live(ctx.conn, ~p"/inbox")
+
+      render_hook(view, "inline-new", %{"id" => a.id, "where" => "below"})
+      view |> form("#task-new-form", %{"title" => "Next"}) |> render_submit()
+
+      next = find(ctx, "Next")
+      assert next.inbox
+      assert rows(view, "#inbox-tasks") == [a.id, next.id]
+    end
+  end
+
+  defp find(ctx, title),
+    do: Marskal.Repo.get_by!(Marskal.Tasks.Task, user_id: ctx.user.id, title: title)
+
   defp add(ctx, titles) when is_list(titles), do: Enum.map(titles, &add(ctx, &1, nil))
 
   defp add(ctx, title, parent) do

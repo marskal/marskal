@@ -10,8 +10,9 @@ defmodule Marskal.Accounts.UserPreferences do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @fields [:timezone, :week_start, :locale, :home_view]
+  @fields [:timezone, :week_start, :locale, :home_view, :keymap]
   @home_views [:inbox, :open_tasks, :agenda, :flagged]
+  @keymaps [:standard, :vim]
 
   # Keyed by the user. Sync names every row by `id`, so here `id` is the
   # user id too; `user_id` is the same column, for owner-scoped queries.
@@ -26,6 +27,8 @@ defmodule Marskal.Accounts.UserPreferences do
     field :locale, :string, default: "en-150"
     # The view a login opens, when the session has no return path.
     field :home_view, Ecto.Enum, values: @home_views, default: :open_tasks
+    # Which keyboard map list navigation uses (ADR 0031).
+    field :keymap, Ecto.Enum, values: @keymaps, default: :standard
     field :user_id, Ecto.UUID, source: :user_id
 
     timestamps(type: :utc_datetime)
@@ -49,5 +52,6 @@ defmodule Marskal.Accounts.UserPreferences do
     |> validate_inclusion(:locale, Enum.map(Marskal.Cldr.known_locale_names(), &to_string/1))
     |> check_constraint(:week_start, name: :user_preferences_week_start)
     |> check_constraint(:home_view, name: :user_preferences_home_view)
+    |> check_constraint(:keymap, name: :user_preferences_keymap)
   end
 end

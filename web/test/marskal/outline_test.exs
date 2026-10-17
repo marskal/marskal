@@ -35,6 +35,19 @@ defmodule Marskal.OutlineTest do
       assert ids(Tasks.list_project_tasks(user, project.id)) == [a.id, new.id, b.id]
     end
 
+    test "before_id puts a new task right before that sibling", %{user: user, project: project} do
+      [a, b] = add(user, project, ["A", "B"])
+      {:ok, first} = create(user, project, %{"title" => "First", "before_id" => a.id})
+      {:ok, middle} = create(user, project, %{"title" => "Middle", "before_id" => b.id})
+
+      assert ids(Tasks.list_project_tasks(user, project.id)) == [first.id, a.id, middle.id, b.id]
+
+      assert {:error, changeset} =
+               create(user, project, %{"title" => "X", "parent_id" => a.id, "before_id" => b.id})
+
+      assert "must be a sibling" in errors_on(changeset).before_id
+    end
+
     test "a subtask lives where its parent does", %{user: user, project: project} do
       [parent] = add(user, project, ["Parent"])
 

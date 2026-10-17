@@ -108,6 +108,20 @@ defmodule MarskalWeb.UserLive.Settings do
         <p>
           Select what view is “Home” – where you land when logging in.
         </p>
+        <.input
+          field={@preferences_form[:keymap]}
+          type="select"
+          label={gettext("Keymap")}
+          options={[
+            {gettext("Standard"), "standard"},
+            {gettext("Vim-style"), "vim"}
+          ]}
+        />
+        <p>
+          {gettext(
+            "Standard uses the arrow keys, Space to complete, Delete to drop, f to flag, and n for a new task. Vim-style adds j, k, x, dd, and others. Press ? on any page for the full list."
+          )}
+        </p>
       </.form>
 
       <div class="divider" />

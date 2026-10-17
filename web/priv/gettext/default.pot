@@ -98,6 +98,11 @@ msgid_plural "%{count} tasks: %{open} open, %{dropped} dropped, and %{done} done
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Action"
+msgstr ""
+
 #: lib/marskal_web/components/core_components.ex
 #, elixir-autogen, elixir-format
 msgid "Actions"
@@ -118,9 +123,20 @@ msgstr ""
 msgid "Choose zip"
 msgstr ""
 
+#: lib/marskal_web/components/keys_help.ex
 #: lib/marskal_web/live/repeat_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Close"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Collapse and expand"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Complete or reopen"
 msgstr ""
 
 #: lib/marskal_web/components/nav_components.ex
@@ -128,9 +144,24 @@ msgstr ""
 msgid "Contents of %{name}"
 msgstr ""
 
+#: lib/marskal_web/outline.ex
+#, elixir-autogen, elixir-format
+msgid "Could not add the task."
+msgstr ""
+
+#: lib/marskal_web/task_keys.ex
+#, elixir-autogen, elixir-format
+msgid "Could not update task."
+msgstr ""
+
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Dark"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Delete"
 msgstr ""
 
 #: lib/marskal_web/live/project_live.ex
@@ -143,6 +174,11 @@ msgstr ""
 msgid "Drag the .ofocus-backup here from Finder. It looks like a file, but it is a folder, so a file picker cannot choose it. To use the picker, compress it in Finder first and choose the zip."
 msgstr ""
 
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Drop"
+msgstr ""
+
 #: lib/marskal_web/live/import_live.ex
 #, elixir-autogen, elixir-format
 msgid "Drop your OmniFocus backup here"
@@ -153,6 +189,46 @@ msgstr ""
 msgid "Dropped"
 msgstr ""
 
+#: lib/marskal_web/task_keys.ex
+#, elixir-autogen, elixir-format
+msgid "Dropped “%{title}”."
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Edit in the inspector"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "End"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Enter"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Esc"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "First and last task"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Flag"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Go to the list"
+msgstr ""
+
 #: lib/marskal_web/live/repeat_panel.ex
 #, elixir-autogen, elixir-format
 msgid "History: %{title}"
@@ -161,6 +237,36 @@ msgstr ""
 #: lib/marskal_web/live/repeat_panel.ex
 #, elixir-autogen, elixir-format
 msgid "History…"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Home"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Indent and outdent"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Keyboard shortcuts"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Keymap"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Keys"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Keys act on the focused task, not while you type. Off a Mac, Cmd is Ctrl."
 msgstr ""
 
 #: lib/marskal_web/components/layouts.ex
@@ -176,6 +282,26 @@ msgstr ""
 #: lib/marskal_web/live/repeat_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Missed %{count} times, %{first} to %{last}"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Move among siblings"
+msgstr ""
+
+#: lib/marskal_web/components/task_components.ex
+#, elixir-autogen, elixir-format
+msgid "New task"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "New task above"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "New task below"
 msgstr ""
 
 #: lib/marskal_web/live/repeat_panel.ex
@@ -195,14 +321,44 @@ msgid_plural "Paused, %{count} times skipped"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Previous and next task"
+msgstr ""
+
 #: lib/marskal_web/components/layouts/root.html.heex
 #, elixir-autogen, elixir-format
 msgid "Reload"
 msgstr ""
 
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Shift"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Show this help"
+msgstr ""
+
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Something went wrong!"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Space"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Standard"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Standard uses the arrow keys, Space to complete, Delete to drop, f to flag, and n for a new task. Vim-style adds j, k, x, dd, and others. Press ? on any page for the full list."
 msgstr ""
 
 #: lib/marskal_web/live/repeat_panel.ex
@@ -213,6 +369,11 @@ msgstr ""
 #: lib/marskal_web/live/repeat_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Strength %{percent}"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Tab"
 msgstr ""
 
 #: lib/marskal_web/components/layouts.ex
@@ -263,6 +424,12 @@ msgstr ""
 #: lib/marskal_web/live/repeat_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Usually done on time"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Vim-style"
 msgstr ""
 
 #: lib/marskal_web/components/layouts.ex

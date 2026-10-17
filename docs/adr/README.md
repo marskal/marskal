@@ -39,6 +39,7 @@ This directory holds **ADRs** — durable decisions and their context.
 | [0028](0028-translatable-text.md) | Translatable text | Accepted |
 | [0029](0029-ios-app.md) | iOS app | Accepted |
 | [0030](0030-sync-event-stream.md) | Sync event stream | Accepted |
+| [0031](0031-keyboard-keymap.md) | Keyboard keymap | Accepted |
 
 ## When to add an ADR
 

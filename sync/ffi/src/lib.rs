@@ -116,6 +116,13 @@ pub enum HomeView {
     Flagged,
 }
 
+/// Which keyboard map list navigation uses (ADR 0031).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum Keymap {
+    Standard,
+    Vim,
+}
+
 /// Where a task lives (ADR 0017).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
 pub enum Location {
@@ -250,6 +257,7 @@ pub struct Preferences {
     /// The CLDR locale dates are formatted in, such as `en-DK` (ADR 0027).
     pub locale: String,
     pub home_view: HomeView,
+    pub keymap: Keymap,
 }
 
 /// What a shell shows about sync.
@@ -800,6 +808,10 @@ fn preferences(p: core::UserPreferences) -> Preferences {
             core::HomeView::OpenTasks => HomeView::OpenTasks,
             core::HomeView::Agenda => HomeView::Agenda,
             core::HomeView::Flagged => HomeView::Flagged,
+        },
+        keymap: match p.keymap {
+            core::Keymap::Standard => Keymap::Standard,
+            core::Keymap::Vim => Keymap::Vim,
         },
     }
 }

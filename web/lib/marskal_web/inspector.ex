@@ -55,9 +55,15 @@ defmodule MarskalWeb.Inspector do
     continue_if_defined(socket, :handle_params, 3)
   end
 
-  defp on_event("inspect", %{"type" => type, "id" => id}, socket)
+  # A selection the list keys make replaces the history entry, so moving
+  # down a list does not leave one entry per row (ADR 0031).
+  defp on_event("inspect", %{"type" => type, "id" => id} = params, socket)
        when type in @selection_keys and is_binary(id) do
-    {:halt, push_patch(socket, to: query_path(socket, %{type => id}))}
+    {:halt,
+     push_patch(socket,
+       to: query_path(socket, %{type => id}),
+       replace: params["replace"] == true
+     )}
   end
 
   defp on_event("close-inspector", _params, socket) do

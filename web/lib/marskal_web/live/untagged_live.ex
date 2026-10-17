@@ -8,7 +8,7 @@ defmodule MarskalWeb.UntaggedLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, socket |> assign(:page_title, "Untagged") |> load()}
+    {:ok, socket |> MarskalWeb.TaskKeys.attach() |> assign(:page_title, "Untagged") |> load()}
   end
 
   @impl true

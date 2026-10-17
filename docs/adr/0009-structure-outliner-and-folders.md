@@ -110,7 +110,9 @@ ancestor.
 
 Views: the project and inbox pages show the outline, with collapse kept per
 browser and outliner keys: Tab and Shift-Tab, or the macOS-style Cmd-] and
-Cmd-[, indent and outdent; Alt-Up and Alt-Down move among siblings. Open tasks
+Cmd-[, indent and outdent; Alt-Up and Alt-Down move among siblings. Those
+are the standard keymap; [ADR 0031](0031-keyboard-keymap.md) adds a Vim-style map and the
+keys that complete, drop, flag, and start a new task. Open tasks
 nests subtasks under their parents too (2026-10-10): the top level stays newest
 first, subtasks go by rank, and rows collapse but do not move. A parent that tag
 state hides shows, dimmed, above its available subtasks. Other lists stay flat

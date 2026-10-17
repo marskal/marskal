@@ -50,6 +50,10 @@ defmodule MarskalWeb.TaskComponents do
   attr :repeating, :any, default: MapSet.new(), doc: "ids of tasks in a running series"
   attr :flagged, :any, default: MapSet.new(), doc: "ids of flagged tasks, own flag or project's"
 
+  attr :new_row, :map,
+    default: nil,
+    doc: "the task being added inline on an outline, from `MarskalWeb.Outline`"
+
   slot :empty_state, doc: "shown instead of `empty` when there are no tasks"
 
   def list(assigns) do
@@ -139,7 +143,10 @@ defmodule MarskalWeb.TaskComponents do
           color: var(--muted);
         }
 
-        :scope.is-selected {
+        /* One highlight for the current row, however it was reached: a click
+           selects it, and so do the keys (ADR 0031). Where the keys only
+           move focus, the focused row takes the same tint. */
+        :scope:is(.is-selected, :has(button.select:focus-visible)) {
           background: var(--accent-tint);
         }
 
@@ -153,6 +160,10 @@ defmodule MarskalWeb.TaskComponents do
           font: inherit;
           text-align: left;
           cursor: pointer;
+        }
+
+        button.select:focus-visible {
+          outline: none;
         }
 
         .check:focus-visible {
@@ -356,156 +367,171 @@ defmodule MarskalWeb.TaskComponents do
       data-outline={@outline}
       data-nested={@nested}
     >
-      <li
-        :for={%{task: task, dates: d, depth: depth, children?: children?} <- @rows}
-        id={"task-#{task.id}"}
-        class={[
-          "task-row",
-          MarskalWeb.Inspector.selected?(:task, task.id, @inspector) && "is-selected",
-          (MapSet.member?(@unavailable, task.id) or MapSet.member?(@deferred, task.id)) &&
-            "is-unavailable",
-          (task.state != :to_do or MapSet.member?(@resolved, task.id)) && "is-resolved"
-        ]}
-        style={depth > 0 && "--depth: #{depth}"}
-        data-depth={(@outline or @nested) && depth}
-        data-inspect-type="task"
-        data-inspect-id={task.id}
-        aria-current={MarskalWeb.Inspector.selected?(:task, task.id, @inspector) && "true"}
-        phx-click="inspect"
-        phx-value-type="task"
-        phx-value-id={task.id}
-      >
-        <%!-- The keys move a row too; this is for pointers. Its own no-op
-             click keeps a grab from opening the inspector. --%>
-        <span
-          :if={@outline}
-          class="drag-handle"
-          aria-hidden="true"
-          title="Drag to move"
-          phx-click={JS.dispatch("outline:noop")}
+      <%= for %{task: task, dates: d, depth: depth, children?: children?} <- @rows do %>
+        <.new_row
+          :if={new_row_at?(@new_row, task.id, :above)}
+          anchor_id={task.id}
+          depth={depth}
+          outline={@outline}
+          disclosures={@disclosures}
+        />
+        <li
+          id={"task-#{task.id}"}
+          class={[
+            "task-row",
+            MarskalWeb.Inspector.selected?(:task, task.id, @inspector) && "is-selected",
+            (MapSet.member?(@unavailable, task.id) or MapSet.member?(@deferred, task.id)) &&
+              "is-unavailable",
+            (task.state != :to_do or MapSet.member?(@resolved, task.id)) && "is-resolved"
+          ]}
+          style={depth > 0 && "--depth: #{depth}"}
+          data-depth={(@outline or @nested) && depth}
+          data-inspect-type="task"
+          data-inspect-id={task.id}
+          aria-current={MarskalWeb.Inspector.selected?(:task, task.id, @inspector) && "true"}
+          phx-click="inspect"
+          phx-value-type="task"
+          phx-value-id={task.id}
         >
-          <Lucideicons.grip_vertical class="icon" />
-        </span>
-        <span :if={@disclosures} class="disclosure">
-          <button
-            :if={children?}
-            type="button"
-            phx-click="outline-toggle"
-            phx-value-id={task.id}
-            aria-expanded={to_string(not MapSet.member?(@collapsed, task.id))}
-            aria-label={
-              if MapSet.member?(@collapsed, task.id), do: "Show subtasks", else: "Hide subtasks"
-            }
+          <%!-- The keys move a row too; this is for pointers. Its own no-op
+             click keeps a grab from opening the inspector. --%>
+          <span
+            :if={@outline}
+            class="drag-handle"
+            aria-hidden="true"
+            title="Drag to move"
+            phx-click={JS.dispatch("outline:noop")}
           >
-            <Lucideicons.chevron_right
-              :if={MapSet.member?(@collapsed, task.id)}
-              class="icon"
-              aria-hidden="true"
-            />
-            <Lucideicons.chevron_down
-              :if={not MapSet.member?(@collapsed, task.id)}
-              class="icon"
-              aria-hidden="true"
-            />
-          </button>
-        </span>
-        <span :if={:complete in @actions} class="check-form">
-          <button
-            type="button"
-            class={check_class(task)}
-            phx-click={check_event(task)}
-            phx-value-id={task.id}
-            title={check_label(task)}
-            aria-label={check_label(task)}
-          >
-            <span :if={task.state == :dropped} class="check__dropped" aria-hidden="true">
-              <Lucideicons.square_off class="icon" />
-            </span>
-            <span :if={task.state == :done} class="check__complete" aria-hidden="true">
-              <Lucideicons.square_check_big class="icon" />
-            </span>
-            <span :if={task.state == :to_do} class="check__idle" aria-hidden="true">
-              <Lucideicons.square class="icon" />
-            </span>
-            <span :if={task.state == :to_do} class="check__hint" aria-hidden="true">
-              <Lucideicons.square_check_big class="icon" />
-            </span>
-          </button>
-        </span>
-        <div class="body">
-          <button
-            type="button"
-            class="select title"
-            phx-click="inspect"
-            phx-value-type="task"
-            phx-value-id={task.id}
-          >
-            <span :if={!(@outline or @nested) && @parents[task.id]} class="crumb">
-              {@parents[task.id].title}<span class="chevron" aria-hidden="true">›</span>
-            </span>
-            {task.title}
-          </button>
-          <MarskalWeb.UrlLink.link url={task.url} />
-          <div class="meta">
-            <span
-              :if={
-                (@mark_inbox and task.inbox) or d.planned_at != nil or d.due_at != nil or
-                  MapSet.member?(@unavailable, task.id) or MapSet.member?(@deferred, task.id) or
-                  MapSet.member?(@repeating, task.id) or
-                  MapSet.member?(@flagged, task.id)
+            <Lucideicons.grip_vertical class="icon" />
+          </span>
+          <span :if={@disclosures} class="disclosure">
+            <button
+              :if={children?}
+              type="button"
+              phx-click="outline-toggle"
+              phx-value-id={task.id}
+              aria-expanded={to_string(not MapSet.member?(@collapsed, task.id))}
+              aria-label={
+                if MapSet.member?(@collapsed, task.id), do: "Show subtasks", else: "Hide subtasks"
               }
-              class="marks"
             >
+              <Lucideicons.chevron_right
+                :if={MapSet.member?(@collapsed, task.id)}
+                class="icon"
+                aria-hidden="true"
+              />
+              <Lucideicons.chevron_down
+                :if={not MapSet.member?(@collapsed, task.id)}
+                class="icon"
+                aria-hidden="true"
+              />
+            </button>
+          </span>
+          <span :if={:complete in @actions} class="check-form">
+            <button
+              type="button"
+              class={check_class(task)}
+              phx-click={check_event(task)}
+              phx-value-id={task.id}
+              title={check_label(task)}
+              aria-label={check_label(task)}
+            >
+              <span :if={task.state == :dropped} class="check__dropped" aria-hidden="true">
+                <Lucideicons.square_off class="icon" />
+              </span>
+              <span :if={task.state == :done} class="check__complete" aria-hidden="true">
+                <Lucideicons.square_check_big class="icon" />
+              </span>
+              <span :if={task.state == :to_do} class="check__idle" aria-hidden="true">
+                <Lucideicons.square class="icon" />
+              </span>
+              <span :if={task.state == :to_do} class="check__hint" aria-hidden="true">
+                <Lucideicons.square_check_big class="icon" />
+              </span>
+            </button>
+          </span>
+          <div class="body">
+            <button
+              type="button"
+              class="select title"
+              phx-click="inspect"
+              phx-value-type="task"
+              phx-value-id={task.id}
+            >
+              <span :if={!(@outline or @nested) && @parents[task.id]} class="crumb">
+                {@parents[task.id].title}<span class="chevron" aria-hidden="true">›</span>
+              </span>
+              {task.title}
+            </button>
+            <MarskalWeb.UrlLink.link url={task.url} />
+            <div class="meta">
               <span
-                :if={MapSet.member?(@flagged, task.id)}
-                class="mark mark--flag"
-                title={flag_label(task)}
+                :if={
+                  (@mark_inbox and task.inbox) or d.planned_at != nil or d.due_at != nil or
+                    MapSet.member?(@unavailable, task.id) or MapSet.member?(@deferred, task.id) or
+                    MapSet.member?(@repeating, task.id) or
+                    MapSet.member?(@flagged, task.id)
+                }
+                class="marks"
               >
-                <Lucideicons.flag class="icon" aria-label={flag_label(task)} />
+                <span
+                  :if={MapSet.member?(@flagged, task.id)}
+                  class="mark mark--flag"
+                  title={flag_label(task)}
+                >
+                  <Lucideicons.flag class="icon" aria-label={flag_label(task)} />
+                </span>
+                <span
+                  :if={MapSet.member?(@repeating, task.id)}
+                  class="mark mark--repeat"
+                  title="Repeats"
+                >
+                  <Lucideicons.repeat class="icon" aria-label="Repeats" />
+                </span>
+                <span :if={@mark_inbox and task.inbox} class="mark mark--inbox">Inbox</span>
+                <span :if={MapSet.member?(@unavailable, task.id)} class="mark mark--unavailable">
+                  Unavailable
+                </span>
+                <span :if={MapSet.member?(@deferred, task.id)} class="mark mark--deferred">
+                  {deferred_label(d, @zone, @today, @now)}
+                </span>
+                <span
+                  :if={d.planned_at}
+                  class={[
+                    "mark mark--planned",
+                    planned_today?(task, d, @zone, @today) && "mark--today",
+                    inherited?(task, d, :planned_at) && "mark--inherited"
+                  ]}
+                  title={inherited?(task, d, :planned_at) && @inherited_hint}
+                >
+                  Planned {MarskalWeb.DateFields.short(d.planned_at, :planned_at, @zone, @today)}
+                </span>
+                <span
+                  :if={d.due_at}
+                  class={[
+                    "mark mark--due",
+                    Marskal.Dates.overdue?(%{state: task.state, due_at: d.due_at}, @now) &&
+                      "mark--overdue",
+                    inherited?(task, d, :due_at) && "mark--inherited"
+                  ]}
+                  title={inherited?(task, d, :due_at) && @inherited_hint}
+                >
+                  Due {MarskalWeb.DateFields.short(d.due_at, :due_at, @zone, @today)}
+                </span>
               </span>
-              <span
-                :if={MapSet.member?(@repeating, task.id)}
-                class="mark mark--repeat"
-                title="Repeats"
-              >
-                <Lucideicons.repeat class="icon" aria-label="Repeats" />
-              </span>
-              <span :if={@mark_inbox and task.inbox} class="mark mark--inbox">Inbox</span>
-              <span :if={MapSet.member?(@unavailable, task.id)} class="mark mark--unavailable">
-                Unavailable
-              </span>
-              <span :if={MapSet.member?(@deferred, task.id)} class="mark mark--deferred">
-                {deferred_label(d, @zone, @today, @now)}
-              </span>
-              <span
-                :if={d.planned_at}
-                class={[
-                  "mark mark--planned",
-                  planned_today?(task, d, @zone, @today) && "mark--today",
-                  inherited?(task, d, :planned_at) && "mark--inherited"
-                ]}
-                title={inherited?(task, d, :planned_at) && @inherited_hint}
-              >
-                Planned {MarskalWeb.DateFields.short(d.planned_at, :planned_at, @zone, @today)}
-              </span>
-              <span
-                :if={d.due_at}
-                class={[
-                  "mark mark--due",
-                  Marskal.Dates.overdue?(%{state: task.state, due_at: d.due_at}, @now) &&
-                    "mark--overdue",
-                  inherited?(task, d, :due_at) && "mark--inherited"
-                ]}
-                title={inherited?(task, d, :due_at) && @inherited_hint}
-              >
-                Due {MarskalWeb.DateFields.short(d.due_at, :due_at, @zone, @today)}
-              </span>
-            </span>
-            <MarskalWeb.TagComponents.chips entries={Map.get(@tags, task.id, [])} />
+              <MarskalWeb.TagComponents.chips entries={Map.get(@tags, task.id, [])} />
+            </div>
+            <MarskalWeb.FormattedNotes.block text={task.notes} />
           </div>
-          <MarskalWeb.FormattedNotes.block text={task.notes} />
-        </div>
-      </li>
+        </li>
+        <.new_row
+          :if={new_row_at?(@new_row, task.id, :below)}
+          anchor_id={task.id}
+          depth={depth + if(@new_row.child?, do: 1, else: 0)}
+          outline={@outline}
+          disclosures={@disclosures}
+        />
+      <% end %>
     </ul>
     <script :type={Phoenix.LiveView.ColocatedHook} name=".Outline" extension="ts">
       import {ViewHook} from "phoenix_live_view"
@@ -533,19 +559,128 @@ defmodule MarskalWeb.TaskComponents do
         }
       }
 
-      // The row keys of an outliner: Tab and Shift-Tab indent and outdent,
-      // as do the macOS-style Cmd-] and Cmd-[ (Ctrl off a Mac).
-      // Alt-Up and Alt-Down move among siblings, Up and Down move focus.
-      const command = (e: KeyboardEvent) => e.metaKey || e.ctrlKey
-      const plain = (e: KeyboardEvent) => !command(e) && !e.altKey
+      // List keys (ADR 0031). Both maps share the arrows, Space, Delete,
+      // and the outline chords. Vim adds letters, and only while a row is
+      // focused: a text field keeps what is typed. `gg` and `dd` are the
+      // two-key sequences; another key after the first does its own action.
+      type Map = "standard" | "vim"
+      type Prefix = "g" | "d"
+      type Action =
+        | "move-prev"
+        | "move-next"
+        | "move-first"
+        | "move-last"
+        | "collapse"
+        | "expand"
+        | "indent"
+        | "outdent"
+        | "sibling-up"
+        | "sibling-down"
+        | "check"
+        | "drop"
+        | "flag"
+        | "new-below"
+        | "new-above"
+        | "open"
 
-      const bracket = (e: KeyboardEvent, key: "[" | "]") => command(e) && !e.altKey && e.key === key
+      const shared: Record<string, Action> = {
+        ArrowUp: "move-prev",
+        ArrowDown: "move-next",
+        Home: "move-first",
+        End: "move-last",
+        ArrowLeft: "collapse",
+        ArrowRight: "expand",
+        " ": "check",
+        Delete: "drop",
+        Backspace: "drop",
+        f: "flag",
+        n: "new-below",
+        Enter: "open",
+      }
 
-      const moves: Record<string, (event: KeyboardEvent) => boolean> = {
-        "outline-indent": (e) => (plain(e) && e.key === "Tab" && !e.shiftKey) || bracket(e, "]"),
-        "outline-outdent": (e) => (plain(e) && e.key === "Tab" && e.shiftKey) || bracket(e, "["),
-        "outline-up": (e) => e.altKey && !command(e) && e.key === "ArrowUp",
-        "outline-down": (e) => e.altKey && !command(e) && e.key === "ArrowDown",
+      const vim: Record<string, Action> = {
+        k: "move-prev",
+        j: "move-next",
+        G: "move-last",
+        h: "collapse",
+        l: "expand",
+        ">": "indent",
+        "<": "outdent",
+        L: "indent",
+        H: "outdent",
+        K: "sibling-up",
+        J: "sibling-down",
+        x: "check",
+        o: "new-below",
+        O: "new-above",
+      }
+
+      // What a completed sequence does.
+      const sequences: Record<Prefix, Action> = {g: "move-first", d: "drop"}
+
+      // The server event each row action sends. Movement and New stay here.
+      const events: Partial<Record<Action, string>> = {
+        collapse: "outline-toggle",
+        expand: "outline-toggle",
+        indent: "outline-indent",
+        outdent: "outline-outdent",
+        "sibling-up": "outline-up",
+        "sibling-down": "outline-down",
+        check: "task-check",
+        drop: "task-drop",
+        flag: "task-flag",
+      }
+
+      const outlineOnly: Action[] = ["indent", "outdent", "sibling-up", "sibling-down"]
+
+      // Where the inspector is a pane beside the list, rather than a sheet
+      // over it. Must match the `.Inspector` hook in layouts.ex.
+      const narrow = window.matchMedia("(max-width: 64rem)")
+
+      const command = (event: KeyboardEvent) => event.metaKey || event.ctrlKey
+
+      function keymap(): Map {
+        return document.getElementById("app-shell")?.dataset.keymap === "vim" ? "vim" : "standard"
+      }
+
+      function typing(event: KeyboardEvent): boolean {
+        const target = event.target
+        if (!(target instanceof HTMLElement)) return true
+        return Boolean(
+          target.closest("input, textarea, select, [contenteditable]:not([contenteditable='false'])"),
+        )
+      }
+
+      function binding(event: KeyboardEvent, map: Map): Action | Prefix | null {
+        const cmd = command(event)
+
+        if (event.key === "Tab" && !cmd && !event.altKey) return event.shiftKey ? "outdent" : "indent"
+        if (cmd && !event.altKey && event.key === "]") return "indent"
+        if (cmd && !event.altKey && event.key === "[") return "outdent"
+        if (event.altKey && !cmd && event.key === "ArrowUp") return "sibling-up"
+        if (event.altKey && !cmd && event.key === "ArrowDown") return "sibling-down"
+        if (cmd || event.altKey) return null
+
+        const action = shared[event.key]
+        if (action) return action
+        if (map !== "vim") return null
+        if (event.key === "g" || event.key === "d") return event.key
+        return vim[event.key] ?? null
+      }
+
+      // The page's own task field wins, so a project task is not captured
+      // into the inbox. Anywhere else, the inbox sheet opens, and its
+      // title field takes focus.
+      function focusNew() {
+        const field = document.querySelector<HTMLElement>("[data-new-task] input[type='text']")
+        if (field) {
+          field.focus()
+          return
+        }
+        const dialog = document.getElementById("quick-capture-sheet")
+        if (!(dialog instanceof HTMLDialogElement)) return
+        dialog.showModal()
+        dialog.querySelector<HTMLElement>("input[type='text']")?.focus()
       }
 
       type Row = {id: string; depth: number}
@@ -578,6 +713,9 @@ defmodule MarskalWeb.TaskComponents do
 
       export default class extends ViewHook<HTMLUListElement> {
         focusId: string | null = null
+        prefix: Prefix | null = null
+        prefixTimer = 0
+        selectTimer = 0
         sortable: Sortable | null = null
         drag: {
           el: HTMLElement
@@ -654,38 +792,144 @@ defmodule MarskalWeb.TaskComponents do
           this.pushEvent("outline-place", {id: this.focusId, ...place})
         }
 
-        onKeydown = (event: KeyboardEvent) => {
-          if (!(event.target instanceof HTMLElement)) return
-          const row = event.target.closest<HTMLElement>(".task-row")
-          const id = row?.dataset.inspectId
-          if (!row || !id) return
+        clearPrefix() {
+          window.clearTimeout(this.prefixTimer)
+          this.prefix = null
+        }
 
-          const move = Object.keys(moves).find((name) => moves[name]?.(event))
-          if (move) {
-            event.preventDefault()
-            this.focusId = id
-            this.pushEvent(move, {id})
+        // Indent and reorder belong to an outline. Collapse only when the
+        // row can change: Left closes an open row, Right opens a closed one.
+        allowed(name: Action, row: HTMLElement): boolean {
+          if (outlineOnly.includes(name) && !this.el.hasAttribute("data-outline")) return false
+          if (name !== "collapse" && name !== "expand") return true
+          const button = row.querySelector(".disclosure button")
+          if (!button) return false
+          const expanded = button.getAttribute("aria-expanded") === "true"
+          return name === "collapse" ? expanded : !expanded
+        }
+
+        rows(): HTMLElement[] {
+          return Array.from(this.el.querySelectorAll<HTMLElement>(":scope > .task-row"))
+        }
+
+        target(name: Action, row: HTMLElement): HTMLElement | undefined {
+          const rows = this.rows()
+          const index = rows.indexOf(row)
+          if (name === "move-prev") return rows[index - 1]
+          if (name === "move-next") return rows[index + 1]
+          if (name === "move-first") return rows[0]
+          if (name === "move-last") return rows[rows.length - 1]
+          return undefined
+        }
+
+        // The focused row is the selected one, and the inspector pane shows
+        // it. The highlight moves at once; the inspector follows when the
+        // keys pause, and replaces the history entry rather than adding one.
+        // Where the inspector is a sheet, the keys only move the highlight.
+        select(row: HTMLElement) {
+          if (narrow.matches) return
+          for (const other of document.querySelectorAll(".task-row.is-selected")) {
+            other.classList.remove("is-selected")
+          }
+          row.classList.add("is-selected")
+          window.clearTimeout(this.selectTimer)
+          const id = row.dataset.inspectId
+          this.selectTimer = window.setTimeout(
+            () => this.pushEvent("inspect", {type: "task", id, replace: true}),
+            150,
+          )
+        }
+
+        // Enter opens the row in the inspector and, beside the list, moves
+        // focus there to edit. A sheet takes focus as it opens.
+        open(id: string) {
+          window.clearTimeout(this.selectTimer)
+          this.pushEvent("inspect", {type: "task", id, replace: !narrow.matches})
+          if (!narrow.matches) document.querySelector<HTMLElement>(".app-inspector")?.focus()
+        }
+
+        // A click selects the row, and focus stays on the list so the keys
+        // go on from there.
+        onClick = (event: MouseEvent) => {
+          if (narrow.matches || !(event.target instanceof Element)) return
+          if (event.target.closest("a, input, textarea, select, button:not(.select), .drag-handle")) return
+          const row = event.target.closest<HTMLElement>(".task-row")
+          if (!row || !this.el.contains(row)) return
+          row.querySelector<HTMLElement>("button.select")?.focus({preventScroll: true})
+        }
+
+        run(name: Action, row: HTMLElement, id: string) {
+          if (name.startsWith("move-")) {
+            const next = this.target(name, row)
+            if (!next || next === row) return
+            next.querySelector<HTMLElement>("button.select")?.focus()
+            this.select(next)
             return
           }
 
-          if (!plain(event) || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) return
-          const rows = Array.from(this.el.querySelectorAll<HTMLElement>(":scope > .task-row"))
-          const next = rows[rows.indexOf(row) + (event.key === "ArrowUp" ? -1 : 1)]
-          if (!next) return
+          // On an outline, `n` (and `o`) and `O` add a task inline beside the
+          // row. Other lists have no place for it, so they use the add field.
+          if (name === "new-below" || name === "new-above") {
+            if (!this.el.hasAttribute("data-outline")) focusNew()
+            else this.pushEvent("inline-new", {id, where: name === "new-below" ? "below" : "above"})
+            return
+          }
+
+          if (name === "open") {
+            this.open(id)
+            return
+          }
+
+          const eventName = events[name]
+          if (!eventName) return
+          this.focusId = id
+          this.pushEvent(eventName, {id})
+        }
+
+        onKeydown = (event: KeyboardEvent) => {
+          if (typing(event) || document.querySelector("dialog[open]")) return
+          if (!(event.target instanceof HTMLElement)) return
+          const row = event.target.closest<HTMLElement>(".task-row")
+          if (!row || !this.el.contains(row)) return
+          const id = row.dataset.inspectId
+          if (!id) return
+
+          let name = binding(event, keymap())
+          const prefix = this.prefix
+          if (prefix) {
+            this.clearPrefix()
+            if (name === prefix) name = sequences[prefix]
+          }
+          if (name === "g" || name === "d") {
+            this.prefix = name
+            this.prefixTimer = window.setTimeout(() => this.clearPrefix(), 1000)
+            event.preventDefault()
+            return
+          }
+          if (!name || !this.allowed(name, row)) return
           event.preventDefault()
-          next.querySelector<HTMLElement>("button.select")?.focus()
+          this.run(name, row, id)
         }
 
         mounted() {
+          this.el.addEventListener("keydown", this.onKeydown)
+          this.el.addEventListener("click", this.onClick)
+          // Back to a row when an inline new task closes.
+          this.handleEvent("outline-focus", ({id}: {id: string}) => {
+            const row = this.el.querySelector<HTMLElement>(`#task-${CSS.escape(id)}`)
+            if (!row) return
+            row.querySelector<HTMLElement>("button.select")?.focus()
+            this.select(row)
+          })
           const outline = this.el.hasAttribute("data-outline")
-          if (!outline && !this.el.hasAttribute("data-nested")) return
+          const nested = this.el.hasAttribute("data-nested")
+          if (!outline && !nested) return
           this.handleEvent("outline-collapsed", ({ids}: {ids: string[]}) => save(ids))
           const ids = load()
           if (ids.length) this.pushEvent("outline-collapsed", {ids})
 
           // A nested list only collapses; its rows do not move.
           if (!outline) return
-          this.el.addEventListener("keydown", this.onKeydown)
           this.el.addEventListener("pointerdown", this.onPointerDown)
           document.addEventListener("pointermove", this.onPointerMove)
 
@@ -713,13 +957,109 @@ defmodule MarskalWeb.TaskComponents do
         }
 
         destroyed() {
+          this.clearPrefix()
+          window.clearTimeout(this.selectTimer)
           this.el.removeEventListener("keydown", this.onKeydown)
+          this.el.removeEventListener("click", this.onClick)
           this.el.removeEventListener("pointerdown", this.onPointerDown)
           document.removeEventListener("pointermove", this.onPointerMove)
           this.sortable?.destroy()
         }
       }
     </script>
+    """
+  end
+
+  defp new_row_at?(%{anchor_id: id, where: :above}, id, :above), do: true
+  defp new_row_at?(%{anchor_id: id, where: :below}, id, :below), do: true
+  defp new_row_at?(_new_row, _id, _where), do: false
+
+  attr :anchor_id, :string, required: true
+  attr :depth, :integer, required: true
+  attr :outline, :boolean, required: true
+  attr :disclosures, :boolean, required: true
+
+  # A task being added inline, by `o` and `O` (ADR 0031). Enter adds it and
+  # opens the next below it; Escape, or leaving it empty, ends.
+  defp new_row(assigns) do
+    ~H"""
+    <li id="task-new" class="task-new" style={@depth > 0 && "--depth: #{@depth}"}>
+      <style :type={MarskalWeb.ColocatedCSS}>
+        @scope (.task-new) {
+          :scope {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.6rem 0.5rem;
+            border-bottom: 1px solid var(--border);
+          }
+
+          :scope[style*="--depth"] {
+            margin-inline-start: calc(var(--depth) * 1.75rem);
+          }
+
+          .handle-space {
+            flex: 0 0 1rem;
+            margin-inline: -0.5rem -0.6rem;
+          }
+
+          .disclosure-space {
+            flex: 0 0 1.5rem;
+            margin-inline-end: -0.5rem;
+          }
+
+          .check-space {
+            display: inline-grid;
+            flex: 0 0 2rem;
+            place-items: center;
+            height: 2rem;
+            color: var(--muted);
+          }
+
+          .check-space .icon {
+            width: 1.5rem;
+            height: 1.5rem;
+          }
+
+          form {
+            flex: 1 1 auto;
+            margin: 0;
+          }
+
+          input[type="text"] {
+            width: 100%;
+            padding: 0;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            color: inherit;
+            font: inherit;
+          }
+
+          input[type="text"]:focus-visible {
+            outline: none;
+          }
+        }
+      </style>
+      <span :if={@outline} class="handle-space" aria-hidden="true"></span>
+      <span :if={@disclosures} class="disclosure-space" aria-hidden="true"></span>
+      <span class="check-space" aria-hidden="true"><Lucideicons.square class="icon" /></span>
+      <form id="task-new-form" phx-submit="inline-create">
+        <input
+          id={"task-new-title-#{@anchor_id}"}
+          type="text"
+          name="title"
+          autocomplete="off"
+          enterkeyhint="next"
+          placeholder={gettext("New task")}
+          aria-label={gettext("New task")}
+          phx-mounted={JS.focus()}
+          phx-keydown="inline-cancel"
+          phx-key="Escape"
+          phx-blur="inline-blur"
+        />
+      </form>
+    </li>
     """
   end
 

@@ -54,6 +54,7 @@ defmodule MarskalWeb.ProjectLive do
         label="Add a task"
         command_id={@command_id}
         phx-submit="create"
+        data-new-task="task"
       />
 
       <MarskalWeb.TaskComponents.list
@@ -69,6 +70,7 @@ defmodule MarskalWeb.ProjectLive do
         flagged={@task_tags.flagged}
         outline
         collapsed={@collapsed}
+        new_row={@new_row}
         zone={Marskal.Accounts.timezone(@current_scope.user)}
         actions={[:complete]}
         inspector={@inspector}

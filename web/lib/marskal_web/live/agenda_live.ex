@@ -9,7 +9,8 @@ defmodule MarskalWeb.AgendaLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, socket |> assign(:page_title, "Agenda") |> assign(:view, nil)}
+    {:ok,
+     socket |> MarskalWeb.TaskKeys.attach() |> assign(:page_title, "Agenda") |> assign(:view, nil)}
   end
 
   # The agenda lists what is due and what is planned (ADR 0006), on the

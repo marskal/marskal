@@ -44,6 +44,7 @@ defmodule MarskalWeb.Layouts do
     <div
       id="app-shell"
       class={["app", @inspector && "is-inspector-open"]}
+      data-keymap={keymap(@current_scope)}
       phx-hook=".Inspector"
     >
       <header class="app-header">
@@ -140,6 +141,11 @@ defmodule MarskalWeb.Layouts do
         </.tab>
       </nav>
 
+      <MarskalWeb.KeysHelp.dialog
+        :if={@current_scope && @current_scope.user}
+        keymap={keymap(@current_scope)}
+      />
+
       <.live_component
         :if={@nav && @current_nav != :inbox}
         module={MarskalWeb.QuickCapture}
@@ -184,7 +190,7 @@ defmodule MarskalWeb.Layouts do
         onKeydown = (event: KeyboardEvent) => {
           if (event.key !== "Escape") return
           if (document.querySelector("dialog[open]")) return
-          if (event.target instanceof Element && event.target.closest(".add-form")) return
+          if (event.target instanceof Element && event.target.closest(".add-form, .task-new")) return
           if (document.body.classList.contains("nav-open")) {
             event.preventDefault()
             this.setNav(false)
@@ -192,6 +198,11 @@ defmodule MarskalWeb.Layouts do
           }
           if (!this.el.classList.contains("is-inspector-open")) return
           event.preventDefault()
+          // Closing from inside the inspector hands focus back to its row.
+          const panel = this.el.querySelector(".app-inspector")
+          if (panel?.contains(document.activeElement)) {
+            this.el.querySelector<HTMLElement>(".task-row.is-selected button.select")?.focus()
+          }
           this.pushEvent("close-inspector", {})
         }
 
@@ -264,7 +275,9 @@ defmodule MarskalWeb.Layouts do
           const narrow = this.narrow.matches
           panel.toggleAttribute("inert", narrow && !open)
           document.body.classList.toggle("inspector-open", narrow && open)
-          if (open && !this.wasOpen) panel.focus({preventScroll: true})
+          // A sheet takes focus as it opens. Beside the list, focus stays
+          // on the row, so the list keys go on from there (ADR 0031).
+          if (open && !this.wasOpen && narrow) panel.focus({preventScroll: true})
           this.wasOpen = open
         }
       }
@@ -273,6 +286,12 @@ defmodule MarskalWeb.Layouts do
     <.flash_group flash={@flash} />
     """
   end
+
+  # The keyboard map for list navigation (ADR 0031), from the preferences
+  # the session preloads. A signed-out page has none, and the standard map
+  # is the default.
+  defp keymap(%{user: user}) when not is_nil(user), do: Marskal.Accounts.preferences(user).keymap
+  defp keymap(_scope), do: :standard
 
   defp inspector_title(%{type: :task}), do: "Task"
   defp inspector_title(%{type: :project}), do: "Project"

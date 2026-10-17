@@ -20,7 +20,12 @@ defmodule MarskalWeb.TagLive do
          |> MarskalWeb.UserAuth.redirect_home()}
 
       tag ->
-        {:ok, socket |> assign(:tag_id, tag.id) |> new_tag_form() |> load()}
+        {:ok,
+         socket
+         |> MarskalWeb.TaskKeys.attach()
+         |> assign(:tag_id, tag.id)
+         |> new_tag_form()
+         |> load()}
     end
   end
 

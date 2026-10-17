@@ -42,6 +42,20 @@ defmodule MarskalWeb.UserLive.SettingsTest do
       assert Accounts.preferences(Accounts.get_user!(user.id)).home_view == :inbox
     end
 
+    test "chooses the keyboard map", %{conn: conn} do
+      user = user_fixture()
+      {:ok, lv, html} = conn |> log_in_user(user) |> live(~p"/users/settings")
+
+      assert html =~ "Keymap"
+      assert html =~ ~s(<option selected="" value="standard">Standard</option>)
+
+      html = lv |> form("#preferences_form", preferences: %{keymap: "vim"}) |> render_change()
+
+      assert html =~ "UserPreferences saved."
+      assert html =~ ~s(<option selected="" value="vim">Vim-style</option>)
+      assert Accounts.preferences(Accounts.get_user!(user.id)).keymap == :vim
+    end
+
     test "sets the locale dates and times are shown in", %{conn: conn} do
       user = user_fixture()
       zone = Accounts.timezone(user)
