@@ -148,6 +148,14 @@ defmodule MarskalWeb.DeviceSignInTest do
     assert redirected_to(conn) == "http://hydra.test/.well-known/oauth-authorization-server"
   end
 
+  test "the resource metadata names Hydra as its authorization server", %{conn: conn} do
+    body = conn |> get(~p"/.well-known/oauth-protected-resource") |> json_response(200)
+
+    assert body["resource"] == MarskalWeb.Endpoint.url()
+    assert body["authorization_servers"] == ["http://hydra.test"]
+    assert "sync:write" in body["scopes_supported"]
+  end
+
   describe "settings" do
     setup :register_and_log_in_user
 
@@ -181,7 +189,10 @@ defmodule MarskalWeb.DeviceSignInTest do
       stub_hydra()
       missing = APIAuth.call(conn, [])
       assert missing.status == 401
-      assert get_resp_header(missing, "www-authenticate") == [~s(Bearer realm="marskal")]
+
+      assert get_resp_header(missing, "www-authenticate") == [
+               ~s(Bearer realm="marskal", resource_metadata="#{MarskalWeb.Endpoint.url()}/.well-known/oauth-protected-resource")
+             ]
 
       unknown =
         build_conn()

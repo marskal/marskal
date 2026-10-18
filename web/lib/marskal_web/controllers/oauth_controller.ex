@@ -41,4 +41,20 @@ defmodule MarskalWeb.OAuthController do
   def metadata(conn, _params) do
     redirect(conn, external: Hydra.public_url() <> "/.well-known/oauth-authorization-server")
   end
+
+  @doc """
+  The sync API's protected resource metadata (RFC 9728). The resource is
+  the server's URL, and Hydra's issuer is its authorization server.
+  """
+  def resource_metadata(conn, _params) do
+    json(conn, %{
+      resource: MarskalWeb.Endpoint.url(),
+      authorization_servers: [Hydra.public_url()],
+      scopes_supported: ["offline_access", "sync:read", "sync:write"],
+      bearer_methods_supported: ["header"]
+    })
+  end
+
+  @doc "Where `resource_metadata/2` is served, for `WWW-Authenticate`."
+  def resource_metadata_url, do: url(~p"/.well-known/oauth-protected-resource")
 end

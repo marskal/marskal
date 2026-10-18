@@ -72,6 +72,12 @@ The reverse proxy sends `/oauth2/*`, `/.well-known/oauth-authorization-server`,
 serves the RFC 8414 metadata itself, so a client needs only the server's URL.
 Its admin port listens on localhost only and is never proxied.
 
+The web app serves the sync API's resource metadata (RFC 9728) at
+`/.well-known/oauth-protected-resource`: the server's URL as the resource,
+Hydra's issuer as its authorization server, and the sync scopes. A `401`
+from the API names that URL in `WWW-Authenticate`, so a generic OAuth
+client can start from the API alone.
+
 ### The device flow
 
 1. The client posts to Hydra's device endpoint and shows the code.

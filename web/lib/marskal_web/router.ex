@@ -51,11 +51,12 @@ defmodule MarskalWeb.Router do
     get "/sync/events", SyncController, :events
   end
 
-  # Hydra serves the OAuth metadata (ADR 0021); this points there.
+  # Hydra serves the OAuth metadata, the web app the resource's (ADR 0021).
   scope "/", MarskalWeb do
     pipe_through :api
 
     get "/.well-known/oauth-authorization-server", OAuthController, :metadata
+    get "/.well-known/oauth-protected-resource", OAuthController, :resource_metadata
   end
 
   # Enable Swoosh mailbox preview in development

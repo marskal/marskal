@@ -4,7 +4,7 @@ defmodule MarskalWeb.APIAuth do
   them; this plug introspects each one, and refuses it unless it is live and
   its device is still signed in. A request without one gets `401`, and one
   whose grant lacks the scope gets `403`, each with the `WWW-Authenticate`
-  header of RFC 6750.
+  header of RFC 6750. A `401` names the resource metadata (RFC 9728).
   """
 
   import Plug.Conn
@@ -27,8 +27,8 @@ defmodule MarskalWeb.APIAuth do
       |> assign(:oauth_scopes, scopes)
       |> assign(:access_token, token)
     else
-      [] -> deny(conn, 401, ~s(Bearer realm="marskal"))
-      _ -> deny(conn, 401, ~s(Bearer realm="marskal", error="invalid_token"))
+      [] -> deny(conn, 401, ~s(Bearer realm="marskal", #{metadata()}))
+      _ -> deny(conn, 401, ~s(Bearer realm="marskal", error="invalid_token", #{metadata()}))
     end
   end
 
@@ -40,6 +40,10 @@ defmodule MarskalWeb.APIAuth do
       do: conn,
       else: deny(conn, 403, ~s(Bearer error="insufficient_scope", scope="#{scope}"))
   end
+
+  # RFC 9728: where a client finds the authorization server.
+  defp metadata,
+    do: ~s(resource_metadata="#{MarskalWeb.OAuthController.resource_metadata_url()}")
 
   defp deny(conn, status, challenge) do
     error = if status == 403, do: "insufficient_scope", else: "invalid_token"
