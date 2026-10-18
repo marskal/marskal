@@ -243,6 +243,7 @@ defmodule Marskal.Imports.OmnifocusAdapter do
       "id" => Xml.attr(element, "id"),
       "name" => clip(text_at(element, "name"), limits.title_chars),
       "parent_id" => parent && Xml.attr(parent, "idref"),
+      "rank" => text_at(element, "rank"),
       "hidden" => text_at(element, "hidden") == "true"
     }
   end
@@ -362,6 +363,7 @@ defmodule Marskal.Imports.OmnifocusAdapter do
         name: row["name"] || "Untitled folder",
         parent_source_id: row["parent_id"],
         dropped: row["hidden"] == true,
+        rank: parse_rank(row["rank"]),
         extras: %{}
       }
     end)
@@ -432,6 +434,7 @@ defmodule Marskal.Imports.OmnifocusAdapter do
             flagged: row["flagged"] == true,
             tag_source_ids: Map.get(tag_ids, row["id"], []),
             recurrence: recurrence(row),
+            rank: parse_rank(row["rank"]),
             extras: extras_for(row),
             problems: problems_for(row)
           }

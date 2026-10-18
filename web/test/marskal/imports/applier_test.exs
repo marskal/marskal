@@ -9,6 +9,7 @@ defmodule Marskal.Imports.ApplierTest do
   alias Marskal.Imports.Applier
   alias Marskal.Imports.Parser
   alias Marskal.ProjectFolders.ProjectFolder
+  alias Marskal.ProjectNav
   alias Marskal.Projects.Project
   alias Marskal.Recurrence
   alias Marskal.Recurrence.Series
@@ -356,6 +357,58 @@ defmodule Marskal.Imports.ApplierTest do
     end
   end
 
+  describe "folder and project order" do
+    test "folders and projects of one folder keep their OmniFocus ranks", %{user: user} do
+      xml = """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <omnifocus>
+        <folder id="a"><name>Later</name><rank>30</rank></folder>
+        <folder id="b"><name>Clients</name><rank>10</rank></folder>
+        <folder id="c"><folder idref="b"/><name>Archive</name><rank>1</rank></folder>
+        <task id="d"><project><folder idref="b"/></project><name>Sales</name><rank>3</rank></task>
+        <task id="e"><project><status>active</status></project><name>Errands</name><rank>20</rank></task>
+        <task id="f"><project><folder idref="b"/></project><name>Billing</name><rank>2</rank></task>
+      </omnifocus>
+      """
+
+      {:ok, batch} =
+        user |> preview!(OmnifocusBackup.zip_with_xml(xml), "order.zip") |> Applier.call()
+
+      nav = ProjectNav.build(user)
+      assert outline_names(nav, nil) == ~w(Clients Errands Later)
+      assert outline_names(nav, folder!(batch, "b").id) == ~w(Archive Billing Sales)
+    end
+
+    test "Todoist's child order, a parent's own tasks first in its folder", %{user: user} do
+      snapshot = %{
+        "sync_token" => "snapshot-1",
+        "full_sync" => true,
+        "user" => %{"email" => "ada@marskal.example", "inbox_project_id" => "in1"},
+        "folders" => [
+          %{"id" => "w1", "name" => "Work", "child_order" => 2},
+          %{"id" => "w2", "name" => "Home", "child_order" => 1}
+        ],
+        "projects" => [
+          %{"id" => "in1", "name" => "Inbox", "inbox_project" => true},
+          %{"id" => "big", "name" => "House", "folder_id" => "w2", "child_order" => 2},
+          %{"id" => "sb", "name" => "Roof", "parent_id" => "big", "child_order" => 2},
+          %{"id" => "sa", "name" => "Garden", "parent_id" => "big", "child_order" => 1},
+          %{"id" => "plain", "name" => "Bills", "folder_id" => "w2", "child_order" => 1}
+        ],
+        "items" => [%{"id" => "t1", "content" => "Call the roofer", "project_id" => "big"}]
+      }
+
+      {:ok, batch} = user |> preview_todoist!(snapshot) |> Applier.call()
+
+      nav = ProjectNav.build(user)
+      assert outline_names(nav, nil) == ~w(Home Work)
+      assert outline_names(nav, folder!(batch, "folder:w2").id) == ~w(Bills House)
+
+      assert outline_names(nav, folder!(batch, "folder:project:big").id) ==
+               ["House tasks", "Garden", "Roof"]
+    end
+  end
+
   test "does not import into another user", %{user: user, other: other} do
     batch = preview!(user, OmnifocusBackup.compact_backup(), "OmniFocus.ofocus-backup")
     assert {:ok, _} = Applier.call(batch)
@@ -380,7 +433,7 @@ defmodule Marskal.Imports.ApplierTest do
     Parser.call(batch)
   end
 
-  defp preview_todoist!(user) do
+  defp preview_todoist!(user, snapshot \\ TodoistSnapshot.small()) do
     {:ok, batch} =
       %ImportBatch{}
       |> ImportBatch.changeset(%{
@@ -390,11 +443,20 @@ defmodule Marskal.Imports.ApplierTest do
         status: :pending,
         filename: "Todoist",
         external_account: "ada@marskal.example",
-        payload: TodoistSnapshot.json()
+        payload: Jason.encode!(snapshot)
       })
       |> Repo.insert()
 
     Parser.call(batch)
+  end
+
+  defp outline_names(nav, folder_id) do
+    nav
+    |> ProjectNav.children(folder_id)
+    |> Enum.map(fn
+      %ProjectFolder{name: name} -> name
+      %Project{title: title} -> title
+    end)
   end
 
   defp tag_names(task_or_project) do

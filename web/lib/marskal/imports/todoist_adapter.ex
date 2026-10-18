@@ -116,6 +116,7 @@ defmodule Marskal.Imports.TodoistAdapter do
       name: blank(row["name"], "Untitled folder"),
       parent_source_id: source_id("folder", row["parent_id"]),
       dropped: false,
+      rank: order_rank(row["child_order"]),
       extras: %{}
     }
   end
@@ -131,6 +132,7 @@ defmodule Marskal.Imports.TodoistAdapter do
       name: name,
       parent_source_id: placed_folder(id, row, parents),
       dropped: state == "dropped",
+      rank: order_rank(row["child_order"]),
       extras:
         %{}
         |> put_extra("order_key", row["order_key"])
@@ -177,6 +179,8 @@ defmodule Marskal.Imports.TodoistAdapter do
             url: url,
             folder_source_id: project_folder_id(id),
             state: project_state(row),
+            # First in its folder, above the sub-projects, as in Todoist.
+            rank: -1,
             extras: project_extras(row)
           }
         ]
@@ -190,6 +194,7 @@ defmodule Marskal.Imports.TodoistAdapter do
             url: url,
             folder_source_id: placed_folder(id, row, parents),
             state: project_state(row),
+            rank: order_rank(row["child_order"]),
             extras: project_extras(row)
           }
         ]
