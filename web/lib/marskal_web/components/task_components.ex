@@ -293,30 +293,10 @@ defmodule MarskalWeb.TaskComponents do
           outline-offset: 1px;
         }
 
-        .drag-handle {
-          flex: 0 0 1rem;
-          align-self: center;
-          margin-inline: -0.5rem -0.6rem;
-          color: var(--muted);
-          cursor: grab;
-          opacity: 0;
-          touch-action: none;
-          transition: opacity 0.12s ease;
-        }
-
-        .drag-handle .icon {
-          width: 1rem;
-          height: 1rem;
-        }
-
-        :scope:is(:hover, :focus-within) .drag-handle {
-          opacity: 1;
-        }
-
-        @media (hover: none) {
-          .drag-handle {
-            opacity: 1;
-          }
+        /* The whole row drags; a touch holds first, so the list still scrolls. */
+        :scope:is([data-outline] > *) {
+          -webkit-user-select: none;
+          user-select: none;
         }
 
         :scope.is-drag-hidden {
@@ -393,17 +373,6 @@ defmodule MarskalWeb.TaskComponents do
           phx-value-type="task"
           phx-value-id={task.id}
         >
-          <%!-- The keys move a row too; this is for pointers. Its own no-op
-             click keeps a grab from opening the inspector. --%>
-          <span
-            :if={@outline}
-            class="drag-handle"
-            aria-hidden="true"
-            title="Drag to move"
-            phx-click={JS.dispatch("outline:noop")}
-          >
-            <Lucideicons.grip_vertical class="icon" />
-          </span>
           <span :if={@disclosures} class="disclosure">
             <button
               :if={children?}
@@ -711,6 +680,20 @@ defmodule MarskalWeb.TaskComponents do
         return Math.max(min, Math.min(max, depth))
       }
 
+      // Sortable blocks the click after a drag, and clears that only when
+      // the row passes another. A sideways drag, to indent, passes none,
+      // so the user's next click would be lost. A click no one else sees
+      // uses the block up: Sortable stops it on the way down if it is
+      // still set, and the sink stops it otherwise.
+      function releaseClick() {
+        const sink = document.createElement("span")
+        sink.hidden = true
+        sink.addEventListener("click", (event) => event.stopPropagation())
+        document.body.append(sink)
+        sink.dispatchEvent(new MouseEvent("click", {bubbles: true}))
+        sink.remove()
+      }
+
       export default class extends ViewHook<HTMLUListElement> {
         focusId: string | null = null
         prefix: Prefix | null = null
@@ -786,10 +769,31 @@ defmodule MarskalWeb.TaskComponents do
           else drag.el.setAttribute("style", drag.style)
           for (const el of drag.hidden) el.classList.remove("is-drag-hidden")
           this.drag = null
+          this.swallowClick()
 
           if (place.parent_id === drag.from.parent_id && place.after_id === drag.from.after_id) return
           this.focusId = drag.el.dataset.inspectId!
           this.pushEvent("outline-place", {id: this.focusId, ...place})
+        }
+
+        // The click that ends a drag neither opens the row nor follows a
+        // link. LiveView listens on window as the click bubbles, so this
+        // catches it first, on the way down.
+        clickAfterDrag = false
+
+        swallowClick() {
+          this.clickAfterDrag = true
+          window.setTimeout(() => {
+            this.clickAfterDrag = false
+            releaseClick()
+          }, 0)
+        }
+
+        onClickCapture = (event: MouseEvent) => {
+          if (!this.clickAfterDrag) return
+          this.clickAfterDrag = false
+          event.preventDefault()
+          event.stopPropagation()
         }
 
         clearPrefix() {
@@ -852,7 +856,7 @@ defmodule MarskalWeb.TaskComponents do
         // go on from there.
         onClick = (event: MouseEvent) => {
           if (narrow.matches || !(event.target instanceof Element)) return
-          if (event.target.closest("a, input, textarea, select, button:not(.select), .drag-handle")) return
+          if (event.target.closest("a, input, textarea, select, button:not(.select)")) return
           const row = event.target.closest<HTMLElement>(".task-row")
           if (!row || !this.el.contains(row)) return
           row.querySelector<HTMLElement>("button.select")?.focus({preventScroll: true})
@@ -932,13 +936,20 @@ defmodule MarskalWeb.TaskComponents do
           if (!outline) return
           this.el.addEventListener("pointerdown", this.onPointerDown)
           document.addEventListener("pointermove", this.onPointerMove)
+          document.addEventListener("click", this.onClickCapture, true)
 
           // The fallback drag, rather than native drag and drop, reports the
           // pointer throughout and works the same on touch.
+          // The whole row drags, from anywhere but its controls. A press
+          // that moves less than the tolerance is a click; on touch, a
+          // hold starts the drag, so a swipe still scrolls.
           this.sortable = Sortable.create(this.el, {
-            handle: ".drag-handle",
             draggable: ".task-row",
-            filter: ".is-drag-hidden",
+            filter: ".is-drag-hidden, a, input, button:not(.select), .disclosure",
+            preventOnFilter: false,
+            fallbackTolerance: 4,
+            delay: 250,
+            delayOnTouchOnly: true,
             forceFallback: true,
             fallbackOnBody: true,
             animation: 120,
@@ -963,6 +974,7 @@ defmodule MarskalWeb.TaskComponents do
           this.el.removeEventListener("click", this.onClick)
           this.el.removeEventListener("pointerdown", this.onPointerDown)
           document.removeEventListener("pointermove", this.onPointerMove)
+          document.removeEventListener("click", this.onClickCapture, true)
           this.sortable?.destroy()
         }
       }
@@ -996,11 +1008,6 @@ defmodule MarskalWeb.TaskComponents do
 
           :scope[style*="--depth"] {
             margin-inline-start: calc(var(--depth) * 1.75rem);
-          }
-
-          .handle-space {
-            flex: 0 0 1rem;
-            margin-inline: -0.5rem -0.6rem;
           }
 
           .disclosure-space {
@@ -1041,7 +1048,6 @@ defmodule MarskalWeb.TaskComponents do
           }
         }
       </style>
-      <span :if={@outline} class="handle-space" aria-hidden="true"></span>
       <span :if={@disclosures} class="disclosure-space" aria-hidden="true"></span>
       <span class="check-space" aria-hidden="true"><Lucideicons.square class="icon" /></span>
       <form id="task-new-form" phx-submit="inline-create">
