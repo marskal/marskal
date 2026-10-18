@@ -44,6 +44,11 @@ in
     ];
   };
 
+  # services.postgres puts psql on the PATH and sets PGHOST and PGPORT. The
+  # role is the login user, psql's default; this names the database, so a
+  # bare `psql` opens the dev one. Mix reads its databases from config/.
+  env.PGDATABASE = "marskal_dev";
+
   # Ory Hydra, the OAuth server (ADR 0021). Its own database in the same
   # cluster, created here for clusters made before it existed.
   processes.hydra = {
