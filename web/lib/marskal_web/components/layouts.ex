@@ -89,9 +89,11 @@ defmodule MarskalWeb.Layouts do
           inspector={@inspector}
         />
         <div :if={@nav} class="sidebar-backdrop"></div>
-        <main class="app-main">
-          {render_slot(@inner_block)}
-        </main>
+        <div class="app-main-pane">
+          <main class="app-main">
+            {render_slot(@inner_block)}
+          </main>
+        </div>
         <div
           :if={@current_scope && @current_scope.user}
           class="app-inspector__backdrop"
@@ -162,6 +164,15 @@ defmodule MarskalWeb.Layouts do
           event.clientY < box.top || event.clientY > box.bottom
       }
 
+      // Each navigation mounts a new LiveView and a new sidebar. Its scroll
+      // position is read as the navigation starts and kept here, in the
+      // bundle, so the next one starts there.
+      let sidebarTop: number | null = null
+      window.addEventListener("phx:page-loading-start", () => {
+        const sidebar = document.getElementById("sidebar")
+        if (sidebar) sidebarTop = sidebar.scrollTop
+      })
+
       export default class extends ViewHook {
         wasOpen = false
         phone = window.matchMedia("(max-width: 720px)")
@@ -208,6 +219,8 @@ defmodule MarskalWeb.Layouts do
 
         mounted() {
           this.el.addEventListener("click", this.onClick)
+          const sidebar = this.el.querySelector<HTMLElement>(".sidebar")
+          if (sidebar && sidebarTop !== null) sidebar.scrollTop = sidebarTop
           document.addEventListener("keydown", this.onKeydown)
           this.phone.addEventListener("change", this.onResize)
           this.handleEvent("quick-capture:added", ({id}: {id: string}) => {
