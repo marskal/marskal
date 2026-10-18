@@ -117,6 +117,8 @@ nests subtasks under their parents too (2026-10-10): the top level stays newest
 first, subtasks go by rank, and rows collapse but do not move. A parent that tag
 state hides shows, dimmed, above its available subtasks. Other lists stay flat
 and name a subtask's parent before its title.
-Rows drag by a handle (SortableJS). The drop depth follows how far the pointer
+Rows drag by the whole row (SortableJS), from anywhere but its controls: a
+press that hardly moves is a click, and on touch a hold starts the drag, so
+a swipe still scrolls. The drop depth follows how far the pointer
 moved sideways, one level per indent, within what the neighboring rows allow;
 the subtree moves with its root.

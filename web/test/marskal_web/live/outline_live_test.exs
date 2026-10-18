@@ -121,7 +121,7 @@ defmodule MarskalWeb.OutlineLiveTest do
     assert rows(view, "#open-tasks") == [other.id, b.id, a.id, first.id, second.id]
     assert has_element?(view, "#task-#{first.id}[data-depth='1']")
     refute has_element?(view, "#task-#{first.id} .crumb")
-    refute has_element?(view, "#open-tasks .drag-handle")
+    refute has_element?(view, "#open-tasks[data-outline]")
 
     render_hook(view, "outline-toggle", %{"id" => a.id})
     assert rows(view, "#open-tasks") == [other.id, b.id, a.id]
