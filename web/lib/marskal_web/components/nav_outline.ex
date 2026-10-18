@@ -584,7 +584,8 @@ defmodule MarskalWeb.NavOutline do
           inspector={@inspector}
           nav_stop
         >
-          <.row_icon type={row.type} /> {row.label}
+          <.row_icon type={row.type} />
+          <span class="nav-label" title={row.label}>{row.label}</span>
         </MarskalWeb.NavComponents.record_link>
       </li>
     </ul>
