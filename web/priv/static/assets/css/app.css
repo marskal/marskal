@@ -311,29 +311,35 @@ h1 {
   padding: 0;
 }
 
-.nav-tree ul {
-  list-style: none;
-  margin: 0.25rem 0 0.25rem 0.75rem;
-  padding: 0;
-  display: grid;
-  gap: 0.25rem;
-}
-
-/* Sidebar rows keep a gutter for the toggle that collapses a folder or tag;
-   what it holds lines up under its name. */
-.sidebar .nav-tree li {
+/* Folders, projects, and tags are flat outlines (MarskalWeb.NavOutline):
+   each row is indented by its depth, and keeps a gutter for the toggle
+   that collapses it, so what it holds lines up under its name. The hook
+   indents a dragged row by the same 1.25rem a level. */
+.nav-row {
+  position: relative;
   display: grid;
   grid-template-columns: 1.5rem minmax(0, 1fr);
   align-items: center;
+  margin-inline-start: calc(var(--depth, 0) * 1.25rem);
 }
 
-.sidebar .nav-tree li > a,
-.sidebar .nav-tree li > ul {
+.nav-row[hidden],
+.nav-row.is-drag-hidden {
+  display: none;
+}
+
+.nav-row.is-drag-ghost {
+  opacity: 0.4;
+}
+
+.nav-row > a {
   grid-column: 2;
 }
 
-.sidebar .nav-tree li > ul {
-  margin-left: 0;
+/* The whole row drags; a touch holds first, so the list still scrolls. */
+.nav-row:is(.nav-outline > *) {
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .nav-toggle {
@@ -360,12 +366,8 @@ h1 {
   transform: rotate(90deg);
 }
 
-.nav-toggle[aria-expanded="false"] ~ ul {
-  display: none;
-}
-
 @media (max-width: 720px) {
-  .sidebar .nav-tree li {
+  .nav-row {
     grid-template-columns: 2.5rem minmax(0, 1fr);
   }
 

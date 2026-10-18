@@ -518,6 +518,8 @@ defmodule Marskal.Recurrence do
   defp insert_occurrence(user, %Series{kind: :project} = series, latest, id, slot, command_id) do
     dates = Schedule.shift_dates(latest, series.anchor, slot, Accounts.timezone(user))
 
+    folder_id = live_folder_id(latest)
+
     attrs =
       Map.merge(dates, %{
         id: id,
@@ -525,7 +527,8 @@ defmodule Marskal.Recurrence do
         notes: latest.notes,
         url: latest.url,
         flagged: latest.flagged,
-        project_folder_id: live_folder_id(latest),
+        project_folder_id: folder_id,
+        rank: rank_beside(user, latest, folder_id),
         deferred_indefinitely: latest.deferred_indefinitely and series.anchor != :defer,
         series_id: series.id,
         occurrence_for: slot
@@ -537,6 +540,14 @@ defmodule Marskal.Recurrence do
     place = %{project_id: project.id, inbox: false, parent_id: nil}
     copy_tasks(user, top_tasks(latest), place, {project.id, anchor_at, slot}, command_id)
     project
+  end
+
+  # The next project takes the latest one's place in its folder.
+  defp rank_beside(user, latest, folder_id) do
+    case Marskal.ProjectOutline.rank_after(user.id, folder_id, {:project, latest.id}) do
+      {:ok, rank} -> rank
+      {:error, _} -> nil
+    end
   end
 
   defp live_folder_id(%Project{project_folder_id: nil}), do: nil

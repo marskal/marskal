@@ -1,7 +1,7 @@
 defmodule MarskalWeb.Inspector do
   @moduledoc """
   Shared state for the signed-in pages: the inspector selection, the sidebar
-  tree, and live updates.
+  tree and its moves (`MarskalWeb.NavMoves`), and live updates.
 
   Each page subscribes to the user's change broadcasts. On a change the hook
   rebuilds the sidebar and bumps `:change_version`, which makes the inspector
@@ -28,7 +28,8 @@ defmodule MarskalWeb.Inspector do
      |> assign(:change_version, 0)
      |> attach_hook(:inspector_params, :handle_params, &on_params/3)
      |> attach_hook(:inspector_event, :handle_event, &on_event/3)
-     |> attach_hook(:inspector_info, :handle_info, &on_info/2)}
+     |> attach_hook(:inspector_info, :handle_info, &on_info/2)
+     |> MarskalWeb.NavMoves.attach()}
   end
 
   @selection_keys ~w(task project folder tag)

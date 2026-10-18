@@ -7,6 +7,7 @@ defmodule Marskal.ProjectFolders.ProjectFolder do
 
   schema "project_folders" do
     field :name, :string
+    field :rank, :string
     field :parent_path, {:array, :string}, default: []
     field :state, Ecto.Enum, values: [:active, :dropped], default: :active
     field :discarded_at, :utc_datetime
@@ -27,23 +28,25 @@ defmodule Marskal.ProjectFolders.ProjectFolder do
 
   def create_changeset(folder, user, attrs) do
     folder
-    |> cast(attrs, [:id, :name, :parent_id, :state])
+    |> cast(attrs, [:id, :name, :parent_id, :state, :rank])
     |> validate_required([:name])
     |> validate_length(:name, max: 200)
     |> put_change(:user_id, user.id)
     |> validate_parent(user, nil)
     |> put_parent_path()
+    |> Marskal.ProjectOutline.put_rank(:parent_id)
   end
 
   @doc """
-  Any subset of name, parent_id, and state. The folder's own path changes
-  only when it moves; `Marskal.ProjectFolders` refreshes descendants after a
-  rename or a move.
+  Any subset of name, parent_id, state, and rank. The folder's own path
+  changes only when it moves, and a move without a rank goes last among its
+  new siblings; `Marskal.ProjectFolders` refreshes descendants after a
+  rename or a move. Clients do not write the rank (`client_fields/1`).
   """
   def update_changeset(folder, user, attrs) do
     changeset =
       folder
-      |> cast(attrs, [:name, :parent_id, :state])
+      |> cast(attrs, [:name, :parent_id, :state, :rank])
       |> validate_required([:name, :state])
       |> validate_length(:name, max: 200)
 
@@ -51,6 +54,7 @@ defmodule Marskal.ProjectFolders.ProjectFolder do
       changeset
       |> validate_parent(user, folder.id)
       |> put_parent_path()
+      |> Marskal.ProjectOutline.put_rank(:parent_id)
     else
       changeset
     end

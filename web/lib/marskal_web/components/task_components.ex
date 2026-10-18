@@ -910,7 +910,14 @@ defmodule MarskalWeb.TaskComponents do
             event.preventDefault()
             return
           }
-          if (!name || !this.allowed(name, row)) return
+          if (!name) return
+          // Left at the top, with nothing to collapse, goes to the sidebar.
+          if (name === "collapse" && depthOf(row) === 0 && !this.allowed(name, row)) {
+            event.preventDefault()
+            window.dispatchEvent(new CustomEvent("marskal:focus-sidebar"))
+            return
+          }
+          if (!this.allowed(name, row)) return
           event.preventDefault()
           this.run(name, row, id)
         }

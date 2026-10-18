@@ -70,11 +70,23 @@ defmodule MarskalWeb.TagLive do
         zone={Marskal.Accounts.timezone(@current_scope.user)}
       />
 
+      <h2>{gettext("Tags inside")}</h2>
+      <MarskalWeb.NavOutline.scope id="tag-outline">
+        <MarskalWeb.NavOutline.list
+          id="tag-children"
+          class="nav-tree"
+          rows={@tag_rows}
+          root_id={@tag.id}
+          inspector={@inspector}
+          label={gettext("Tags inside")}
+        />
+      </MarskalWeb.NavOutline.scope>
+
       <.add_form
         id="new-child-tag"
         for={@tag_form}
         field={@tag_form[:name]}
-        label="New tag inside"
+        label={gettext("New tag inside")}
         command_id={@tag_command_id}
         phx-submit="create-tag"
       />
@@ -171,6 +183,7 @@ defmodule MarskalWeb.TagLive do
         |> assign(:state, Tree.state(tree, root.tag.id) || root.tag.state)
         |> assign(:ancestors, ancestors(tree, root.tag))
         |> assign(:outline, outline)
+        |> assign(:tag_rows, tag_rows(tree, root.tag))
         |> assign(:task_tags, annotate(user, outline))
     end
   end
@@ -237,6 +250,17 @@ defmodule MarskalWeb.TagLive do
       | tasks: TaskList.merge(old.tasks, node.tasks, lingering),
         children: TaskList.merge(old.children, children, gone, & &1.tag.id)
     }
+  end
+
+  # The tags below this one, as the sidebar shows them; all of them on a
+  # dropped tag's page.
+  defp tag_rows(tree, tag) do
+    include? =
+      if Tree.visible?(tree, tag.id),
+        do: &Tree.visible?(tree, &1.id),
+        else: fn _tag -> true end
+
+    MarskalWeb.NavOutline.tag_rows(tree, tag.id, include?)
   end
 
   defp node_tasks(node), do: node.tasks ++ Enum.flat_map(node.children, &node_tasks/1)
