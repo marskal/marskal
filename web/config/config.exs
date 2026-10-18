@@ -48,6 +48,7 @@ config :phoenix_live_view,
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
 config :marskal, Marskal.Mailer, adapter: Swoosh.Adapters.Local
+config :marskal, :mail_from, {"Marskal", "contact@marskal.example"}
 
 config :marskal, Oban,
   repo: Marskal.Repo,
@@ -56,7 +57,9 @@ config :marskal, Oban,
     {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
     {Oban.Plugins.Cron,
      crontab: [
-       {"@hourly", Marskal.Imports.ExpireJob}
+       {"@hourly", Marskal.Imports.ExpireJob},
+       {"@daily", Marskal.Accounts.ExpireUnconfirmedJob},
+       {"@daily", Marskal.Accounts.ExpireTokensJob}
      ]}
   ]
 

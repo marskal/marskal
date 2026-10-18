@@ -140,10 +140,15 @@ defmodule MarskalWeb.Router do
       ] do
       live "/users/register", UserLive.Registration, :new
       live "/users/log-in", UserLive.Login, :new
-      live "/users/log-in/:token", UserLive.Confirmation, :new
+      live "/users/check-email", UserLive.CheckEmail, :show
+      live "/users/confirm/:token", UserLive.Confirmation, :new
+      live "/users/reset-password", UserLive.ForgotPassword, :new
+      live "/users/reset-password/:token", UserLive.ResetPassword, :edit
     end
 
+    get "/.well-known/change-password", PageController, :change_password
     post "/users/log-in", UserSessionController, :create
+    post "/users/confirm", UserSessionController, :confirm
     delete "/users/log-out", UserSessionController, :delete
   end
 end

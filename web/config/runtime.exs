@@ -157,21 +157,21 @@ if config_env() == :prod do
   #
   # Check `Plug.SSL` for all available options in `force_ssl`.
 
-  # ## Configuring the mailer
-  #
-  # In production you need to configure the mailer to use a different adapter.
-  # Here is an example configuration for Mailgun:
-  #
-  #     config :marskal, Marskal.Mailer,
-  #       adapter: Swoosh.Adapters.Mailgun,
-  #       api_key: System.get_env("MAILGUN_API_KEY"),
-  #       domain: System.get_env("MAILGUN_DOMAIN")
-  #
-  # Most non-SMTP adapters require an API client. Swoosh supports Req, Hackney,
-  # and Finch out-of-the-box. This configuration is typically done at
-  # compile-time in your config/prod.exs:
-  #
-  #     config :swoosh, :api_client, Swoosh.ApiClient.Req
-  #
-  # See https://swoosh.hexdocs.pm/Swoosh.html#module-installation for details.
+  # Mail. MAILER_ADAPTER names a Swoosh adapter by its last segment
+  # ("Scaleway" is Swoosh.Adapters.Scaleway), and each other MAILER_<KEY>
+  # becomes its option `key`: MAILER_SECRET_KEY is `secret_key`. The values
+  # are strings, which suits the HTTP API adapters. MAILER_FROM is the
+  # sender address. Without MAILER_ADAPTER no mail is sent.
+  if adapter = System.get_env("MAILER_ADAPTER") do
+    options =
+      for {"MAILER_" <> key, value} <- System.get_env(), key not in ["ADAPTER", "FROM"] do
+        {key |> String.downcase() |> String.to_atom(), value}
+      end
+
+    config :marskal, Marskal.Mailer, [adapter: Module.concat(Swoosh.Adapters, adapter)] ++ options
+  end
+
+  if from = System.get_env("MAILER_FROM") do
+    config :marskal, :mail_from, {"Marskal", from}
+  end
 end

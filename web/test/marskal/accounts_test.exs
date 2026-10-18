@@ -115,16 +115,10 @@ defmodule Marskal.AccountsTest do
     end
   end
 
-  describe "deliver_user_update_email_instructions/3" do
-    setup do
-      %{user: user_fixture()}
-    end
-
-    test "sends token through notification", %{user: user} do
-      token =
-        extract_user_token(fn url ->
-          Accounts.deliver_user_update_email_instructions(user, "current@marskal.example", url)
-        end)
+  describe "build_update_email_token/2" do
+    test "stores a token for the new address" do
+      user = user_fixture()
+      token = Accounts.build_update_email_token(user, "current@marskal.example")
 
       {:ok, token} = Base.url_decode64(token, padding: false)
       assert user_token = Repo.get_by(UserToken, token: :crypto.hash(:sha256, token))
@@ -139,10 +133,7 @@ defmodule Marskal.AccountsTest do
       user = unconfirmed_user_fixture()
       email = unique_user_email()
 
-      token =
-        extract_user_token(fn url ->
-          Accounts.deliver_user_update_email_instructions(%{user | email: email}, user.email, url)
-        end)
+      token = Accounts.build_update_email_token(%{user | email: email}, user.email)
 
       %{user: user, token: token, email: email}
     end
@@ -309,60 +300,6 @@ defmodule Marskal.AccountsTest do
     end
   end
 
-  describe "get_user_by_magic_link_token/1" do
-    setup do
-      user = user_fixture()
-      {encoded_token, _hashed_token} = generate_user_magic_link_token(user)
-      %{user: user, token: encoded_token}
-    end
-
-    test "returns user by token", %{user: user, token: token} do
-      assert session_user = Accounts.get_user_by_magic_link_token(token)
-      assert session_user.id == user.id
-    end
-
-    test "does not return user for invalid token" do
-      refute Accounts.get_user_by_magic_link_token("oops")
-    end
-
-    test "does not return user for expired token", %{token: token} do
-      {1, nil} = Repo.update_all(UserToken, set: [inserted_at: ~N[2020-01-01 00:00:00]])
-      refute Accounts.get_user_by_magic_link_token(token)
-    end
-  end
-
-  describe "login_user_by_magic_link/1" do
-    test "confirms user and expires tokens" do
-      user = unconfirmed_user_fixture()
-      refute user.confirmed_at
-      {encoded_token, hashed_token} = generate_user_magic_link_token(user)
-
-      assert {:ok, {user, [%{token: ^hashed_token}]}} =
-               Accounts.login_user_by_magic_link(encoded_token)
-
-      assert user.confirmed_at
-    end
-
-    test "returns user and (deleted) token for confirmed user" do
-      user = user_fixture()
-      assert user.confirmed_at
-      {encoded_token, _hashed_token} = generate_user_magic_link_token(user)
-      assert {:ok, {^user, []}} = Accounts.login_user_by_magic_link(encoded_token)
-      # one time use only
-      assert {:error, :not_found} = Accounts.login_user_by_magic_link(encoded_token)
-    end
-
-    test "raises when unconfirmed user has password set" do
-      user = unconfirmed_user_fixture()
-      {1, nil} = Repo.update_all(User, set: [hashed_password: "hashed"])
-      {encoded_token, _hashed_token} = generate_user_magic_link_token(user)
-
-      assert_raise RuntimeError, ~r/magic link log in is not allowed/, fn ->
-        Accounts.login_user_by_magic_link(encoded_token)
-      end
-    end
-  end
-
   describe "delete_user_session_token/1" do
     test "deletes the token" do
       user = user_fixture()
@@ -372,22 +309,149 @@ defmodule Marskal.AccountsTest do
     end
   end
 
-  describe "deliver_login_instructions/2" do
+  describe "confirm_user/2" do
     setup do
-      %{user: unconfirmed_user_fixture()}
+      user = registered_user_fixture()
+      {:ok, token} = Accounts.build_confirmation_token(user)
+      %{user: user, token: token}
     end
 
-    test "sends token through notification", %{user: user} do
-      token =
-        extract_user_token(fn url ->
-          Accounts.deliver_login_instructions(user, url)
-        end)
+    test "registration leaves the account unconfirmed", %{user: user} do
+      refute user.confirmed_at
+      assert user.hashed_password
+    end
 
-      {:ok, token} = Base.url_decode64(token, padding: false)
-      assert user_token = Repo.get_by(UserToken, token: :crypto.hash(:sha256, token))
-      assert user_token.user_id == user.id
-      assert user_token.sent_to == user.email
-      assert user_token.context == "login"
+    test "confirms with the account's password and ends its tokens", %{user: user, token: token} do
+      assert Accounts.get_user_by_confirmation_token(token).id == user.id
+      assert {:ok, {confirmed, [_token]}} = Accounts.confirm_user(token, valid_user_password())
+      assert confirmed.confirmed_at
+      refute Accounts.get_user_by_confirmation_token(token)
+      assert {:error, :not_found} = Accounts.confirm_user(token, valid_user_password())
+    end
+
+    test "refuses another password", %{user: user, token: token} do
+      assert {:error, :invalid_password} = Accounts.confirm_user(token, "not the password")
+      refute Repo.get!(User, user.id).confirmed_at
+    end
+
+    test "refuses a bad or expired token", %{token: token} do
+      assert {:error, :not_found} = Accounts.confirm_user("oops", valid_user_password())
+      {1, nil} = Repo.update_all(UserToken, set: [inserted_at: ~N[2020-01-01 00:00:00]])
+      assert {:error, :not_found} = Accounts.confirm_user(token, valid_user_password())
+    end
+
+    test "refuses a token sent to an address the account no longer has", %{
+      user: user,
+      token: token
+    } do
+      Repo.update_all(from(u in User, where: u.id == ^user.id), set: [email: unique_user_email()])
+      assert {:error, :not_found} = Accounts.confirm_user(token, valid_user_password())
+    end
+
+    test "sends one link a minute", %{user: user} do
+      assert {:error, :sent_recently} = Accounts.build_confirmation_token(user)
+      {1, nil} = Repo.update_all(UserToken, set: [inserted_at: ~N[2020-01-01 00:00:00]])
+      assert {:ok, _token} = Accounts.build_confirmation_token(user)
+    end
+  end
+
+  describe "delete_unconfirmed_users/1" do
+    test "deletes accounts unconfirmed past the link's life" do
+      stale = registered_user_fixture()
+      fresh = registered_user_fixture()
+      confirmed = user_fixture()
+
+      old = ~U[2020-01-01 00:00:00Z]
+
+      Repo.update_all(from(u in User, where: u.id in ^[stale.id, confirmed.id]),
+        set: [inserted_at: old]
+      )
+
+      assert {1, _} = Accounts.delete_unconfirmed_users()
+      refute Repo.get(User, stale.id)
+      assert Repo.get(User, fresh.id)
+      assert Repo.get(User, confirmed.id)
+    end
+  end
+
+  describe "delete_expired_tokens/1" do
+    test "deletes each context's tokens past its validity, and keeps the rest" do
+      user = user_fixture()
+      now = DateTime.utc_now(:second)
+
+      tokens = [
+        {"session", -15, :day, :expired},
+        {"session", -13, :day, :valid},
+        {"reset_password", -2, :hour, :expired},
+        {"reset_password", -30, :minute, :valid},
+        {"confirm", -8, :day, :expired},
+        {"confirm", -6, :day, :valid},
+        {"change:#{user.email}", -8, :day, :expired},
+        {"change:#{user.email}", -6, :day, :valid}
+      ]
+
+      for {context, amount, unit, _} <- tokens do
+        Repo.insert!(%UserToken{
+          token: :crypto.strong_rand_bytes(32),
+          context: context,
+          user_id: user.id,
+          inserted_at: DateTime.add(now, amount, unit)
+        })
+      end
+
+      expired = Enum.count(tokens, &(elem(&1, 3) == :expired))
+      assert {^expired, _} = Accounts.delete_expired_tokens(now)
+
+      left = Repo.all(from t in UserToken, select: t.context) |> Enum.frequencies()
+
+      assert left == %{
+               "session" => 1,
+               "reset_password" => 1,
+               "confirm" => 1,
+               "change:#{user.email}" => 1
+             }
+    end
+  end
+
+  describe "reset_user_password/2" do
+    test "sets the password and ends every token" do
+      user = password_user_fixture()
+      _session = Accounts.generate_user_session_token(user)
+      {:ok, token} = Accounts.build_reset_password_token(user)
+      assert Accounts.get_user_by_reset_password_token(token).id == user.id
+
+      assert {:ok, {_user, [_session, _reset]}} =
+               Accounts.reset_user_password(user, %{password: "a new valid password"})
+
+      refute Accounts.get_user_by_reset_password_token(token)
+      refute Accounts.get_user_by_email_and_password(user.email, valid_user_password())
+      assert Accounts.get_user_by_email_and_password(user.email, "a new valid password")
+    end
+
+    test "confirms the account and replaces the password someone else set" do
+      squatted = registered_user_fixture()
+      {:ok, token} = Accounts.build_reset_password_token(squatted)
+      user = Accounts.get_user_by_reset_password_token(token)
+
+      assert {:ok, {user, _expired}} =
+               Accounts.reset_user_password(user, %{password: "the owner's password"})
+
+      assert user.confirmed_at
+      refute Accounts.get_user_by_email_and_password(user.email, valid_user_password())
+    end
+
+    test "validates the password" do
+      user = user_fixture()
+      assert {:error, changeset} = Accounts.reset_user_password(user, %{password: "short"})
+      assert "should be at least 12 character(s)" in errors_on(changeset).password
+    end
+
+    test "refuses a bad or expired token" do
+      user = user_fixture()
+      {:ok, token} = Accounts.build_reset_password_token(user)
+      refute Accounts.get_user_by_reset_password_token("oops")
+      {1, nil} = Repo.update_all(UserToken, set: [inserted_at: ~N[2020-01-01 00:00:00]])
+      refute Accounts.get_user_by_reset_password_token(token)
     end
   end
 

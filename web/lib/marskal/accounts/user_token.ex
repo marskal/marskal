@@ -6,9 +6,11 @@ defmodule Marskal.Accounts.UserToken do
   @hash_algorithm :sha256
   @rand_size 32
 
-  # It is very important to keep the magic link token expiry short,
-  # since someone with access to the email may take over the account.
-  @magic_link_validity_in_minutes 15
+  # A reset link takes over the account, so it is short-lived. An account
+  # left unconfirmed as long as its link lasts is deleted
+  # (`Marskal.Accounts.ExpireUnconfirmedJob`).
+  @confirm_validity_in_days 7
+  @reset_password_validity_in_hours 1
   @change_email_validity_in_days 7
   @session_validity_in_days 14
 
@@ -97,32 +99,44 @@ defmodule Marskal.Accounts.UserToken do
      }}
   end
 
+  @doc "How long a confirmation link, and so an unconfirmed account, lasts."
+  def confirm_validity_in_days, do: @confirm_validity_in_days
+
   @doc """
   Checks if the token is valid and returns its underlying lookup query.
 
-  If found, the query returns a tuple of the form `{user, token}`.
-
-  The given token is valid if it matches its hashed counterpart in the
-  database. This function also checks whether the token has expired. The context
-  of a magic link token is always "login".
+  The query returns the user the token was sent to, if any. The token is
+  valid if it matches its hashed counterpart in the database, has not
+  expired, and was sent to the user's current email. The context is
+  "confirm" or "reset_password".
   """
-  def verify_magic_link_token_query(token) do
+  def verify_email_token_query(token, context) when context in ["confirm", "reset_password"] do
     case Base.url_decode64(token, padding: false) do
       {:ok, decoded_token} ->
         hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
 
         query =
-          from token in by_token_and_context_query(hashed_token, "login"),
+          from token in by_token_and_context_query(hashed_token, context),
             join: user in assoc(token, :user),
-            where: token.inserted_at > ago(^@magic_link_validity_in_minutes, "minute"),
+            where: token.inserted_at > ago(^validity_in_hours(context), "hour"),
             where: token.sent_to == user.email,
-            select: {user, token}
+            select: user
 
         {:ok, query}
 
       :error ->
         :error
     end
+  end
+
+  defp validity_in_hours("confirm"), do: @confirm_validity_in_days * 24
+  defp validity_in_hours("reset_password"), do: @reset_password_validity_in_hours
+
+  @doc "Whether a token with the context was made for the user in the last minutes."
+  def sent_recently_query(user, context, minutes) do
+    from t in UserToken,
+      where: t.user_id == ^user.id and t.context == ^context,
+      where: t.inserted_at > ago(^minutes, "minute")
   end
 
   @doc """
@@ -150,6 +164,25 @@ defmodule Marskal.Accounts.UserToken do
       :error ->
         :error
     end
+  end
+
+  @doc """
+  Tokens past the validity of their context at `now`. No lookup accepts
+  them, and nothing else deletes those left unused
+  (`Marskal.Accounts.ExpireTokensJob`).
+  """
+  def expired_query(now) do
+    session = DateTime.add(now, -@session_validity_in_days, :day)
+    confirm = DateTime.add(now, -@confirm_validity_in_days, :day)
+    reset = DateTime.add(now, -@reset_password_validity_in_hours, :hour)
+    change = DateTime.add(now, -@change_email_validity_in_days, :day)
+
+    from t in UserToken,
+      where:
+        (t.context == "session" and t.inserted_at < ^session) or
+          (t.context == "confirm" and t.inserted_at < ^confirm) or
+          (t.context == "reset_password" and t.inserted_at < ^reset) or
+          (like(t.context, "change:%") and t.inserted_at < ^change)
   end
 
   defp by_token_and_context_query(token, context) do

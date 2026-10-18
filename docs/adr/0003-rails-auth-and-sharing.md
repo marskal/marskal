@@ -9,6 +9,13 @@ generator is how the current tree authenticates. The port uses
 `mix phx.gen.auth` instead ([ADR 0016](0016-elixir-phoenix-web.md)). Magic
 link is not the product login.
 
+An account signs in only once its email is confirmed. The confirmation link
+also asks for the account's password, so a link alone cannot confirm an
+account someone else registered with the address. An account left
+unconfirmed for the link's 7 days is deleted. A password reset link confirms
+the account and ends every session, which is how an address's owner takes
+over an account someone else made with it.
+
 ## Context
 
 The app will be multi-user. Personal tasks (inbox, open stream, tags) stay private.

@@ -58,12 +58,6 @@ defmodule Marskal.AccountsFixtures do
     user
   end
 
-  def extract_user_token(fun) do
-    {:ok, captured_email} = fun.(&"[TOKEN]#{&1}[TOKEN]")
-    [_, token | _] = String.split(captured_email.text_body, "[TOKEN]")
-    token
-  end
-
   def override_token_authenticated_at(token, authenticated_at) when is_binary(token) do
     Marskal.Repo.update_all(
       from(t in Accounts.UserToken,
@@ -73,11 +67,14 @@ defmodule Marskal.AccountsFixtures do
     )
   end
 
-  def generate_user_magic_link_token(user) do
-    {encoded_token, user_token} = Accounts.UserToken.build_email_token(user, "login")
-    Marskal.Repo.insert!(user_token)
-    {encoded_token, user_token.token}
+  @doc "An account registered with the valid password but not confirmed."
+  def registered_user_fixture(attrs \\ %{}) do
+    {:ok, user} = Accounts.register_user(valid_user_attributes(attrs))
+    user
   end
+
+  @doc "A confirmed user with the valid password."
+  def password_user_fixture(attrs \\ %{}), do: attrs |> user_fixture() |> set_password()
 
   def offset_user_token(token, amount_to_add, unit) do
     dt = DateTime.add(DateTime.utc_now(:second), amount_to_add, unit)

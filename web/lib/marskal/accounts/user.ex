@@ -116,11 +116,10 @@ defmodule Marskal.Accounts.User do
   end
 
   @doc """
-  Confirms the account by setting `confirmed_at`.
+  Confirms the account by setting `confirmed_at`. Takes a user or a changeset.
   """
-  def confirm_changeset(user) do
-    now = DateTime.utc_now(:second)
-    change(user, confirmed_at: now)
+  def confirm_changeset(user_or_changeset) do
+    change(user_or_changeset, confirmed_at: DateTime.utc_now(:second))
   end
 
   @doc """

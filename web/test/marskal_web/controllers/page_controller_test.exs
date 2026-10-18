@@ -53,6 +53,19 @@ defmodule MarskalWeb.PageControllerTest do
     assert redirected_to(get(conn, ~p"/?task=abc")) == "/agenda?task=abc"
   end
 
+  test "the well-known change-password URL leads to settings", %{conn: conn} do
+    assert redirected_to(get(conn, "/.well-known/change-password")) == ~p"/users/settings"
+
+    # Password managers trust it only when other well-known paths are not found.
+    conn =
+      get(
+        build_conn(),
+        "/.well-known/resource-that-should-not-exist-whose-status-code-should-not-be-200"
+      )
+
+    assert conn.status == 404
+  end
+
   test "GET /up is healthy", %{conn: conn} do
     conn = get(conn, ~p"/up")
     assert response(conn, 200) == "ok"

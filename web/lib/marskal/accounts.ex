@@ -6,7 +6,7 @@ defmodule Marskal.Accounts do
   import Ecto.Query, warn: false
   alias Marskal.Repo
 
-  alias Marskal.Accounts.{User, UserNotifier, UserPreferences, UserToken}
+  alias Marskal.Accounts.{User, UserPreferences, UserToken}
   alias Marskal.Changes
 
   ## Database getters
@@ -237,11 +237,30 @@ defmodule Marskal.Accounts do
   end
 
   @doc """
-  Gets the user with the given magic link token.
+  Makes the token for a change of email, for the link the web layer emails
+  to the new address. `user` carries the new email; `current_email` is the
+  one the account has now.
   """
-  def get_user_by_magic_link_token(token) do
-    with {:ok, query} <- UserToken.verify_magic_link_token_query(token),
-         {user, _token} <- Repo.one(query) do
+  def build_update_email_token(%User{} = user, current_email) do
+    {encoded_token, user_token} = UserToken.build_email_token(user, "change:#{current_email}")
+    Repo.insert!(user_token)
+    encoded_token
+  end
+
+  ## Confirmation
+
+  @doc """
+  Makes a confirmation token for an unconfirmed user, for the link the web
+  layer emails. Returns `{:ok, encoded_token}`, or `{:error, :sent_recently}`
+  when a link went out in the last minute.
+  """
+  def build_confirmation_token(%User{confirmed_at: nil} = user),
+    do: build_email_token(user, "confirm")
+
+  @doc "The unconfirmed user a confirmation token was sent to, or nil."
+  def get_user_by_confirmation_token(token) do
+    with {:ok, query} <- UserToken.verify_email_token_query(token, "confirm"),
+         %User{confirmed_at: nil} = user <- Repo.one(query) do
       user
     else
       _ -> nil
@@ -249,76 +268,92 @@ defmodule Marskal.Accounts do
   end
 
   @doc """
-  Logs the user in by magic link.
+  Confirms the account a confirmation token was sent to. The password must
+  be the account's, so a link alone cannot confirm an account someone else
+  registered with the address; the owner resets the password instead.
 
-  There are three cases to consider:
-
-  1. The user has already confirmed their email. They are logged in
-     and the magic link is expired.
-
-  2. The user has not confirmed their email and no password is set.
-     In this case, the user gets confirmed, logged in, and all tokens -
-     including session ones - are expired. In theory, no other tokens
-     exist but we delete all of them for best security practices.
-
-  3. The user has not confirmed their email but a password is set.
-     This cannot happen in the default implementation but may be the
-     source of security pitfalls. See the "Mixing magic link and password registration" section of
-     `mix help phx.gen.auth`.
+  Returns `{:ok, {user, expired_tokens}}`, `{:error, :not_found}` for a bad
+  or expired token, or `{:error, :invalid_password}`.
   """
-  def login_user_by_magic_link(token) do
-    {:ok, query} = UserToken.verify_magic_link_token_query(token)
-
-    case Repo.one(query) do
-      # Prevent session fixation attacks by disallowing magic links for unconfirmed users with password
-      {%User{confirmed_at: nil, hashed_password: hash}, _token} when not is_nil(hash) ->
-        raise """
-        magic link log in is not allowed for unconfirmed users with a password set!
-
-        This cannot happen with the default implementation, which indicates that you
-        might have adapted the code to a different use case. Please make sure to read the
-        "Mixing magic link and password registration" section of `mix help phx.gen.auth`.
-        """
-
-      {%User{confirmed_at: nil} = user, _token} ->
-        user
-        |> User.confirm_changeset()
-        |> update_user_and_delete_all_tokens()
-
-      {user, token} ->
-        Repo.delete!(token)
-        {:ok, {user, []}}
-
+  def confirm_user(token, password) when is_binary(password) do
+    case get_user_by_confirmation_token(token) do
       nil ->
         {:error, :not_found}
+
+      user ->
+        if User.valid_password?(user, password) do
+          user
+          |> User.confirm_changeset()
+          |> update_user_and_delete_all_tokens()
+        else
+          {:error, :invalid_password}
+        end
     end
   end
 
-  @doc ~S"""
-  Delivers the update email instructions to the given user.
-
-  ## Examples
-
-      iex> deliver_user_update_email_instructions(user, current_email, &url(~p"/users/settings/confirm-email/#{&1}"))
-      {:ok, %{to: ..., body: ...}}
-
+  @doc """
+  Deletes accounts left unconfirmed longer than a confirmation link lasts,
+  which frees their addresses. They never signed in, so nothing of theirs
+  was synced.
   """
-  def deliver_user_update_email_instructions(%User{} = user, current_email, update_email_url_fun)
-      when is_function(update_email_url_fun, 1) do
-    {encoded_token, user_token} = UserToken.build_email_token(user, "change:#{current_email}")
+  def delete_unconfirmed_users(now \\ DateTime.utc_now(:second)) do
+    cutoff = DateTime.add(now, -UserToken.confirm_validity_in_days(), :day)
 
-    Repo.insert!(user_token)
-    UserNotifier.deliver_update_email_instructions(user, update_email_url_fun.(encoded_token))
+    Repo.delete_all(from u in User, where: is_nil(u.confirmed_at) and u.inserted_at < ^cutoff)
+  end
+
+  ## Password reset
+
+  @doc """
+  Makes a password reset token, for the link the web layer emails. Returns
+  `{:ok, encoded_token}`, or `{:error, :sent_recently}` when a link went out
+  in the last minute.
+  """
+  def build_reset_password_token(%User{} = user), do: build_email_token(user, "reset_password")
+
+  @doc "The user a password reset token was sent to, or nil."
+  def get_user_by_reset_password_token(token) do
+    with {:ok, query} <- UserToken.verify_email_token_query(token, "reset_password"),
+         %User{} = user <- Repo.one(query) do
+      user
+    else
+      _ -> nil
+    end
   end
 
   @doc """
-  Delivers the magic link login instructions to the given user.
+  Sets a new password from a reset link. The link proves the address, so an
+  unconfirmed account is confirmed too. Every session and token ends, and
+  every device signed in through Hydra is signed out (ADR 0021).
+
+  Returns `{:ok, {user, expired_tokens}}` or `{:error, changeset}`.
   """
-  def deliver_login_instructions(%User{} = user, magic_link_url_fun)
-      when is_function(magic_link_url_fun, 1) do
-    {encoded_token, user_token} = UserToken.build_email_token(user, "login")
-    Repo.insert!(user_token)
-    UserNotifier.deliver_login_instructions(user, magic_link_url_fun.(encoded_token))
+  def reset_user_password(%User{} = user, attrs) do
+    changeset = User.password_changeset(user, attrs)
+    changeset = if user.confirmed_at, do: changeset, else: User.confirm_changeset(changeset)
+
+    with {:ok, {user, _expired}} = ok <- update_user_and_delete_all_tokens(changeset) do
+      Marskal.Devices.sign_out_all(user)
+      ok
+    end
+  end
+
+  defp build_email_token(user, context) do
+    if Repo.exists?(UserToken.sent_recently_query(user, context, 1)) do
+      {:error, :sent_recently}
+    else
+      {encoded_token, user_token} = UserToken.build_email_token(user, context)
+      Repo.insert!(user_token)
+      {:ok, encoded_token}
+    end
+  end
+
+  @doc """
+  Deletes tokens past their validity: sessions nobody logged out of, and
+  links nobody followed.
+  """
+  def delete_expired_tokens(now \\ DateTime.utc_now(:second)) do
+    Repo.delete_all(UserToken.expired_query(now))
   end
 
   @doc """
