@@ -146,6 +146,7 @@ defmodule MarskalWeb.Router do
       live "/users/reset-password/:token", UserLive.ResetPassword, :edit
     end
 
+    get "/.well-known/change-password", PageController, :change_password
     post "/users/log-in", UserSessionController, :create
     post "/users/confirm", UserSessionController, :confirm
     delete "/users/log-out", UserSessionController, :delete
