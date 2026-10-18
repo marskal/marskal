@@ -530,6 +530,11 @@ msgstr ""
 
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
+msgid "Sidebar width"
+msgstr ""
+
+#: lib/marskal_web/components/layouts.ex
+#, elixir-autogen, elixir-format
 msgid "Something went wrong!"
 msgstr ""
 

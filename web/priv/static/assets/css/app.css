@@ -78,6 +78,9 @@
      have the box-drawing characters drawn tables need, which Consolas lacks;
      elsewhere the system's own monospace. */
   --font-mono: ui-monospace, Menlo, "Cascadia Mono", monospace;
+  /* The sidebar's width: what its handle set (--sidebar-width, from
+     localStorage), kept between 12rem and half the window. */
+  --sidebar-column: clamp(12rem, var(--sidebar-width, 16rem), max(12rem, min(40rem, 50vw)));
 }
 
 :root[data-theme="light"] {
@@ -127,16 +130,16 @@ h1 {
 
 .app-body {
   display: grid;
-  grid-template-columns: 16rem minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-column) minmax(0, 1fr);
 }
 
 .app-body.has-inspector {
-  grid-template-columns: 16rem minmax(0, 1fr) 22.5rem;
+  grid-template-columns: var(--sidebar-column) minmax(0, 1fr) 22.5rem;
 }
 
 @media (max-width: 64rem) {
   .app-body.has-inspector {
-    grid-template-columns: 16rem minmax(0, 1fr);
+    grid-template-columns: var(--sidebar-column) minmax(0, 1fr);
   }
 }
 
@@ -152,6 +155,7 @@ h1 {
 
 .sidebar-backdrop,
 .sidebar-account,
+.sidebar-resizer,
 .app-header__menu,
 .tab-bar {
   display: none;
@@ -177,6 +181,36 @@ h1 {
   .app-inspector {
     overflow-y: auto;
     overscroll-behavior: contain;
+  }
+
+  .app-body {
+    position: relative;
+  }
+
+  /* The handle on the sidebar's edge that sets its width. */
+  .sidebar-resizer {
+    display: block;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(var(--sidebar-column) - 3px);
+    z-index: 5;
+    width: 6px;
+    cursor: col-resize;
+    touch-action: none;
+  }
+
+  .sidebar-resizer:hover,
+  .sidebar-resizer:focus-visible,
+  body.is-resizing-sidebar .sidebar-resizer {
+    outline: none;
+    background: linear-gradient(to right, transparent 2px, var(--accent) 2px 4px, transparent 4px);
+  }
+
+  body.is-resizing-sidebar {
+    cursor: col-resize;
+    -webkit-user-select: none;
+    user-select: none;
   }
 }
 
