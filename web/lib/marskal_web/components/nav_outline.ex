@@ -51,17 +51,14 @@ defmodule MarskalWeb.NavOutline do
     end)
   end
 
-  defp tone(%ProjectFolder{state: :dropped}), do: :dropped
-  defp tone(%ProjectFolder{}), do: nil
-  defp tone(%Project{state: :done}), do: :done
-  defp tone(%Project{state: :dropped}), do: :dropped
+  # Folders, projects, and tags alike; only a project can be deferred.
+  defp tone(%{state: state}) when state in [:done, :dropped], do: state
 
   defp tone(%Project{} = project) do
     if Dates.deferred?(project, DateTime.utc_now()), do: :deferred
   end
 
-  defp tone(%{state: :dropped}), do: :dropped
-  defp tone(_tag), do: nil
+  defp tone(_record), do: nil
 
   defp row(type, id, label, depth, children?, tone) do
     %{type: type, id: id, label: label, depth: depth, children?: children?, tone: tone}
@@ -598,7 +595,7 @@ defmodule MarskalWeb.NavOutline do
           inspector={@inspector}
           nav_stop
         >
-          <.row_icon type={row.type} />
+          <.row_icon type={row.type} tone={row.tone} />
           <span class="nav-label" title={row.label}>{row.label}</span>
         </MarskalWeb.NavComponents.record_link>
       </li>
@@ -607,8 +604,16 @@ defmodule MarskalWeb.NavOutline do
   end
 
   attr :type, :atom, required: true
+  attr :tone, :atom, default: nil
 
+  # A project's icon says its state, as a task's checkbox does.
   defp row_icon(%{type: :folder} = assigns), do: ~H|<Lucideicons.folder class="icon" />|
-  defp row_icon(%{type: :project} = assigns), do: ~H|<Lucideicons.circle class="icon" />|
   defp row_icon(%{type: :tag} = assigns), do: ~H|<Lucideicons.tag class="icon" />|
+
+  defp row_icon(%{tone: :done} = assigns),
+    do: ~H|<Lucideicons.circle_check_big class="icon" />|
+
+  defp row_icon(%{tone: :dropped} = assigns), do: ~H|<Lucideicons.circle_off class="icon" />|
+  defp row_icon(%{tone: :deferred} = assigns), do: ~H|<Lucideicons.circle_dashed class="icon" />|
+  defp row_icon(assigns), do: ~H|<Lucideicons.circle class="icon" />|
 end

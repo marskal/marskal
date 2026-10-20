@@ -5,7 +5,6 @@ defmodule MarskalWeb.UntaggedLive do
   import MarskalWeb.TaskList, only: [assign_tasks: 2]
 
   alias Marskal.Tags
-  alias MarskalWeb.Visibility
 
   @impl true
   def mount(_params, _session, socket) do
@@ -54,7 +53,7 @@ defmodule MarskalWeb.UntaggedLive do
   end
 
   defp load(socket) do
-    show = Visibility.kinds(socket.assigns.visibility)
+    show = socket.assigns.visibility
     assign_tasks(socket, Tags.untagged_tasks(socket.assigns.current_scope.user, show: show))
   end
 end

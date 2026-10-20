@@ -118,19 +118,9 @@ msgstr ""
 msgid "Actions"
 msgstr ""
 
-#: lib/marskal_web/components/layouts.ex
-#, elixir-autogen, elixir-format
-msgid "All of these"
-msgstr ""
-
 #: lib/marskal_web/live/user_live/registration.ex
 #, elixir-autogen, elixir-format
 msgid "Already registered?"
-msgstr ""
-
-#: lib/marskal_web/components/layouts.ex
-#, elixir-autogen, elixir-format
-msgid "Also show"
 msgstr ""
 
 #: lib/marskal_web/components/layouts.ex
@@ -383,6 +373,11 @@ msgstr ""
 msgid "Invalid email or password"
 msgstr ""
 
+#: lib/marskal_web/live/project_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its tasks still to do are deferred. Show deferred to see them."
+msgstr ""
+
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Keyboard shortcuts"
@@ -468,19 +463,9 @@ msgstr ""
 msgid "New task below"
 msgstr ""
 
-#: lib/marskal_web/components/layouts.ex
-#, elixir-autogen, elixir-format
-msgid "None of these"
-msgstr ""
-
 #: lib/marskal_web/live/folder_live.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing in this folder yet."
-msgstr ""
-
-#: lib/marskal_web/live/project_live.ex
-#, elixir-autogen, elixir-format
-msgid "Nothing to show."
 msgstr ""
 
 #: lib/marskal_web/live/repeat_panel.ex
@@ -548,6 +533,26 @@ msgstr ""
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Shift"
+msgstr ""
+
+#: lib/marskal_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Show"
+msgstr ""
+
+#: lib/marskal_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Show deferred tasks and projects"
+msgstr ""
+
+#: lib/marskal_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Show done tasks and projects"
+msgstr ""
+
+#: lib/marskal_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Show dropped tasks, projects, folders, and tags"
 msgstr ""
 
 #: lib/marskal_web/components/keys_help.ex
@@ -635,11 +640,6 @@ msgstr ""
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Theme"
-msgstr ""
-
-#: lib/marskal_web/components/layouts.ex
-#, elixir-autogen, elixir-format
-msgid "To-do items stay listed."
 msgstr ""
 
 #: lib/marskal_web/live/repeat_panel.ex

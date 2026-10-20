@@ -241,6 +241,10 @@ defmodule Marskal.Tasks do
 
   defp list_by_day(user, date, field, earlier?, opts) do
     {from, until} = Dates.day_bounds(date, Marskal.Accounts.timezone(user))
+    # From earlier days come what is still open, and what was done or
+    # dropped during this day, so finishing an overdue task today leaves it
+    # on today when Done is shown. Not every one ever missed.
+    open = Task |> where_open(user) |> select([t], t.id)
 
     tasks =
       Task
@@ -249,7 +253,14 @@ defmodule Marskal.Tasks do
       |> where([t, d], field(d, ^field) < type(^until, :utc_datetime))
       |> then(fn query ->
         if earlier?,
-          do: query,
+          do:
+            where(
+              query,
+              [t, d],
+              field(d, ^field) >= type(^from, :utc_datetime) or t.id in subquery(open) or
+                (t.resolved_at >= type(^from, :utc_datetime) and
+                   t.resolved_at < type(^until, :utc_datetime))
+            ),
           else: where(query, [t, d], field(d, ^field) >= type(^from, :utc_datetime))
       end)
       |> order_by([t, d], asc: field(d, ^field), asc: t.inserted_at, asc: t.id)

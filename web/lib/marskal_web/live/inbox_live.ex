@@ -4,7 +4,6 @@ defmodule MarskalWeb.InboxLive do
   import MarskalWeb.TaskList, only: [assign_tasks: 2]
 
   alias Marskal.Tasks
-  alias MarskalWeb.Visibility
 
   @impl true
   def mount(_params, _session, socket) do
@@ -109,7 +108,7 @@ defmodule MarskalWeb.InboxLive do
   def handle_event("complete", %{"id" => id}, socket), do: act(socket, id, &Tasks.complete_task/3)
   def handle_event("reopen", %{"id" => id}, socket), do: act(socket, id, &Tasks.reopen_task/3)
 
-  defp shown(socket), do: Visibility.kinds(socket.assigns.visibility)
+  defp shown(socket), do: socket.assigns.visibility
 
   defp act(socket, id, fun) do
     user = socket.assigns.current_scope.user

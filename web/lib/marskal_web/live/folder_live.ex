@@ -4,7 +4,6 @@ defmodule MarskalWeb.FolderLive do
   alias Marskal.ProjectFolders
   alias Marskal.ProjectNav
   alias Marskal.Projects
-  alias MarskalWeb.Visibility
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -135,7 +134,7 @@ defmodule MarskalWeb.FolderLive do
 
   # Leaves the capture forms alone, so a broadcast does not clear typing.
   defp assign_records(socket, user, folder) do
-    nav = ProjectNav.build(user, Visibility.kinds(socket.assigns.visibility))
+    nav = ProjectNav.build(user, socket.assigns.visibility)
 
     socket
     |> assign(:page_title, folder.name)

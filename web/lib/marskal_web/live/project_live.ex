@@ -5,7 +5,6 @@ defmodule MarskalWeb.ProjectLive do
 
   alias Marskal.Projects
   alias Marskal.Tasks
-  alias MarskalWeb.Visibility
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -96,7 +95,7 @@ defmodule MarskalWeb.ProjectLive do
         id="project-hidden"
         class="empty"
       >
-        {gettext("Nothing to show.")}
+        {gettext("Its tasks still to do are deferred. Show deferred to see them.")}
       </p>
       <.empty_state
         :if={!@open? and @project.state == :to_do and @has_tasks? and @task_counts.to_do == 0}
@@ -186,7 +185,7 @@ defmodule MarskalWeb.ProjectLive do
 
   # Leaves the capture form alone, so a broadcast does not clear typing.
   defp assign_records(socket, user, project) do
-    show = Visibility.kinds(socket.assigns.visibility)
+    show = socket.assigns.visibility
     open_tasks = Tasks.list_project_tasks(user, project.id, show: show)
 
     folder =

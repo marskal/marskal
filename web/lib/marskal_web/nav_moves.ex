@@ -13,7 +13,6 @@ defmodule MarskalWeb.NavMoves do
 
   alias Marskal.ProjectOutline
   alias Marskal.Tags
-  alias MarskalWeb.Visibility
 
   @types %{"folder" => :folder, "project" => :project}
 
@@ -27,7 +26,7 @@ defmodule MarskalWeb.NavMoves do
   defp handle_event(event, %{"type" => type, "id" => id}, socket)
        when event in @move_events and is_binary(id) do
     user = socket.assigns.current_scope.user
-    opts = [show: Visibility.kinds(socket.assigns.visibility)]
+    opts = [show: socket.assigns.visibility]
 
     result =
       case type do

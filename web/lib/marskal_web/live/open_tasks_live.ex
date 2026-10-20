@@ -8,7 +8,6 @@ defmodule MarskalWeb.OpenTasksLive do
   import MarskalWeb.TaskList, only: [assign_tasks: 2]
 
   alias Marskal.Tasks
-  alias MarskalWeb.Visibility
 
   # The open stream, and :flagged, its flagged tasks with the inbox's
   # (ADR 0025).
@@ -85,7 +84,7 @@ defmodule MarskalWeb.OpenTasksLive do
 
   defp load_tasks(socket) do
     user = socket.assigns.current_scope.user
-    opts = [show: Visibility.kinds(socket.assigns.visibility)]
+    opts = [show: socket.assigns.visibility]
 
     # Subtasks show under their parents (ADR 0009). Flagged stays flat:
     # a parent task does not flag its subtasks (ADR 0025).

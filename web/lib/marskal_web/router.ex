@@ -13,7 +13,6 @@ defmodule MarskalWeb.Router do
     plug :put_root_layout, html: {MarskalWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :fetch_current_scope_for_user
-    plug MarskalWeb.Visibility
   end
 
   pipeline :api do
@@ -90,6 +89,7 @@ defmodule MarskalWeb.Router do
     get "/", PageController, :home
 
     live_session :require_authenticated_user,
+      session: {MarskalWeb.Visibility, :session, []},
       on_mount: [
         {MarskalWeb.UserAuth, :require_authenticated},
         {MarskalWeb.Inspector, :default},
@@ -122,6 +122,7 @@ defmodule MarskalWeb.Router do
     pipe_through [:browser, :require_authenticated_user, :require_sudo_mode]
 
     live_session :require_sudo_mode,
+      session: {MarskalWeb.Visibility, :session, []},
       on_mount: [
         {MarskalWeb.UserAuth, :require_authenticated},
         {MarskalWeb.Inspector, :default},
@@ -149,7 +150,6 @@ defmodule MarskalWeb.Router do
     end
 
     get "/.well-known/change-password", PageController, :change_password
-    post "/visibility", VisibilityController, :update
     post "/users/log-in", UserSessionController, :create
     post "/users/confirm", UserSessionController, :confirm
     delete "/users/log-out", UserSessionController, :delete

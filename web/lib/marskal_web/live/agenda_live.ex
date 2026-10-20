@@ -6,7 +6,6 @@ defmodule MarskalWeb.AgendaLive do
 
   alias Marskal.Dates
   alias Marskal.Tasks
-  alias MarskalWeb.Visibility
 
   @impl true
   def mount(_params, _session, socket) do
@@ -124,9 +123,8 @@ defmodule MarskalWeb.AgendaLive do
   # A task both due and planned shows once, under Due. Rows that linger
   # after Done stay in the column they were in.
   defp load_tasks(socket) do
-    %{date: date, today: today, visibility: visibility} = socket.assigns
+    %{date: date, today: today, visibility: show} = socket.assigns
     user = socket.assigns.current_scope.user
-    show = Visibility.kinds(visibility)
     due = Tasks.list_due(user, date, overdue: date == today, show: show)
     due_ids = MapSet.new(due, & &1.id)
 

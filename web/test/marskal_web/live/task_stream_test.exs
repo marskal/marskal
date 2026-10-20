@@ -110,7 +110,10 @@ defmodule MarskalWeb.TaskStreamTest do
     {:ok, open, _html} = live(conn, ~p"/open")
     refute has_element?(open, "#open-tasks", "Ask Anna")
 
-    open |> element("#visibility-all") |> render_click()
+    for kind <- ~w(done dropped deferred) do
+      open |> element("#visibility-#{kind}") |> render_click()
+    end
+
     render(open)
     refute has_element?(open, "#open-tasks", "Ask Anna")
   end

@@ -7,7 +7,6 @@ defmodule MarskalWeb.TagLive do
   alias Marskal.Tasks
   alias MarskalWeb.TagComponents
   alias MarskalWeb.TaskList
-  alias MarskalWeb.Visibility
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -170,7 +169,7 @@ defmodule MarskalWeb.TagLive do
   defp load(socket) do
     user = socket.assigns.current_scope.user
 
-    show = Visibility.kinds(socket.assigns.visibility)
+    show = socket.assigns.visibility
 
     case Tags.outline(user, socket.assigns.tag_id, show: show) do
       nil ->

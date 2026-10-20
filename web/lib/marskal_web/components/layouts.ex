@@ -36,7 +36,10 @@ defmodule MarskalWeb.Layouts do
   attr :inspector, :any, default: nil
   attr :nav, :any, default: nil, doc: "the sidebar tree, assigned by MarskalWeb.Inspector"
   attr :change_version, :integer, default: 0
-  attr :visibility, :any, default: nil, doc: "this browser's Done, Dropped, and Deferred choice"
+
+  attr :visibility, :list,
+    default: nil,
+    doc: "what this browser also shows (`MarskalWeb.Visibility`)"
 
   slot :inner_block, required: true
 
@@ -66,7 +69,7 @@ defmodule MarskalWeb.Layouts do
             <span>Marskal</span>
           </.link>
         </div>
-        <.visibility_menu :if={@visibility} visibility={@visibility} />
+        <.visibility_toggle :if={@visibility} visibility={@visibility} />
         <.theme_toggle />
         <div class="app-header__account">
           <%= if @current_scope && @current_scope.user do %>
@@ -418,131 +421,72 @@ defmodule MarskalWeb.Layouts do
     """
   end
 
-  attr :visibility, :any, required: true
+  attr :visibility, :list, required: true
 
   @doc """
-  Done, Dropped, and Deferred, for this browser only. The server filters
-  from the cookie and the session; this hook keeps `localStorage` and posts
-  the choice so the cookie stays current.
+  Done, Dropped, and Deferred, for this browser only: three toggles beside
+  the theme's. The server filters by `MarskalWeb.Visibility`; this hook
+  stores a toggle in the cookie and passes it to the browser's other tabs.
   """
-  def visibility_menu(assigns) do
+  def visibility_toggle(assigns) do
     ~H"""
-    <details
+    <div
       id="visibility"
-      class={["visibility", not MarskalWeb.Visibility.none?(@visibility) && "is-active"]}
-      data-visibility={MarskalWeb.Visibility.encode(@visibility)}
+      class="visibility"
+      role="group"
+      aria-labelledby="visibility-label"
+      data-show={MarskalWeb.Visibility.encode(@visibility)}
       phx-hook=".Visibility"
-      phx-mounted={JS.ignore_attributes("open")}
     >
-      <summary aria-label={gettext("Also show")}>
-        <Lucideicons.eye class="icon" />
-        <span class="visibility__label">{gettext("Also show")}</span>
-      </summary>
-      <div class="visibility__panel">
-        <p class="visibility__note">{gettext("To-do items stay listed.")}</p>
-        <div class="visibility__actions">
-          <button
-            type="button"
-            id="visibility-all"
-            phx-click="visibility"
-            phx-value-set="all"
-            disabled={MarskalWeb.Visibility.all?(@visibility)}
-          >
-            {gettext("All of these")}
-          </button>
-          <button
-            type="button"
-            id="visibility-none"
-            phx-click="visibility"
-            phx-value-set="none"
-            disabled={MarskalWeb.Visibility.none?(@visibility)}
-          >
-            {gettext("None of these")}
-          </button>
-        </div>
-        <label
-          :for={
-            {kind, label} <- [
-              done: gettext("Done"),
-              dropped: gettext("Dropped"),
-              deferred: gettext("Deferred")
-            ]
-          }
-          class="visibility__choice"
-        >
-          <input
-            type="checkbox"
-            id={"visibility-#{kind}"}
-            checked={Map.get(@visibility, kind)}
-            phx-click="visibility"
-            phx-value-kind={kind}
-          />
-          {label}
-        </label>
-      </div>
-    </details>
+      <span id="visibility-label" class="visibility__label">{gettext("Show")}</span>
+      <button
+        :for={
+          {kind, label, hint} <- [
+            {:done, gettext("Done"), gettext("Show done tasks and projects")},
+            {:dropped, gettext("Dropped"),
+             gettext("Show dropped tasks, projects, folders, and tags")},
+            {:deferred, gettext("Deferred"), gettext("Show deferred tasks and projects")}
+          ]
+        }
+        type="button"
+        id={"visibility-#{kind}"}
+        aria-pressed={to_string(kind in @visibility)}
+        title={hint}
+        phx-click="visibility"
+        phx-value-kind={kind}
+      >
+        <Lucideicons.square_check_big :if={kind == :done} class="icon" />
+        <Lucideicons.square_off :if={kind == :dropped} class="icon" />
+        <Lucideicons.hourglass :if={kind == :deferred} class="icon" />
+        <span class="visibility__name">{label}</span>
+      </button>
+    </div>
     <script :type={Phoenix.LiveView.ColocatedHook} name=".Visibility" extension="ts">
       import {ViewHook} from "phoenix_live_view"
 
-      const key = "marskal:visibility"
-
-      function read(): string | null {
-        try {
-          return localStorage.getItem(key)
-        } catch {
-          return null
-        }
-      }
+      // Must match MarskalWeb.Visibility and the connect params in app.ts.
+      const cookie = "marskal_show"
+      const year = 60 * 60 * 24 * 365
 
       export default class extends ViewHook {
-        onStorage = (event: StorageEvent) => {
-          if (event.key !== key || event.newValue === null) return
-          if (event.newValue !== this.el.dataset.visibility) {
-            this.pushEvent("visibility", {stored: event.newValue})
-          }
-        }
-
-        onPointerDown = (event: PointerEvent) => {
-          if (!(event.target instanceof Node) || this.el.contains(event.target)) return
-          this.el.removeAttribute("open")
-        }
-
-        onKeyDown = (event: KeyboardEvent) => {
-          if (event.key === "Escape") this.el.removeAttribute("open")
-        }
+        channel: BroadcastChannel | null = null
 
         mounted() {
-          const stored = read()
-          if (stored !== null && stored !== this.el.dataset.visibility) {
-            this.pushEvent("visibility", {stored})
-          }
-          window.addEventListener("storage", this.onStorage)
-          document.addEventListener("pointerdown", this.onPointerDown)
-          document.addEventListener("keydown", this.onKeyDown)
-          this.handleEvent("visibility-store", ({value}: {value: string}) => {
-            try {
-              localStorage.setItem(key, value)
-            } catch {
-              // Private windows may refuse storage; the cookie still holds it.
+          this.channel = new BroadcastChannel(cookie)
+          this.channel.onmessage = (event: MessageEvent) => {
+            if (typeof event.data === "string" && event.data !== this.el.dataset.show) {
+              this.pushEvent("visibility", {value: event.data})
             }
-            const token = document.querySelector<HTMLMetaElement>("meta[name='csrf-token']")?.content
-            if (!token) return
-            fetch("/visibility", {
-              method: "POST",
-              headers: {
-                "content-type": "application/x-www-form-urlencoded",
-                "x-csrf-token": token
-              },
-              body: new URLSearchParams({value}),
-              credentials: "same-origin"
-            })
+          }
+
+          this.handleEvent("visibility", ({value}: {value: string}) => {
+            document.cookie = `${cookie}=${value}; path=/; max-age=${year}; samesite=lax`
+            this.channel?.postMessage(value)
           })
         }
 
         destroyed() {
-          window.removeEventListener("storage", this.onStorage)
-          document.removeEventListener("pointerdown", this.onPointerDown)
-          document.removeEventListener("keydown", this.onKeyDown)
+          this.channel?.close()
         }
       }
     </script>
