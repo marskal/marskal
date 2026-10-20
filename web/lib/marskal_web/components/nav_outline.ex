@@ -14,6 +14,7 @@ defmodule MarskalWeb.NavOutline do
 
   use MarskalWeb, :html
 
+  alias Marskal.Dates
   alias Marskal.ProjectFolders.ProjectFolder
   alias Marskal.ProjectNav
   alias Marskal.Projects.Project
@@ -29,10 +30,10 @@ defmodule MarskalWeb.NavOutline do
     |> Enum.flat_map(fn
       %ProjectFolder{} = folder ->
         below = project_rows(nav, folder.id, depth + 1)
-        [row(:folder, folder.id, folder.name, depth, below != []) | below]
+        [row(:folder, folder.id, folder.name, depth, below != [], tone(folder)) | below]
 
       %Project{} = project ->
-        [row(:project, project.id, project.title, depth, false)]
+        [row(:project, project.id, project.title, depth, false, tone(project))]
     end)
   end
 
@@ -46,12 +47,25 @@ defmodule MarskalWeb.NavOutline do
     |> Enum.filter(include?)
     |> Enum.flat_map(fn tag ->
       below = tag_rows(tree, tag.id, include?, depth + 1)
-      [row(:tag, tag.id, tag.name, depth, below != []) | below]
+      [row(:tag, tag.id, tag.name, depth, below != [], tone(tag)) | below]
     end)
   end
 
-  defp row(type, id, label, depth, children?),
-    do: %{type: type, id: id, label: label, depth: depth, children?: children?}
+  defp tone(%ProjectFolder{state: :dropped}), do: :dropped
+  defp tone(%ProjectFolder{}), do: nil
+  defp tone(%Project{state: :done}), do: :done
+  defp tone(%Project{state: :dropped}), do: :dropped
+
+  defp tone(%Project{} = project) do
+    if Dates.deferred?(project, DateTime.utc_now()), do: :deferred
+  end
+
+  defp tone(%{state: :dropped}), do: :dropped
+  defp tone(_tag), do: nil
+
+  defp row(type, id, label, depth, children?, tone) do
+    %{type: type, id: id, label: label, depth: depth, children?: children?, tone: tone}
+  end
 
   attr :id, :string, required: true
   attr :class, :any, default: nil
@@ -561,7 +575,7 @@ defmodule MarskalWeb.NavOutline do
       <li
         :for={row <- @rows}
         id={"#{@id}-#{row.type}-#{row.id}"}
-        class="nav-row"
+        class={["nav-row", row.tone && "is-#{row.tone}"]}
         style={row.depth > 0 && "--depth: #{row.depth}"}
         data-type={row.type}
         data-id={row.id}

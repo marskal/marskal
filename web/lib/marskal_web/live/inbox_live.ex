@@ -4,6 +4,7 @@ defmodule MarskalWeb.InboxLive do
   import MarskalWeb.TaskList, only: [assign_tasks: 2]
 
   alias Marskal.Tasks
+  alias MarskalWeb.Visibility
 
   @impl true
   def mount(_params, _session, socket) do
@@ -15,7 +16,7 @@ defmodule MarskalWeb.InboxLive do
      |> MarskalWeb.Outline.attach()
      |> assign(:command_id, Ecto.UUID.generate(version: 7))
      |> assign(:form, to_form(%{"title" => ""}, as: "task"))
-     |> assign_tasks(Tasks.list_inbox(user))}
+     |> assign_tasks(Tasks.list_inbox(user, show: shown(socket)))}
   end
 
   @impl true
@@ -28,6 +29,7 @@ defmodule MarskalWeb.InboxLive do
       inspector={assigns[:inspector]}
       nav={assigns[:nav]}
       change_version={assigns[:change_version] || 0}
+      visibility={assigns[:visibility]}
     >
       <h1>Inbox</h1>
       <p class="lede">
@@ -76,7 +78,11 @@ defmodule MarskalWeb.InboxLive do
 
   @impl true
   def handle_info({:marskal_change, _type, _id}, socket) do
-    {:noreply, assign_tasks(socket, Tasks.list_inbox(socket.assigns.current_scope.user))}
+    {:noreply,
+     assign_tasks(
+       socket,
+       Tasks.list_inbox(socket.assigns.current_scope.user, show: shown(socket))
+     )}
   end
 
   @impl true
@@ -90,7 +96,7 @@ defmodule MarskalWeb.InboxLive do
          |> put_flash(:info, "Added.")
          |> assign(:command_id, Ecto.UUID.generate(version: 7))
          |> assign(:form, to_form(%{"title" => ""}, as: "task"))
-         |> assign_tasks(Tasks.list_inbox(user))}
+         |> assign_tasks(Tasks.list_inbox(user, show: shown(socket)))}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, form: to_form(changeset, as: "task"))}
@@ -103,12 +109,14 @@ defmodule MarskalWeb.InboxLive do
   def handle_event("complete", %{"id" => id}, socket), do: act(socket, id, &Tasks.complete_task/3)
   def handle_event("reopen", %{"id" => id}, socket), do: act(socket, id, &Tasks.reopen_task/3)
 
+  defp shown(socket), do: Visibility.kinds(socket.assigns.visibility)
+
   defp act(socket, id, fun) do
     user = socket.assigns.current_scope.user
 
     case fun.(user, id, Ecto.UUID.generate(version: 7)) do
       {:ok, _task} ->
-        {:noreply, assign_tasks(socket, Tasks.list_inbox(user))}
+        {:noreply, assign_tasks(socket, Tasks.list_inbox(user, show: shown(socket)))}
 
       {:error, :not_found} ->
         {:noreply, put_flash(socket, :error, "That task is not available.")}

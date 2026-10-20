@@ -93,9 +93,12 @@ defmodule Marskal.ProjectOutline do
     end
   end
 
-  @doc "Files the item last in the folder just above it. A project above takes nothing."
-  def indent(%User{} = user, item, command_id) do
-    with {:ok, nav, parent_id} <- locate(user, item) do
+  @doc """
+  Files the item last in the folder just above it. A project above takes
+  nothing. `show:` in `opts` is the sidebar's visibility.
+  """
+  def indent(%User{} = user, item, command_id, opts \\ []) do
+    with {:ok, nav, parent_id} <- locate(user, item, opts) do
       case neighbors(nav, parent_id, item) do
         {nil, _next} -> {:error, :first}
         {{:project, _id}, _next} -> {:error, :not_a_folder}
@@ -105,8 +108,8 @@ defmodule Marskal.ProjectOutline do
   end
 
   @doc "Moves the item out of its folder, to just after it."
-  def outdent(%User{} = user, item, command_id) do
-    with {:ok, nav, parent_id} <- locate(user, item) do
+  def outdent(%User{} = user, item, command_id, opts \\ []) do
+    with {:ok, nav, parent_id} <- locate(user, item, opts) do
       case parent_id && ProjectNav.folder(nav, parent_id) do
         nil -> {:error, :top_level}
         folder -> place(user, item, folder.parent_id, {:folder, folder.id}, command_id)
@@ -115,8 +118,8 @@ defmodule Marskal.ProjectOutline do
   end
 
   @doc "Swaps the item with the sibling above it."
-  def move_up(%User{} = user, item, command_id) do
-    with {:ok, nav, parent_id} <- locate(user, item) do
+  def move_up(%User{} = user, item, command_id, opts \\ []) do
+    with {:ok, nav, parent_id} <- locate(user, item, opts) do
       case neighbors(nav, parent_id, item) do
         {nil, _next} ->
           {:error, :first}
@@ -129,8 +132,8 @@ defmodule Marskal.ProjectOutline do
   end
 
   @doc "Swaps the item with the sibling below it."
-  def move_down(%User{} = user, item, command_id) do
-    with {:ok, nav, parent_id} <- locate(user, item) do
+  def move_down(%User{} = user, item, command_id, opts \\ []) do
+    with {:ok, nav, parent_id} <- locate(user, item, opts) do
       case neighbors(nav, parent_id, item) do
         {_above, nil} -> {:error, :last}
         {_above, below} -> place(user, item, parent_id, below, command_id)
@@ -139,8 +142,8 @@ defmodule Marskal.ProjectOutline do
   end
 
   # The item's folder, as the sidebar shows it.
-  defp locate(user, item) do
-    nav = ProjectNav.build(user)
+  defp locate(user, item, opts) do
+    nav = ProjectNav.build(user, Keyword.get(opts, :show, []))
 
     case ProjectNav.parent_id(nav, item) do
       {:ok, parent_id} -> {:ok, nav, parent_id}

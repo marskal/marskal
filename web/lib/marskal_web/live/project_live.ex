@@ -5,6 +5,7 @@ defmodule MarskalWeb.ProjectLive do
 
   alias Marskal.Projects
   alias Marskal.Tasks
+  alias MarskalWeb.Visibility
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -32,6 +33,7 @@ defmodule MarskalWeb.ProjectLive do
       inspector={assigns[:inspector]}
       nav={assigns[:nav]}
       change_version={assigns[:change_version] || 0}
+      visibility={assigns[:visibility]}
     >
       <p :if={@folder} class="lede">
         <.link
@@ -89,8 +91,15 @@ defmodule MarskalWeb.ProjectLive do
           <button type="button" phx-click="reopen">Reopen</button>
         </:actions>
       </.empty_state>
+      <p
+        :if={!@open? and @project.state == :to_do and @task_counts.to_do > 0}
+        id="project-hidden"
+        class="empty"
+      >
+        {gettext("Nothing to show.")}
+      </p>
       <.empty_state
-        :if={!@open? and @project.state == :to_do and @has_tasks?}
+        :if={!@open? and @project.state == :to_do and @has_tasks? and @task_counts.to_do == 0}
         id="project-finished"
         title="Nothing left to do"
       >
@@ -177,7 +186,8 @@ defmodule MarskalWeb.ProjectLive do
 
   # Leaves the capture form alone, so a broadcast does not clear typing.
   defp assign_records(socket, user, project) do
-    open_tasks = Tasks.list_project_tasks(user, project.id)
+    show = Visibility.kinds(socket.assigns.visibility)
+    open_tasks = Tasks.list_project_tasks(user, project.id, show: show)
 
     folder =
       if project.project_folder_id do

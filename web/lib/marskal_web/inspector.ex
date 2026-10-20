@@ -14,20 +14,25 @@ defmodule MarskalWeb.Inspector do
 
   alias Marskal.Changes
   alias Marskal.ProjectNav
+  alias MarskalWeb.Visibility
 
   def selected?(type, id, %{type: type, id: id}), do: true
   def selected?(_type, _id, _selection), do: false
 
-  def on_mount(:default, _params, _session, socket) do
+  def on_mount(:default, _params, session, socket) do
     user = socket.assigns.current_scope.user
     if connected?(socket), do: Changes.subscribe(user)
+    {key, visibility} = Visibility.from_mount(socket, session)
 
     {:cont,
      socket
-     |> assign(:nav, ProjectNav.build(user))
+     |> assign(:visibility_key, key)
+     |> assign(:visibility, visibility)
+     |> assign(:nav, ProjectNav.build(user, Visibility.kinds(visibility)))
      |> assign(:change_version, 0)
      |> attach_hook(:inspector_params, :handle_params, &on_params/3)
      |> attach_hook(:inspector_event, :handle_event, &on_event/3)
+     |> attach_hook(:visibility, :handle_event, &on_visibility/3)
      |> attach_hook(:inspector_info, :handle_info, &on_info/2)
      |> MarskalWeb.NavMoves.attach()}
   end
@@ -37,8 +42,7 @@ defmodule MarskalWeb.Inspector do
   defp on_params(params, uri, socket) do
     uri = URI.parse(uri)
 
-    # Other query params, such as the open stream's ?unavailable=1, survive
-    # opening and closing the inspector.
+    # Other query params survive opening and closing the inspector.
     page_query =
       (uri.query || "")
       |> URI.decode_query()
@@ -73,9 +77,36 @@ defmodule MarskalWeb.Inspector do
 
   defp on_event(_event, _params, socket), do: {:cont, socket}
 
+  defp on_visibility("visibility", params, socket) do
+    current = socket.assigns.visibility
+    next = Visibility.change(current, params)
+
+    if next == current do
+      {:halt, socket}
+    else
+      Visibility.store(socket.assigns.visibility_key, next)
+      user = socket.assigns.current_scope.user
+
+      socket =
+        socket
+        |> assign(:visibility, next)
+        |> assign(:nav, ProjectNav.build(user, Visibility.kinds(next)))
+        |> push_event("visibility-store", %{value: Visibility.encode(next)})
+        |> clear_kept_rows()
+
+      send(self(), {:marskal_change, :visibility, nil})
+      {:halt, socket}
+    end
+  end
+
+  defp on_visibility(_event, _params, socket), do: {:cont, socket}
+
   defp on_info({:marskal_change, _type, _id}, socket) do
+    user = socket.assigns.current_scope.user
+    show = Visibility.kinds(socket.assigns.visibility)
+
     socket
-    |> assign(:nav, ProjectNav.build(socket.assigns.current_scope.user))
+    |> assign(:nav, ProjectNav.build(user, show))
     |> assign(:change_version, socket.assigns.change_version + 1)
     |> continue_if_defined(:handle_info, 2)
   end
@@ -85,6 +116,19 @@ defmodule MarskalWeb.Inspector do
     do: {:halt, put_flash(socket, kind, message)}
 
   defp on_info(_message, socket), do: {:cont, socket}
+
+  # A visibility change is a new view: rows kept so a slip can be undone,
+  # and a tag outline's kept groups, start over.
+  defp clear_kept_rows(socket) do
+    socket =
+      if Map.has_key?(socket.assigns, :tasks),
+        do: MarskalWeb.TaskList.reset_tasks(socket),
+        else: socket
+
+    if Map.has_key?(socket.assigns, :outline),
+      do: assign(socket, :outline, nil),
+      else: socket
+  end
 
   defp continue_if_defined(socket, fun, arity) do
     if function_exported?(socket.view, fun, arity),

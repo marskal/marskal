@@ -17,17 +17,20 @@ defmodule Marskal.Tasks do
   alias Marskal.Tasks.Outline
   alias Marskal.Tasks.Task
 
-  def list_inbox(%User{} = user), do: list_visible(user, true)
+  def list_inbox(%User{} = user, opts \\ []) do
+    without_deferred(user, list_visible(user, true, opts), show_kinds(opts))
+  end
 
   @doc """
-  The open stream: to-do tasks out of the inbox. Tasks that tag state makes
-  unavailable (ADR 0005), and deferred ones (ADR 0006), are left out unless
-  `unavailable: true`.
+  The open stream: tasks out of the inbox whose own state is shown.
+  `show:` is any of `:done`, `:dropped`, and `:deferred`; the default shows
+  none of those. A task under a task or project whose state is not shown
+  stays out. Tasks that tag state makes unavailable (ADR 0005) are left
+  out unless `unavailable: true`. Deferred to-do tasks (ADR 0006) are left
+  out unless `:deferred` is in `show`.
   """
   def list_open(%User{} = user, opts \\ []) do
-    tasks = list_visible(user, false)
-
-    if Keyword.get(opts, :unavailable, false), do: tasks, else: available(user, tasks)
+    engage(user, list_visible(user, false, opts), opts)
   end
 
   @doc """
@@ -57,21 +60,21 @@ defmodule Marskal.Tasks do
     |> Enum.uniq()
   end
 
-  defp available(user, tasks, now \\ DateTime.utc_now()) do
-    deferred = deferred_ids(user, tasks, now)
+  @doc """
+  A project's tasks that `show:` includes, inbox ones included (ADR 0010).
+  The default is its open tasks. Tag state does not hide them here.
+  """
+  def list_project_tasks(%User{} = user, project_id, opts \\ []) do
+    show = show_kinds(opts)
 
-    tasks
-    |> Enum.reject(&MapSet.member?(deferred, &1.id))
-    |> then(&Marskal.Tags.reject_unavailable(user, &1))
-  end
+    tasks =
+      Task
+      |> where_shown(user, show)
+      |> where([t], t.project_id == ^project_id)
+      |> order_by([t], asc: t.rank, asc: t.id)
+      |> Repo.all()
 
-  @doc "A project's open tasks, inbox ones included (ADR 0010)."
-  def list_project_tasks(%User{} = user, project_id) do
-    Task
-    |> where_open(user)
-    |> where([t], t.project_id == ^project_id)
-    |> order_by([t], asc: t.rank, asc: t.id)
-    |> Repo.all()
+    without_deferred(user, tasks, show)
   end
 
   @doc """
@@ -146,21 +149,92 @@ defmodule Marskal.Tasks do
   end
 
   @doc """
-  The agenda for `date` in the user's zone: open tasks planned that day,
+  Narrows a task query to the user's live tasks whose own state is shown.
+  `show` may include `:done` and `:dropped`; To-Do is always included. A
+  task under a task or project whose state is not shown stays out, the
+  same way `where_open/2` treats anything resolved. Defer is not applied
+  here.
+  """
+  def where_shown(query, %User{} = user, show) when is_list(show) do
+    states = shown_states(show)
+
+    hidden_projects =
+      from p in Project,
+        where: p.user_id == ^user.id and p.state not in ^states,
+        select: p.id
+
+    query
+    |> where([t], t.user_id == ^user.id and t.state in ^states and is_nil(t.discarded_at))
+    |> where([t], is_nil(t.project_id) or t.project_id not in subquery(hidden_projects))
+    |> where([t], t.id not in subquery(under_hidden(user, states)))
+  end
+
+  defp shown_states(show) do
+    [:to_do | Enum.filter(show, &(&1 in [:done, :dropped]))]
+  end
+
+  # Every task below a task whose state is not shown. Same shape as
+  # `under_resolved/1`, under its own name so it does not collide with the
+  # effective-date CTEs.
+  defp under_hidden(user, states) do
+    children_of_hidden =
+      from c in Task,
+        join: p in Task,
+        on: c.parent_id == p.id,
+        where: p.user_id == ^user.id and p.state not in ^states,
+        select: %{id: c.id}
+
+    deeper =
+      from t in Task,
+        join: u in "under_hidden",
+        on: t.parent_id == u.id,
+        select: %{id: t.id}
+
+    from(u in "under_hidden", select: type(u.id, Ecto.UUID))
+    |> recursive_ctes(true)
+    |> with_cte("under_hidden", as: ^union(children_of_hidden, ^deeper))
+  end
+
+  @doc false
+  def without_deferred(%User{} = user, tasks, show, now \\ DateTime.utc_now())
+      when is_list(show) do
+    if :deferred in show do
+      tasks
+    else
+      deferred = deferred_ids(user, tasks, now)
+
+      Enum.reject(tasks, fn task ->
+        task.state == :to_do and MapSet.member?(deferred, task.id)
+      end)
+    end
+  end
+
+  defp show_kinds(opts), do: Keyword.get(opts, :show, [])
+
+  defp engage(user, tasks, opts, now \\ DateTime.utc_now()) do
+    tasks =
+      if Keyword.get(opts, :unavailable, false),
+        do: tasks,
+        else: Marskal.Tags.reject_unavailable(user, tasks)
+
+    without_deferred(user, tasks, show_kinds(opts), now)
+  end
+
+  @doc """
+  The agenda for `date` in the user's zone: tasks planned that day,
   earliest first (ADR 0006), by the Planned they go by: their own, or
   else what they inherit (`Marskal.Tasks.EffectiveDates`). With
   `carry_over: true`, tasks planned on earlier days and still to do come
-  first. Deferred and unavailable tasks are left out unless
-  `unavailable: true`, as in `list_open/2`.
+  first. `show:` and `unavailable:` are as in `list_open/2`.
   """
   def list_planned(%User{} = user, %Date{} = date, opts \\ []),
     do: list_by_day(user, date, :planned_at, Keyword.get(opts, :carry_over, false), opts)
 
   @doc """
-  Open tasks due on `date` in the user's zone, earliest first, by the Due
-  they go by, their own or inherited. With `overdue: true`, tasks due
-  earlier and still to do come first. Deferred and unavailable tasks are
-  left out unless `unavailable: true`.
+  Tasks due on `date` in the user's zone, earliest first, by the Due they
+  go by, their own or inherited. With `overdue: true`, tasks due earlier
+  and still to do come first. `show:` and `unavailable:` are as in
+  `list_open/2`.
   """
   def list_due(%User{} = user, %Date{} = date, opts \\ []),
     do: list_by_day(user, date, :due_at, Keyword.get(opts, :overdue, false), opts)
@@ -170,7 +244,7 @@ defmodule Marskal.Tasks do
 
     tasks =
       Task
-      |> where_open(user)
+      |> where_shown(user, show_kinds(opts))
       |> join(:inner, [t], d in ^EffectiveDates.name(), on: d.id == t.id)
       |> where([t, d], field(d, ^field) < type(^until, :utc_datetime))
       |> then(fn query ->
@@ -186,14 +260,13 @@ defmodule Marskal.Tasks do
     # day will hold: a task deferred until within it is on it.
     now = DateTime.utc_now()
     at = if DateTime.after?(from, now), do: DateTime.add(until, -1, :second), else: now
-
-    if Keyword.get(opts, :unavailable, false), do: tasks, else: available(user, tasks, at)
+    engage(user, tasks, opts, at)
   end
 
   @doc """
-  The Flagged view (ADR 0025): open tasks flagged by themselves or by
-  their project, inbox included, oldest first. Deferred and unavailable
-  tasks are left out unless `unavailable: true`, as in `list_open/2`.
+  The Flagged view (ADR 0025): tasks flagged by themselves or by their
+  project, inbox included, oldest first. `show:` and `unavailable:` are
+  as in `list_open/2`.
   """
   def list_flagged(%User{} = user, opts \\ []) do
     flagged_projects =
@@ -201,12 +274,12 @@ defmodule Marskal.Tasks do
 
     tasks =
       Task
-      |> where_open(user)
+      |> where_shown(user, show_kinds(opts))
       |> where([t], t.flagged or t.project_id in subquery(flagged_projects))
       |> order_by([t], asc: t.inserted_at, asc: t.id)
       |> Repo.all()
 
-    if Keyword.get(opts, :unavailable, false), do: tasks, else: available(user, tasks)
+    engage(user, tasks, opts)
   end
 
   @doc """
@@ -681,9 +754,9 @@ defmodule Marskal.Tasks do
 
   # The inbox is a location, in outline order. The open stream gathers
   # every location, newest first.
-  defp list_visible(user, inbox) do
+  defp list_visible(user, inbox, opts) do
     Task
-    |> where_open(user)
+    |> where_shown(user, show_kinds(opts))
     |> where([t], t.inbox == ^inbox)
     |> then(fn query ->
       if inbox,

@@ -60,7 +60,7 @@ defmodule MarskalWeb.NavComponents do
             MarskalWeb.NavOutline.tag_rows(
               @nav.tags,
               nil,
-              &Marskal.Tags.Tree.visible?(@nav.tags, &1.id)
+              &Marskal.ProjectNav.tag_shown?(@nav, &1.id)
             )
           }
           current_id={@current_id}

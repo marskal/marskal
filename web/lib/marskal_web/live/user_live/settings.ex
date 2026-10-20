@@ -15,6 +15,7 @@ defmodule MarskalWeb.UserLive.Settings do
       inspector={assigns[:inspector]}
       nav={assigns[:nav]}
       change_version={assigns[:change_version] || 0}
+      visibility={assigns[:visibility]}
     >
       <div class="text-center">
         <.header>

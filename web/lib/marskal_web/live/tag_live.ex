@@ -7,6 +7,7 @@ defmodule MarskalWeb.TagLive do
   alias Marskal.Tasks
   alias MarskalWeb.TagComponents
   alias MarskalWeb.TaskList
+  alias MarskalWeb.Visibility
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -39,6 +40,7 @@ defmodule MarskalWeb.TagLive do
       inspector={assigns[:inspector]}
       nav={assigns[:nav]}
       change_version={assigns[:change_version] || 0}
+      visibility={assigns[:visibility]}
     >
       <p :if={@ancestors != []} class="lede tag-ancestors">
         <%= for {ancestor, i} <- Enum.with_index(@ancestors) do %>
@@ -168,7 +170,9 @@ defmodule MarskalWeb.TagLive do
   defp load(socket) do
     user = socket.assigns.current_scope.user
 
-    case Tags.outline(user, socket.assigns.tag_id) do
+    show = Visibility.kinds(socket.assigns.visibility)
+
+    case Tags.outline(user, socket.assigns.tag_id, show: show) do
       nil ->
         socket
         |> put_flash(:info, "That tag was deleted.")
@@ -183,7 +187,7 @@ defmodule MarskalWeb.TagLive do
         |> assign(:state, Tree.state(tree, root.tag.id) || root.tag.state)
         |> assign(:ancestors, ancestors(tree, root.tag))
         |> assign(:outline, outline)
-        |> assign(:tag_rows, tag_rows(tree, root.tag))
+        |> assign(:tag_rows, tag_rows(tree, root.tag, show))
         |> assign(:task_tags, annotate(user, outline))
     end
   end
@@ -252,12 +256,12 @@ defmodule MarskalWeb.TagLive do
     }
   end
 
-  # The tags below this one, as the sidebar shows them; all of them on a
-  # dropped tag's page.
-  defp tag_rows(tree, tag) do
+  # The tags below this one, as the sidebar shows them; all of them when
+  # this tag itself is hidden.
+  defp tag_rows(tree, tag, show) do
     include? =
-      if Tree.visible?(tree, tag.id),
-        do: &Tree.visible?(tree, &1.id),
+      if Tags.shown?(tree, tag.id, show),
+        do: &Tags.shown?(tree, &1.id, show),
         else: fn _tag -> true end
 
     MarskalWeb.NavOutline.tag_rows(tree, tag.id, include?)

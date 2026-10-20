@@ -5,6 +5,7 @@ defmodule MarskalWeb.UntaggedLive do
   import MarskalWeb.TaskList, only: [assign_tasks: 2]
 
   alias Marskal.Tags
+  alias MarskalWeb.Visibility
 
   @impl true
   def mount(_params, _session, socket) do
@@ -21,6 +22,7 @@ defmodule MarskalWeb.UntaggedLive do
       inspector={assigns[:inspector]}
       nav={assigns[:nav]}
       change_version={assigns[:change_version] || 0}
+      visibility={assigns[:visibility]}
     >
       <h1>Untagged</h1>
       <p class="lede">To-do tasks with no tags of their own or from their project.</p>
@@ -52,6 +54,7 @@ defmodule MarskalWeb.UntaggedLive do
   end
 
   defp load(socket) do
-    assign_tasks(socket, Tags.untagged_tasks(socket.assigns.current_scope.user))
+    show = Visibility.kinds(socket.assigns.visibility)
+    assign_tasks(socket, Tags.untagged_tasks(socket.assigns.current_scope.user, show: show))
   end
 end

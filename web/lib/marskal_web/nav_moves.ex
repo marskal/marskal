@@ -13,17 +13,11 @@ defmodule MarskalWeb.NavMoves do
 
   alias Marskal.ProjectOutline
   alias Marskal.Tags
+  alias MarskalWeb.Visibility
 
   @types %{"folder" => :folder, "project" => :project}
 
-  @moves %{
-    "nav-indent" => {&ProjectOutline.indent/3, &Tags.indent_tag/3},
-    "nav-outdent" => {&ProjectOutline.outdent/3, &Tags.outdent_tag/3},
-    "nav-up" => {&ProjectOutline.move_up/3, &Tags.move_tag_up/3},
-    "nav-down" => {&ProjectOutline.move_down/3, &Tags.move_tag_down/3}
-  }
-
-  @move_events Map.keys(@moves)
+  @move_events ~w(nav-indent nav-outdent nav-up nav-down)
 
   # Nothing to indent under, out of, or past: the key does nothing.
   @no_ops [:first, :last, :top_level, :not_a_folder]
@@ -33,13 +27,18 @@ defmodule MarskalWeb.NavMoves do
   defp handle_event(event, %{"type" => type, "id" => id}, socket)
        when event in @move_events and is_binary(id) do
     user = socket.assigns.current_scope.user
-    {projects, tags} = @moves[event]
+    opts = [show: Visibility.kinds(socket.assigns.visibility)]
 
     result =
       case type do
-        "tag" -> tags.(user, id, command_id())
-        type when is_map_key(@types, type) -> projects.(user, {@types[type], id}, command_id())
-        _ -> {:error, :unknown_type}
+        "tag" ->
+          move_tag(event, user, id, command_id(), opts)
+
+        type when is_map_key(@types, type) ->
+          move_item(event, user, {@types[type], id}, command_id(), opts)
+
+        _ ->
+          {:error, :unknown_type}
       end
 
     {:halt, report(socket, result)}
@@ -69,6 +68,30 @@ defmodule MarskalWeb.NavMoves do
   end
 
   defp handle_event(_event, _params, socket), do: {:cont, socket}
+
+  defp move_item("nav-indent", user, item, command_id, opts),
+    do: ProjectOutline.indent(user, item, command_id, opts)
+
+  defp move_item("nav-outdent", user, item, command_id, opts),
+    do: ProjectOutline.outdent(user, item, command_id, opts)
+
+  defp move_item("nav-up", user, item, command_id, opts),
+    do: ProjectOutline.move_up(user, item, command_id, opts)
+
+  defp move_item("nav-down", user, item, command_id, opts),
+    do: ProjectOutline.move_down(user, item, command_id, opts)
+
+  defp move_tag("nav-indent", user, id, command_id, opts),
+    do: Tags.indent_tag(user, id, command_id, opts)
+
+  defp move_tag("nav-outdent", user, id, command_id, _opts),
+    do: Tags.outdent_tag(user, id, command_id)
+
+  defp move_tag("nav-up", user, id, command_id, opts),
+    do: Tags.move_tag_up(user, id, command_id, opts)
+
+  defp move_tag("nav-down", user, id, command_id, opts),
+    do: Tags.move_tag_down(user, id, command_id, opts)
 
   defp report(socket, {:ok, _record}), do: socket
   defp report(socket, {:error, reason}) when reason in @no_ops, do: socket

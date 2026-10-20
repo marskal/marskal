@@ -402,6 +402,16 @@ h1 {
   margin-block: calc((1lh - 1rem) / 2);
 }
 
+.nav-row.is-done > a,
+.nav-row.is-dropped > a,
+.nav-row.is-deferred > a {
+  color: var(--muted);
+}
+
+.nav-row.is-done > a .nav-label {
+  text-decoration: line-through;
+}
+
 .nav-label {
   min-width: 0;
 }
@@ -741,6 +751,106 @@ h1 {
   .theme-toggle button {
     width: 2.25rem;
     height: 2.25rem;
+  }
+}
+
+/* This browser's Done / Dropped / Deferred choice. It takes the space the
+   theme toggle uses to sit at the right, and gives it back when present. */
+.visibility {
+  position: relative;
+  margin-left: auto;
+}
+
+.visibility + .theme-toggle {
+  margin-left: 0;
+}
+
+.visibility summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 1.75rem;
+  padding: 0 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+}
+
+.visibility summary::-webkit-details-marker {
+  display: none;
+}
+
+.visibility summary:hover,
+.visibility.is-active summary {
+  color: var(--text);
+}
+
+.visibility.is-active summary {
+  background: var(--accent-tint-strong);
+  color: var(--accent);
+}
+
+.visibility__panel {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 20;
+  display: grid;
+  gap: 0.5rem;
+  min-width: 12rem;
+  padding: 0.6rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+}
+
+.visibility__note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.visibility__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.visibility__panel button {
+  padding: 0.2rem 0.55rem;
+}
+
+.visibility__panel button:disabled {
+  opacity: 0.45;
+}
+
+.visibility__choice {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.visibility__choice input {
+  width: auto;
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .visibility summary {
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+  }
+
+  .visibility__label {
+    display: none;
   }
 }
 

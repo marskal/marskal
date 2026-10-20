@@ -159,6 +159,7 @@ defmodule MarskalWeb.ImportLive do
       inspector={assigns[:inspector]}
       nav={assigns[:nav]}
       change_version={assigns[:change_version] || 0}
+      visibility={assigns[:visibility]}
     >
       <%= cond do %>
         <% @live_action == :index -> %>

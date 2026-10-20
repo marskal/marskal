@@ -1,21 +1,30 @@
 defmodule Marskal.ProjectNav do
   @moduledoc """
-  Sidebar tree. Dropped folders and done or dropped projects stay out.
-  A project filed under a dropped ancestor is not hoisted into the list.
-  A folder's subfolders and projects are one list in rank order
+  Sidebar tree. `show` selects Done projects, Dropped folders, projects,
+  and tags, and Deferred projects. The default shows none of those.
+  A project filed under a folder that stays hidden is not hoisted into
+  the list. A folder's subfolders and projects are one list in rank order
   (`Marskal.ProjectOutline`).
-  Tags come as a `Marskal.Tags.Tree`; dropped subtrees are hidden.
+  Tags come as a `Marskal.Tags.Tree`.
   """
 
+  import Ecto.Query
+
+  alias Marskal.Dates
   alias Marskal.ProjectFolders.ProjectFolder
   alias Marskal.Projects.Project
+  alias Marskal.Repo
   alias Marskal.Tags.Tree
 
-  defstruct [:folders, :children, :tags]
+  defstruct [:folders, :children, :tags, show: []]
 
-  def build(user) do
-    folders = Marskal.ProjectFolders.list_active(user)
-    projects = Marskal.Projects.list_open(user)
+  def build(user, show \\ []) when is_list(show) do
+    folders =
+      if :dropped in show,
+        do: Marskal.ProjectFolders.list_all(user),
+        else: Marskal.ProjectFolders.list_active(user)
+
+    projects = shown_projects(user, show)
 
     children =
       (Enum.map(folders, &{&1.parent_id, &1}) ++
@@ -26,13 +35,33 @@ defmodule Marskal.ProjectNav do
     %__MODULE__{
       folders: Map.new(folders, &{&1.id, &1}),
       children: children,
-      tags: Marskal.Tags.tree(user)
+      tags: Marskal.Tags.tree(user),
+      show: show
     }
   end
 
-  @doc "Visible child tags of a tag, or the visible roots for `nil`."
-  def tags_in(%__MODULE__{tags: tree}, parent_id) do
-    tree |> Tree.children(parent_id) |> Enum.filter(&Tree.visible?(tree, &1.id))
+  @doc "Whether this tag is in the sidebar for the nav's `show`."
+  def tag_shown?(%__MODULE__{} = nav, id), do: Marskal.Tags.shown?(nav.tags, id, nav.show)
+
+  @doc "Child tags the sidebar shows, or the shown roots for `nil`."
+  def tags_in(%__MODULE__{} = nav, parent_id) do
+    nav.tags
+    |> Tree.children(parent_id)
+    |> Enum.filter(&tag_shown?(nav, &1.id))
+  end
+
+  defp shown_projects(user, show) do
+    states = [:to_do | Enum.filter(show, &(&1 in [:done, :dropped]))]
+    now = DateTime.utc_now()
+
+    Project
+    |> where([p], p.user_id == ^user.id and p.state in ^states and is_nil(p.discarded_at))
+    |> Repo.all()
+    |> then(fn projects ->
+      if :deferred in show,
+        do: projects,
+        else: Enum.reject(projects, &(&1.state == :to_do and Dates.deferred?(&1, now)))
+    end)
   end
 
   def empty?(%__MODULE__{} = nav), do: children(nav, nil) == []
