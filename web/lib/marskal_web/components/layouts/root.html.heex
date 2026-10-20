@@ -14,11 +14,14 @@
     <meta name="apple-mobile-web-app-title" content="Marskal" />
     <meta name="theme-color" content="#125a48" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#062b21" media="(prefers-color-scheme: dark)" />
-    <%!-- Before the stylesheet, so a chosen theme paints without a flash. --%>
+    <%!-- Before the stylesheet, so a chosen theme and sidebar width paint
+         without a flash. --%>
     <script nonce={@conn.assigns[:csp_nonce]}>
       try {
         const theme = localStorage.getItem("marskal:theme")
         if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme
+        const width = Number(localStorage.getItem("marskal:sidebar-width"))
+        if (width > 0) document.documentElement.style.setProperty("--sidebar-width", `${width}px`)
       } catch {}
     </script>
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />

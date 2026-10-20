@@ -122,3 +122,26 @@ press that hardly moves is a click, and on touch a hold starts the drag, so
 a swipe still scrolls. The drop depth follows how far the pointer
 moved sideways, one level per indent, within what the neighboring rows allow;
 the subtree moves with its root.
+
+### Folders and projects as an outline (2026-10-18)
+
+Folders and projects, and tags (ADR 0005), get the same outline in the
+sidebar, on a folder's page, and on a tag's page: drag by the row, and the
+outline keys of ADR 0031.
+
+- The folders and projects in one folder, or at the top, are **one sibling
+  list**: a project can sit above a folder. `project_folders.rank` and
+  `projects.rank` draw from that one list (fractional, ADR 0014). The
+  migration keeps the order the sidebar showed: folders by name, then
+  projects by title.
+- A folder takes folders and projects; a project takes nothing. A drop or an
+  indent onto a project is refused, so projects stay flat.
+- New folders and projects go last, and so does one filed into another folder
+  without a rank. The next occurrence of a repeating project goes right after
+  the one it follows.
+- The keys move among what the sidebar shows: a dropped folder, a done project,
+  or a dropped tag is not a neighbor to swap with or indent under. The rank is
+  still placed among every live sibling.
+- The rank syncs read-only, as a tag's does: pull carries it, and a client
+  cannot write it (`client_fields/1`). The Rust engine does not order by it yet.
+- Collapsed folders and tags are kept per browser, the same in every outline.

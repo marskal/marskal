@@ -28,10 +28,10 @@ defmodule Marskal.Sync do
         planned_at due_at series_id occurrence_for resolved_at discarded_at inserted_at
         updated_at)a},
     {"project", Marskal.Projects.Project,
-     ~w(id title notes url flagged state project_folder_id defer_until deferred_indefinitely planned_at
+     ~w(id title notes url flagged state project_folder_id rank defer_until deferred_indefinitely planned_at
         due_at series_id occurrence_for resolved_at discarded_at inserted_at updated_at)a},
     {"project_folder", Marskal.ProjectFolders.ProjectFolder,
-     ~w(id name parent_id state discarded_at inserted_at updated_at)a},
+     ~w(id name parent_id state rank discarded_at inserted_at updated_at)a},
     {"tag", Marskal.Tags.Tag,
      ~w(id name parent_id state rank merged_into_id discarded_at inserted_at updated_at)a},
     {"task_tag", Marskal.Tags.TaskTag,

@@ -1,8 +1,6 @@
 defmodule MarskalWeb.FolderLive do
   use MarskalWeb, :live_view
 
-  import MarskalWeb.NavComponents, only: [record_link: 1]
-
   alias Marskal.ProjectFolders
   alias Marskal.ProjectNav
   alias Marskal.Projects
@@ -43,40 +41,33 @@ defmodule MarskalWeb.FolderLive do
         <button :if={@folder.state == :dropped} type="button" phx-click="activate">Activate</button>
       </p>
 
-      <h2>Folders</h2>
-      <ul class="nav-tree">
-        <li :for={child <- @children}>
-          <.record_link type={:folder} id={child.id} inspector={@inspector}>
-            <Lucideicons.folder class="icon" /> {child.name}
-          </.record_link>
-        </li>
-      </ul>
-      <p :if={@children == []} class="empty">No folders inside.</p>
+      <h2>{gettext("Folders and projects")}</h2>
+      <MarskalWeb.NavOutline.scope id="folder-outline">
+        <MarskalWeb.NavOutline.list
+          id="folder-contents"
+          class="nav-tree"
+          rows={@rows}
+          root_id={@folder.id}
+          inspector={@inspector}
+          label={gettext("Folders and projects")}
+        />
+      </MarskalWeb.NavOutline.scope>
+      <p :if={@rows == []} class="empty">{gettext("Nothing in this folder yet.")}</p>
 
       <.add_form
         id="new-folder"
         for={@folder_form}
         field={@folder_form[:name]}
-        label="New folder"
+        label={gettext("New folder")}
         command_id={@folder_command_id}
         phx-submit="create-folder"
       />
-
-      <h2>Projects</h2>
-      <ul class="nav-tree">
-        <li :for={project <- @projects}>
-          <.record_link type={:project} id={project.id} inspector={@inspector}>
-            <Lucideicons.circle class="icon" /> {project.title}
-          </.record_link>
-        </li>
-      </ul>
-      <p :if={@projects == []} class="empty">No open projects.</p>
 
       <.add_form
         id="new-project"
         for={@project_form}
         field={@project_form[:title]}
-        label="New project"
+        label={gettext("New project")}
         command_id={@project_command_id}
         phx-submit="create-project"
       />
@@ -147,7 +138,6 @@ defmodule MarskalWeb.FolderLive do
     socket
     |> assign(:page_title, folder.name)
     |> assign(:folder, folder)
-    |> assign(:children, ProjectNav.child_folders(nav, folder))
-    |> assign(:projects, ProjectNav.projects_in(nav, folder))
+    |> assign(:rows, MarskalWeb.NavOutline.project_rows(nav, folder.id))
   end
 end

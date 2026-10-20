@@ -68,10 +68,25 @@ are the product, so they are recorded here.
 | New task above | | `O` |
 | Edit in the inspector | Enter | |
 | Go to the list | Down, or Escape in an add field | `j` |
+| Go to the sidebar, from a top row | Left | `h` |
+| Back from the sidebar | Right | `l` |
 | Show the keys | `?` | |
 
 Cmd-] and Cmd-[ are Ctrl-] and Ctrl-[ off a Mac, as before. Escape still
 closes the inspector and the phone navigation.
+
+### The sidebar (2026-10-18)
+
+- The sidebar is a list the keys move through: the views at the top, then
+  folders and projects, then tags. Up, Down, Home, End (and `k`, `j`, `gg`,
+  `G`) move; Enter opens the row's page. Only folders, projects, and tags
+  rearrange, with the outline keys above (ADR 0009). The views stay put, and
+  Tab on one leaves it as usual.
+- Left and `h` on a list's top row, with nothing to collapse, go to the
+  sidebar's current row. Right and `l` in the sidebar, with nothing to
+  expand, go back to the list. Shift-Tab still reaches the sidebar too.
+- A folder's page and a tag's page list what is inside as the same outline,
+  with the same keys.
 
 ## Consequences
 

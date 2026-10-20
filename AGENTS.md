@@ -145,7 +145,8 @@ Project folders (nested) → Project (flat) → Tasks (nested outliner)
 ```
 
 - **Tasks:** parent/child tree; outliner UX (indent, collapse, sibling order).
-- **Projects:** never nested under projects.
+- **Projects:** never nested under projects. A folder's subfolders and projects are
+  one sibling list by `rank`; the sidebar and folder and tag pages are outlines (ADR 0009).
 - **Project folders:** nested; **name** + **Active | Dropped** only (no Done/dates).
   Projects optionally filed in one folder; drop folder does not resolve projects.
 - **Sharing (later):** share a **folder** → that folder + subfolders + projects (+ tasks).

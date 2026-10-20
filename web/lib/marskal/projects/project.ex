@@ -13,6 +13,7 @@ defmodule Marskal.Projects.Project do
     field :notes, :string
     field :url, :string
     field :flagged, :boolean, default: false
+    field :rank, :string
     field :state, Ecto.Enum, values: @states, default: :to_do
     field :defer_until, :utc_datetime
     field :deferred_indefinitely, :boolean, default: false
@@ -57,6 +58,7 @@ defmodule Marskal.Projects.Project do
       :state,
       :series_id,
       :occurrence_for,
+      :rank,
       :resolved_at | Dates.fields()
     ])
     |> validate_required([:title, :flagged])
@@ -68,13 +70,16 @@ defmodule Marskal.Projects.Project do
     |> Dates.put_resolved_at(opts[:at])
     |> owned_folder_constraint()
     |> validate_live_folder()
+    |> Marskal.ProjectOutline.put_rank(:project_folder_id)
     |> date_constraints()
     |> Marskal.Recurrence.validate_occurrence(user.id, :project, generated: opts[:generated])
   end
 
   @doc """
   Any subset of the editable fields. Only fields that differ reach the
-  patch. `series_id` and `occurrence_for` join a series, once.
+  patch. `series_id` and `occurrence_for` join a series, once. A move to
+  another folder without a rank goes last there; clients do not write the
+  rank (`client_fields/1`).
   """
   def update_changeset(project, attrs, opts \\ []) do
     project
@@ -86,7 +91,8 @@ defmodule Marskal.Projects.Project do
       :project_folder_id,
       :state,
       :series_id,
-      :occurrence_for | Dates.fields()
+      :occurrence_for,
+      :rank | Dates.fields()
     ])
     |> validate_required([:title, :state, :flagged])
     |> validate_length(:title, max: Marskal.Tasks.Task.title_max())
@@ -96,6 +102,7 @@ defmodule Marskal.Projects.Project do
     |> Dates.put_resolved_at(opts[:at])
     |> owned_folder_constraint()
     |> validate_live_folder()
+    |> Marskal.ProjectOutline.put_rank(:project_folder_id)
     |> date_constraints()
     |> Marskal.Recurrence.validate_occurrence(project.user_id, :project)
   end

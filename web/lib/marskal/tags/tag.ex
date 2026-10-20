@@ -56,13 +56,14 @@ defmodule Marskal.Tags.Tag do
   end
 
   @doc """
-  Any subset of name, parent_id, and state. A move also takes a new rank at
-  the end of its new siblings; `Marskal.Tags` refreshes descendants' paths.
+  Any subset of name, parent_id, state, and rank. A move without a rank
+  takes one at the end of its new siblings; `Marskal.Tags` refreshes
+  descendants' paths. Clients do not write the rank (`client_fields/1`).
   """
   def update_changeset(tag, user, attrs, rank_for) do
     changeset =
       tag
-      |> cast(attrs, [:name, :parent_id, :state])
+      |> cast(attrs, [:name, :parent_id, :state, :rank])
       |> normalize_name()
       |> validate_required([:name, :state])
       |> validate_length(:name, max: @name_max)
@@ -151,6 +152,8 @@ defmodule Marskal.Tags.Tag do
     do: [tag.id | ancestor_ids(Marskal.Repo.get!(__MODULE__, tag.parent_id))]
 
   defp put_rank(%Ecto.Changeset{valid?: false} = changeset, _rank_for), do: changeset
+
+  defp put_rank(%Ecto.Changeset{changes: %{rank: _}} = changeset, _rank_for), do: changeset
 
   defp put_rank(changeset, rank_for),
     do: put_change(changeset, :rank, rank_for.(get_field(changeset, :parent_id)))

@@ -103,6 +103,11 @@ msgstr[1] ""
 msgid "A link to confirm your email change has been sent to the new address."
 msgstr ""
 
+#: lib/marskal_web/nav_moves.ex
+#, elixir-autogen, elixir-format
+msgid "A tag with that name is already there."
+msgstr ""
+
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Action"
@@ -126,6 +131,11 @@ msgstr ""
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Automatic"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Back from the sidebar"
 msgstr ""
 
 #: lib/marskal_web/live/user_live/check_email.ex
@@ -184,7 +194,7 @@ msgstr ""
 msgid "Confirm your new email address"
 msgstr ""
 
-#: lib/marskal_web/components/nav_components.ex
+#: lib/marskal_web/components/nav_outline.ex
 #, elixir-autogen, elixir-format
 msgid "Contents of %{name}"
 msgstr ""
@@ -192,6 +202,11 @@ msgstr ""
 #: lib/marskal_web/outline.ex
 #, elixir-autogen, elixir-format
 msgid "Could not add the task."
+msgstr ""
+
+#: lib/marskal_web/nav_moves.ex
+#, elixir-autogen, elixir-format
+msgid "Could not move that there."
 msgstr ""
 
 #: lib/marskal_web/task_keys.ex
@@ -271,12 +286,18 @@ msgstr ""
 
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
-msgid "First and last task"
+msgid "First and last row"
 msgstr ""
 
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Flag"
+msgstr ""
+
+#: lib/marskal_web/components/nav_components.ex
+#: lib/marskal_web/live/folder_live.ex
+#, elixir-autogen, elixir-format
+msgid "Folders and projects"
 msgstr ""
 
 #: lib/marskal_web/live/user_live/reset_password.ex
@@ -293,6 +314,11 @@ msgstr ""
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Go to the list"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#, elixir-autogen, elixir-format
+msgid "Go to the sidebar, from a top row"
 msgstr ""
 
 #: lib/marskal_web/user_notifier.ex
@@ -357,7 +383,7 @@ msgstr ""
 
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
-msgid "Keys act on the focused task, not while you type. Off a Mac, Cmd is Ctrl."
+msgid "Keys act on the focused task, folder, project, or tag, not while you type. Off a Mac, Cmd is Ctrl."
 msgstr ""
 
 #: lib/marskal_web/components/layouts.ex
@@ -390,9 +416,24 @@ msgstr ""
 msgid "Move among siblings"
 msgstr ""
 
+#: lib/marskal_web/live/folder_live.ex
+#, elixir-autogen, elixir-format
+msgid "New folder"
+msgstr ""
+
 #: lib/marskal_web/live/user_live/reset_password.ex
 #, elixir-autogen, elixir-format
 msgid "New password"
+msgstr ""
+
+#: lib/marskal_web/live/folder_live.ex
+#, elixir-autogen, elixir-format
+msgid "New project"
+msgstr ""
+
+#: lib/marskal_web/live/tag_live.ex
+#, elixir-autogen, elixir-format
+msgid "New tag inside"
 msgstr ""
 
 #: lib/marskal_web/components/task_components.ex
@@ -408,6 +449,11 @@ msgstr ""
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "New task below"
+msgstr ""
+
+#: lib/marskal_web/live/folder_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing in this folder yet."
 msgstr ""
 
 #: lib/marskal_web/live/repeat_panel.ex
@@ -439,7 +485,7 @@ msgstr[1] ""
 
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
-msgid "Previous and next task"
+msgid "Previous and next row"
 msgstr ""
 
 #: lib/marskal_web/live/user_live/registration.ex
@@ -484,6 +530,11 @@ msgstr ""
 
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
+msgid "Sidebar width"
+msgstr ""
+
+#: lib/marskal_web/components/layouts.ex
+#, elixir-autogen, elixir-format
 msgid "Something went wrong!"
 msgstr ""
 
@@ -520,6 +571,16 @@ msgstr ""
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Tab"
+msgstr ""
+
+#: lib/marskal_web/components/nav_components.ex
+#, elixir-autogen, elixir-format
+msgid "Tags"
+msgstr ""
+
+#: lib/marskal_web/live/tag_live.ex
+#, elixir-autogen, elixir-format
+msgid "Tags inside"
 msgstr ""
 
 #: lib/marskal_web/controllers/user_session_controller.ex

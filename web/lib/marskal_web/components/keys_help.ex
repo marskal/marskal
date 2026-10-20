@@ -161,13 +161,17 @@ defmodule MarskalWeb.KeysHelp do
         </tbody>
       </table>
       <p>
-        {gettext("Keys act on the focused task, not while you type. Off a Mac, Cmd is Ctrl.")}
+        {gettext(
+          "Keys act on the focused task, folder, project, or tag, not while you type. Off a Mac, Cmd is Ctrl."
+        )}
       </p>
     </dialog>
     <script :type={Phoenix.LiveView.ColocatedHook} name=".Keys" extension="ts">
       import {ViewHook} from "phoenix_live_view"
 
-      const rowTitle = ".app-main .task-row button.select"
+      // A task row's title, or a folder, project, or tag row's link.
+      const rowTitle = ".app-main .task-row button.select, .app-main .nav-row [data-nav-stop]"
+      const rowStop = "button.select, [data-nav-stop]"
 
       function typing(target: EventTarget | null): boolean {
         return target instanceof HTMLElement &&
@@ -184,7 +188,7 @@ defmodule MarskalWeb.KeysHelp do
           const last = this.lastRow && document.getElementById(this.lastRow)
           const title =
             document.querySelector<HTMLElement>(".app-main .task-row.is-selected button.select") ||
-            (last instanceof HTMLElement && last.querySelector<HTMLElement>("button.select")) ||
+            (last instanceof HTMLElement && last.querySelector<HTMLElement>(rowStop)) ||
             document.querySelector<HTMLElement>(rowTitle)
           if (!title) return false
           title.focus()
@@ -193,8 +197,8 @@ defmodule MarskalWeb.KeysHelp do
 
         onFocusIn = (event: FocusEvent) => {
           if (!(event.target instanceof HTMLElement)) return
-          const row = event.target.closest<HTMLElement>(".task-row")
-          if (row?.id && event.target.matches("button.select")) this.lastRow = row.id
+          const row = event.target.closest<HTMLElement>(".app-main .task-row, .app-main .nav-row")
+          if (row?.id && event.target.matches(rowStop)) this.lastRow = row.id
         }
 
         onKeydown = (event: KeyboardEvent) => {
@@ -220,14 +224,19 @@ defmodule MarskalWeb.KeysHelp do
           if (idle && moves && this.focusList()) event.preventDefault()
         }
 
+        // Right in the sidebar, with nothing to expand, comes back here.
+        onFocusList = () => this.focusList()
+
         mounted() {
           document.addEventListener("keydown", this.onKeydown)
           document.addEventListener("focusin", this.onFocusIn)
+          window.addEventListener("marskal:focus-list", this.onFocusList)
         }
 
         destroyed() {
           document.removeEventListener("keydown", this.onKeydown)
           document.removeEventListener("focusin", this.onFocusIn)
+          window.removeEventListener("marskal:focus-list", this.onFocusList)
         }
       }
     </script>
@@ -262,8 +271,8 @@ defmodule MarskalWeb.KeysHelp do
   # {action, keys in both maps, keys Vim adds}
   defp rows do
     [
-      {gettext("Previous and next task"), ["↑", "↓"], ["k", "j"]},
-      {gettext("First and last task"), [gettext("Home"), gettext("End")],
+      {gettext("Previous and next row"), ["↑", "↓"], ["k", "j"]},
+      {gettext("First and last row"), [gettext("Home"), gettext("End")],
        [{:seq, ["g", "g"]}, "G"]},
       {gettext("Collapse and expand"), ["←", "→"], ["h", "l"]},
       {gettext("Indent and outdent"),
@@ -282,6 +291,8 @@ defmodule MarskalWeb.KeysHelp do
       {gettext("New task above"), [], ["O"]},
       {gettext("Edit in the inspector"), [gettext("Enter")], []},
       {gettext("Go to the list"), ["↓", gettext("Esc")], ["j"]},
+      {gettext("Go to the sidebar, from a top row"), ["←"], ["h"]},
+      {gettext("Back from the sidebar"), ["→"], ["l"]},
       {gettext("Show this help"), ["?"], []}
     ]
   end

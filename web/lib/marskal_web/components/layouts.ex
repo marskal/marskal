@@ -89,9 +89,103 @@ defmodule MarskalWeb.Layouts do
           inspector={@inspector}
         />
         <div :if={@nav} class="sidebar-backdrop"></div>
-        <main class="app-main">
-          {render_slot(@inner_block)}
-        </main>
+        <div
+          :if={@nav}
+          id="sidebar-resizer"
+          class="sidebar-resizer"
+          role="separator"
+          aria-orientation="vertical"
+          aria-controls="sidebar"
+          aria-label={gettext("Sidebar width")}
+          tabindex="0"
+          phx-hook=".SidebarResize"
+          phx-mounted={JS.ignore_attributes(["aria-valuenow", "aria-valuemin", "aria-valuemax"])}
+        >
+        </div>
+        <script :type={Phoenix.LiveView.ColocatedHook} name=".SidebarResize" extension="ts">
+          import {ViewHook} from "phoenix_live_view"
+
+          // Drag the handle, or focus it and press the arrow keys, to set the
+          // sidebar's width; a double click puts it back. The width is this
+          // browser's, kept in localStorage; root.html.heex applies it before
+          // the first paint. The CSS clamps it as the window narrows, too.
+          const key = "marskal:sidebar-width"
+          const root = document.documentElement
+          const min = 192
+          const max = () => Math.max(min, Math.min(640, window.innerWidth / 2))
+          const clamp = (px: number) => Math.round(Math.min(max(), Math.max(min, px)))
+
+          export default class extends ViewHook {
+            onPointerDown = (event: PointerEvent) => {
+              if (event.button !== 0) return
+              event.preventDefault()
+              this.el.setPointerCapture(event.pointerId)
+              document.body.classList.add("is-resizing-sidebar")
+            }
+
+            onPointerMove = (event: PointerEvent) => {
+              if (!this.el.hasPointerCapture(event.pointerId)) return
+              const left = this.el.parentElement?.getBoundingClientRect().left ?? 0
+              this.set(event.clientX - left)
+            }
+
+            onPointerEnd = () => {
+              document.body.classList.remove("is-resizing-sidebar")
+              this.save()
+            }
+
+            onKeydown = (event: KeyboardEvent) => {
+              const steps: Record<string, number> = {ArrowLeft: -16, ArrowRight: 16}
+              if (event.key in steps) this.set(this.width() + steps[event.key])
+              else if (event.key === "Home") this.set(min)
+              else if (event.key === "End") this.set(max())
+              else return
+              event.preventDefault()
+              event.stopPropagation()
+              this.save()
+            }
+
+            onDoubleClick = () => {
+              root.style.removeProperty("--sidebar-width")
+              try { localStorage.removeItem(key) } catch {}
+              this.show()
+            }
+
+            mounted() {
+              this.el.addEventListener("pointerdown", this.onPointerDown)
+              this.el.addEventListener("pointermove", this.onPointerMove)
+              this.el.addEventListener("lostpointercapture", this.onPointerEnd)
+              this.el.addEventListener("keydown", this.onKeydown)
+              this.el.addEventListener("dblclick", this.onDoubleClick)
+              this.show()
+            }
+
+            width(): number {
+              return document.getElementById("sidebar")?.getBoundingClientRect().width ?? 256
+            }
+
+            set(px: number) {
+              root.style.setProperty("--sidebar-width", `${clamp(px)}px`)
+              this.show()
+            }
+
+            show() {
+              this.el.setAttribute("aria-valuemin", String(min))
+              this.el.setAttribute("aria-valuemax", String(Math.round(max())))
+              this.el.setAttribute("aria-valuenow", String(Math.round(this.width())))
+            }
+
+            save() {
+              const width = root.style.getPropertyValue("--sidebar-width")
+              try { if (width) localStorage.setItem(key, String(parseInt(width))) } catch {}
+            }
+          }
+        </script>
+        <div class="app-main-pane">
+          <main class="app-main">
+            {render_slot(@inner_block)}
+          </main>
+        </div>
         <div
           :if={@current_scope && @current_scope.user}
           class="app-inspector__backdrop"
@@ -162,6 +256,15 @@ defmodule MarskalWeb.Layouts do
           event.clientY < box.top || event.clientY > box.bottom
       }
 
+      // Each navigation mounts a new LiveView and a new sidebar. Its scroll
+      // position is read as the navigation starts and kept here, in the
+      // bundle, so the next one starts there.
+      let sidebarTop: number | null = null
+      window.addEventListener("phx:page-loading-start", () => {
+        const sidebar = document.getElementById("sidebar")
+        if (sidebar) sidebarTop = sidebar.scrollTop
+      })
+
       export default class extends ViewHook {
         wasOpen = false
         phone = window.matchMedia("(max-width: 720px)")
@@ -208,6 +311,8 @@ defmodule MarskalWeb.Layouts do
 
         mounted() {
           this.el.addEventListener("click", this.onClick)
+          const sidebar = this.el.querySelector<HTMLElement>(".sidebar")
+          if (sidebar && sidebarTop !== null) sidebar.scrollTop = sidebarTop
           document.addEventListener("keydown", this.onKeydown)
           this.phone.addEventListener("change", this.onResize)
           this.handleEvent("quick-capture:added", ({id}: {id: string}) => {

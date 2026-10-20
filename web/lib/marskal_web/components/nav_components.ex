@@ -18,69 +18,63 @@ defmodule MarskalWeb.NavComponents do
       class="sidebar"
       tabindex="-1"
       aria-label="Projects and tags"
-      phx-hook=".NavTree"
       phx-mounted={JS.ignore_attributes("inert")}
     >
-      <nav class="sidebar-links">
-        <.link navigate={~p"/inbox"} class={["in-tab-bar", link_class(@current_nav, :inbox)]}>
-          <Lucideicons.inbox class="icon" /> Inbox
-        </.link>
-        <.link navigate={~p"/open"} class={["in-tab-bar", link_class(@current_nav, :open)]}>
-          <Lucideicons.list class="icon" /> Open
-        </.link>
-        <.link navigate={~p"/agenda"} class={["in-tab-bar", link_class(@current_nav, :agenda)]}>
-          <Lucideicons.calendar_days class="icon" /> Agenda
-        </.link>
-        <.link navigate={~p"/flagged"} class={["in-tab-bar", link_class(@current_nav, :flagged)]}>
-          <Lucideicons.flag class="icon" /> Flagged
-        </.link>
-        <.link navigate={~p"/imports"} class={link_class(@current_nav, :import)}>
-          <Lucideicons.download class="icon" /> Import
-        </.link>
-      </nav>
+      <MarskalWeb.NavOutline.scope id="sidebar-nav">
+        <nav class="sidebar-links">
+          <.view_link navigate={~p"/inbox"} current={@current_nav == :inbox} class="in-tab-bar">
+            <Lucideicons.inbox class="icon" /> Inbox
+          </.view_link>
+          <.view_link navigate={~p"/open"} current={@current_nav == :open} class="in-tab-bar">
+            <Lucideicons.list class="icon" /> Open
+          </.view_link>
+          <.view_link navigate={~p"/agenda"} current={@current_nav == :agenda} class="in-tab-bar">
+            <Lucideicons.calendar_days class="icon" /> Agenda
+          </.view_link>
+          <.view_link navigate={~p"/flagged"} current={@current_nav == :flagged} class="in-tab-bar">
+            <Lucideicons.flag class="icon" /> Flagged
+          </.view_link>
+          <.view_link navigate={~p"/imports"} current={@current_nav == :import}>
+            <Lucideicons.download class="icon" /> Import
+          </.view_link>
+        </nav>
 
-      <.live_component module={MarskalWeb.NewFolderForm} id="new-root-folder" user={@user} />
+        <.live_component module={MarskalWeb.NewFolderForm} id="new-root-folder" user={@user} />
 
-      <p :if={Marskal.ProjectNav.empty?(@nav)} class="empty">No projects yet.</p>
+        <p :if={Marskal.ProjectNav.empty?(@nav)} class="empty">No projects yet.</p>
 
-      <ul class="nav-tree">
-        <MarskalWeb.NavComponents.folder
-          :for={folder <- Marskal.ProjectNav.root_folders(@nav)}
-          nav={@nav}
-          folder={folder}
+        <MarskalWeb.NavOutline.list
+          id="sidebar-projects"
+          class="nav-tree"
+          rows={MarskalWeb.NavOutline.project_rows(@nav, nil)}
           current_id={@current_id}
           inspector={@inspector}
+          label={gettext("Folders and projects")}
         />
-      </ul>
 
-      <ul :if={Marskal.ProjectNav.unfiled_projects(@nav) != []} class="nav-tree">
-        <li :for={project <- Marskal.ProjectNav.unfiled_projects(@nav)}>
-          <.record_link
-            type={:project}
-            id={project.id}
-            current_id={@current_id}
-            inspector={@inspector}
-          >
-            <Lucideicons.circle class="icon" /> {project.title}
-          </.record_link>
-        </li>
-      </ul>
-
-      <.live_component module={MarskalWeb.NewTagForm} id="new-root-tag" user={@user} />
-      <ul class="nav-tree" id="sidebar-tags">
-        <MarskalWeb.NavComponents.tag
-          :for={tag <- Marskal.ProjectNav.tags_in(@nav, nil)}
-          nav={@nav}
-          tag={tag}
+        <.live_component module={MarskalWeb.NewTagForm} id="new-root-tag" user={@user} />
+        <MarskalWeb.NavOutline.list
+          id="sidebar-tags"
+          class="nav-tree"
+          rows={
+            MarskalWeb.NavOutline.tag_rows(
+              @nav.tags,
+              nil,
+              &Marskal.Tags.Tree.visible?(@nav.tags, &1.id)
+            )
+          }
           current_id={@current_id}
           inspector={@inspector}
+          label={gettext("Tags")}
         />
-        <li>
-          <.link navigate={~p"/tags/untagged"} class={link_class(@current_nav, :untagged)}>
-            <Lucideicons.tag class="icon" /> Untagged
-          </.link>
-        </li>
-      </ul>
+        <ul class="nav-tree">
+          <li class="nav-row">
+            <.view_link navigate={~p"/tags/untagged"} current={@current_nav == :untagged}>
+              <Lucideicons.tag class="icon" /> Untagged
+            </.view_link>
+          </li>
+        </ul>
+      </MarskalWeb.NavOutline.scope>
 
       <div class="sidebar-account">
         <p class="who">{@user.email}</p>
@@ -95,152 +89,26 @@ defmodule MarskalWeb.NavComponents do
         </.link>
       </div>
     </aside>
-    <script :type={Phoenix.LiveView.ColocatedHook} name=".NavTree" extension="ts">
-      import {ViewHook} from "phoenix_live_view"
-
-      // Collapsed folders and tags are kept per browser and never reach the
-      // server. A toggle names the list it hides (aria-controls); the saved
-      // set holds those list ids.
-      const key = "marskal:sidebar:collapsed"
-
-      function load(): Set<string> {
-        try {
-          const ids: unknown = JSON.parse(localStorage.getItem(key) ?? "[]")
-          return new Set(Array.isArray(ids) ? ids.filter((id) => typeof id === "string") : [])
-        } catch {
-          return new Set()
-        }
-      }
-
-      function save(ids: Set<string>) {
-        try {
-          localStorage.setItem(key, JSON.stringify([...ids]))
-        } catch {
-          // Private windows may refuse storage; the toggles still work.
-        }
-      }
-
-      export default class extends ViewHook {
-        collapsed = new Set<string>()
-
-        mounted() {
-          this.collapsed = load()
-          this.apply()
-          this.el.addEventListener("click", (event) => {
-            if (!(event.target instanceof Element)) return
-            const list = event.target.closest(".nav-toggle")?.getAttribute("aria-controls")
-            if (!list) return
-            if (!this.collapsed.delete(list)) this.collapsed.add(list)
-            save(this.collapsed)
-            this.apply()
-          })
-        }
-
-        updated() {
-          this.apply()
-        }
-
-        // Through this.js(), so the state outlives the server's patches.
-        apply() {
-          for (const toggle of this.el.querySelectorAll<HTMLElement>(".nav-toggle")) {
-            const expanded = String(!this.collapsed.has(toggle.getAttribute("aria-controls") ?? ""))
-            if (toggle.getAttribute("aria-expanded") !== expanded) {
-              this.js().setAttribute(toggle, "aria-expanded", expanded)
-            }
-          }
-        }
-      }
-    </script>
     """
   end
 
-  attr :nav, :any, required: true
-  attr :folder, :any, required: true
-  attr :current_id, :string, default: nil
-  attr :inspector, :any, default: nil
+  attr :navigate, :string, required: true
+  attr :current, :boolean, default: false
+  attr :class, :string, default: nil
+  slot :inner_block, required: true
 
-  def folder(assigns) do
-    folders = Marskal.ProjectNav.child_folders(assigns.nav, assigns.folder)
-    projects = Marskal.ProjectNav.projects_in(assigns.nav, assigns.folder)
-
-    assigns =
-      assign(assigns,
-        folders: folders,
-        projects: projects,
-        children?: folders != [] or projects != []
-      )
-
+  # A view at the top of the sidebar. The keys move through these and the
+  # outlines below; only the outlines rearrange.
+  defp view_link(assigns) do
     ~H"""
-    <li>
-      <.nav_toggle :if={@children?} list={"sidebar-folder-#{@folder.id}"} name={@folder.name} />
-      <.record_link type={:folder} id={@folder.id} current_id={@current_id} inspector={@inspector}>
-        <Lucideicons.folder class="icon" /> {@folder.name}
-      </.record_link>
-      <ul :if={@children?} id={"sidebar-folder-#{@folder.id}"}>
-        <MarskalWeb.NavComponents.folder
-          :for={child <- @folders}
-          nav={@nav}
-          folder={child}
-          current_id={@current_id}
-          inspector={@inspector}
-        />
-        <li :for={project <- @projects}>
-          <.record_link
-            type={:project}
-            id={project.id}
-            current_id={@current_id}
-            inspector={@inspector}
-          >
-            <Lucideicons.circle class="icon" /> {project.title}
-          </.record_link>
-        </li>
-      </ul>
-    </li>
-    """
-  end
-
-  attr :nav, :any, required: true
-  attr :tag, :any, required: true
-  attr :current_id, :string, default: nil
-  attr :inspector, :any, default: nil
-
-  def tag(assigns) do
-    assigns = assign(assigns, :children, Marskal.ProjectNav.tags_in(assigns.nav, assigns.tag.id))
-
-    ~H"""
-    <li>
-      <.nav_toggle :if={@children != []} list={"sidebar-tag-#{@tag.id}"} name={@tag.name} />
-      <.record_link type={:tag} id={@tag.id} current_id={@current_id} inspector={@inspector}>
-        <Lucideicons.tag class="icon" /> {@tag.name}
-      </.record_link>
-      <ul :if={@children != []} id={"sidebar-tag-#{@tag.id}"}>
-        <MarskalWeb.NavComponents.tag
-          :for={child <- @children}
-          nav={@nav}
-          tag={child}
-          current_id={@current_id}
-          inspector={@inspector}
-        />
-      </ul>
-    </li>
-    """
-  end
-
-  attr :list, :string, required: true, doc: "the id of the list it shows and hides"
-  attr :name, :string, required: true
-
-  # Starts expanded; the sidebar's hook collapses what this browser saved.
-  defp nav_toggle(assigns) do
-    ~H"""
-    <button
-      type="button"
-      class="nav-toggle"
-      aria-controls={@list}
-      aria-expanded="true"
-      aria-label={gettext("Contents of %{name}", name: @name)}
+    <.link
+      navigate={@navigate}
+      class={[@class, @current && "is-current"]}
+      aria-current={@current && "page"}
+      data-nav-stop
     >
-      <Lucideicons.chevron_right class="icon" />
-    </button>
+      {render_slot(@inner_block)}
+    </.link>
     """
   end
 
@@ -248,6 +116,11 @@ defmodule MarskalWeb.NavComponents do
   attr :id, :string, required: true
   attr :current_id, :string, default: nil
   attr :inspector, :any, default: nil
+
+  attr :nav_stop, :boolean,
+    default: false,
+    doc: "a row the outline keys move to and the pointer drags"
+
   slot :inner_block, required: true
 
   @doc """
@@ -274,6 +147,8 @@ defmodule MarskalWeb.NavComponents do
         MarskalWeb.Inspector.selected?(@type, @id, @inspector) && "is-selected"
       ]}
       aria-current={@current_id == @id && "page"}
+      data-nav-stop={@nav_stop}
+      draggable={@nav_stop && "false"}
     >
       {render_slot(@inner_block)}
     </.link>
@@ -315,7 +190,4 @@ defmodule MarskalWeb.NavComponents do
   def record_path(:project, id), do: ~p"/projects/#{id}?#{[project: id]}"
   def record_path(:folder, id), do: ~p"/folders/#{id}?#{[folder: id]}"
   def record_path(:tag, id), do: ~p"/tags/#{id}?#{[tag: id]}"
-
-  defp link_class(current, name) when current == name, do: "is-current"
-  defp link_class(_current, _name), do: nil
 end

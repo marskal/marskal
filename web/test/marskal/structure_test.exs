@@ -69,8 +69,8 @@ defmodule Marskal.StructureTest do
     {:ok, _} = ProjectFolders.drop_folder(user, archive.id, command())
 
     nav = ProjectNav.build(user)
-    assert ProjectNav.root_folders(nav) == []
-    assert ProjectNav.unfiled_projects(nav) == []
+    assert ProjectNav.children(nav, nil) == []
+    assert MarskalWeb.NavOutline.project_rows(nav, nil) == []
   end
 
   test "a task filed on a project shows on that project, not in the inbox", %{user: user} do

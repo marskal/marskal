@@ -270,6 +270,68 @@ defmodule Marskal.Tags do
   def move_tag(user, id, parent_id, command_id),
     do: update_tag(user, id, %{parent_id: parent_id}, command_id)
 
+  @doc """
+  Puts a tag under `parent_id` (`nil` for the top), right after the
+  sibling `after_id` (`nil` for first, `:last` for last). Its children come
+  along. A name already used there refuses the move.
+  """
+  def place_tag(%User{} = user, id, parent_id, after_id, command_id) do
+    Changes.apply(user, command_id, "tag", fn ->
+      with %Tag{} = tag <- get_tag(user, id) || {:error, :not_found},
+           {:ok, rank} <- rank_after(user, parent_id, after_id, tag.id) do
+        write_tag(user, tag, %{parent_id: parent_id, rank: rank})
+      end
+    end)
+  end
+
+  @doc """
+  Makes the tag the last child of the sibling above it. The keyboard moves
+  work on the tags the sidebar shows, so a dropped tag is not a neighbor.
+  """
+  def indent_tag(%User{} = user, id, command_id) do
+    with {:ok, tag, {above, _below}} <- shown_neighbors(user, id) do
+      if above,
+        do: place_tag(user, tag.id, above.id, :last, command_id),
+        else: {:error, :first}
+    end
+  end
+
+  @doc "Moves the tag out of its parent, to just after it."
+  def outdent_tag(%User{} = user, id, command_id) do
+    case get_tag(user, id) do
+      nil ->
+        {:error, :not_found}
+
+      %Tag{parent_id: nil} ->
+        {:error, :top_level}
+
+      tag ->
+        place_tag(user, tag.id, get_tag(user, tag.parent_id).parent_id, tag.parent_id, command_id)
+    end
+  end
+
+  @doc "Swaps the tag with the shown sibling above it."
+  def move_tag_up(%User{} = user, id, command_id) do
+    with {:ok, tag, {above, _below}} <- shown_neighbors(user, id) do
+      case above && shown_neighbors(user, above.id) do
+        nil ->
+          {:error, :first}
+
+        {:ok, _above, {before, _}} ->
+          place_tag(user, tag.id, tag.parent_id, before && before.id, command_id)
+      end
+    end
+  end
+
+  @doc "Swaps the tag with the shown sibling below it."
+  def move_tag_down(%User{} = user, id, command_id) do
+    with {:ok, tag, {_above, below}} <- shown_neighbors(user, id) do
+      if below,
+        do: place_tag(user, tag.id, tag.parent_id, below.id, command_id),
+        else: {:error, :last}
+    end
+  end
+
   def set_tag_state(user, id, state, command_id),
     do: update_tag(user, id, %{state: state}, command_id)
 
@@ -380,6 +442,57 @@ defmodule Marskal.Tags do
     |> select([t], max(t.rank))
     |> Repo.one()
     |> Rank.between(nil)
+  end
+
+  # The rank right after sibling `after_id`, first for `nil`, last for
+  # `:last`, leaving out the tag being placed.
+  defp rank_after(user, parent_id, after_id, except) do
+    siblings =
+      Tag
+      |> where([t], t.user_id == ^user.id and is_nil(t.discarded_at) and t.id != ^except)
+      |> where_parent(parent_id)
+      |> order_by([t], asc: t.rank, asc: t.id)
+      |> select([t], %{id: t.id, rank: t.rank})
+      |> Repo.all()
+
+    case after_id do
+      nil ->
+        {:ok, Rank.between(nil, Enum.at(siblings, 0)[:rank])}
+
+      :last ->
+        {:ok, Rank.between(List.last(siblings)[:rank], nil)}
+
+      id ->
+        case Enum.find(siblings, &(&1.id == id)) do
+          nil ->
+            {:error, :not_a_sibling}
+
+          %{rank: rank} ->
+            next = Enum.find(siblings, &(&1.rank > rank))
+            {:ok, Rank.between(rank, next && next.rank)}
+        end
+    end
+  end
+
+  # The tag, and the siblings just above and below it among those shown.
+  # A hidden tag, on a dropped tag's own page, goes by all its siblings.
+  defp shown_neighbors(user, id) do
+    tree = tree(user)
+
+    case Tree.get(tree, id) do
+      nil ->
+        {:error, :not_found}
+
+      tag ->
+        siblings =
+          tree
+          |> Tree.children(tag.parent_id)
+          |> Enum.filter(&(Tree.visible?(tree, &1.id) or not Tree.visible?(tree, tag.id)))
+
+        index = Enum.find_index(siblings, &(&1.id == tag.id))
+        above = if index > 0, do: Enum.at(siblings, index - 1)
+        {:ok, tag, {above, Enum.at(siblings, index + 1)}}
+    end
   end
 
   defp where_parent(query, nil), do: where(query, [t], is_nil(t.parent_id))
