@@ -79,10 +79,11 @@ defmodule Marskal.Imports.Applier do
 
       acc =
         graph.folders
-        |> parents_first()
-        |> Enum.reduce(acc, &apply_folder(batch, &1, &2))
-
-      acc = Enum.reduce(graph.projects, acc, &apply_project(batch, &1, &2))
+        |> folder_outline(graph.projects)
+        |> Enum.reduce(acc, fn
+          {:folder, node}, acc -> apply_folder(batch, node, acc)
+          {:project, node}, acc -> apply_project(batch, node, acc)
+        end)
 
       acc =
         graph.tasks
@@ -135,6 +136,60 @@ defmodule Marskal.Imports.Applier do
     |> where([i], i.user_id == ^batch.user_id and i.source == ^batch.source)
     |> Repo.all()
     |> Map.new(&{&1.source_id, &1})
+  end
+
+  # Folders and projects as one outline: each folder right before what it
+  # holds, and the folders and projects of one folder in source rank order.
+  # A new one goes last among its siblings, so this order is the sidebar's.
+  # A folder in a parent cycle starts its own walk at the top, where
+  # `parents_first/1` would cut it.
+  defp folder_outline(folders, projects) do
+    known = MapSet.new(folders, & &1.source_id)
+    parent = fn id -> if MapSet.member?(known, id), do: id end
+
+    children =
+      (Enum.map(folders, &{parent.(&1.parent_source_id), {:folder, &1}}) ++
+         Enum.map(projects, &{parent.(&1.folder_source_id), {:project, &1}}))
+      |> Enum.with_index()
+      |> Enum.sort_by(fn {{_parent, {_kind, node}}, index} -> {node.rank, index} end)
+      |> Enum.group_by(fn {{parent, _item}, _index} -> parent end, fn {{_, item}, _} -> item end)
+
+    {ordered, seen} = walk_folders(nil, children, {[], MapSet.new()})
+
+    {ordered, _seen} =
+      folders
+      |> parents_first()
+      |> Enum.reduce({ordered, seen}, fn node, {_, seen} = acc ->
+        if MapSet.member?(seen, node.source_id),
+          do: acc,
+          else: walk_folders(node, children, acc)
+      end)
+
+    Enum.reverse(ordered)
+  end
+
+  defp walk_folders(nil, children, acc), do: walk_children(nil, children, acc)
+
+  defp walk_folders(folder, children, {ordered, seen}) do
+    walk_children(
+      folder.source_id,
+      children,
+      {[{:folder, folder} | ordered], MapSet.put(seen, folder.source_id)}
+    )
+  end
+
+  defp walk_children(parent_id, children, acc) do
+    children
+    |> Map.get(parent_id, [])
+    |> Enum.reduce(acc, fn
+      {:project, _node} = item, {ordered, seen} ->
+        {[item | ordered], seen}
+
+      {:folder, node}, {_, seen} = acc ->
+        if MapSet.member?(seen, node.source_id),
+          do: acc,
+          else: walk_folders(node, children, acc)
+    end)
   end
 
   # Depth-first on the parent link, so a parent is created before its
