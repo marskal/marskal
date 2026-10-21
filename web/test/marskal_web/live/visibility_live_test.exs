@@ -116,7 +116,7 @@ defmodule MarskalWeb.VisibilityLiveTest do
     {:ok, finished} = Projects.create_project(user, %{title: "Finished"}, command())
     {:ok, _} = Projects.complete_project(user, finished.id, command())
 
-    conn = conn |> put_req_cookie("marskal_show", "done") |> get(~p"/open")
+    conn = conn |> put_req_cookie("marskal_visibility", "done") |> get(~p"/open")
     assert html_response(conn, 200) =~ "Finished"
     {:ok, view, _html} = live(conn)
 
@@ -132,8 +132,8 @@ defmodule MarskalWeb.VisibilityLiveTest do
 
     {:ok, view, _html} =
       conn
-      |> put_req_cookie("marskal_show", "dropped")
-      |> put_connect_params(%{"show" => "done"})
+      |> put_req_cookie("marskal_visibility", "dropped")
+      |> put_connect_params(%{"visibility" => "done"})
       |> live(~p"/inbox")
 
     assert has_element?(view, "#sidebar-projects", "Finished")

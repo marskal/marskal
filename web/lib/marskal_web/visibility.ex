@@ -13,20 +13,19 @@ defmodule MarskalWeb.Visibility do
   after a change agrees with it.
   """
 
-  @cookie "marskal_show"
+  @cookie "marskal_visibility"
   @kinds [:done, :dropped, :deferred]
 
-  def cookie, do: @cookie
   def kinds, do: @kinds
 
   @doc "The live session's share of the request: the cookie as it came."
-  def session(conn), do: %{"show" => conn.cookies[@cookie] || ""}
+  def session(conn), do: %{"visibility" => conn.cookies[@cookie] || ""}
 
   @doc "The choice on mount: the connect param when connected, else the session's."
   def from_mount(socket, session) do
     case Phoenix.LiveView.get_connect_params(socket) do
-      %{"show" => raw} -> parse(raw)
-      _ -> parse(session["show"])
+      %{"visibility" => raw} -> parse(raw)
+      _ -> parse(session["visibility"])
     end
   end
 

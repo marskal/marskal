@@ -32,14 +32,14 @@ import topbar from "topbar"
 const csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content")
 // Read on every live mount, so a page reached by live navigation shows
 // what this browser chose since the first load (MarskalWeb.Visibility).
-function shown(): string {
-  const match = document.cookie.match(/(?:^|;\s*)marskal_show=([^;]*)/)
+function visibilityChoice(): string {
+  const match = document.cookie.match(/(?:^|;\s*)marskal_visibility=([^;]*)/)
   return match ? match[1] : ""
 }
 
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
-  params: () => ({_csrf_token: csrfToken, show: shown()}),
+  params: () => ({_csrf_token: csrfToken, visibility: visibilityChoice()}),
   hooks: {...colocatedHooks},
 })
 

@@ -435,7 +435,7 @@ defmodule MarskalWeb.Layouts do
       class="visibility"
       role="group"
       aria-labelledby="visibility-label"
-      data-show={MarskalWeb.Visibility.encode(@visibility)}
+      data-visibility={MarskalWeb.Visibility.encode(@visibility)}
       phx-hook=".Visibility"
     >
       <span id="visibility-label" class="visibility__label">{gettext("Show")}</span>
@@ -465,7 +465,7 @@ defmodule MarskalWeb.Layouts do
       import {ViewHook} from "phoenix_live_view"
 
       // Must match MarskalWeb.Visibility and the connect params in app.ts.
-      const cookie = "marskal_show"
+      const cookie = "marskal_visibility"
       const year = 60 * 60 * 24 * 365
 
       export default class extends ViewHook {
@@ -474,7 +474,7 @@ defmodule MarskalWeb.Layouts do
         mounted() {
           this.channel = new BroadcastChannel(cookie)
           this.channel.onmessage = (event: MessageEvent) => {
-            if (typeof event.data === "string" && event.data !== this.el.dataset.show) {
+            if (typeof event.data === "string" && event.data !== this.el.dataset.visibility) {
               this.pushEvent("visibility", {value: event.data})
             }
           }
