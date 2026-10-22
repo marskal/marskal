@@ -12,6 +12,21 @@ defmodule Marskal.Imports.TaskpaperAdapterTest do
     refute TaskpaperAdapter.match?(<<0x50, 0x4B, 0x03, 0x04>>, "archive.zip")
   end
 
+  test "a line without @id keeps its identity when another line is added" do
+    ids = fn text ->
+      text |> TaskpaperAdapter.parse() |> Map.fetch!(:tasks) |> Map.new(&{&1.title, &1.source_id})
+    end
+
+    before = ids.("Work:\n\t- A\n\t- B\n\t- A\n")
+    later = ids.("Work:\n\t- New\n\t- A\n\t- B\n\t- A\n")
+
+    assert Map.take(later, ["A", "B"]) == Map.take(before, ["A", "B"])
+    refute later["New"] in Map.values(before)
+
+    graph = TaskpaperAdapter.parse("Work:\n\t- A\n\t- A\n")
+    assert [_, _] = graph.tasks |> Enum.map(& &1.source_id) |> Enum.uniq()
+  end
+
   test "inbox, no project, and Archive" do
     graph =
       TaskpaperAdapter.parse("""

@@ -6,9 +6,14 @@ defmodule Marskal.Imports.Taskpaper do
   dash and a space, or is a dash alone. Any other line is a note under the
   nearest shallower item. One tab, or four spaces, is one level. A tag is
   `@name` or `@name(value)` after whitespace; `)`, `(`, `\\`, and `,` are
-  escaped in a value. A leading `\\` keeps a note that would otherwise be
-  a task or a project.
+  escaped in a value, and a list value is written comma-separated. A
+  leading `\\` keeps a note that would otherwise be a task or a project.
+  TaskPaper has no escape for `@`, so text that would read as a tag gets a
+  word joiner (U+2060) before the `@`. It is invisible, and other tools do
+  not read a tag there either; reading drops it again.
   """
+
+  @guard "\u2060"
 
   @outline "This file is not a TaskPaper outline. A task starts with a dash, and a project ends with a colon."
 
@@ -151,7 +156,7 @@ defmodule Marskal.Imports.Taskpaper do
 
   defp note(content) do
     {text, tags} = extract_tags(content)
-    {:note, String.trim(text), tags}
+    {:note, text |> String.trim() |> unguard(), tags}
   end
 
   defp structural?(content), do: task?(content) or match?({:ok, _, _}, split_project(content))
@@ -267,7 +272,13 @@ defmodule Marskal.Imports.Taskpaper do
     text
     |> String.trim()
     |> String.replace(~r/[ \t]+/u, " ")
+    |> unguard()
   end
+
+  # An `@` where a tag could start, followed by what a tag name takes.
+  defp guard(text), do: String.replace(text, ~r/(^|[ \t])@(?=[^\s@()])/u, "\\1#{@guard}@")
+
+  defp unguard(text), do: String.replace(text, @guard <> "@", "@")
 
   defp dump_item(item, depth) do
     [
@@ -279,12 +290,18 @@ defmodule Marskal.Imports.Taskpaper do
     ]
   end
 
-  defp line(%{type: :project, text: text, tags: tags}), do: [text, ":", format_tags(tags)]
+  defp line(%{type: :project, text: text, tags: tags}),
+    do: [guard(text), ":", format_tags(tags)]
+
   defp line(%{type: :task, text: "", tags: tags}), do: ["-", format_tags(tags)]
-  defp line(%{type: :task, text: text, tags: tags}), do: ["- ", text, format_tags(tags)]
+  defp line(%{type: :task, text: text, tags: tags}), do: ["- ", guard(text), format_tags(tags)]
 
   defp format_tags(tags), do: Enum.map(tags, &format_tag/1)
   defp format_tag({name, nil}), do: [" @", name]
+
+  defp format_tag({name, values}) when is_list(values),
+    do: [" @", name, "(", Enum.map_join(values, ", ", &escape_value/1), ")"]
+
   defp format_tag({name, value}), do: [" @", name, "(", escape_value(value), ")"]
 
   defp escape_value(value) do
@@ -306,6 +323,7 @@ defmodule Marskal.Imports.Taskpaper do
   end
 
   defp escape_note(line) do
+    line = guard(line)
     if structural?(line), do: "\\" <> line, else: line
   end
 

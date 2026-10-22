@@ -168,8 +168,8 @@ beside it. `Marskal.Imports.OmnifocusRecurrence` reads it into a rule
 
 ### TaskPaper (amended 2026-10-21)
 
-TaskPaper's plain-text outline is the interchange file other task tools
-already read and write, including OmniFocus's "Copy as TaskPaper". Marskal
+TaskPaper's plain-text outline is an interchange file that several other
+task tools read and write, OmniFocus's "Copy as TaskPaper" among them. Marskal
 imports that file through the same adapter path, and exports tasks,
 projects, and folders back into it (`GET /exports/taskpaper`).
 
@@ -187,7 +187,11 @@ is a note. One tab, or four spaces, is one level.
   `@start`), and `@planned` are those dates. `@defer` with no date defers
   indefinitely. `@flagged` is the flag. `@url` is the URL. `@tags`, and any
   other tag, are the item's own tags. `Parent : Child` is nesting.
-- `@id` is the source id. An id that is one of this user's tasks, projects,
+- `@id` is the source id. A line without one is identified by its kind,
+  the titles above it, its title, and which of its same-titled siblings it
+  is, so adding a line elsewhere does not move it to another record. A
+  renamed line without `@id` is a new record.
+- An id that is one of this user's tasks, projects,
   or folders links that record, so a file Marskal wrote updates it. The
   first link takes the record as it is now as the base: an unchanged file
   writes nothing, and a changed one writes the file. Importing again is the
@@ -203,21 +207,25 @@ is a note. One tab, or four spaces, is one level.
 folders, in outline order. Inbox is a project named Inbox when there is
 something in it. Done, Dropped, the flag, dates, the URL, the item's own
 tags, and a repeat on the current To-Do occurrence are tags. `@id` is the
-record's id. A tag inherited from a project stays on the project.
+record's id. A tag inherited from a project stays on the project. `@tags`
+lists the item's own tags, comma-separated, a comma in a name escaped. A
+repeat whose days an RRULE cannot say (calendar days mixed with nth
+weekdays, say) is left out. TaskPaper has no escape for `@`, so an `@` in
+a title, name, or note that would read as a tag is written with a word
+joiner (U+2060) before it; import drops the joiner.
 
 A round trip keeps the outline, titles, notes, URL, flag, own tags, dates,
 Done and Dropped, inbox and No project, folders, and a repeat the file can
 say. A project inside a project comes back beside it. Notes on a folder
 are left out. A tag's own value, other than the tags above, is left out.
-A tag name that contains a comma or ` : ` can be read back as more than
-one tag. Blank lines that only separate paragraphs are kept inside a note
+A tag name that contains ` : ` is read back as a path. Blank lines that only separate paragraphs are kept inside a note
 and dropped at its ends.
 
 ## Consequences
 
-- New sources add an adapter + sniff, not new controllers. TaskPaper is the
-  outline interchange: a tool that can read a task list can read this file,
-  and a richer source still adds an adapter.
+- New sources add an adapter + sniff, not new controllers. TaskPaper is one
+  outline interchange, for tools that read or write it; a richer source
+  still adds an adapter.
 - `extras` keeps unmapped values for inspection, not for backfill. The payload
   is gone after apply, so a value is only as complete as what the adapter
   stored. OmniFocus tag definitions, for one, were never stored. Before

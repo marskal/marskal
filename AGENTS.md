@@ -268,7 +268,7 @@ The repository root is the product, not the web app (ADR 0015).
   `Imports.OmnifocusRecurrence` reads, makes the task or project a series'
   first occurrence; a closest fit is marked "Approximate repeat rule", and
   what is not read stays an import problem. Do not add competing-app libraries.
-  A TaskPaper outline is the interchange with other task tools: the same
+  A TaskPaper outline is one interchange with other task tools: the same
   upload path imports it, and `GET /exports/taskpaper` writes tasks,
   projects, and folders back out. The mapping is in ADR 0013.
 - **UI (ADR 0012, ADR 0016):** HEEx function components plus plain CSS `@scope`.

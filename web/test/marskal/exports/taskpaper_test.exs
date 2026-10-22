@@ -150,6 +150,55 @@ defmodule Marskal.Exports.TaskpaperTest do
     assert weekly.recurrence["frequency"] == "weeks"
   end
 
+  test "several own tags, and an @ in a title, come back as they were" do
+    user = user_fixture()
+    command = fn -> Ecto.UUID.generate(version: 7) end
+
+    {:ok, task} =
+      Tasks.create_task(user, %{"title" => "Email @Anna", "inbox" => false}, command.())
+
+    for name <- ["Waiting", "Errands"] do
+      {:ok, tag} = Tags.create_tag(user, %{"name" => name}, command.())
+      {:ok, _} = Tags.tag_task(user, task.id, tag.id, command.())
+    end
+
+    graph = user |> Taskpaper.render() |> TaskpaperAdapter.parse()
+    [read] = graph.tasks
+    assert read.title == "Email @Anna"
+    assert graph.tags |> Enum.map(& &1.name) |> Enum.sort() == ["Errands", "Waiting"]
+    assert [_, _] = read.tag_source_ids
+  end
+
+  test "leaves out a repeat the RRULE cannot say" do
+    user = user_fixture()
+    command = fn -> Ecto.UUID.generate(version: 7) end
+
+    {:ok, task} =
+      Tasks.create_task(
+        user,
+        %{"title" => "Monthly", "inbox" => false, "due_at" => ~U[2026-11-02 15:00:00Z]},
+        command.()
+      )
+
+    {:ok, _} =
+      Recurrence.repeat_task(
+        user,
+        task.id,
+        %{
+          "mode" => "regular",
+          "anchor" => "due",
+          "interval" => 1,
+          "frequency" => "months",
+          "on_days" => ["1:day", "1:monday"]
+        },
+        command.()
+      )
+
+    text = Taskpaper.render(user)
+    assert text =~ "- Monthly"
+    refute text =~ "@repeat-rule"
+  end
+
   test "an empty account renders nothing and names the file for today" do
     user = user_fixture()
     assert Taskpaper.render(user) == ""

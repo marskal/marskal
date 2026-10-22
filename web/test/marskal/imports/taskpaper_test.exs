@@ -49,6 +49,30 @@ defmodule Marskal.Imports.TaskpaperTest do
     assert task.text == "Call @due(nope"
   end
 
+  test "an @ that would read as a tag survives a dump and a parse" do
+    item = %Taskpaper{
+      type: :task,
+      text: "Email @Anna about it",
+      notes: "@bob first\nthen x@y.com",
+      tags: [{"tags", ["Waiting", "A, B"]}]
+    }
+
+    dumped = Taskpaper.dump([item])
+    assert dumped =~ "@tags(Waiting, A\\, B)"
+
+    {[task], 0} = Taskpaper.parse(dumped)
+    assert task.text == "Email @Anna about it"
+    assert task.notes == "@bob first\nthen x@y.com"
+    assert task.tags == [{"tags", "Waiting, A\\, B"}]
+
+    {[project], 0} =
+      Taskpaper.dump([%Taskpaper{type: :project, text: "Plan @home", notes: ""}])
+      |> Taskpaper.parse()
+
+    assert project.text == "Plan @home"
+    assert project.tags == []
+  end
+
   test "a leading backslash keeps a note that would be a task or a project" do
     {[task], 0} =
       Taskpaper.parse("""

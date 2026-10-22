@@ -78,15 +78,33 @@ defmodule Marskal.Imports.TaskpaperAdapter do
       project_title: nil,
       task_id: nil,
       inbox: false,
-      path: []
+      path: [],
+      nth: 0
     }
   end
 
   defp walk(items, ctx, acc) do
     items
-    |> Enum.with_index()
-    |> Enum.reduce(acc, fn {item, index}, acc -> walk_item(item, ctx, index, acc) end)
+    |> positioned()
+    |> Enum.reduce(acc, fn {item, index, nth}, acc ->
+      walk_item(item, %{ctx | nth: nth}, index, acc)
+    end)
   end
+
+  # Each item with its index, and how many siblings before it share its
+  # kind and title. The index is the rank; the count goes in the identity.
+  defp positioned(items) do
+    items
+    |> Enum.with_index()
+    |> Enum.map_reduce(%{}, fn {item, index}, seen ->
+      key = {item.type, title_key(item.text)}
+      nth = Map.get(seen, key, 0)
+      {{item, index, nth}, Map.put(seen, key, nth + 1)}
+    end)
+    |> elem(0)
+  end
+
+  defp title_key(text), do: text |> String.normalize(:nfc) |> String.trim()
 
   defp walk_item(%{type: :project} = item, ctx, index, acc) do
     cond do
@@ -117,7 +135,7 @@ defmodule Marskal.Imports.TaskpaperAdapter do
 
   defp walk_folder(item, ctx, index, acc) do
     acc = count!(acc)
-    id = identity(:folder, item, ctx, index)
+    id = identity(:folder, item, ctx)
     {name, problems} = folder_name(item.text)
     problems = problems ++ folder_problems(item)
 
@@ -146,15 +164,15 @@ defmodule Marskal.Imports.TaskpaperAdapter do
     acc = %{acc | folders: [node | acc.folders]}
 
     item.children
-    |> Enum.with_index()
-    |> Enum.reduce(acc, fn {child, child_index}, acc ->
-      walk_folder_child(child, child_ctx, child_index, acc)
+    |> positioned()
+    |> Enum.reduce(acc, fn {child, child_index, nth}, acc ->
+      walk_folder_child(child, %{child_ctx | nth: nth}, child_index, acc)
     end)
   end
 
   defp walk_project(item, ctx, index, acc) do
     acc = count!(acc)
-    id = identity(:project, item, ctx, index)
+    id = identity(:project, item, ctx)
     {acc, tag_ids, fields, problems} = read_fields(item, acc)
     problems = if nested?(ctx), do: [nested_problem(ctx) | problems], else: problems
 
@@ -193,9 +211,9 @@ defmodule Marskal.Imports.TaskpaperAdapter do
     |> then(&walk(item.children, child, &1))
   end
 
-  defp walk_task(item, ctx, index, acc) do
+  defp walk_task(item, ctx, _index, acc) do
     acc = count!(acc)
-    id = identity(:task, item, ctx, index)
+    id = identity(:task, item, ctx)
     {acc, tag_ids, fields, problems} = read_fields(item, acc)
     {inbox, project_id, parent_id} = task_place(ctx)
 
@@ -292,12 +310,20 @@ defmodule Marskal.Imports.TaskpaperAdapter do
     notes ++ done
   end
 
-  defp identity(kind, item, ctx, index) do
+  # Without `@id`, a line is its kind, the titles above it, its title, and
+  # which of its same-titled siblings it is, so a line added elsewhere
+  # leaves it the same record. A renamed line is a new one.
+  defp identity(kind, item, ctx) do
     case explicit_id(item) do
       nil ->
         material =
           Enum.join(
-            [Atom.to_string(kind), Enum.join(ctx.path, "\n"), Integer.to_string(index)],
+            [
+              Atom.to_string(kind),
+              Enum.join(ctx.path, "\n"),
+              title_key(item.text),
+              Integer.to_string(ctx.nth)
+            ],
             "\n"
           )
 

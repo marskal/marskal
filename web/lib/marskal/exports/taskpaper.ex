@@ -238,7 +238,7 @@ defmodule Marskal.Exports.Taskpaper do
   defp url_tag(_record), do: []
 
   defp tags_tag([]), do: []
-  defp tags_tag(labels), do: [{"tags", Enum.join(labels, ", ")}]
+  defp tags_tag(labels), do: [{"tags", labels}]
 
   defp format_instant(datetime, field, zone) do
     {date, time} = Dates.to_local(datetime, zone)
@@ -312,12 +312,19 @@ defmodule Marskal.Exports.Taskpaper do
     end
   end
 
+  # A rule the RRULE cannot say is left out rather than written wrong.
   defp encode_repeat(series) do
-    [
-      {"repeat-rule", rrule(series)},
-      {"repeat-schedule-type", schedule_type(series.mode)},
-      {"repeat-anchor-date", anchor_name(series.anchor)}
-    ]
+    case limit_parts(series) do
+      :error ->
+        []
+
+      limits ->
+        [
+          {"repeat-rule", rrule(series, limits)},
+          {"repeat-schedule-type", schedule_type(series.mode)},
+          {"repeat-anchor-date", anchor_name(series.anchor)}
+        ]
+    end
   end
 
   defp schedule_type(:on_completion), do: "from-completion"
@@ -327,10 +334,10 @@ defmodule Marskal.Exports.Taskpaper do
   defp anchor_name(:planned), do: "datePlanned"
   defp anchor_name(:due), do: "dateDue"
 
-  defp rrule(series) do
+  defp rrule(series, limits) do
     ["FREQ=#{@freqs[series.frequency]}"]
     |> interval(series)
-    |> Kernel.++(limit_parts(series))
+    |> Kernel.++(limits)
     |> count_part(series)
     |> until_part(series)
     |> Kernel.++(["WKST=#{@days[series.week_start]}"])
@@ -383,9 +390,11 @@ defmodule Marskal.Exports.Taskpaper do
     sets = grouped |> Map.values() |> Enum.map(&day_signature/1) |> Enum.uniq()
     months = grouped |> Map.keys() |> Enum.reject(&is_nil/1) |> Enum.sort()
 
-    case {sets, months} do
-      {[_], [_ | _]} -> ["BYMONTH=#{Enum.join(months, ",")}"] ++ day_parts(rules)
-      _ -> []
+    with {[_], [_ | _]} <- {sets, months},
+         [_ | _] = days <- day_parts(rules) do
+      ["BYMONTH=#{Enum.join(months, ",")}" | days]
+    else
+      _ -> :error
     end
   end
 
@@ -396,6 +405,9 @@ defmodule Marskal.Exports.Taskpaper do
     |> Enum.sort()
   end
 
+  # The rows are one set of days, but RRULE parts narrow each other, so
+  # only one kind of row can be said: calendar days, nth weekdays, or nth
+  # work days or weekend days.
   defp day_parts(rules) do
     calendar = for {_month, ordinal, :day} <- rules, uniq: true, do: ordinal
 
@@ -405,25 +417,20 @@ defmodule Marskal.Exports.Taskpaper do
     specials =
       for {_month, ordinal, kind} <- rules, kind in [:work_day, :weekend_day], do: {kind, ordinal}
 
-    calendar_part(Enum.sort(calendar)) ++
-      weekday_part(weekdays) ++
-      setpos_part(weekdays, specials)
+    case {calendar, weekdays, specials} do
+      {[_ | _], [], []} -> ["BYMONTHDAY=#{calendar |> Enum.sort() |> Enum.join(",")}"]
+      {[], [_ | _], []} -> weekday_part(weekdays)
+      {[], [], [_ | _]} -> setpos_part(specials)
+      _ -> :error
+    end
   end
-
-  defp calendar_part([]), do: []
-  defp calendar_part(days), do: ["BYMONTHDAY=#{Enum.join(days, ",")}"]
-
-  defp weekday_part([]), do: []
 
   defp weekday_part(weekdays) do
     codes = Enum.map_join(weekdays, ",", fn {ordinal, code} -> "#{ordinal}#{code}" end)
     ["BYDAY=#{codes}"]
   end
 
-  defp setpos_part([_ | _], _specials), do: []
-  defp setpos_part(_weekdays, []), do: []
-
-  defp setpos_part(_weekdays, specials) do
+  defp setpos_part(specials) do
     case Enum.uniq(Enum.map(specials, &elem(&1, 0))) do
       [kind] ->
         days = if kind == :work_day, do: "MO,TU,WE,TH,FR", else: "SA,SU"
@@ -431,7 +438,7 @@ defmodule Marskal.Exports.Taskpaper do
         ["BYDAY=#{days}", "BYSETPOS=#{Enum.join(positions, ",")}"]
 
       _kinds ->
-        []
+        :error
     end
   end
 end
