@@ -163,10 +163,25 @@ defmodule MarskalWeb.ImportLive do
       <%= cond do %>
         <% @live_action == :index -> %>
           <h1>Import</h1>
-          <p class="lede">Bring tasks in from Todoist, or from an OmniFocus backup.</p>
+          <p class="lede">
+            {gettext(
+              "Bring tasks in from Todoist or an OmniFocus backup, or exchange them as a TaskPaper outline."
+            )}
+          </p>
+          <p class="lede">
+            {gettext(
+              "Download a TaskPaper file to take your tasks, projects, and folders to another tool. Inbox is a project named Inbox. A task with no project stays at the top. Done is @done, dropped is @dropped, and a flag is @flagged."
+            )}
+          </p>
           <p class="actions">
             <.link href={~p"/imports/todoist"} class="btn btn-primary">Import from Todoist</.link>
             <.link navigate={~p"/imports/new"} class="btn">Upload an OmniFocus backup</.link>
+            <.link navigate={~p"/imports/taskpaper"} class="btn">
+              {gettext("Upload a TaskPaper file")}
+            </.link>
+            <.link href={~p"/exports/taskpaper"} class="btn">
+              {gettext("Download TaskPaper")}
+            </.link>
           </p>
           <h2 :if={@batches != []}>Recent imports</h2>
           <ul :if={@batches != []} class="import-list">
@@ -179,7 +194,9 @@ defmodule MarskalWeb.ImportLive do
             </li>
           </ul>
           <p :if={@batches == []} class="empty">
-            No imports yet. Import from Todoist, or upload an OmniFocus Backup Document.
+            {gettext(
+              "No imports yet. Import from Todoist, or upload an OmniFocus backup or a TaskPaper file."
+            )}
           </p>
         <% @live_action == :new -> %>
           <p class="lede"><.link navigate={~p"/imports"}>Import</.link></p>
@@ -348,6 +365,20 @@ defmodule MarskalWeb.ImportLive do
               return /\.zip$/i.test(file.name) || /\.ofocus(-backup)?$/i.test(file.name)
             }
           </script>
+        <% @live_action == :taskpaper -> %>
+          <p class="lede"><.link navigate={~p"/imports"}>Import</.link></p>
+          <h1>{gettext("TaskPaper")}</h1>
+          <p class="lede">
+            {gettext(
+              "Upload a TaskPaper outline. A project ends with a colon, a task starts with a dash, and any other line is a note. Tabs show what belongs under what."
+            )}
+          </p>
+          <form action={~p"/imports"} method="post" enctype="multipart/form-data" class="capture">
+            <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
+            <input type="hidden" name="import_batch[kind]" value="taskpaper" />
+            <input type="file" name="import_batch[payload]" accept=".taskpaper,text/plain" required />
+            <button type="submit">{gettext("Upload and preview")}</button>
+          </form>
         <% @live_action == :show && @batch -> %>
           <p class="lede"><.link navigate={~p"/imports"}>Import</.link></p>
           <h1>{source_label(@batch.source)} import</h1>
@@ -360,7 +391,10 @@ defmodule MarskalWeb.ImportLive do
             <p :if={@batch.source == "todoist"}>
               <.link href={~p"/imports/todoist"} class="btn">Try Todoist again</.link>
             </p>
-            <p :if={@batch.source != "todoist"}>
+            <p :if={@batch.source == "taskpaper"}>
+              <.link navigate={~p"/imports/taskpaper"} class="btn">{gettext("Try another file")}</.link>
+            </p>
+            <p :if={@batch.source not in ["todoist", "taskpaper"]}>
               <.link navigate={~p"/imports/new"} class="btn">Try another file</.link>
             </p>
           </div>
@@ -391,6 +425,13 @@ defmodule MarskalWeb.ImportLive do
               Includes: {Enum.join(samples(@batch), ", ")}
             </p>
             <.import_problems batch={@batch} />
+            <p :if={stat(@batch, "skipped_rows") > 0} class="lede" id="import-skipped">
+              {ngettext(
+                "1 line was left out.",
+                "%{count} lines were left out.",
+                stat(@batch, "skipped_rows")
+              )}
+            </p>
             <p class="lede">{preview_note(@batch)}</p>
             <form action={~p"/imports/#{@batch.id}/apply"} method="post">
               <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
@@ -464,6 +505,13 @@ defmodule MarskalWeb.ImportLive do
     |> assign(:batch, nil)
   end
 
+  defp apply_action(socket, :taskpaper, _params) do
+    socket
+    |> assign(:page_title, gettext("TaskPaper"))
+    |> assign(:batches, [])
+    |> assign(:batch, nil)
+  end
+
   defp apply_action(socket, :show, %{"id" => id}) do
     user = socket.assigns.current_scope.user
 
@@ -502,13 +550,21 @@ defmodule MarskalWeb.ImportLive do
 
   defp source_label("omnifocus"), do: "OmniFocus"
   defp source_label("todoist"), do: "Todoist"
+  defp source_label("taskpaper"), do: "TaskPaper"
   defp source_label(other), do: to_string(other)
 
   defp reading_label(%{source: "todoist"}), do: "Reading your Todoist account…"
+  defp reading_label(%{source: "taskpaper"}), do: gettext("Reading the outline…")
   defp reading_label(_batch), do: "Reading the backup…"
 
   defp preview_note(%{source: "todoist"}) do
     "Already-imported items are updated with what changed in Todoist, except where you changed the same thing here. Items you deleted here come back. Labels become tags. Sections and recurrence cannot be brought over yet; those tasks are tagged Import problems. Completed history is not included."
+  end
+
+  defp preview_note(%{source: "taskpaper"}) do
+    gettext(
+      "A project named Inbox is the inbox. A task with no project stays out of the inbox. A colon line with @folder, or one that holds projects and no tasks, is a folder. Done is @done, dropped is @dropped, and a flag is @flagged. Dates, a URL, tags, and a repeat this outline can say come across. A project inside a project is filed beside it. Importing this file again updates the same items, except where you changed the same thing here."
+    )
   end
 
   defp preview_note(_batch) do

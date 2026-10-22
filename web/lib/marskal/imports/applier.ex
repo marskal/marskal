@@ -27,6 +27,7 @@ defmodule Marskal.Imports.Applier do
   alias Marskal.Imports
   alias Marskal.Imports.Merge
   alias Marskal.Imports.OmnifocusAdapter
+  alias Marskal.Imports.TaskpaperAdapter
   alias Marskal.Imports.TodoistAdapter
   alias Marskal.ProjectFolders
   alias Marskal.ProjectFolders.ProjectFolder
@@ -67,7 +68,8 @@ defmodule Marskal.Imports.Applier do
         kept_count: 0,
         recreated: 0,
         source_tag_ids: MapSet.new(),
-        existing: existing_items(batch)
+        existing: existing_items(batch),
+        tail: %{}
       }
 
       acc =
@@ -119,6 +121,8 @@ defmodule Marskal.Imports.Applier do
   end
 
   defp graph_for(%{source: "todoist"} = batch), do: TodoistAdapter.parse(batch.payload)
+
+  defp graph_for(%{source: "taskpaper"} = batch), do: TaskpaperAdapter.parse(batch.payload)
 
   defp graph_for(batch), do: OmnifocusAdapter.parse(batch.payload, filename: batch.filename)
 
@@ -405,11 +409,15 @@ defmodule Marskal.Imports.Applier do
     do: node.tag_source_ids |> Enum.map(&acc.ids[&1]) |> Enum.reject(&is_nil/1) |> Enum.uniq()
 
   defp apply_folder(batch, node, acc) do
-    with %ImportItem{project_folder_id: id} = item <- Map.get(acc.existing, node.source_id),
-         %ProjectFolder{} = folder <- ProjectFolders.get_folder(batch.user, id) do
-      acc |> put_id(node, id) |> update_folder(batch, node, item, folder)
-    else
-      _ ->
+    case resolve(acc, batch, :folder, node, &ProjectFolders.get_folder/2) do
+      {:update, item, folder} ->
+        acc |> put_id(node, folder.id) |> update_folder(batch, node, item, folder)
+
+      {:adopt, folder} ->
+        acc = adopt(acc, batch, :folder, node, folder, &folder_base/1)
+        update_folder(acc, batch, node, Map.fetch!(acc.existing, node.source_id), folder)
+
+      :insert ->
         {:ok, folder} =
           ProjectFolders.create_folder(
             batch.user,
@@ -460,11 +468,15 @@ defmodule Marskal.Imports.Applier do
   end
 
   defp apply_project(batch, node, acc) do
-    with %ImportItem{project_id: id} = item <- Map.get(acc.existing, node.source_id),
-         %Projects.Project{} = project <- Projects.get_project(batch.user, id) do
-      acc |> put_id(node, id) |> update_project(batch, node, item, project)
-    else
-      _ ->
+    case resolve(acc, batch, :project, node, &Projects.get_project/2) do
+      {:update, item, project} ->
+        acc |> put_id(node, project.id) |> update_project(batch, node, item, project)
+
+      {:adopt, project} ->
+        acc = adopt(acc, batch, :project, node, project, &project_base/1)
+        update_project(acc, batch, node, Map.fetch!(acc.existing, node.source_id), project)
+
+      :insert ->
         {:ok, project} =
           Projects.create_project(
             batch.user,
@@ -527,17 +539,26 @@ defmodule Marskal.Imports.Applier do
   end
 
   defp apply_task(batch, node, acc) do
-    with %ImportItem{task_id: id} = item <- Map.get(acc.existing, node.source_id),
-         %Tasks.Task{} = task <- Tasks.get_task(batch.user, id) do
-      acc |> put_id(node, id) |> update_task(batch, node, item, task)
-    else
-      _ ->
+    case resolve(acc, batch, :task, node, &Tasks.get_task/2) do
+      {:update, item, task} ->
+        acc
+        |> put_id(node, task.id)
+        |> update_task(batch, node, item, task)
+        |> finish_task(batch, node, task.id)
+
+      {:adopt, task} ->
+        acc = adopt(acc, batch, :task, node, task, &task_base/1)
+        item = Map.fetch!(acc.existing, node.source_id)
+
+        acc
+        |> update_task(batch, node, item, task)
+        |> finish_task(batch, node, task.id)
+
+      :insert ->
+        attrs = node |> task_attrs(acc, batch.user) |> put_after(batch, node, acc)
+
         {:ok, task} =
-          Tasks.create_task(
-            batch.user,
-            task_attrs(node, acc, batch.user),
-            Ecto.UUID.generate(version: 7)
-          )
+          Tasks.create_task(batch.user, attrs, Ecto.UUID.generate(version: 7))
 
         tags = tag_all!(batch.user, :task, task.id, source_tags(node, acc))
         base = Merge.snapshot(:task, task) |> Map.put("tag_ids", Enum.sort(tags))
@@ -547,11 +568,13 @@ defmodule Marskal.Imports.Applier do
         |> record!(batch, :task, node, %{task_id: task.id}, base)
         |> put_id(node, task.id)
         |> count(:created, "tasks")
+        |> finish_task(batch, node, task.id)
     end
   end
 
   # The project wins over a source inbox flag. A project the import did
-  # not create leaves the task in the inbox (ADR 0017).
+  # not create leaves the task in the inbox (ADR 0017). A task the source
+  # places in No project stays there.
   defp task_attrs(node, acc, user) do
     project_id = node.project_source_id && acc.ids[node.project_source_id]
 
@@ -560,12 +583,98 @@ defmodule Marskal.Imports.Applier do
       "notes" => node.notes,
       "url" => node.url,
       "flagged" => node.flagged == true,
-      "inbox" => is_nil(project_id),
+      "inbox" => inbox?(node, project_id),
       "project_id" => project_id,
       "parent_id" => acc.ids[node.parent_source_id],
       "state" => state(node.state)
     }
     |> Map.merge(dates(node, user))
+  end
+
+  defp inbox?(node, project_id) do
+    cond do
+      is_binary(project_id) -> false
+      is_binary(node.project_source_id) -> true
+      node.inbox == false -> false
+      true -> true
+    end
+  end
+
+  # Inbox lists newest first, so a new task lands on top. The previous
+  # sibling keeps a TaskPaper file's order.
+  defp put_after(attrs, %{source: "taskpaper"}, node, acc) do
+    key = {node.parent_source_id, attrs["inbox"], attrs["project_id"]}
+
+    case Map.get(acc.tail, key) do
+      nil -> attrs
+      id -> Map.put(attrs, "after_id", id)
+    end
+  end
+
+  defp put_after(attrs, _batch, _node, _acc), do: attrs
+
+  defp finish_task(acc, %{source: "taskpaper"} = batch, node, task_id) do
+    task = Tasks.get_task(batch.user, task_id)
+    key = {node.parent_source_id, task.inbox, task.project_id}
+    %{acc | tail: Map.put(acc.tail, key, task_id)}
+  end
+
+  defp finish_task(acc, _batch, _node, _task_id), do: acc
+
+  defp resolve(acc, batch, kind, node, get) do
+    case Map.get(acc.existing, node.source_id) do
+      %ImportItem{} = item ->
+        case fetch_linked(Map.get(item, link_field(kind)), get, batch.user) do
+          nil -> :insert
+          record -> {:update, item, record}
+        end
+
+      nil ->
+        adopt_or_insert(batch, node, get)
+    end
+  end
+
+  defp link_field(:task), do: :task_id
+  defp link_field(:project), do: :project_id
+  defp link_field(:folder), do: :project_folder_id
+
+  defp fetch_linked(nil, _get, _user), do: nil
+  defp fetch_linked(id, get, user), do: get.(user, id)
+
+  # A TaskPaper @id that is one of this user's records links it. The first
+  # merge treats the record as it is now as the base, so an unchanged file
+  # writes nothing and a changed one writes the file.
+  defp adopt_or_insert(%{source: "taskpaper"} = batch, node, get) do
+    with {:ok, id} <- Ecto.UUID.cast(node.source_id),
+         %{} = record <- get.(batch.user, id) do
+      {:adopt, record}
+    else
+      _ -> :insert
+    end
+  end
+
+  defp adopt_or_insert(_batch, _node, _get), do: :insert
+
+  defp adopt(acc, batch, kind, node, record, base_fun) do
+    acc
+    |> put_id(node, record.id)
+    |> record!(batch, kind, node, link_ids(kind, record.id), base_fun.(record))
+  end
+
+  defp link_ids(:task, id), do: %{task_id: id}
+  defp link_ids(:project, id), do: %{project_id: id}
+  defp link_ids(:folder, id), do: %{project_folder_id: id}
+
+  defp folder_base(folder), do: Merge.snapshot(:folder, folder)
+
+  defp project_base(project) do
+    tags = live_tag_ids(Tags.ProjectTag, :project_id, project.id)
+    Merge.snapshot(:project, project) |> Map.put("tag_ids", Enum.sort(tags))
+  end
+
+  defp task_base(task) do
+    tags = live_tag_ids(Tags.TaskTag, :task_id, task.id)
+    Merge.snapshot(:task, task) |> Map.put("tag_ids", Enum.sort(tags))
   end
 
   defp update_task(acc, batch, node, item, task) do

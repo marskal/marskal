@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted; amended 2026-10-04 (re-import updates); amended 2026-10-07 (import problems); amended 2026-10-09 (Todoist repeats); amended 2026-10-16 (OmniFocus repeats)
+Accepted; amended 2026-10-04 (re-import updates); amended 2026-10-07 (import problems); amended 2026-10-09 (Todoist repeats); amended 2026-10-16 (OmniFocus repeats); amended 2026-10-21 (TaskPaper)
 
 The framework stands and is ported to Elixir ([ADR 0016](0016-elixir-phoenix-web.md)):
 `Imports.Graph`, `Imports.OmnifocusAdapter`, and Oban jobs in place of Active
@@ -166,9 +166,58 @@ beside it. `Marskal.Imports.OmnifocusRecurrence` reads it into a rule
 - Re-import works as for Todoist: a task or project becomes a first
   occurrence once, and its series then owns its dates.
 
+### TaskPaper (amended 2026-10-21)
+
+TaskPaper's plain-text outline is the interchange file other task tools
+already read and write, including OmniFocus's "Copy as TaskPaper". Marskal
+imports that file through the same adapter path, and exports tasks,
+projects, and folders back into it (`GET /exports/taskpaper`).
+
+**Import** (`Marskal.Imports.TaskpaperAdapter`). A file whose name ends in
+`.taskpaper`, or whose text has a task or project line, is this format. A
+task starts with a dash, a project ends with a colon, and any other line
+is a note. One tab, or four spaces, is one level.
+
+- A project named Inbox is the inbox. A task with no project is No project.
+  A colon line tagged `@folder`, or one that contains projects and no tasks
+  of its own, is a project folder. A project inside another project is filed
+  in the same folder, and the item is tagged Nested project. A task of a
+  folder comes in through the inbox. Notes on a folder are left out.
+- `@done` and `@dropped` are Done and Dropped. `@due`, `@defer` (and
+  `@start`), and `@planned` are those dates. `@defer` with no date defers
+  indefinitely. `@flagged` is the flag. `@url` is the URL. `@tags`, and any
+  other tag, are the item's own tags. `Parent : Child` is nesting.
+- `@id` is the source id. An id that is one of this user's tasks, projects,
+  or folders links that record, so a file Marskal wrote updates it. The
+  first link takes the record as it is now as the base: an unchanged file
+  writes nothing, and a changed one writes the file. Importing again is the
+  usual three-way merge. A deleted record stays deleted, and the file
+  creates a new one.
+- `@repeat-rule` and the OmniFocus repeat parameters are read by
+  `Imports.OmnifocusRecurrence`.
+- A date or URL that cannot be read is tagged Unread value. A line with
+  nothing above it to belong to is left out. A project named Archive is a
+  project.
+
+**Export** (`Marskal.Exports.Taskpaper`). The live tasks, projects, and
+folders, in outline order. Inbox is a project named Inbox when there is
+something in it. Done, Dropped, the flag, dates, the URL, the item's own
+tags, and a repeat on the current To-Do occurrence are tags. `@id` is the
+record's id. A tag inherited from a project stays on the project.
+
+A round trip keeps the outline, titles, notes, URL, flag, own tags, dates,
+Done and Dropped, inbox and No project, folders, and a repeat the file can
+say. A project inside a project comes back beside it. Notes on a folder
+are left out. A tag's own value, other than the tags above, is left out.
+A tag name that contains a comma or ` : ` can be read back as more than
+one tag. Blank lines that only separate paragraphs are kept inside a note
+and dropped at its ends.
+
 ## Consequences
 
-- New sources add an adapter + sniff, not new controllers.
+- New sources add an adapter + sniff, not new controllers. TaskPaper is the
+  outline interchange: a tool that can read a task list can read this file,
+  and a richer source still adds an adapter.
 - `extras` keeps unmapped values for inspection, not for backfill. The payload
   is gone after apply, so a value is only as complete as what the adapter
   stored. OmniFocus tag definitions, for one, were never stored. Before

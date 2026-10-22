@@ -27,6 +27,10 @@ defmodule MarskalWeb.ImportBatchControllerTest do
     {:ok, _view, html} = live(conn, ~p"/imports")
     assert html =~ "Import from Todoist"
     assert html =~ "/imports/todoist"
+    assert html =~ "Upload a TaskPaper file"
+    assert html =~ "/exports/taskpaper"
+    {:ok, _view, html} = live(conn, ~p"/imports/taskpaper")
+    assert html =~ "A project ends with a colon"
   end
 
   test "todoist sign-in stores a snapshot and previews it", %{conn: conn, user: user} do
@@ -243,6 +247,147 @@ defmodule MarskalWeb.ImportBatchControllerTest do
 
     assert {:error, {:redirect, %{to: to}}} = live(conn, ~p"/imports/#{batch.id}")
     assert to == ~p"/imports"
+  end
+
+  test "taskpaper outline imports and the download updates the same records", %{
+    conn: conn,
+    user: user
+  } do
+    outline = """
+    Inbox:
+    \t- First
+    \t- Second
+    Work: @tags(Focus) @url(https://example.com/work)
+    \tNotes for the project
+    \t- Parent task
+    \t\t- Child
+    - Loose @dropped
+    This line is left out
+    """
+
+    conn =
+      post(conn, ~p"/imports", %{
+        "import_batch" => %{
+          "kind" => "taskpaper",
+          "payload" => upload(outline, "outline.taskpaper")
+        }
+      })
+
+    batch = last_batch(user)
+    assert redirected_to(conn) == ~p"/imports/#{batch.id}"
+    assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Reading the outline"
+    assert batch.source == "taskpaper"
+
+    drain_imports!()
+    batch = Repo.reload!(batch)
+    assert batch.status == :previewed
+    assert batch.stats["tasks"] == 5
+    assert batch.stats["projects"] == 1
+    assert batch.stats["tags"] == 1
+    assert batch.stats["inbox"] == 2
+    assert batch.stats["skipped_rows"] == 1
+
+    conn = get(recycle(conn), ~p"/imports/#{batch.id}")
+    html = html_response(conn, 200)
+    assert html =~ "A project named Inbox is the inbox"
+    assert html =~ "1 line was left out."
+
+    conn = post(recycle(conn), ~p"/imports/#{batch.id}/apply")
+    assert redirected_to(conn) == ~p"/imports/#{batch.id}"
+    drain_imports!()
+    assert Repo.reload!(batch).status == :applied
+
+    first = Repo.get_by!(Task, user_id: user.id, title: "First")
+    second = Repo.get_by!(Task, user_id: user.id, title: "Second")
+    assert first.inbox and second.inbox
+    assert first.rank < second.rank
+
+    project = Repo.get_by!(Marskal.Projects.Project, user_id: user.id, title: "Work")
+    assert project.notes == "Notes for the project"
+    assert project.url == "https://example.com/work"
+    tag = Repo.get_by!(Marskal.Tags.Tag, user_id: user.id, name: "Focus")
+
+    assert Repo.get_by!(Marskal.Tags.ProjectTag, project_id: project.id, tag_id: tag.id).discarded_at ==
+             nil
+
+    parent = Repo.get_by!(Task, user_id: user.id, title: "Parent task")
+    child = Repo.get_by!(Task, user_id: user.id, title: "Child")
+    assert child.parent_id == parent.id
+    assert child.project_id == project.id
+    assert parent.project_id == project.id
+
+    loose = Repo.get_by!(Task, user_id: user.id, title: "Loose")
+    assert loose.state == :dropped
+    refute loose.inbox
+    assert loose.project_id == nil
+
+    conn = get(recycle(conn), ~p"/exports/taskpaper")
+    assert get_resp_header(conn, "content-type") |> hd() =~ "text/plain"
+    assert get_resp_header(conn, "content-type") |> hd() =~ "charset=utf-8"
+    disposition = get_resp_header(conn, "content-disposition") |> hd()
+    assert disposition =~ "attachment"
+    assert disposition =~ ".taskpaper"
+    body = response(conn, 200)
+    assert body =~ "Parent task"
+    assert body =~ "@id(#{parent.id})"
+
+    again =
+      post(recycle(conn), ~p"/imports", %{
+        "import_batch" => %{
+          "kind" => "taskpaper",
+          "payload" =>
+            upload(String.replace(body, "Parent task", "Renamed task"), "again.taskpaper")
+        }
+      })
+
+    reimport = last_batch(user)
+    assert redirected_to(again) == ~p"/imports/#{reimport.id}"
+    drain_imports!()
+    post(recycle(again), ~p"/imports/#{reimport.id}/apply")
+    drain_imports!()
+    assert Repo.reload!(reimport).status == :applied
+    assert Repo.get!(Task, parent.id).title == "Renamed task"
+
+    assert Repo.aggregate(
+             from(t in Task, where: t.user_id == ^user.id and is_nil(t.discarded_at)),
+             :count
+           ) == 5
+  end
+
+  test "a file that is not an outline fails and offers another file", %{conn: conn, user: user} do
+    conn =
+      post(conn, ~p"/imports", %{
+        "import_batch" => %{
+          "kind" => "taskpaper",
+          "payload" => upload("just words\n", "notes.taskpaper")
+        }
+      })
+
+    batch = last_batch(user)
+    drain_imports!()
+    batch = Repo.reload!(batch)
+    assert batch.status == :failed
+    assert batch.source == "taskpaper"
+    assert batch.error_message =~ "not a TaskPaper outline"
+
+    conn = get(recycle(conn), ~p"/imports/#{batch.id}")
+    assert html_response(conn, 200) =~ "/imports/taskpaper"
+
+    post(recycle(conn), ~p"/imports", %{
+      "import_batch" => %{
+        "kind" => "taskpaper",
+        "payload" => upload(<<0xFF, 0xFE>>, "bad.taskpaper")
+      }
+    })
+
+    batch = last_batch(user)
+    drain_imports!()
+    assert Repo.reload!(batch).error_message =~ "UTF-8"
+  end
+
+  test "taskpaper export requires sign in" do
+    conn = build_conn() |> get(~p"/exports/taskpaper")
+    assert redirected_to(conn) == ~p"/users/log-in"
   end
 
   defp drain_imports! do

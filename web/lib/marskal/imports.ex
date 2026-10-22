@@ -1,6 +1,6 @@
 defmodule Marskal.Imports do
   @moduledoc """
-  Upload an OmniFocus backup, preview it, and apply it.
+  Upload an OmniFocus backup or a TaskPaper file, preview it, and apply it.
 
   Parsing and applying run on the Oban `imports` queue. The upload request
   only stores the file and enqueues the job.
@@ -12,7 +12,9 @@ defmodule Marskal.Imports do
   alias Marskal.Imports.ApplyJob
   alias Marskal.Imports.BundlePackager
   alias Marskal.Imports.Limits
+  alias Marskal.Imports.OmnifocusAdapter
   alias Marskal.Imports.ParseJob
+  alias Marskal.Imports.TaskpaperAdapter
   alias Marskal.Imports.Todoist
   alias Marskal.Repo
 
@@ -55,7 +57,7 @@ defmodule Marskal.Imports do
         {:ok, filename, bytes} ->
           insert_and_enqueue(user, %{
             user_id: user.id,
-            source: "omnifocus",
+            source: source(bytes, filename, params["kind"]),
             channel: :file,
             status: :pending,
             filename: filename,
@@ -126,8 +128,8 @@ defmodule Marskal.Imports do
     end
   end
 
-  defp read_payload(%{"payload" => %Plug.Upload{} = upload}) do
-    {:ok, safe_filename(upload.filename), File.read!(upload.path)}
+  defp read_payload(%{"payload" => %Plug.Upload{} = upload} = params) do
+    {:ok, safe_filename(upload.filename, params["kind"]), File.read!(upload.path)}
   rescue
     error in File.Error -> {:error, Exception.message(error)}
   end
@@ -156,11 +158,29 @@ defmodule Marskal.Imports do
     error in [ArgumentError, File.Error] -> {:error, Exception.message(error)}
   end
 
+  defp read_payload(%{"kind" => "taskpaper"}),
+    do: {:error, "Choose a TaskPaper file to upload."}
+
   defp read_payload(_params), do: {:error, "Choose an OmniFocus backup to upload."}
 
-  defp safe_filename(name) do
+  defp source(bytes, filename, kind) do
+    cond do
+      OmnifocusAdapter.match?(bytes, filename) -> "omnifocus"
+      TaskpaperAdapter.match?(bytes, filename) or kind == "taskpaper" -> "taskpaper"
+      true -> "omnifocus"
+    end
+  end
+
+  defp safe_filename(name, kind) do
     base = name |> to_string() |> Path.basename() |> String.trim()
-    base = if base == "", do: "OmniFocus.ofocus-backup", else: base
+
+    base =
+      cond do
+        base != "" -> base
+        kind == "taskpaper" -> "outline.taskpaper"
+        true -> "OmniFocus.ofocus-backup"
+      end
+
     String.slice(base, 0, 255)
   end
 

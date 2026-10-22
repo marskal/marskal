@@ -1,7 +1,7 @@
 defmodule Marskal.Imports.Graph do
   @moduledoc false
 
-  defstruct [:source, folders: [], projects: [], tasks: [], tags: []]
+  defstruct [:source, folders: [], projects: [], tasks: [], tags: [], skipped_rows: 0]
 
   @folder_samples 50
 
@@ -28,7 +28,8 @@ defmodule Marskal.Imports.Graph do
           folder.problems != [],
           do: %{"name" => folder.name, "fields" => folder.problems}
         )
-        |> Enum.take(@folder_samples)
+        |> Enum.take(@folder_samples),
+      "skipped_rows" => graph.skipped_rows
     }
   end
 end

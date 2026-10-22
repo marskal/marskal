@@ -30,7 +30,9 @@ defmodule Marskal.Imports.Problems do
     approximate_recurrence: "Approximate repeat rule",
     missing_section: "Missing section",
     shortened_title: "Shortened title",
-    shortened_notes: "Shortened notes"
+    shortened_notes: "Shortened notes",
+    unread_value: "Unread value",
+    nested_project: "Nested project"
   ]
 
   def mark(%Graph{} = graph, source_name) do

@@ -11,15 +11,21 @@ defmodule MarskalWeb.ImportBatchController do
     case Imports.ingest_upload(user, payload) do
       {:ok, batch} ->
         conn
-        |> put_flash(:info, "Reading backup…")
+        |> put_flash(:info, reading_flash(batch))
         |> redirect(to: ~p"/imports/#{batch.id}")
 
       {:error, message} ->
         conn
         |> put_flash(:error, message)
-        |> redirect(to: ~p"/imports/new")
+        |> redirect(to: upload_return(payload))
     end
   end
+
+  defp reading_flash(%{source: "taskpaper"}), do: gettext("Reading the outline…")
+  defp reading_flash(_batch), do: "Reading backup…"
+
+  defp upload_return(%{"kind" => "taskpaper"}), do: ~p"/imports/taskpaper"
+  defp upload_return(_payload), do: ~p"/imports/new"
 
   def apply(conn, %{"id" => id}) do
     user = conn.assigns.current_scope.user

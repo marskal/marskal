@@ -85,6 +85,7 @@ defmodule MarskalWeb.Router do
     get "/imports/todoist", ImportBatchController, :todoist
     get "/imports/todoist/callback", ImportBatchController, :todoist_callback
     post "/imports/:id/apply", ImportBatchController, :apply
+    get "/exports/taskpaper", ExportController, :taskpaper
     get "/tasks/:id", TaskController, :show
     get "/", PageController, :home
 
@@ -97,6 +98,7 @@ defmodule MarskalWeb.Router do
       live "/open", OpenTasksLive, :index
       live "/imports", ImportLive, :index
       live "/imports/new", ImportLive, :new
+      live "/imports/taskpaper", ImportLive, :taskpaper
       live "/imports/:id", ImportLive, :show
       live "/inbox", InboxLive, :index
       live "/agenda", AgendaLive, :index
