@@ -118,6 +118,11 @@ msgstr ""
 msgid "Actions"
 msgstr ""
 
+#: lib/marskal_web/live/tag_live.ex
+#, elixir-autogen, elixir-format
+msgid "Add a task with this tag"
+msgstr ""
+
 #: lib/marskal_web/live/user_live/registration.ex
 #, elixir-autogen, elixir-format
 msgid "Already registered?"
@@ -197,6 +202,11 @@ msgstr ""
 #: lib/marskal_web/components/nav_outline.ex
 #, elixir-autogen, elixir-format
 msgid "Contents of %{name}"
+msgstr ""
+
+#: lib/marskal_web/live/tag_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not add task."
 msgstr ""
 
 #: lib/marskal_web/outline.ex

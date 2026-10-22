@@ -89,6 +89,17 @@ defmodule MarskalWeb.TagsLiveTest do
       assert has_element?(view, "button", "Activate")
     end
 
+    test "a task added here is tagged and in No project", %{conn: conn, user: user} do
+      waiting = tag!(user, "Waiting")
+      {:ok, view, _html} = live(conn, ~p"/tags/#{waiting.id}")
+
+      view |> form("#new-tag-task", task: %{title: "Reply from Bo"}) |> render_submit()
+
+      assert has_element?(view, "#tag-tasks-#{waiting.id}", "Reply from Bo")
+      [task] = Tasks.list_open(user)
+      assert %{title: "Reply from Bo", inbox: false, project_id: nil} = task
+    end
+
     test "a child tag can be added", %{conn: conn, user: user} do
       person = tag!(user, "Person")
       {:ok, view, _html} = live(conn, ~p"/tags/#{person.id}")
