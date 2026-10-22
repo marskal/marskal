@@ -5,7 +5,7 @@ defmodule MarskalWeb.OpenTasksLive do
     reload: &load_tasks/1,
     missing: "That task is not available."
 
-  import MarskalWeb.TaskList, only: [assign_tasks: 2, reset_tasks: 1]
+  import MarskalWeb.TaskList, only: [assign_tasks: 2]
 
   alias Marskal.Tasks
 
@@ -18,22 +18,14 @@ defmodule MarskalWeb.OpenTasksLive do
     {:ok,
      socket
      |> MarskalWeb.Outline.attach()
-     |> assign(:page_title, title)
-     |> assign(:show_unavailable, nil)}
+     |> assign(:page_title, title)}
   end
 
-  # Tasks made unavailable by tag state (ADR 0005), and deferred ones
-  # (ADR 0006), are hidden unless ?unavailable=1.
-  # Flipping it is a new view, so kept rows go; opening the inspector is not.
+  # Opening the inspector patches this page. That is not a new view, so
+  # rows kept for undo stay. A visibility change resets them itself.
   @impl true
-  def handle_params(params, _uri, socket) do
-    show = params["unavailable"] == "1"
-
-    socket
-    |> then(&if(&1.assigns.show_unavailable == show, do: &1, else: reset_tasks(&1)))
-    |> assign(:show_unavailable, show)
-    |> load_tasks()
-    |> then(&{:noreply, &1})
+  def handle_params(_params, _uri, socket) do
+    {:noreply, load_tasks(socket)}
   end
 
   @impl true
@@ -48,16 +40,13 @@ defmodule MarskalWeb.OpenTasksLive do
       inspector={assigns[:inspector]}
       nav={assigns[:nav]}
       change_version={assigns[:change_version] || 0}
+      visibility={assigns[:visibility]}
     >
       <h1>{@page_title}</h1>
       <p class="lede">
         {if @flagged?,
           do: "Open tasks flagged by themselves or by their project.",
           else: "Work out of the inbox, still to do."}
-        <.link :if={!@show_unavailable} patch={view_path(@flagged?, unavailable: 1)}>
-          Show unavailable
-        </.link>
-        <.link :if={@show_unavailable} patch={view_path(@flagged?, [])}>Hide unavailable</.link>
       </p>
 
       <MarskalWeb.TaskComponents.list
@@ -93,14 +82,9 @@ defmodule MarskalWeb.OpenTasksLive do
     """
   end
 
-  defp view_path(true, []), do: ~p"/flagged"
-  defp view_path(true, query), do: ~p"/flagged?#{query}"
-  defp view_path(false, []), do: ~p"/open"
-  defp view_path(false, query), do: ~p"/open?#{query}"
-
   defp load_tasks(socket) do
     user = socket.assigns.current_scope.user
-    opts = [unavailable: socket.assigns.show_unavailable]
+    opts = [show: socket.assigns.visibility]
 
     # Subtasks show under their parents (ADR 0009). Flagged stays flat:
     # a parent task does not flag its subtasks (ADR 0025).

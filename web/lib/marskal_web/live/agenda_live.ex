@@ -10,15 +10,14 @@ defmodule MarskalWeb.AgendaLive do
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
-     socket |> MarskalWeb.TaskKeys.attach() |> assign(:page_title, "Agenda") |> assign(:view, nil)}
+     socket |> MarskalWeb.TaskKeys.attach() |> assign(:page_title, "Agenda") |> assign(:date, nil)}
   end
 
   # The agenda lists what is due and what is planned (ADR 0006), on the
   # user's stored zone (ADR 0014). Today also carries earlier plans and
-  # dues that are still to do, so a missed day is not lost. Deferred and
-  # unavailable tasks are hidden unless ?unavailable=1, as in the open
-  # stream; a later day counts what is deferred until within it as
-  # available. A new day or toggle is a new view, so kept rows go.
+  # dues that are still to do, so a missed day is not lost. A later day
+  # counts what is deferred until within it as available that day. A new
+  # day is a new view, so kept rows go; opening the inspector is not.
   @impl true
   def handle_params(params, _uri, socket) do
     zone = Marskal.Accounts.timezone(socket.assigns.current_scope.user)
@@ -30,11 +29,9 @@ defmodule MarskalWeb.AgendaLive do
         {:error, _} -> today
       end
 
-    view = {date, params["unavailable"] == "1"}
-
     socket
-    |> then(&if(&1.assigns.view == view, do: &1, else: reset_tasks(&1)))
-    |> assign(view: view, date: date, today: today, show_unavailable: elem(view, 1))
+    |> then(&if(&1.assigns.date == date, do: &1, else: reset_tasks(&1)))
+    |> assign(date: date, today: today)
     |> load_tasks()
     |> then(&{:noreply, &1})
   end
@@ -49,30 +46,20 @@ defmodule MarskalWeb.AgendaLive do
       inspector={assigns[:inspector]}
       nav={assigns[:nav]}
       change_version={assigns[:change_version] || 0}
+      visibility={assigns[:visibility]}
     >
       <h1>{heading(@date, @today)}</h1>
       <p class="lede">
-        <.link id="agenda-prev" patch={day_path(Date.add(@date, -1), @today, @show_unavailable)}>
+        <.link id="agenda-prev" patch={day_path(Date.add(@date, -1), @today)}>
           Previous day
         </.link>
         ·
-        <.link
-          :if={@date != @today}
-          id="agenda-today"
-          patch={day_path(@today, @today, @show_unavailable)}
-        >
+        <.link :if={@date != @today} id="agenda-today" patch={day_path(@today, @today)}>
           Today
         </.link>
         <span :if={@date != @today}>·</span>
-        <.link id="agenda-next" patch={day_path(Date.add(@date, 1), @today, @show_unavailable)}>
+        <.link id="agenda-next" patch={day_path(Date.add(@date, 1), @today)}>
           Next day
-        </.link>
-        ·
-        <.link :if={!@show_unavailable} patch={day_path(@date, @today, true)}>
-          Show unavailable
-        </.link>
-        <.link :if={@show_unavailable} patch={day_path(@date, @today, false)}>
-          Hide unavailable
         </.link>
       </p>
 
@@ -136,14 +123,14 @@ defmodule MarskalWeb.AgendaLive do
   # A task both due and planned shows once, under Due. Rows that linger
   # after Done stay in the column they were in.
   defp load_tasks(socket) do
-    %{date: date, today: today, show_unavailable: show} = socket.assigns
+    %{date: date, today: today, visibility: show} = socket.assigns
     user = socket.assigns.current_scope.user
-    due = Tasks.list_due(user, date, overdue: date == today, unavailable: show)
+    due = Tasks.list_due(user, date, overdue: date == today, show: show)
     due_ids = MapSet.new(due, & &1.id)
 
     planned =
       user
-      |> Tasks.list_planned(date, carry_over: date == today, unavailable: show)
+      |> Tasks.list_planned(date, carry_over: date == today, show: show)
       |> Enum.reject(&MapSet.member?(due_ids, &1.id))
 
     was_due = if socket.assigns[:tasks] == [], do: MapSet.new(), else: socket.assigns[:due_ids]
@@ -173,11 +160,7 @@ defmodule MarskalWeb.AgendaLive do
     end
   end
 
-  defp day_path(date, today, show_unavailable) do
-    query =
-      [date: date != today && Date.to_iso8601(date), unavailable: show_unavailable && 1]
-      |> Enum.filter(fn {_key, value} -> value end)
-
-    if query == [], do: ~p"/agenda", else: ~p"/agenda?#{query}"
+  defp day_path(date, today) do
+    if date == today, do: ~p"/agenda", else: ~p"/agenda?#{[date: Date.to_iso8601(date)]}"
   end
 end

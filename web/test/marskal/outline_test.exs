@@ -365,7 +365,7 @@ defmodule Marskal.OutlineTest do
 
       assert MapSet.equal?(deferred, MapSet.new([child.id, early.id]))
       refute child.id in ids(Tasks.list_open(user))
-      assert child.id in ids(Tasks.list_open(user, unavailable: true))
+      assert child.id in ids(Tasks.list_open(user, show: [:deferred]))
     end
   end
 

@@ -74,7 +74,8 @@ defmodule MarskalWeb.TaskStreamTest do
     open |> element("#open-tasks li.task-row", "First") |> render_click()
     assert has_element?(open, "#open-tasks li.is-resolved", "Second")
 
-    open |> element("a", "Show unavailable") |> render_click()
+    open |> element("#visibility-deferred") |> render_click()
+    render(open)
     refute has_element?(open, "#open-tasks", "Second")
   end
 
@@ -98,7 +99,7 @@ defmodule MarskalWeb.TaskStreamTest do
     assert task.project_id == nil
   end
 
-  test "tasks on an on-hold tag hide until unavailable ones are shown", %{conn: conn, user: user} do
+  test "tasks on an on-hold tag stay out of the open stream", %{conn: conn, user: user} do
     {:ok, task} =
       Marskal.Tasks.create_task(user, %{"title" => "Ask Anna", "inbox" => false}, command())
 
@@ -109,11 +110,11 @@ defmodule MarskalWeb.TaskStreamTest do
     {:ok, open, _html} = live(conn, ~p"/open")
     refute has_element?(open, "#open-tasks", "Ask Anna")
 
-    open |> element("a", "Show unavailable") |> render_click()
-    assert_patch(open, ~p"/open?unavailable=1")
-    assert has_element?(open, "#open-tasks", "Ask Anna")
+    for kind <- ~w(done dropped deferred) do
+      open |> element("#visibility-#{kind}") |> render_click()
+    end
 
-    open |> element("a", "Hide unavailable") |> render_click()
+    render(open)
     refute has_element?(open, "#open-tasks", "Ask Anna")
   end
 

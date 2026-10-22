@@ -96,23 +96,27 @@ defmodule Marskal.Tags do
   end
 
   @doc """
-  The tag view (ADR 0005): the tag's own to-do tasks, then one group per
-  child tag, nested the same way. Inbox tasks are included (ADR 0010). A
-  task shows under every tag it carries. Empty groups are left out, and so
-  are dropped subtrees, unless the selected tag is itself dropped.
+  The tag view (ADR 0005): the tag's own tasks, then one group per child
+  tag, nested the same way. Inbox tasks are included (ADR 0010). A task
+  shows under every tag it carries. Empty groups are left out.
+
+  `show:` is as in `Marskal.Tasks.list_open/2` for the tasks. Dropped tag
+  subtrees stay hidden unless the selected tag is itself hidden, or
+  `:dropped` is in `show`.
 
   Returns `%{root: node, tree: tree, effective: map, unavailable: MapSet}`,
   where a node
   is `%{tag: tag, tasks: [task], children: [node]}`, or nil for an unknown
   tag.
   """
-  def outline(%User{} = user, tag_id) do
+  def outline(%User{} = user, tag_id, opts \\ []) do
+    show = Keyword.get(opts, :show, [])
     tree = tree(user)
 
     with %Tag{} = tag <- Tree.get(tree, tag_id) do
-      include? = include_fun(tree, tag)
+      include? = include_fun(tree, tag, show)
       ids = tree |> Tree.subtree(tag.id) |> Enum.filter(include?) |> Enum.map(& &1.id)
-      tasks = to_do_tasks_tagged(user, ids)
+      tasks = shown_tasks_tagged(user, ids, show)
       effective = effective_tags(user, tasks, tree)
 
       by_tag =
@@ -130,15 +134,20 @@ defmodule Marskal.Tags do
     end
   end
 
-  @doc "To-do tasks, inbox included, with no effective tags."
-  def untagged_tasks(%User{} = user) do
+  @doc """
+  Tasks with no effective tags. `show:` is as in `Marskal.Tasks.list_open/2`;
+  the default is the open ones, inbox included.
+  """
+  def untagged_tasks(%User{} = user, opts \\ []) do
+    show = Keyword.get(opts, :show, [])
     tree = tree(user)
 
     tasks =
       Task
-      |> Tasks.where_open(user)
+      |> Tasks.where_shown(user, show)
       |> order_by([t], desc: t.inserted_at, desc: t.id)
       |> Repo.all()
+      |> then(&Tasks.without_deferred(user, &1, show))
 
     effective = effective_tags(user, tasks, tree)
     Enum.filter(tasks, &(effective[&1.id] == []))
@@ -286,10 +295,11 @@ defmodule Marskal.Tags do
 
   @doc """
   Makes the tag the last child of the sibling above it. The keyboard moves
-  work on the tags the sidebar shows, so a dropped tag is not a neighbor.
+  work on the tags the sidebar shows. `show:` in `opts` is that visibility;
+  without it a dropped tag is not a neighbor.
   """
-  def indent_tag(%User{} = user, id, command_id) do
-    with {:ok, tag, {above, _below}} <- shown_neighbors(user, id) do
+  def indent_tag(%User{} = user, id, command_id, opts \\ []) do
+    with {:ok, tag, {above, _below}} <- shown_neighbors(user, id, opts) do
       if above,
         do: place_tag(user, tag.id, above.id, :last, command_id),
         else: {:error, :first}
@@ -311,9 +321,9 @@ defmodule Marskal.Tags do
   end
 
   @doc "Swaps the tag with the shown sibling above it."
-  def move_tag_up(%User{} = user, id, command_id) do
-    with {:ok, tag, {above, _below}} <- shown_neighbors(user, id) do
-      case above && shown_neighbors(user, above.id) do
+  def move_tag_up(%User{} = user, id, command_id, opts \\ []) do
+    with {:ok, tag, {above, _below}} <- shown_neighbors(user, id, opts) do
+      case above && shown_neighbors(user, above.id, opts) do
         nil ->
           {:error, :first}
 
@@ -324,8 +334,8 @@ defmodule Marskal.Tags do
   end
 
   @doc "Swaps the tag with the shown sibling below it."
-  def move_tag_down(%User{} = user, id, command_id) do
-    with {:ok, tag, {_above, below}} <- shown_neighbors(user, id) do
+  def move_tag_down(%User{} = user, id, command_id, opts \\ []) do
+    with {:ok, tag, {_above, below}} <- shown_neighbors(user, id, opts) do
       if below,
         do: place_tag(user, tag.id, tag.parent_id, below.id, command_id),
         else: {:error, :last}
@@ -392,7 +402,7 @@ defmodule Marskal.Tags do
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
   end
 
-  defp to_do_tasks_tagged(user, tag_ids) do
+  defp shown_tasks_tagged(user, tag_ids, show) do
     tagged =
       from l in TaskTag,
         where: l.user_id == ^user.id and l.tag_id in ^tag_ids and is_nil(l.discarded_at),
@@ -404,15 +414,25 @@ defmodule Marskal.Tags do
         select: l.project_id
 
     Task
-    |> Tasks.where_open(user)
+    |> Tasks.where_shown(user, show)
     |> where([t], t.id in subquery(tagged) or t.project_id in subquery(via_project))
     |> order_by([t], desc: t.inserted_at, desc: t.id)
     |> Repo.all()
+    |> then(&Tasks.without_deferred(user, &1, show))
   end
 
-  defp include_fun(tree, tag) do
-    if Tree.visible?(tree, tag.id),
-      do: &Tree.visible?(tree, &1.id),
+  @doc "Whether a tag is shown for `show`. On hold stays shown; dropped needs `:dropped`."
+  def shown?(%Tree{} = tree, id, show) when is_list(show) do
+    case Tree.state(tree, id) do
+      nil -> false
+      :dropped -> :dropped in show
+      _state -> true
+    end
+  end
+
+  defp include_fun(tree, tag, show) do
+    if shown?(tree, tag.id, show),
+      do: &shown?(tree, &1.id, show),
       else: fn _tag -> true end
   end
 
@@ -476,7 +496,8 @@ defmodule Marskal.Tags do
 
   # The tag, and the siblings just above and below it among those shown.
   # A hidden tag, on a dropped tag's own page, goes by all its siblings.
-  defp shown_neighbors(user, id) do
+  defp shown_neighbors(user, id, opts) do
+    show = Keyword.get(opts, :show, [])
     tree = tree(user)
 
     case Tree.get(tree, id) do
@@ -487,7 +508,7 @@ defmodule Marskal.Tags do
         siblings =
           tree
           |> Tree.children(tag.parent_id)
-          |> Enum.filter(&(Tree.visible?(tree, &1.id) or not Tree.visible?(tree, tag.id)))
+          |> Enum.filter(&(shown?(tree, &1.id, show) or not shown?(tree, tag.id, show)))
 
         index = Enum.find_index(siblings, &(&1.id == tag.id))
         above = if index > 0, do: Enum.at(siblings, index - 1)

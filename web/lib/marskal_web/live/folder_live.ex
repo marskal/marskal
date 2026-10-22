@@ -31,6 +31,7 @@ defmodule MarskalWeb.FolderLive do
       inspector={assigns[:inspector]}
       nav={assigns[:nav]}
       change_version={assigns[:change_version] || 0}
+      visibility={assigns[:visibility]}
     >
       <p :if={@folder.parent_path != []} class="lede">{Enum.join(@folder.parent_path, " / ")}</p>
       <MarskalWeb.NavComponents.page_heading type={:folder} id={@folder.id} inspector={@inspector}>
@@ -133,7 +134,7 @@ defmodule MarskalWeb.FolderLive do
 
   # Leaves the capture forms alone, so a broadcast does not clear typing.
   defp assign_records(socket, user, folder) do
-    nav = ProjectNav.build(user)
+    nav = ProjectNav.build(user, socket.assigns.visibility)
 
     socket
     |> assign(:page_title, folder.name)

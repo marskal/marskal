@@ -38,7 +38,7 @@ defmodule Marskal.FlaggedTest do
 
     assert titles(Tasks.list_flagged(user)) == ["Paint", "Call", "Milk"]
 
-    assert titles(Tasks.list_flagged(user, unavailable: true)) == [
+    assert titles(Tasks.list_flagged(user, show: [:deferred])) == [
              "Paint",
              "Call",
              "Milk",
@@ -48,7 +48,8 @@ defmodule Marskal.FlaggedTest do
     other = AccountsFixtures.user_fixture()
     assert Tasks.list_flagged(other) == []
 
-    tasks = Tasks.list_open(user, unavailable: true) ++ Tasks.list_inbox(user)
+    tasks =
+      Tasks.list_open(user, show: [:deferred]) ++ Tasks.list_inbox(user, show: [:deferred])
 
     assert Tasks.flagged_ids(user, tasks) ==
              MapSet.new([paint.id, call.id, milk.id, later.id])

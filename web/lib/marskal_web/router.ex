@@ -89,6 +89,7 @@ defmodule MarskalWeb.Router do
     get "/", PageController, :home
 
     live_session :require_authenticated_user,
+      session: {MarskalWeb.Visibility, :session, []},
       on_mount: [
         {MarskalWeb.UserAuth, :require_authenticated},
         {MarskalWeb.Inspector, :default},
@@ -121,6 +122,7 @@ defmodule MarskalWeb.Router do
     pipe_through [:browser, :require_authenticated_user, :require_sudo_mode]
 
     live_session :require_sudo_mode,
+      session: {MarskalWeb.Visibility, :session, []},
       on_mount: [
         {MarskalWeb.UserAuth, :require_authenticated},
         {MarskalWeb.Inspector, :default},

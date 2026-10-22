@@ -14,20 +14,24 @@ defmodule MarskalWeb.Inspector do
 
   alias Marskal.Changes
   alias Marskal.ProjectNav
+  alias MarskalWeb.Visibility
 
   def selected?(type, id, %{type: type, id: id}), do: true
   def selected?(_type, _id, _selection), do: false
 
-  def on_mount(:default, _params, _session, socket) do
+  def on_mount(:default, _params, session, socket) do
     user = socket.assigns.current_scope.user
     if connected?(socket), do: Changes.subscribe(user)
+    visibility = Visibility.from_mount(socket, session)
 
     {:cont,
      socket
-     |> assign(:nav, ProjectNav.build(user))
+     |> assign(:visibility, visibility)
+     |> assign(:nav, ProjectNav.build(user, visibility))
      |> assign(:change_version, 0)
      |> attach_hook(:inspector_params, :handle_params, &on_params/3)
      |> attach_hook(:inspector_event, :handle_event, &on_event/3)
+     |> attach_hook(:visibility, :handle_event, &on_visibility/3)
      |> attach_hook(:inspector_info, :handle_info, &on_info/2)
      |> MarskalWeb.NavMoves.attach()}
   end
@@ -37,8 +41,7 @@ defmodule MarskalWeb.Inspector do
   defp on_params(params, uri, socket) do
     uri = URI.parse(uri)
 
-    # Other query params, such as the open stream's ?unavailable=1, survive
-    # opening and closing the inspector.
+    # Other query params survive opening and closing the inspector.
     page_query =
       (uri.query || "")
       |> URI.decode_query()
@@ -73,9 +76,33 @@ defmodule MarskalWeb.Inspector do
 
   defp on_event(_event, _params, socket), do: {:cont, socket}
 
+  # A toggle here is stored by the page's hook, which tells other tabs; a
+  # value from another tab is already stored. Either way the page reloads
+  # through the same path as a change.
+  defp on_visibility("visibility", %{"kind" => kind}, socket) when is_binary(kind) do
+    case Enum.find(Visibility.kinds(), &(Atom.to_string(&1) == kind)) do
+      nil ->
+        {:halt, socket}
+
+      kind ->
+        next = Visibility.toggle(socket.assigns.visibility, kind)
+        socket = push_event(socket, "visibility", %{value: Visibility.encode(next)})
+        {:halt, show(socket, next)}
+    end
+  end
+
+  defp on_visibility("visibility", %{"value" => value}, socket) when is_binary(value) do
+    next = Visibility.parse(value)
+    {:halt, if(next == socket.assigns.visibility, do: socket, else: show(socket, next))}
+  end
+
+  defp on_visibility(_event, _params, socket), do: {:cont, socket}
+
   defp on_info({:marskal_change, _type, _id}, socket) do
+    user = socket.assigns.current_scope.user
+
     socket
-    |> assign(:nav, ProjectNav.build(socket.assigns.current_scope.user))
+    |> assign(:nav, ProjectNav.build(user, socket.assigns.visibility))
     |> assign(:change_version, socket.assigns.change_version + 1)
     |> continue_if_defined(:handle_info, 2)
   end
@@ -85,6 +112,35 @@ defmodule MarskalWeb.Inspector do
     do: {:halt, put_flash(socket, kind, message)}
 
   defp on_info(_message, socket), do: {:cont, socket}
+
+  # A visibility change is a new view: rows kept so a slip can be undone,
+  # and a tag outline's kept groups, start over. The sidebar and the page's
+  # list reload as on a change, in this same render: a change message sent
+  # to self would render the emptied list first.
+  defp show(socket, visibility) do
+    message = {:marskal_change, :visibility, nil}
+    socket = socket |> assign(:visibility, visibility) |> clear_kept_rows()
+
+    case on_info(message, socket) do
+      {:cont, socket} ->
+        {:noreply, socket} = socket.view.handle_info(message, socket)
+        socket
+
+      {:halt, socket} ->
+        socket
+    end
+  end
+
+  defp clear_kept_rows(socket) do
+    socket =
+      if Map.has_key?(socket.assigns, :tasks),
+        do: MarskalWeb.TaskList.reset_tasks(socket),
+        else: socket
+
+    if Map.has_key?(socket.assigns, :outline),
+      do: assign(socket, :outline, nil),
+      else: socket
+  end
 
   defp continue_if_defined(socket, fun, arity) do
     if function_exported?(socket.view, fun, arity),

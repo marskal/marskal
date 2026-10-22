@@ -222,7 +222,8 @@ h1 {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .app-header {
+  /* `.app` outranks the base .app-header rule, which comes later. */
+  .app .app-header {
     flex-wrap: nowrap;
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
@@ -247,6 +248,11 @@ h1 {
   }
 
   .app:has(.sidebar) .app-header__account {
+    display: none;
+  }
+
+  /* The logo alone, so the Show and theme toggles fit one row. */
+  .app:has(.sidebar) .app-header__brand span {
     display: none;
   }
 
@@ -400,6 +406,16 @@ h1 {
 .nav-row > a > .icon {
   flex: none;
   margin-block: calc((1lh - 1rem) / 2);
+}
+
+.nav-row.is-done > a,
+.nav-row.is-dropped > a,
+.nav-row.is-deferred > a {
+  color: var(--muted);
+}
+
+.nav-row.is-done > a .nav-label {
+  text-decoration: line-through;
 }
 
 .nav-label {
@@ -739,6 +755,70 @@ h1 {
 
 @media (max-width: 720px) {
   .theme-toggle button {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+}
+
+/* This browser's Done / Dropped / Deferred toggles, styled as the theme
+   toggle. They take the space that pushes the theme toggle right. */
+.visibility {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  margin-left: auto;
+  padding: 0.125rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.visibility + .theme-toggle {
+  margin-left: 0;
+}
+
+.visibility__label {
+  padding-inline: 0.4rem 0.2rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.visibility button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  height: 1.75rem;
+  padding: 0 0.45rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.visibility button:hover {
+  color: var(--text);
+}
+
+.visibility button[aria-pressed="true"] {
+  background: var(--accent-tint-strong);
+  color: var(--accent);
+}
+
+@media (max-width: 1000px) {
+  .visibility__label,
+  .visibility__name {
+    display: none;
+  }
+
+  .visibility button {
+    justify-content: center;
+    width: 1.75rem;
+    padding: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .visibility button {
     width: 2.25rem;
     height: 2.25rem;
   }

@@ -14,6 +14,7 @@ defmodule MarskalWeb.NavOutline do
 
   use MarskalWeb, :html
 
+  alias Marskal.Dates
   alias Marskal.ProjectFolders.ProjectFolder
   alias Marskal.ProjectNav
   alias Marskal.Projects.Project
@@ -29,10 +30,10 @@ defmodule MarskalWeb.NavOutline do
     |> Enum.flat_map(fn
       %ProjectFolder{} = folder ->
         below = project_rows(nav, folder.id, depth + 1)
-        [row(:folder, folder.id, folder.name, depth, below != []) | below]
+        [row(:folder, folder.id, folder.name, depth, below != [], tone(folder)) | below]
 
       %Project{} = project ->
-        [row(:project, project.id, project.title, depth, false)]
+        [row(:project, project.id, project.title, depth, false, tone(project))]
     end)
   end
 
@@ -46,12 +47,22 @@ defmodule MarskalWeb.NavOutline do
     |> Enum.filter(include?)
     |> Enum.flat_map(fn tag ->
       below = tag_rows(tree, tag.id, include?, depth + 1)
-      [row(:tag, tag.id, tag.name, depth, below != []) | below]
+      [row(:tag, tag.id, tag.name, depth, below != [], tone(tag)) | below]
     end)
   end
 
-  defp row(type, id, label, depth, children?),
-    do: %{type: type, id: id, label: label, depth: depth, children?: children?}
+  # Folders, projects, and tags alike; only a project can be deferred.
+  defp tone(%{state: state}) when state in [:done, :dropped], do: state
+
+  defp tone(%Project{} = project) do
+    if Dates.deferred?(project, DateTime.utc_now()), do: :deferred
+  end
+
+  defp tone(_record), do: nil
+
+  defp row(type, id, label, depth, children?, tone) do
+    %{type: type, id: id, label: label, depth: depth, children?: children?, tone: tone}
+  end
 
   attr :id, :string, required: true
   attr :class, :any, default: nil
@@ -561,7 +572,7 @@ defmodule MarskalWeb.NavOutline do
       <li
         :for={row <- @rows}
         id={"#{@id}-#{row.type}-#{row.id}"}
-        class="nav-row"
+        class={["nav-row", row.tone && "is-#{row.tone}"]}
         style={row.depth > 0 && "--depth: #{row.depth}"}
         data-type={row.type}
         data-id={row.id}
@@ -584,7 +595,7 @@ defmodule MarskalWeb.NavOutline do
           inspector={@inspector}
           nav_stop
         >
-          <.row_icon type={row.type} />
+          <.row_icon type={row.type} tone={row.tone} />
           <span class="nav-label" title={row.label}>{row.label}</span>
         </MarskalWeb.NavComponents.record_link>
       </li>
@@ -593,8 +604,16 @@ defmodule MarskalWeb.NavOutline do
   end
 
   attr :type, :atom, required: true
+  attr :tone, :atom, default: nil
 
+  # A project's icon says its state, as a task's checkbox does.
   defp row_icon(%{type: :folder} = assigns), do: ~H|<Lucideicons.folder class="icon" />|
-  defp row_icon(%{type: :project} = assigns), do: ~H|<Lucideicons.circle class="icon" />|
   defp row_icon(%{type: :tag} = assigns), do: ~H|<Lucideicons.tag class="icon" />|
+
+  defp row_icon(%{tone: :done} = assigns),
+    do: ~H|<Lucideicons.circle_check_big class="icon" />|
+
+  defp row_icon(%{tone: :dropped} = assigns), do: ~H|<Lucideicons.circle_off class="icon" />|
+  defp row_icon(%{tone: :deferred} = assigns), do: ~H|<Lucideicons.circle_dashed class="icon" />|
+  defp row_icon(assigns), do: ~H|<Lucideicons.circle class="icon" />|
 end

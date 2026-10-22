@@ -37,6 +37,10 @@ defmodule MarskalWeb.Layouts do
   attr :nav, :any, default: nil, doc: "the sidebar tree, assigned by MarskalWeb.Inspector"
   attr :change_version, :integer, default: 0
 
+  attr :visibility, :list,
+    default: nil,
+    doc: "what this browser also shows (`MarskalWeb.Visibility`)"
+
   slot :inner_block, required: true
 
   def app(assigns) do
@@ -65,6 +69,7 @@ defmodule MarskalWeb.Layouts do
             <span>Marskal</span>
           </.link>
         </div>
+        <.visibility_toggle :if={@visibility} visibility={@visibility} />
         <.theme_toggle />
         <div class="app-header__account">
           <%= if @current_scope && @current_scope.user do %>
@@ -413,6 +418,78 @@ defmodule MarskalWeb.Layouts do
     <.link navigate={@navigate} class={@current && "is-current"} aria-current={@current && "page"}>
       {render_slot(@inner_block)}
     </.link>
+    """
+  end
+
+  attr :visibility, :list, required: true
+
+  @doc """
+  Done, Dropped, and Deferred, for this browser only: three toggles beside
+  the theme's. The server filters by `MarskalWeb.Visibility`; this hook
+  stores a toggle in the cookie and passes it to the browser's other tabs.
+  """
+  def visibility_toggle(assigns) do
+    ~H"""
+    <div
+      id="visibility"
+      class="visibility"
+      role="group"
+      aria-labelledby="visibility-label"
+      data-visibility={MarskalWeb.Visibility.encode(@visibility)}
+      phx-hook=".Visibility"
+    >
+      <span id="visibility-label" class="visibility__label">{gettext("Show")}</span>
+      <button
+        :for={
+          {kind, label, hint} <- [
+            {:done, gettext("Done"), gettext("Show done tasks and projects")},
+            {:dropped, gettext("Dropped"),
+             gettext("Show dropped tasks, projects, folders, and tags")},
+            {:deferred, gettext("Deferred"), gettext("Show deferred tasks and projects")}
+          ]
+        }
+        type="button"
+        id={"visibility-#{kind}"}
+        aria-pressed={to_string(kind in @visibility)}
+        title={hint}
+        phx-click="visibility"
+        phx-value-kind={kind}
+      >
+        <Lucideicons.square_check_big :if={kind == :done} class="icon" />
+        <Lucideicons.square_off :if={kind == :dropped} class="icon" />
+        <Lucideicons.hourglass :if={kind == :deferred} class="icon" />
+        <span class="visibility__name">{label}</span>
+      </button>
+    </div>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".Visibility" extension="ts">
+      import {ViewHook} from "phoenix_live_view"
+
+      // Must match MarskalWeb.Visibility and the connect params in app.ts.
+      const cookie = "marskal_visibility"
+      const year = 60 * 60 * 24 * 365
+
+      export default class extends ViewHook {
+        channel: BroadcastChannel | null = null
+
+        mounted() {
+          this.channel = new BroadcastChannel(cookie)
+          this.channel.onmessage = (event: MessageEvent) => {
+            if (typeof event.data === "string" && event.data !== this.el.dataset.visibility) {
+              this.pushEvent("visibility", {value: event.data})
+            }
+          }
+
+          this.handleEvent("visibility", ({value}: {value: string}) => {
+            document.cookie = `${cookie}=${value}; path=/; max-age=${year}; samesite=lax`
+            this.channel?.postMessage(value)
+          })
+        }
+
+        destroyed() {
+          this.channel?.close()
+        }
+      }
+    </script>
     """
   end
 

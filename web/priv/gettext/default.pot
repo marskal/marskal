@@ -219,11 +219,17 @@ msgstr ""
 msgid "Dark"
 msgstr ""
 
+#: lib/marskal_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Deferred"
+msgstr ""
+
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr ""
 
+#: lib/marskal_web/components/layouts.ex
 #: lib/marskal_web/live/project_live.ex
 #, elixir-autogen, elixir-format
 msgid "Done"
@@ -244,6 +250,7 @@ msgstr ""
 msgid "Drop your OmniFocus backup here"
 msgstr ""
 
+#: lib/marskal_web/components/layouts.ex
 #: lib/marskal_web/live/project_live.ex
 #, elixir-autogen, elixir-format
 msgid "Dropped"
@@ -364,6 +371,11 @@ msgstr ""
 #: lib/marskal_web/controllers/user_session_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid email or password"
+msgstr ""
+
+#: lib/marskal_web/live/project_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its tasks still to do are deferred. Show deferred to see them."
 msgstr ""
 
 #: lib/marskal_web/components/keys_help.ex
@@ -521,6 +533,26 @@ msgstr ""
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Shift"
+msgstr ""
+
+#: lib/marskal_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Show"
+msgstr ""
+
+#: lib/marskal_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Show deferred tasks and projects"
+msgstr ""
+
+#: lib/marskal_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Show done tasks and projects"
+msgstr ""
+
+#: lib/marskal_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Show dropped tasks, projects, folders, and tags"
 msgstr ""
 
 #: lib/marskal_web/components/keys_help.ex

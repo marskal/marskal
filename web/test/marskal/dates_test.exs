@@ -98,7 +98,7 @@ defmodule Marskal.DatesTest do
 
       assert titles(Tasks.list_open(user)) == ["Plain", "Past"]
 
-      assert titles(Tasks.list_open(user, unavailable: true)) == [
+      assert titles(Tasks.list_open(user, show: [:deferred])) == [
                "Plain",
                "Past",
                "Someday",
@@ -278,7 +278,7 @@ defmodule Marskal.DatesTest do
 
       today = Dates.today(Marskal.Accounts.timezone(user))
       assert Tasks.list_planned(user, today) == []
-      assert titles(Tasks.list_planned(user, today, unavailable: true)) == ["Deferred"]
+      assert titles(Tasks.list_planned(user, today, show: [:deferred])) == ["Deferred"]
     end
 
     test "a later day shows what is deferred until within it", %{user: user} do

@@ -228,13 +228,13 @@ defmodule MarskalWeb.TagsLiveTest do
     end
   end
 
-  test "opening the inspector keeps the open stream's toggle", %{conn: conn, user: user} do
+  test "opening the inspector keeps the page's other query params", %{conn: conn, user: user} do
     task = task!(user, "Anything")
 
-    {:ok, view, _html} = live(conn, ~p"/open?#{[unavailable: 1]}")
+    {:ok, view, _html} = live(conn, ~p"/open?#{[focus: "1"]}")
     view |> element("#task-#{task.id} button.select") |> render_click()
 
-    assert_patch(view, ~p"/open?#{[task: task.id, unavailable: 1]}")
+    assert_patch(view, ~p"/open?#{[task: task.id, focus: "1"]}")
   end
 
   defp tag!(user, name, parent \\ nil) do

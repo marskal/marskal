@@ -149,7 +149,8 @@ defmodule MarskalWeb.DatesLiveTest do
     {:ok, view, _html} = live(conn, ~p"/open")
     refute has_element?(view, "#open-tasks", "Paint")
 
-    {:ok, view, _html} = live(conn, ~p"/open?unavailable=1")
+    view |> element("#visibility-deferred") |> render_click()
+    render(view)
     assert has_element?(view, "#open-tasks li.is-unavailable .mark--deferred", "Deferred")
   end
 
