@@ -25,6 +25,7 @@ defmodule MarskalWeb.TagLive do
          |> MarskalWeb.TaskKeys.attach()
          |> assign(:tag_id, tag.id)
          |> new_tag_form()
+         |> new_task_form()
          |> load()}
     end
   end
@@ -62,6 +63,15 @@ defmodule MarskalWeb.TagLive do
           Activate
         </button>
       </p>
+      <.add_form
+        id="new-tag-task"
+        for={@task_form}
+        field={@task_form[:title]}
+        label={gettext("Add a task with this tag")}
+        command_id={@task_command_id}
+        phx-submit="create-task"
+        data-new-task="task"
+      />
 
       <.outline_node
         node={@outline.root}
@@ -146,6 +156,22 @@ defmodule MarskalWeb.TagLive do
     case Tags.set_tag_state(user, socket.assigns.tag.id, state, Ecto.UUID.generate(version: 7)) do
       {:ok, _tag} -> {:noreply, load(socket)}
       {:error, _} -> {:noreply, put_flash(socket, :error, "Could not update tag.")}
+    end
+  end
+
+  # Not to the inbox: it goes to No project, already tagged.
+  def handle_event("create-task", %{"task" => params, "command_id" => command_id}, socket) do
+    user = socket.assigns.current_scope.user
+
+    case Tags.create_tagged_task(user, socket.assigns.tag.id, params, command_id) do
+      {:ok, _task} ->
+        {:noreply, socket |> new_task_form() |> load()}
+
+      {:error, %Ecto.Changeset{data: %Marskal.Tasks.Task{}} = changeset} ->
+        {:noreply, assign(socket, :task_form, to_form(changeset, as: "task"))}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, gettext("Could not add task."))}
     end
   end
 
@@ -279,6 +305,12 @@ defmodule MarskalWeb.TagLive do
     socket
     |> assign(:tag_command_id, Ecto.UUID.generate(version: 7))
     |> assign(:tag_form, to_form(%{"name" => ""}, as: "tag"))
+  end
+
+  defp new_task_form(socket) do
+    socket
+    |> assign(:task_command_id, Ecto.UUID.generate(version: 7))
+    |> assign(:task_form, to_form(%{"title" => ""}, as: "task"))
   end
 
   defp state_note(%{state: :on_hold}, _state),

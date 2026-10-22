@@ -136,6 +136,32 @@ defmodule Marskal.TagsTest do
       assert Repo.aggregate(TaskTag, :count) == 1
     end
 
+    test "a tagged task goes to No project, and a replay adds nothing", %{user: user} do
+      waiting = tag!(user, "Waiting")
+      command_id = command()
+      attrs = %{"title" => "Reply", "inbox" => "true"}
+
+      {:ok, task} = Tags.create_tagged_task(user, waiting.id, attrs, command_id)
+      assert %{inbox: false, project_id: nil} = task
+      assert live_tag_ids(task) == [waiting.id]
+
+      {:ok, again} = Tags.create_tagged_task(user, waiting.id, attrs, command_id)
+      assert again.id == task.id
+      assert Repo.aggregate(TaskTag, :count) == 1
+    end
+
+    test "a tagged task with a missing tag is not created", %{user: user} do
+      assert {:error, :not_found} =
+               Tags.create_tagged_task(
+                 user,
+                 Ecto.UUID.generate(version: 7),
+                 %{"title" => "Reply"},
+                 command()
+               )
+
+      assert Repo.aggregate(Marskal.Tasks.Task, :count) == 0
+    end
+
     test "projects are tagged the same way", %{user: user} do
       {:ok, project} = Projects.create_project(user, %{"title" => "Garden"}, command())
       home = tag!(user, "Home")

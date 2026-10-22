@@ -376,6 +376,22 @@ defmodule Marskal.Tags do
     end)
   end
 
+  @doc """
+  A new task in No project carrying this tag, both or neither. The link's
+  command id derives from the task's, so a replay replays both.
+  """
+  def create_tagged_task(%User{} = user, tag_id, attrs, command_id) do
+    attrs = Map.merge(attrs, %{"inbox" => false, "project_id" => nil})
+
+    Repo.transact(fn ->
+      with {:ok, task} <- Tasks.create_task(user, attrs, command_id),
+           {:ok, _link} <-
+             tag_task(user, task.id, tag_id, Marskal.Uuid.v5(command_id, "tag|#{tag_id}")) do
+        {:ok, task}
+      end
+    end)
+  end
+
   def tag_task(user, task_id, tag_id, command_id),
     do: write_link(user, :task, task_id, tag_id, :tag, command_id)
 
