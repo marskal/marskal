@@ -60,7 +60,10 @@ defmodule Marskal.Recurrence.ProjectOccurrenceTest do
     {:ok, done} = Projects.complete_project(user, project.id, command())
 
     [next] = later_occurrences(series, project)
-    slot = DateTime.add(done.resolved_at, 7, :day)
+    # A week on the user's clock, which is not 7 × 24 hours across a change
+    # to or from summer time.
+    {done_day, done_time} = Dates.to_local(done.resolved_at, @zone)
+    slot = Dates.from_local(Date.add(done_day, 7), done_time, :due_at, @zone)
     assert next.id == Recurrence.occurrence_id(series.id, slot)
 
     assert %Project{

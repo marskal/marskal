@@ -40,7 +40,10 @@ defmodule Marskal.Recurrence.NextOccurrenceTest do
       {:ok, done} = Tasks.complete_task(user, first.id, command())
 
       [next] = later_occurrences(series, first)
-      slot = DateTime.add(done.resolved_at, 3, :day)
+      # Three days on the user's clock, which is not 3 × 24 hours across a
+      # change to or from summer time.
+      {done_day, done_time} = Dates.to_local(done.resolved_at, "Europe/Copenhagen")
+      slot = Dates.from_local(Date.add(done_day, 3), done_time, :due_at, "Europe/Copenhagen")
       assert next.id == Recurrence.occurrence_id(series.id, slot)
 
       assert %Task{
@@ -245,7 +248,8 @@ defmodule Marskal.Recurrence.NextOccurrenceTest do
 
       {:ok, _} = Tasks.complete_task(user, first.id, command())
       [next] = later_occurrences(series, first)
-      slot = DateTime.add(first.occurrence_for, 1, :day)
+      {first_day, first_time} = Dates.to_local(first.occurrence_for, "Europe/Copenhagen")
+      slot = Dates.from_local(Date.add(first_day, 1), first_time, :due_at, "Europe/Copenhagen")
       assert next.id == Recurrence.occurrence_id(series.id, slot)
       assert %Task{title: "Bins", state: :to_do, due_at: ^slot, occurrence_for: ^slot} = next
     end
@@ -271,7 +275,10 @@ defmodule Marskal.Recurrence.NextOccurrenceTest do
 
       {:ok, _} = Tasks.complete_task(user, first.id, command())
       assert [%Task{occurrence_for: slot}] = later_occurrences(series, first)
-      assert slot == DateTime.add(first.occurrence_for, 3, :day)
+      {first_day, first_time} = Dates.to_local(first.occurrence_for, "Europe/Copenhagen")
+
+      assert slot ==
+               Dates.from_local(Date.add(first_day, 3), first_time, :due_at, "Europe/Copenhagen")
     end
 
     test "done by mistake, undone, and done again creates one", %{user: user} do
