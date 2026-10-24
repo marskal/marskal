@@ -293,6 +293,7 @@ defmodule MarskalWeb.KeysHelp do
       {gettext("Go to the list"), ["↓", gettext("Esc")], ["j"]},
       {gettext("Go to the sidebar, from a top row"), ["←"], ["h"]},
       {gettext("Back from the sidebar"), ["→"], ["l"]},
+      {gettext("Go to a view, project, folder, or tag"), ["/", {:chord, ["Cmd", "K"]}], []},
       {gettext("Show this help"), ["?"], []}
     ]
   end
