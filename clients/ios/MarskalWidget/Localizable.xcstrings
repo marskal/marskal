@@ -13,6 +13,9 @@
     "Adds a task to your Marskal Inbox." : {
 
     },
+    "Agenda" : {
+
+    },
     "Buy milk" : {
 
     },
@@ -20,6 +23,9 @@
 
     },
     "Choose the tasks to show." : {
+
+    },
+    "Due %@" : {
 
     },
     "Flagged" : {
@@ -38,6 +44,9 @@
 
     },
     "Marskal could not read its data. Open the app and try again." : {
+
+    },
+    "Nothing planned or due today" : {
 
     },
     "Nothing to do" : {
@@ -64,10 +73,16 @@
     "Title" : {
 
     },
+    "Today" : {
+
+    },
     "Water the plants" : {
 
     },
     "What do you want to add?" : {
+
+    },
+    "What is planned or due today, by time. Check a task off right here." : {
 
     },
     "Your Inbox, open tasks, or flagged tasks. Check a task off right here." : {

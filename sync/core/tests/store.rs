@@ -856,3 +856,108 @@ fn a_pulled_flag_is_kept() {
 
     assert!(store.world().unwrap().task(id).unwrap().flagged);
 }
+
+#[test]
+fn the_agenda_is_due_and_planned_tasks_by_time() {
+    let (mut store, _clock) = store();
+    // The end of 2 October in Copenhagen; the clock reads 11:00 there.
+    let until: Timestamp = "2026-10-02T22:00:00Z".parse().unwrap();
+    let rows = [
+        ("Afternoon", json!({ "planned_at": "2026-10-02T12:00:00Z" })),
+        (
+            "Missed yesterday",
+            json!({ "planned_at": "2026-10-01T07:00:00Z" }),
+        ),
+        ("Overdue", json!({ "due_at": "2026-09-30T15:00:00Z" })),
+        (
+            "Due before it is planned",
+            json!({ "planned_at": "2026-10-02T06:00:00Z", "due_at": "2026-10-02T15:00:00Z" }),
+        ),
+        (
+            "Planned today, due next week",
+            json!({ "planned_at": "2026-10-02T07:00:00Z", "due_at": "2026-10-09T15:00:00Z" }),
+        ),
+        ("Tomorrow", json!({ "planned_at": "2026-10-02T22:00:00Z" })),
+        (
+            "Done",
+            json!({ "planned_at": "2026-10-02T08:00:00Z", "state": "done" }),
+        ),
+        (
+            "Deferred",
+            json!({ "planned_at": "2026-10-02T08:00:00Z", "defer_until": "2026-10-02T10:00:00Z" }),
+        ),
+        ("Undated", json!({})),
+    ];
+    let rows = rows
+        .into_iter()
+        .map(|(title, extra)| ("task", task_row(Uuid::now_v7(), title, extra)))
+        .collect();
+    store.apply_pull(&pull(1, true, rows)).unwrap();
+
+    let agenda: Vec<(String, String, bool)> = store
+        .world()
+        .unwrap()
+        .agenda(until)
+        .into_iter()
+        .map(|e| (e.view.task.title, e.at.to_string(), e.due))
+        .collect();
+
+    assert_eq!(
+        agenda,
+        [
+            ("Overdue".into(), "2026-09-30T15:00:00Z".into(), true),
+            (
+                "Missed yesterday".into(),
+                "2026-10-01T07:00:00Z".into(),
+                false
+            ),
+            (
+                "Planned today, due next week".into(),
+                "2026-10-02T07:00:00Z".into(),
+                false
+            ),
+            ("Afternoon".into(), "2026-10-02T12:00:00Z".into(), false),
+            (
+                "Due before it is planned".into(),
+                "2026-10-02T15:00:00Z".into(),
+                true
+            ),
+        ]
+    );
+}
+
+#[test]
+fn a_subtask_is_on_the_agenda_by_its_parent_s_planned() {
+    let (mut store, _clock) = store();
+    let until: Timestamp = "2026-10-02T22:00:00Z".parse().unwrap();
+    let paint = store
+        .add_task(NewTask {
+            title: "Paint".into(),
+            location: Some(Location::NoProject),
+            planned_at: Some("2026-10-02T13:00:00Z".parse().unwrap()),
+            ..NewTask::default()
+        })
+        .unwrap();
+    store
+        .add_task(NewTask {
+            title: "Sand".into(),
+            parent_id: Some(paint),
+            ..NewTask::default()
+        })
+        .unwrap();
+
+    let agenda: Vec<(String, String)> = store
+        .world()
+        .unwrap()
+        .agenda(until)
+        .into_iter()
+        .map(|e| (e.view.task.title, e.at.to_string()))
+        .collect();
+    assert_eq!(
+        agenda,
+        [
+            ("Paint".into(), "2026-10-02T13:00:00Z".into()),
+            ("Sand".into(), "2026-10-02T13:00:00Z".into()),
+        ]
+    );
+}

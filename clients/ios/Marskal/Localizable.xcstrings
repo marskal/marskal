@@ -81,6 +81,9 @@
         }
       }
     },
+    "Agenda" : {
+
+    },
     "Cancel" : {
 
     },
@@ -97,6 +100,9 @@
 
     },
     "Drop" : {
+
+    },
+    "Due %@" : {
 
     },
     "Flagged" : {
@@ -134,6 +140,9 @@
 
     },
     "Not synced yet" : {
+
+    },
+    "Nothing planned or due today" : {
 
     },
     "Nothing to do" : {
@@ -210,6 +219,12 @@
     "Task" : {
 
     },
+    "Tasks" : {
+
+    },
+    "Tasks planned or due today show up here." : {
+
+    },
     "That change could not be made" : {
 
     },
@@ -252,6 +267,9 @@
           }
         }
       }
+    },
+    "Today" : {
+
     },
     "Try closing and opening the app again." : {
 

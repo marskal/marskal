@@ -51,7 +51,14 @@ struct RootView: View {
             if model.session == nil {
                 SignInView()
             } else {
-                TasksView()
+                TabView {
+                    Tab("Tasks", systemImage: "checklist") {
+                        TasksView()
+                    }
+                    Tab("Agenda", systemImage: "calendar") {
+                        AgendaView()
+                    }
+                }
             }
         }
         .alert(item: $model.problem) { problem in

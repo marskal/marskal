@@ -11,6 +11,7 @@ final class AppModel {
     private(set) var session: Session?
     private(set) var inbox: [TaskItem] = []
     private(set) var open: [TaskItem] = []
+    private(set) var agenda: [AgendaItem] = []
     private(set) var preferences: Preferences?
     private(set) var lastSyncedAt: Date?
     private(set) var projects: [ProjectItem] = []
@@ -96,6 +97,7 @@ final class AppModel {
         self.session = nil
         inbox = []
         open = []
+        agenda = []
         projects = []
         offline = false
         preferences = nil
@@ -274,6 +276,7 @@ final class AppModel {
         do {
             inbox = try store.tasks(filter: .inbox)
             open = try store.tasks(filter: .open(unavailable: false))
+            agenda = try Agenda.today(store)
             projects = try store.projects().filter { $0.state == .toDo }
             preferences = try store.preferences()
             let status = try store.status()

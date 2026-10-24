@@ -285,3 +285,36 @@ fn another_connection_sees_a_write() {
     assert_eq!(db.store.tasks(TaskFilter::Inbox).unwrap().len(), 1);
     widget.close();
 }
+
+#[test]
+fn the_agenda_carries_the_time_each_task_is_on_it_for() {
+    let db = Db::new();
+    let add = |title: &str, planned: Option<&str>, due: Option<&str>| {
+        db.store
+            .add_task(NewTask {
+                title: title.into(),
+                planned_at: planned.map(at),
+                due_at: due.map(at),
+                ..NewTask::default()
+            })
+            .unwrap()
+    };
+    let report = add(
+        "Report",
+        Some("2020-05-04T07:00:00Z"),
+        Some("2020-05-04T15:00:00Z"),
+    );
+    let call = add("Call", Some("2020-05-04T10:00:00Z"), None);
+    add("Later", Some("2020-05-05T07:00:00Z"), None);
+
+    let agenda = db.store.agenda(at("2020-05-04T22:00:00Z")).unwrap();
+    let entries: Vec<(Uuid, Timestamp, bool)> =
+        agenda.iter().map(|e| (e.task.id, e.at, e.due)).collect();
+    assert_eq!(
+        entries,
+        [
+            (call, at("2020-05-04T10:00:00Z"), false),
+            (report, at("2020-05-04T15:00:00Z"), true),
+        ]
+    );
+}
