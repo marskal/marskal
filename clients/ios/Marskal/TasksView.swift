@@ -90,9 +90,14 @@ struct TasksView: View {
 
 extension TaskItem: @retroactive Identifiable {}
 
-private struct TaskRow: View {
+/// A task in a list: a circle that marks it Done, its title, project, and
+/// flag, and whatever the list shows after them.
+struct TaskRow<Detail: View>: View {
     let task: TaskItem
+    /// By its depth in the outline.
+    var indented = true
     let complete: () -> Void
+    @ViewBuilder var detail: Detail
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
@@ -113,14 +118,23 @@ private struct TaskRow: View {
                 }
             }
 
+            Spacer(minLength: 0)
+
             if task.flagged {
-                Spacer()
                 Image(systemName: "flag.fill")
                     .foregroundStyle(.orange)
                     .accessibilityLabel(Text("Flagged"))
             }
+
+            detail
         }
-        .padding(.leading, CGFloat(task.depth) * 16)
+        .padding(.leading, indented ? CGFloat(task.depth) * 16 : 0)
+    }
+}
+
+extension TaskRow where Detail == EmptyView {
+    init(task: TaskItem, complete: @escaping () -> Void) {
+        self.init(task: task, complete: complete) { EmptyView() }
     }
 }
 
@@ -248,7 +262,7 @@ private struct MoveSheet: View {
     }
 }
 
-private struct SyncStatus: View {
+struct SyncStatus: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {

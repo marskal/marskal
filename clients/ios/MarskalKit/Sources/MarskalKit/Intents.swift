@@ -68,6 +68,9 @@ public struct CompleteTaskIntent: AppIntent {
         }
         defer { store.close() }
         try store.setTaskState(id: id, state: .done)
+        // WidgetKit reloads the widget whose button this was; the task may
+        // be on the others too.
+        WidgetCenter.shared.reloadAllTimelines()
         return .result()
     }
 }

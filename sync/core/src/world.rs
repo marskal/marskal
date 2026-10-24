@@ -58,6 +58,17 @@ pub struct TaskView {
     pub flagged: bool,
 }
 
+/// A task on the agenda, and the time it is there for.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct AgendaView {
+    #[serde(flatten)]
+    pub view: TaskView,
+    /// Its Due when that is on the agenda, otherwise its Planned.
+    pub at: Timestamp,
+    /// On the agenda by its Due, not its Planned.
+    pub due: bool,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct TagRef {
     pub id: Uuid,
@@ -242,6 +253,36 @@ impl World {
             }),
             TaskFilter::All => self.newest_first(|_| true),
         }
+    }
+
+    /// The agenda for the day that ends at `until` (ADR 0006): open tasks
+    /// due or planned before then, earlier days' included, so a missed day
+    /// is not lost. A task both due and planned is on it by its Due. By
+    /// that time, earliest first. Deferred and unavailable tasks are left
+    /// out, as on the web.
+    pub fn agenda(&self, until: Timestamp) -> Vec<AgendaView> {
+        let before = |at: &Option<String>| at.as_deref().and_then(parse).filter(|at| *at < until);
+
+        let mut entries: Vec<AgendaView> = self
+            .tasks
+            .iter()
+            .map(|task| self.view(task))
+            .filter(|view| !view.resolved && view.available && !view.deferred)
+            .filter_map(|view| {
+                let (at, due) = match before(&view.effective.due_at) {
+                    Some(at) => (at, true),
+                    None => (before(&view.effective.planned_at)?, false),
+                };
+                Some(AgendaView { view, at, due })
+            })
+            .collect();
+
+        entries.sort_by(|a, b| {
+            a.at.cmp(&b.at)
+                .then(a.view.task.inserted_at.cmp(&b.view.task.inserted_at))
+                .then(a.view.task.id.cmp(&b.view.task.id))
+        });
+        entries
     }
 
     /// One task as a view.

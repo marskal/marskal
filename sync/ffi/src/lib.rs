@@ -216,6 +216,16 @@ pub struct TaskItem {
     pub inserted_at: Option<Timestamp>,
 }
 
+/// A task on the agenda, and the time it is there for.
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct AgendaItem {
+    pub task: TaskItem,
+    /// Its Due when that is on the agenda, otherwise its Planned.
+    pub at: Timestamp,
+    /// On the agenda by its Due, not its Planned.
+    pub due: bool,
+}
+
 #[derive(Clone, Debug, PartialEq, uniffi::Record)]
 pub struct ProjectItem {
     pub id: Uuid,
@@ -423,6 +433,23 @@ impl Store {
         self.with(|store| {
             let world = store.world()?;
             Ok(world.tasks(filter.into()).into_iter().map(task).collect())
+        })
+    }
+
+    /// The agenda for the day that ends at `until`, earlier days' open
+    /// tasks included. See `marskal_sync::World::agenda`.
+    pub fn agenda(&self, until: Timestamp) -> Result<Vec<AgendaItem>> {
+        self.with(|store| {
+            let world = store.world()?;
+            Ok(world
+                .agenda(until)
+                .into_iter()
+                .map(|entry| AgendaItem {
+                    task: task(entry.view),
+                    at: entry.at,
+                    due: entry.due,
+                })
+                .collect())
         })
     }
 
