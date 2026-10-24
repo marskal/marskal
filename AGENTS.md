@@ -40,6 +40,7 @@ This file is **short and actionable**. Rationale and history live in
 | iOS app (`clients/ios`, `sync/ffi`) | [0029](docs/adr/0029-ios-app.md) |
 | Sync event stream (SSE) | [0030](docs/adr/0030-sync-event-stream.md) |
 | Keyboard keymap | [0031](docs/adr/0031-keyboard-keymap.md) |
+| Typed dates, calendar | [0032](docs/adr/0032-date-shorthand.md) |
 | Repository layout | [0015](docs/adr/0015-repository-layout.md) |
 
 ---
@@ -357,6 +358,9 @@ The repository root is the product, not the web app (ADR 0015).
 - **Dates on screen (ADR 0027):** format through `Marskal.DateFormat` (ex_cldr,
   the user's `locale` preference), never `Calendar.strftime`. Form inputs keep
   ISO values. A new locale or ex_cldr version needs `nix/update-cldr-locales`.
+- **Typed dates (ADR 0032):** one text field per date, read by
+  `Marskal.DateInput` (English words, plus the locale's language: `da`).
+  The grammar is shared with Rust through `sync/fixtures/date_input.json`.
 - Tests: state transitions; user isolation; defer/planned/due; outliner/folder structure;
   **recurrence** matrix (ADR 0007); tag inheritance in Phase 2+; sync merge,
   command replay, tombstones, and the shared fixture vectors (ADR 0014).
