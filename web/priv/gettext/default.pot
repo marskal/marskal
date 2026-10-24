@@ -123,6 +123,11 @@ msgstr ""
 msgid "Add a task with this tag"
 msgstr ""
 
+#: lib/marskal_web/live/go_to.ex
+#, elixir-autogen, elixir-format
+msgid "Agenda"
+msgstr ""
+
 #: lib/marskal_web/live/user_live/registration.ex
 #, elixir-autogen, elixir-format
 msgid "Already registered?"
@@ -240,6 +245,7 @@ msgid "Delete"
 msgstr ""
 
 #: lib/marskal_web/components/layouts.ex
+#: lib/marskal_web/live/go_to.ex
 #: lib/marskal_web/live/project_live.ex
 #, elixir-autogen, elixir-format
 msgid "Done"
@@ -261,6 +267,7 @@ msgid "Drop your OmniFocus backup here"
 msgstr ""
 
 #: lib/marskal_web/components/layouts.ex
+#: lib/marskal_web/live/go_to.ex
 #: lib/marskal_web/live/project_live.ex
 #, elixir-autogen, elixir-format
 msgid "Dropped"
@@ -311,6 +318,11 @@ msgstr ""
 msgid "Flag"
 msgstr ""
 
+#: lib/marskal_web/live/go_to.ex
+#, elixir-autogen, elixir-format
+msgid "Flagged"
+msgstr ""
+
 #: lib/marskal_web/components/nav_components.ex
 #: lib/marskal_web/live/folder_live.ex
 #, elixir-autogen, elixir-format
@@ -328,6 +340,17 @@ msgstr ""
 msgid "Forgot your password?"
 msgstr ""
 
+#: lib/marskal_web/live/go_to.ex
+#, elixir-autogen, elixir-format
+msgid "Go to"
+msgstr ""
+
+#: lib/marskal_web/components/keys_help.ex
+#: lib/marskal_web/live/go_to.ex
+#, elixir-autogen, elixir-format
+msgid "Go to a view, project, folder, or tag"
+msgstr ""
+
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Go to the list"
@@ -336,6 +359,11 @@ msgstr ""
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Go to the sidebar, from a top row"
+msgstr ""
+
+#: lib/marskal_web/live/go_to.ex
+#, elixir-autogen, elixir-format
+msgid "Go to…"
 msgstr ""
 
 #: lib/marskal_web/user_notifier.ex
@@ -371,6 +399,16 @@ msgstr ""
 #: lib/marskal_web/live/user_live/check_email.ex
 #, elixir-autogen, elixir-format
 msgid "If %{email} has an account, we've sent it a link to choose a new password."
+msgstr ""
+
+#: lib/marskal_web/live/go_to.ex
+#, elixir-autogen, elixir-format
+msgid "Import"
+msgstr ""
+
+#: lib/marskal_web/live/go_to.ex
+#, elixir-autogen, elixir-format
+msgid "Inbox"
 msgstr ""
 
 #: lib/marskal_web/components/keys_help.ex
@@ -478,11 +516,17 @@ msgstr ""
 msgid "Nothing in this folder yet."
 msgstr ""
 
+#: lib/marskal_web/live/go_to.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing matches."
+msgstr ""
+
 #: lib/marskal_web/live/repeat_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Older entries are not shown."
 msgstr ""
 
+#: lib/marskal_web/live/go_to.ex
 #: lib/marskal_web/live/project_live.ex
 #, elixir-autogen, elixir-format
 msgid "Open"
@@ -504,6 +548,11 @@ msgid "Paused, 1 time skipped"
 msgid_plural "Paused, %{count} times skipped"
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/marskal_web/live/go_to.ex
+#, elixir-autogen, elixir-format
+msgid "Places"
+msgstr ""
 
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
@@ -538,6 +587,11 @@ msgstr ""
 #: lib/marskal_web/live/user_live/reset_password.ex
 #, elixir-autogen, elixir-format
 msgid "Set password"
+msgstr ""
+
+#: lib/marskal_web/live/go_to.ex
+#, elixir-autogen, elixir-format
+msgid "Settings"
 msgstr ""
 
 #: lib/marskal_web/components/keys_help.ex
@@ -650,6 +704,11 @@ msgstr ""
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Theme"
+msgstr ""
+
+#: lib/marskal_web/live/go_to.ex
+#, elixir-autogen, elixir-format
+msgid "Untagged"
 msgstr ""
 
 #: lib/marskal_web/live/repeat_panel.ex

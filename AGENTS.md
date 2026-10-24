@@ -41,6 +41,7 @@ This file is **short and actionable**. Rationale and history live in
 | Sync event stream (SSE) | [0030](docs/adr/0030-sync-event-stream.md) |
 | Keyboard keymap | [0031](docs/adr/0031-keyboard-keymap.md) |
 | Typed dates, calendar | [0032](docs/adr/0032-date-shorthand.md) |
+| Go to, search | [0033](docs/adr/0033-go-to.md) |
 | Repository layout | [0015](docs/adr/0015-repository-layout.md) |
 
 ---

@@ -69,6 +69,7 @@ defmodule MarskalWeb.Layouts do
             <span>Marskal</span>
           </.link>
         </div>
+        <MarskalWeb.GoTo.button :if={@nav} />
         <.visibility_toggle :if={@visibility} visibility={@visibility} />
         <.theme_toggle />
         <div class="app-header__account">
@@ -243,6 +244,14 @@ defmodule MarskalWeb.Layouts do
       <MarskalWeb.KeysHelp.dialog
         :if={@current_scope && @current_scope.user}
         keymap={keymap(@current_scope)}
+      />
+
+      <.live_component
+        :if={@nav}
+        module={MarskalWeb.GoTo}
+        id="go-to"
+        user={@current_scope.user}
+        nav={@nav}
       />
 
       <.live_component
