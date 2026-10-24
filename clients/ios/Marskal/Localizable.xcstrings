@@ -82,7 +82,14 @@
       }
     },
     "Agenda" : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agenda"
+          }
+        }
+      }
     },
     "Cancel" : {
 
@@ -103,7 +110,14 @@
 
     },
     "Due %@" : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frist %@"
+          }
+        }
+      }
     },
     "Flagged" : {
 
@@ -143,7 +157,14 @@
 
     },
     "Nothing planned or due today" : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Intet planlagt eller med frist i dag"
+          }
+        }
+      }
     },
     "Nothing to do" : {
 
@@ -220,10 +241,24 @@
 
     },
     "Tasks" : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opgaver"
+          }
+        }
+      }
     },
     "Tasks planned or due today show up here." : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opgaver, der er planlagt eller har frist i dag, vises her."
+          }
+        }
+      }
     },
     "That change could not be made" : {
 
@@ -269,7 +304,14 @@
       }
     },
     "Today" : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I dag"
+          }
+        }
+      }
     },
     "Try closing and opening the app again." : {
 

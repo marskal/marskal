@@ -14,7 +14,14 @@
 
     },
     "Agenda" : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agenda"
+          }
+        }
+      }
     },
     "Buy milk" : {
 
@@ -26,7 +33,14 @@
 
     },
     "Due %@" : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frist %@"
+          }
+        }
+      }
     },
     "Flagged" : {
 
@@ -47,7 +61,14 @@
 
     },
     "Nothing planned or due today" : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Intet planlagt eller med frist i dag"
+          }
+        }
+      }
     },
     "Nothing to do" : {
 
@@ -68,13 +89,27 @@
 
     },
     "Tasks" : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opgaver"
+          }
+        }
+      }
     },
     "Title" : {
 
     },
     "Today" : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I dag"
+          }
+        }
+      }
     },
     "Water the plants" : {
 
@@ -83,7 +118,14 @@
 
     },
     "What is planned or due today, by time. Check a task off right here." : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Det, der er planlagt eller har frist i dag, efter klokkeslæt. Sæt flueben ved en opgave lige her."
+          }
+        }
+      }
     },
     "Your Inbox, open tasks, or flagged tasks. Check a task off right here." : {
 
