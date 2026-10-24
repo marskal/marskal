@@ -20,7 +20,9 @@ defmodule Marskal.DateInput do
 
   # The words of each language. English is always read; another language's
   # words are read as well when the user's locale is in it. Phrases of more
-  # than one word are matched whole.
+  # than one word are matched whole. `clock` words come before a time ("at
+  # 9"), `clock_after` words after it ("9 o'clock"), and `fillers` are
+  # skipped wherever they are ("on fri").
   @languages %{
     "en" => %{
       days: %{
@@ -34,6 +36,8 @@ defmodule Marskal.DateInput do
       next: ~w(next),
       within: ~w(in),
       clock: ~w(at @),
+      clock_after: ~w(o'clock oclock),
+      fillers: ~w(on),
       periods: %{week: ~w(week), month: ~w(month), year: ~w(year)},
       weekdays: %{
         1 => ~w(mon monday),
@@ -80,6 +84,8 @@ defmodule Marskal.DateInput do
       next: ~w(næste),
       within: ~w(om),
       clock: ~w(kl kl. klokken),
+      clock_after: [],
+      fillers: ~w(på den),
       periods: %{week: ~w(uge), month: ~w(måned), year: ~w(år)},
       weekdays: %{
         1 => ~w(man mandag),
@@ -136,7 +142,9 @@ defmodule Marskal.DateInput do
                  evening_words: list.(:evening_words),
                  next: list.(:next),
                  within: list.(:within),
-                 clock: list.(:clock)
+                 clock: list.(:clock),
+                 clock_after: list.(:clock_after),
+                 fillers: list.(:fillers)
                }}
             end)
 
@@ -153,7 +161,8 @@ defmodule Marskal.DateInput do
   `evening:` is the time "tonight" means, 19:00 when not given; the field
   being typed in sets it (`Marskal.Dates.evening_time/1`).
 
-  Blank text is `:blank`, which clears the field.
+  Blank text is `:blank`, which clears the field; text of only filler
+  words ("on") is an error.
   """
   @spec parse(String.t(), NaiveDateTime.t(), keyword()) :: result()
   def parse(text, %NaiveDateTime{} = now, opts) do
@@ -172,7 +181,7 @@ defmodule Marskal.DateInput do
 
     case words(text) do
       [] -> :blank
-      words -> read(words, ctx)
+      words -> words |> Enum.reject(&(&1 in ctx.words.fillers)) |> read(ctx)
     end
   end
 
@@ -187,7 +196,7 @@ defmodule Marskal.DateInput do
   end
 
   defp read(words, ctx) do
-    {day_words, time} = split_time(words, ctx.words.clock)
+    {day_words, time} = split_time(words, ctx.words)
 
     case {day(day_words, ctx), time} do
       {:none, nil} -> :error
@@ -202,33 +211,34 @@ defmodule Marskal.DateInput do
 
   ## Time of day
 
-  # A time at the end ("fri 14:00", "tom kl 9", "24/12 2pm"), else at the
-  # start ("14:00 fri"). A dotted time ("14.30") is read only after a day,
-  # since alone it is a date.
-  defp split_time(words, markers) do
-    with {_, nil} <- time_at_end(words, markers),
-         {_, nil} <- time_at_start(words, markers) do
+  # A time at the end ("fri 14:00", "tom kl 9", "24/12 2pm", "fri 9
+  # o'clock"), else at the start ("14:00 fri"). A dotted time ("14.30") is
+  # read only after a day, since alone it is a date.
+  defp split_time(words, lexicon) do
+    with {_, nil} <- time_at_end(words, lexicon),
+         {_, nil} <- time_at_start(words, lexicon) do
       {words, nil}
     end
   end
 
-  defp time_at_end(words, markers) do
-    {rest, time} = clock_words(Enum.reverse(words), markers, true)
+  defp time_at_end(words, lexicon) do
+    {rest, time} = clock_words(Enum.reverse(words), lexicon, true)
     {Enum.reverse(rest), time}
   end
 
-  defp time_at_start(words, markers), do: clock_words(words, markers, false)
+  defp time_at_start(words, lexicon), do: clock_words(words, lexicon, false)
 
   # The time at the head of `words`, which are reversed when `at_end`.
-  defp clock_words(words, markers, at_end) do
+  defp clock_words(words, lexicon, at_end) do
     case words do
       [first, second | rest] ->
         {marker, token} = if at_end, do: {second, first}, else: {first, second}
-        {ampm, hour} = if at_end, do: {first, second}, else: {second, first}
+        {suffix, hour} = if at_end, do: {first, second}, else: {second, first}
 
         cond do
-          marker in markers -> found(clock(token, bare: true, dot: true), rest)
-          ampm in ~w(am pm) -> found(clock(hour <> ampm, []), rest)
+          marker in lexicon.clock -> found(clock(token, bare: true, dot: true), rest)
+          suffix in ~w(am pm) -> found(clock(hour <> suffix, []), rest)
+          suffix in lexicon.clock_after -> found(clock(hour, bare: true, dot: true), rest)
           true -> one_clock_word(words, at_end)
         end
 

@@ -53,6 +53,8 @@ in Danish ("16. okt. 2026", "fre."), and with it typed dates read Danish
 words. The rest of the interface stays English until it is translated
 (ADR 0028), so a `da` user sees "Planned fre." for now. Another language is
 a word table in `Marskal.DateInput` and the Rust library, and a locale.
+The table names words that come before a time (`kl`), after it (German
+`Uhr`), and filler words to skip (`på`, `am`).
 
 | Typed | Means |
 |-------|-------|
@@ -72,10 +74,12 @@ a word table in `Marskal.DateInput` and the Rust library, and a locale.
 | `fri 23 oct` | The weekday must be that day's, or it is an error |
 | `14:00`, `2pm`, `2:30 pm`, `at 9`, `@9` | A time, at the end or the start; alone, today |
 | `fri 14.30` | A dotted time only after a day; alone, `24.12` is a date |
+| `9 o'clock` | A word after a bare hour, as `at` before it |
+| `on fri` | Filler words are skipped; alone, an error |
 
 In Danish: `i dag`, `i morgen`, `i overmorgen`, `i går`, `i aften`, `tirsdag aften`, `nu`, `man` …
 `søn`, `næste fre`, `næste uge`, `om 3 dage`, `2 uger`, `1 md`, `2t`,
-`maj`, `okt`, `kl 9`, `kl. 9.30`.
+`maj`, `okt`, `kl 9`, `kl. 9.30`, `på torsdag`, `den 24. dec`.
 
 The evening a field means is passed to the reader, as its default time is
 not, since "tonight" names a time where a day alone names none.
