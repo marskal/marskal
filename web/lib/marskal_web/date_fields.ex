@@ -41,6 +41,7 @@ defmodule MarskalWeb.DateFields do
     ~H"""
     <div class="field dates" id={@id}>
       <.day_time
+        :if={not @record.deferred_indefinitely}
         label={gettext("Defer until")}
         form={@form}
         id={@id}
@@ -50,7 +51,6 @@ defmodule MarskalWeb.DateFields do
         target={@target}
         preview={@previews["defer"]}
         calendar={@calendar}
-        disabled={@record.deferred_indefinitely}
       />
       <p :if={inherited_defer(@record, @inherited, @zone)} class="hint inherited">
         {inherited_defer(@record, @inherited, @zone)}
@@ -110,7 +110,6 @@ defmodule MarskalWeb.DateFields do
   attr :target, :any, required: true
   attr :preview, :any, default: nil
   attr :calendar, :map, default: nil
-  attr :disabled, :boolean, default: false
 
   defp day_time(assigns) do
     key = Map.fetch!(@keys, assigns.field)
@@ -134,8 +133,8 @@ defmodule MarskalWeb.DateFields do
     <div class="day-time">
       <label for={"#{@id}-#{@key}"}>{@label}</label>
       <div class="day-time__entry">
-        <input type="hidden" name={"#{@form}[#{@key}_date]"} value={@date} disabled={@disabled} />
-        <input type="hidden" name={"#{@form}[#{@key}_time]"} value={@time} disabled={@disabled} />
+        <input type="hidden" name={"#{@form}[#{@key}_date]"} value={@date} />
+        <input type="hidden" name={"#{@form}[#{@key}_time]"} value={@time} />
         <input
           id={"#{@id}-#{@key}"}
           class="input"
@@ -143,7 +142,6 @@ defmodule MarskalWeb.DateFields do
           name={"#{@form}[#{@key}_text]"}
           value={typed(@preview) || @saved}
           data-saved={@saved}
-          disabled={@disabled}
           autocomplete="off"
           spellcheck="false"
           phx-debounce="150"
@@ -161,7 +159,6 @@ defmodule MarskalWeb.DateFields do
           phx-click={if(@open, do: "calendar-close", else: "calendar-open")}
           phx-value-key={@key}
           phx-target={@target}
-          disabled={@disabled}
           aria-expanded={to_string(@open)}
           aria-controls={"#{@id}-#{@key}-calendar"}
           aria-label={gettext("Pick a day for %{field}", field: @label)}
@@ -579,8 +576,8 @@ defmodule MarskalWeb.DateFields do
   @doc """
   The date attrs a form post means for `record`. A field whose day and
   minute match the stored value keeps the stored value, so an untouched
-  field is not patched. A field that was not posted, such as a disabled
-  input, is cleared.
+  field is not patched. A field that was not posted is cleared; defer is
+  left out while indefinite.
   """
   def params_to_attrs(params, record, zone) do
     indefinite = params["deferred_indefinitely"] |> List.wrap() |> List.last() == "true"
