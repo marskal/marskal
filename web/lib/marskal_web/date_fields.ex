@@ -524,7 +524,7 @@ defmodule MarskalWeb.DateFields do
       week_start: preferences.week_start,
       order: Marskal.DateFormat.numeric_order(locale: preferences.locale),
       day_month: Marskal.DateFormat.day_month_order(locale: preferences.locale),
-      language: preferences.locale |> String.split("-") |> hd(),
+      language: preferences.locale |> String.split("-", parts: 2) |> hd(),
       evening: Dates.evening_time(field)
     )
   end
