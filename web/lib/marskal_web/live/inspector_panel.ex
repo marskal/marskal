@@ -5,6 +5,7 @@ defmodule MarskalWeb.InspectorPanel do
 
   use MarskalWeb, :live_component
 
+  alias Marskal.GoTo
   alias Marskal.ProjectFolders
   alias Marskal.Projects
   alias Marskal.Tags
@@ -56,6 +57,7 @@ defmodule MarskalWeb.InspectorPanel do
     |> assign(:tagging, tagging(user, record))
     |> assign(:outline, outline(user, record))
     |> assign(:picker, picker || %{query: "", results: []})
+    |> assign(:place, if(same?, do: socket.assigns[:place]))
     |> assign(:date_previews, if(same?, do: socket.assigns[:date_previews] || %{}, else: %{}))
     |> assign(:calendar, if(same?, do: socket.assigns[:calendar]))
     |> assign(:error, error)
@@ -222,6 +224,48 @@ defmodule MarskalWeb.InspectorPanel do
 
         .suggestions button.suggestion:is(:hover, :focus-visible) {
           background: color-mix(in srgb, var(--accent) 12%, var(--bg));
+        }
+
+        .locations {
+          max-height: 18rem;
+          overflow-y: auto;
+        }
+
+        .locations button.suggestion {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .locations [aria-selected="true"] > button.suggestion {
+          background: color-mix(in srgb, var(--accent) 12%, var(--bg));
+        }
+
+        .locations .icon {
+          flex-shrink: 0;
+          color: var(--muted);
+        }
+
+        .locations .path {
+          display: inline-flex;
+          flex-wrap: wrap;
+          align-items: baseline;
+          gap: 0 0.3em;
+          min-width: 0;
+        }
+
+        .locations :is(.ancestor, .sep),
+        .locations .is-hidden .name {
+          color: var(--muted);
+        }
+
+        .locations .current {
+          margin-left: auto;
+        }
+
+        .locations .empty {
+          padding: 0.4rem 0.6rem;
+          color: var(--muted);
         }
 
         .create {
@@ -415,6 +459,7 @@ defmodule MarskalWeb.InspectorPanel do
         error={@error}
         tagging={@tagging}
         picker={@picker}
+        place={@place}
         outline={@outline}
         date_previews={@date_previews}
         calendar={@calendar}
@@ -465,6 +510,7 @@ defmodule MarskalWeb.InspectorPanel do
 
   attr :date_previews, :map, default: %{}
   attr :calendar, :map, default: nil
+  attr :place, :map, default: nil
 
   attr :user, :any, required: true
   attr :change_version, :any, default: nil
@@ -511,19 +557,14 @@ defmodule MarskalWeb.InspectorPanel do
           <MarskalWeb.UrlLink.link url={@record.url} text />
         </div>
         <.notes_field form="task" record={@record} placeholder="Markdown is fine…" />
-        <div class="field">
-          <label for="inspector-task-location">Location</label>
-          <MarskalWeb.TaskComponents.location_select
-            id="inspector-task-location"
-            class="input"
-            name="task[location]"
-            task={@record}
-            projects={@options}
-          />
-          <p :if={@outline[:parent]} class="hint" id="inspector-task-parent">
-            Subtask of {@outline[:parent].title}. Choosing another location moves it out.
-          </p>
-        </div>
+        <.location_picker
+          id="inspector-task-location"
+          myself={@myself}
+          task={@record}
+          projects={@options}
+          place={@place}
+          parent={@outline[:parent]}
+        />
         <div class="field">
           <label for="inspector-task-state">State</label>
           <select id="inspector-task-state" class="input" name="task[state]">
@@ -858,6 +899,217 @@ defmodule MarskalWeb.InspectorPanel do
     </section>
     """
   end
+
+  attr :id, :string, required: true
+  attr :myself, :any, required: true
+  attr :task, Tasks.Task, required: true
+  attr :projects, :list, required: true, doc: "the open projects, and the task's own"
+
+  attr :place, :map,
+    required: true,
+    doc: "the open list: targets, query, and results; nil when closed"
+
+  attr :parent, :any, default: nil
+
+  # Where a task lives (ADR 0017), picked as in Go to (ADR 0033): focus
+  # lists every location, typing narrows them by name or folder path, and
+  # choosing one moves the task. The field is in the task form, but has its
+  # own change event, so a query is never saved.
+  defp location_picker(assigns) do
+    assigns = assign(assigns, :current, location_text(assigns.task, assigns.projects))
+
+    ~H"""
+    <div
+      class="field location"
+      id={"#{@id}-field"}
+      phx-hook=".LocationPicker"
+      phx-target={@myself}
+      data-current={@current}
+    >
+      <label for={@id}>{gettext("Location")}</label>
+      <input
+        id={@id}
+        class="input"
+        type="text"
+        name="location_query"
+        value={@current}
+        placeholder={@current}
+        role="combobox"
+        aria-expanded={to_string(@place != nil)}
+        aria-controls={"#{@id}-results"}
+        aria-autocomplete="list"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        phx-change="location-search"
+        phx-target={@myself}
+      />
+      <ul
+        :if={@place}
+        id={"#{@id}-results"}
+        class="suggestions locations"
+        role="listbox"
+        aria-label={gettext("Locations")}
+      >
+        <li
+          :for={target <- @place.results}
+          id={"#{@id}-#{target.type}-#{target.id}"}
+          role="option"
+          class={target.hidden && "is-hidden"}
+          data-current={location_value(target) == location_value(@task) && "true"}
+        >
+          <button
+            type="button"
+            class="suggestion"
+            tabindex="-1"
+            phx-click="location-pick"
+            phx-value-location={location_value(target)}
+            phx-target={@myself}
+          >
+            <.location_icon target={target} />
+            <span class="path">
+              <%= for segment <- Enum.drop(target.path, -1) do %>
+                <span class="ancestor">{segment}</span>
+                <span class="sep" aria-hidden="true">›</span>
+              <% end %>
+              <span class="name">{List.last(target.path)}</span>
+            </span>
+            <Lucideicons.check
+              :if={location_value(target) == location_value(@task)}
+              class="icon current"
+              aria-label={gettext("Current location")}
+            />
+          </button>
+        </li>
+        <li :if={@place.results == []} class="empty">{gettext("Nothing matches.")}</li>
+      </ul>
+      <p :if={@parent} class="hint" id="inspector-task-parent">
+        {gettext("Subtask of %{title}. Choosing another location moves it out.",
+          title: @parent.title
+        )}
+      </p>
+      <script :type={Phoenix.LiveView.ColocatedHook} name=".LocationPicker" extension="ts">
+        import {ViewHook} from "phoenix_live_view"
+
+        // A combobox, as Go to is: focus stays in the field, the arrow keys
+        // move the selected option, and Enter picks it. Opening empties the
+        // field, leaving the current location as its placeholder; Escape, or
+        // leaving the field, closes the list and puts it back.
+        export default class extends ViewHook {
+          active: string | null = null
+          wasOpen = false
+
+          get input() { return this.el.querySelector<HTMLInputElement>("input")! }
+          get list() { return this.el.querySelector<HTMLElement>("[role=listbox]") }
+          get options() { return Array.from(this.el.querySelectorAll<HTMLElement>("[role=option]")) }
+
+          onFocus = () => this.open()
+
+          // A click in the field after Escape opens the list again.
+          onClick = () => { if (!this.list) this.open() }
+
+          // A new query selects its best match.
+          onInput = () => { this.active = null }
+
+          onKeydown = (event: KeyboardEvent) => {
+            if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+              event.preventDefault()
+              if (!this.list) return this.open()
+              const options = this.options
+              const index = options.findIndex((option) => option.id === this.active)
+              const step = event.key === "ArrowDown" ? 1 : -1
+              const next = options[(index + step + options.length) % options.length]
+              if (next) this.select(next)
+            } else if (event.key === "Enter") {
+              // The field is in the task form; Enter must not submit it.
+              event.preventDefault()
+              const option = this.active ? document.getElementById(this.active) : null
+              option?.querySelector("button")?.click()
+            } else if (event.key === "Escape" && this.list) {
+              event.preventDefault()
+              event.stopPropagation()
+              this.close()
+              this.input.select()
+            }
+          }
+
+          // Keeps focus in the field, so a click on an option is not a blur.
+          onPointerDown = (event: PointerEvent) => {
+            if ((event.target as Element).closest("[role=listbox]")) event.preventDefault()
+          }
+
+          onPointerMove = (event: PointerEvent) => {
+            const option = (event.target as Element).closest<HTMLElement>("[role=option]")
+            if (option && option.id !== this.active) this.select(option)
+          }
+
+          mounted() {
+            this.input.addEventListener("focus", this.onFocus)
+            this.input.addEventListener("click", this.onClick)
+            this.input.addEventListener("blur", () => this.close())
+            this.input.addEventListener("input", this.onInput)
+            this.input.addEventListener("keydown", this.onKeydown)
+            this.el.addEventListener("pointerdown", this.onPointerDown)
+            this.el.addEventListener("pointermove", this.onPointerMove)
+          }
+
+          // Opening selects the current location; a narrower list keeps the
+          // selected option if it is still there. A list that closes, on a
+          // pick, shows the location the task now has.
+          updated() {
+            const options = this.options
+            const kept = options.find((option) => option.id === this.active)
+            const current = this.active === null && this.input.value === ""
+              ? options.find((option) => option.dataset.current === "true")
+              : undefined
+            this.select(kept ?? current ?? options[0] ?? null)
+            if (this.wasOpen && !this.list) this.input.value = this.el.dataset.current ?? ""
+            this.wasOpen = Boolean(this.list)
+          }
+
+          open() {
+            this.input.value = ""
+            this.active = null
+            this.pushEventTo(this.el, "location-open", {})
+          }
+
+          close() {
+            this.input.value = this.el.dataset.current ?? ""
+            this.select(null)
+            if (this.list) this.pushEventTo(this.el, "location-close", {})
+          }
+
+          select(option: HTMLElement | null) {
+            this.active = option?.id ?? null
+            for (const each of this.options) each.setAttribute("aria-selected", String(each === option))
+            if (option) {
+              this.input.setAttribute("aria-activedescendant", option.id)
+              option.scrollIntoView({block: "nearest"})
+            } else {
+              this.input.removeAttribute("aria-activedescendant")
+            }
+          }
+        }
+      </script>
+    </div>
+    """
+  end
+
+  attr :target, GoTo.Target, required: true
+
+  defp location_icon(%{target: %{type: :view, id: :inbox}} = assigns),
+    do: ~H|<Lucideicons.inbox class="icon" />|
+
+  defp location_icon(%{target: %{type: :view, id: :none}} = assigns),
+    do: ~H|<Lucideicons.list class="icon" />|
+
+  defp location_icon(%{target: %{state: :done}} = assigns),
+    do: ~H|<Lucideicons.circle_check_big class="icon" />|
+
+  defp location_icon(%{target: %{state: :dropped}} = assigns),
+    do: ~H|<Lucideicons.circle_off class="icon" />|
+
+  defp location_icon(assigns), do: ~H|<Lucideicons.circle class="icon" />|
 
   attr :id, :string, required: true
   attr :myself, :any, required: true
@@ -1279,7 +1531,6 @@ defmodule MarskalWeb.InspectorPanel do
     attrs =
       params
       |> Map.take(["title", "notes", "url", "flagged", "state"])
-      |> Map.merge(location_params(params))
       |> Map.reject(fn {_key, value} -> value == nil end)
       |> Map.merge(date_params(params, socket))
 
@@ -1388,6 +1639,29 @@ defmodule MarskalWeb.InspectorPanel do
 
   def handle_event("tag-search", %{"tag_query" => query}, socket) do
     {:noreply, assign(socket, :picker, %{query: query, results: suggestions(socket, query)})}
+  end
+
+  def handle_event("location-open", _params, socket) do
+    targets = locations(socket.assigns)
+    {:noreply, assign(socket, :place, %{targets: targets, query: "", results: browse(targets)})}
+  end
+
+  def handle_event("location-search", %{"location_query" => query}, socket) do
+    targets =
+      case socket.assigns.place do
+        %{targets: targets} -> targets
+        nil -> locations(socket.assigns)
+      end
+
+    results = if String.trim(query) == "", do: browse(targets), else: GoTo.run(targets, query)
+    {:noreply, assign(socket, :place, %{targets: targets, query: query, results: results})}
+  end
+
+  def handle_event("location-close", _params, socket), do: {:noreply, assign(socket, :place, nil)}
+
+  def handle_event("location-pick", %{"location" => value}, socket) do
+    attrs = value |> MarskalWeb.TaskComponents.parse_location() |> Tasks.location_attrs()
+    socket |> assign(:place, nil) |> save(&Tasks.update_task(&1, &2, attrs, &3))
   end
 
   def handle_event("tag-add", %{"id" => tag_id}, socket), do: link_tag(socket, :tag, tag_id)
@@ -1613,15 +1887,43 @@ defmodule MarskalWeb.InspectorPanel do
     do:
       "Delete this project and every task in it? To finish it or give it up, use Done or Dropped."
 
-  # A hidden "false" is always submitted. A checked box adds "true" after it.
-  defp location_params(%{"location" => value}) do
-    value
-    |> MarskalWeb.TaskComponents.parse_location()
-    |> Tasks.location_attrs()
-    |> Map.new(fn {key, value} -> {Atom.to_string(key), value} end)
+  # Where a task can move: the inbox, no project, and every open project,
+  # with its own even if resolved. A project the sidebar hides, deferred or
+  # in a dropped folder, is dimmed and ranks after those it shows.
+  defp locations(%{user: user, record: %Tasks.Task{} = task}) do
+    projects =
+      user
+      |> GoTo.projects()
+      |> Enum.filter(&(&1.state == :to_do or &1.id == task.project_id))
+
+    [
+      %GoTo.Target{type: :view, id: :inbox, path: [gettext("Inbox")]},
+      %GoTo.Target{type: :view, id: :none, path: [gettext("No project")]}
+      | projects
+    ]
   end
 
-  defp location_params(_params), do: %{}
+  # A blank query lists every location, in sidebar order, hidden ones last.
+  defp browse(targets), do: Enum.sort_by(targets, & &1.hidden)
+
+  defp location_text(task, projects) do
+    case Tasks.location(task) do
+      :inbox -> gettext("Inbox")
+      :none -> gettext("No project")
+      id -> Enum.find_value(projects, "", &(&1.id == id && &1.title))
+    end
+  end
+
+  # A location as `MarskalWeb.TaskComponents.parse_location/1` reads it.
+  defp location_value(%GoTo.Target{type: :view, id: id}), do: Atom.to_string(id)
+  defp location_value(%GoTo.Target{id: id}), do: id
+
+  defp location_value(%Tasks.Task{} = task) do
+    case Tasks.location(task) do
+      id when is_atom(id) -> Atom.to_string(id)
+      id -> id
+    end
+  end
 
   # The date inputs are only on the task and project forms. A post from
   # elsewhere, without them, leaves the dates alone.

@@ -244,6 +244,11 @@ msgstr ""
 msgid "Could not update task."
 msgstr ""
 
+#: lib/marskal_web/live/inspector_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Current location"
+msgstr ""
+
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Dark"
@@ -437,6 +442,7 @@ msgid "Import"
 msgstr ""
 
 #: lib/marskal_web/live/go_to.ex
+#: lib/marskal_web/live/inspector_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Inbox"
 msgstr ""
@@ -479,6 +485,16 @@ msgstr ""
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Light"
+msgstr ""
+
+#: lib/marskal_web/live/inspector_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Location"
+msgstr ""
+
+#: lib/marskal_web/live/inspector_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Locations"
 msgstr ""
 
 #: lib/marskal_web/live/user_live/registration.ex
@@ -551,12 +567,18 @@ msgstr ""
 msgid "No date"
 msgstr ""
 
+#: lib/marskal_web/live/inspector_panel.ex
+#, elixir-autogen, elixir-format
+msgid "No project"
+msgstr ""
+
 #: lib/marskal_web/live/folder_live.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing in this folder yet."
 msgstr ""
 
 #: lib/marskal_web/live/go_to.ex
+#: lib/marskal_web/live/inspector_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing matches."
 msgstr ""
@@ -717,6 +739,11 @@ msgstr ""
 #: lib/marskal_web/live/repeat_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Strength %{percent}"
+msgstr ""
+
+#: lib/marskal_web/live/inspector_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Subtask of %{title}. Choosing another location moves it out."
 msgstr ""
 
 #: lib/marskal_web/components/keys_help.ex
