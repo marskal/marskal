@@ -14,10 +14,12 @@ defmodule Marskal.DateFormat do
 
   @days %{
     weekday: :E,
+    weekday_long: :EEEE,
     day_month: :MMMd,
     day_month_year: :yMMMd,
     long: :MMMMEEEEd,
-    long_year: :yMMMMEEEEd
+    long_year: :yMMMMEEEEd,
+    month_year: :yMMMM
   }
 
   @doc "Formats with the user's locale from now on in this process."
@@ -25,8 +27,9 @@ defmodule Marskal.DateFormat do
     do: Marskal.Cldr.put_locale(Marskal.Accounts.locale(user))
 
   @doc """
-  A day: `:weekday` ("Sun"), `:day_month` ("11 Oct"), `:day_month_year`
-  ("11 Oct 2026"), `:long` ("Sunday, 11 October"), or `:long_year`.
+  A day: `:weekday` ("Sun"), `:weekday_long` ("Sunday"), `:day_month` ("11 Oct"), `:day_month_year`
+  ("11 Oct 2026"), `:long` ("Sunday, 11 October"), `:long_year`, or
+  `:month_year` ("October 2026").
   """
   def date(date, style, opts \\ []) when is_map_key(@days, style),
     do: Marskal.Cldr.Date.to_string!(date, format: Map.fetch!(@days, style), locale: locale(opts))

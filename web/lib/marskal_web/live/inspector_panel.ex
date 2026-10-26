@@ -57,6 +57,7 @@ defmodule MarskalWeb.InspectorPanel do
     |> assign(:outline, outline(user, record))
     |> assign(:picker, picker || %{query: "", results: []})
     |> assign(:date_previews, if(same?, do: socket.assigns[:date_previews] || %{}, else: %{}))
+    |> assign(:calendar, if(same?, do: socket.assigns[:calendar]))
     |> assign(:error, error)
     |> assign(:loaded_selection, selection)
     |> assign(:loaded, {selection, socket.assigns[:change_version]})
@@ -249,6 +250,112 @@ defmodule MarskalWeb.InspectorPanel do
           gap: 0.3rem;
         }
 
+        .day-time {
+          position: relative;
+        }
+
+        .day-time__entry {
+          display: flex;
+          gap: 0.4rem;
+        }
+
+        .day-time__entry .input {
+          flex: 1 1 auto;
+          min-width: 0;
+        }
+
+        .day-time__pick {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex: 0 0 auto;
+          width: 2.25rem;
+          padding: 0;
+        }
+
+        .calendar {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          z-index: 10;
+          margin-top: 0.25rem;
+          padding: 0.5rem;
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          background: var(--surface);
+          box-shadow: 0 6px 24px var(--shadow);
+        }
+
+        .calendar__head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.5rem;
+          margin-bottom: 0.35rem;
+        }
+
+        .calendar__head button {
+          display: inline-flex;
+          padding: 0.25rem;
+          border: 0;
+          background: transparent;
+          color: var(--muted);
+        }
+
+        .calendar__head button:is(:hover, :focus-visible) {
+          color: var(--text);
+        }
+
+        .calendar__month {
+          margin: 0;
+          font-weight: 600;
+          font-size: 0.9rem;
+        }
+
+        .calendar__grid {
+          border-collapse: collapse;
+          font-size: 0.85rem;
+        }
+
+        .calendar__grid th {
+          padding: 0.2rem 0;
+          font-weight: 400;
+          font-size: 0.75rem;
+          color: var(--muted);
+        }
+
+        .calendar__grid td {
+          padding: 1px;
+        }
+
+        .calendar__day {
+          width: 2rem;
+          height: 2rem;
+          padding: 0;
+          border: 1px solid transparent;
+          border-radius: 6px;
+          background: transparent;
+          color: var(--text);
+          font-variant-numeric: tabular-nums;
+        }
+
+        .calendar__day:hover {
+          background: var(--accent-tint);
+        }
+
+        .calendar__day--outside {
+          color: var(--muted);
+        }
+
+        .calendar__day--today {
+          border-color: var(--accent);
+        }
+
+        .calendar__day--selected {
+          background: var(--accent);
+          color: var(--accent-contrast);
+        }
+
         .reads:empty {
           display: none;
         }
@@ -310,6 +417,7 @@ defmodule MarskalWeb.InspectorPanel do
         picker={@picker}
         outline={@outline}
         date_previews={@date_previews}
+        calendar={@calendar}
       />
       <.project_form
         :if={match?(%Projects.Project{}, @record)}
@@ -323,6 +431,7 @@ defmodule MarskalWeb.InspectorPanel do
         tagging={@tagging}
         picker={@picker}
         date_previews={@date_previews}
+        calendar={@calendar}
       />
       <.folder_form
         :if={match?(%ProjectFolders.ProjectFolder{}, @record)}
@@ -355,6 +464,7 @@ defmodule MarskalWeb.InspectorPanel do
     doc: "the task's parent, the dates it goes by, and whether it is resolved from above"
 
   attr :date_previews, :map, default: %{}
+  attr :calendar, :map, default: nil
 
   attr :user, :any, required: true
   attr :change_version, :any, default: nil
@@ -455,6 +565,7 @@ defmodule MarskalWeb.InspectorPanel do
           zone={@zone}
           target={@myself}
           previews={@date_previews}
+          calendar={@calendar}
           inherited={@outline[:dates]}
         />
         <div class="actions">
@@ -494,6 +605,7 @@ defmodule MarskalWeb.InspectorPanel do
   attr :user, :any, required: true
   attr :change_version, :any, default: nil
   attr :date_previews, :map, default: %{}
+  attr :calendar, :map, default: nil
 
   defp project_form(assigns) do
     ~H"""
@@ -583,6 +695,7 @@ defmodule MarskalWeb.InspectorPanel do
           zone={@zone}
           target={@myself}
           previews={@date_previews}
+          calendar={@calendar}
         />
         <div class="actions">
           <button
@@ -1207,6 +1320,42 @@ defmodule MarskalWeb.InspectorPanel do
 
       :error ->
         {:reply, %{}, update(socket, :date_previews, &Map.put(&1, key, {:error, text}))}
+    end
+  end
+
+  def handle_event("calendar-open", %{"key" => key}, socket)
+      when key in ["defer", "planned", "due"] do
+    %{user: user, record: record} = socket.assigns
+    {:noreply, assign(socket, :calendar, MarskalWeb.DateFields.open_calendar(key, record, user))}
+  end
+
+  def handle_event("calendar-month", %{"step" => step}, socket) when step in ["-1", "1"] do
+    calendar =
+      socket.assigns.calendar &&
+        MarskalWeb.DateFields.step_calendar(socket.assigns.calendar, String.to_integer(step))
+
+    {:noreply, assign(socket, :calendar, calendar)}
+  end
+
+  def handle_event("calendar-close", _params, socket),
+    do: {:noreply, assign(socket, :calendar, nil)}
+
+  def handle_event("calendar-pick", %{"key" => key, "date" => iso}, socket)
+      when key in ["defer", "planned", "due"] do
+    %{user: user, record: record} = socket.assigns
+
+    case Date.from_iso8601(iso) do
+      {:ok, date} ->
+        attrs = MarskalWeb.DateFields.pick(key, date, record, user)
+        {:noreply, socket} = save(socket, &update_dates(record, &1, &2, attrs, &3))
+
+        {:noreply,
+         socket
+         |> assign(:calendar, nil)
+         |> update(:date_previews, &Map.delete(&1, key))}
+
+      {:error, _} ->
+        {:noreply, socket}
     end
   end
 
