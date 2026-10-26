@@ -290,12 +290,15 @@ defmodule MarskalWeb.DatesLiveTest do
 
     {:ok, view, _html} = live(conn, ~p"/open")
     view |> element("#open-tasks li.task-row", "Paint") |> render_click()
+    assert has_element?(view, "#inspector-task-dates-defer")
 
     view
     |> form("#inspector-task", task: %{deferred_indefinitely: "true"})
     |> render_change()
 
     assert Tasks.get_task(user, task.id).deferred_indefinitely
+    refute has_element?(view, "#inspector-task-dates-defer")
+    refute has_element?(view, "#inspector-task-dates-defer-calendar-toggle")
 
     {:ok, view, _html} = live(conn, ~p"/open")
     refute has_element?(view, "#open-tasks", "Paint")
