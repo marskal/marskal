@@ -16,23 +16,35 @@ defmodule MarskalWeb.DateFields do
   attr :id, :string, required: true
   attr :record, :any, required: true
   attr :zone, :string, required: true
+  attr :target, :any, required: true, doc: "the component that handles `date-commit`"
+
+  attr :previews, :map,
+    default: %{},
+    doc: "what each field's typed text reads as, by key, from `preview/3`"
 
   attr :inherited, :map,
     default: nil,
     doc:
       "the dates the record goes by (`Marskal.Tasks.effective_dates/2`), to show what it inherits"
 
-  @doc "The three date fields for a task or project."
+  @doc """
+  The three date fields for a task or project. Each is a text field that
+  reads what is typed (ADR 0032), over hidden ISO inputs that hold what is
+  saved. Typing posts the text, for `preview/3`; Enter or leaving the field
+  sends a `date-commit` event with the key and text, for `commit/4`.
+  """
   def inputs(assigns) do
     ~H"""
     <div class="field dates" id={@id}>
       <.day_time
-        label="Defer until"
+        label={gettext("Defer until")}
         form={@form}
         id={@id}
         field={:defer_until}
         record={@record}
         zone={@zone}
+        target={@target}
+        preview={@previews["defer"]}
         disabled={@record.deferred_indefinitely}
       />
       <p :if={inherited_defer(@record, @inherited, @zone)} class="hint inherited">
@@ -46,24 +58,38 @@ defmodule MarskalWeb.DateFields do
           name={"#{@form}[deferred_indefinitely]"}
           value="true"
           checked={@record.deferred_indefinitely}
-        /> Defer indefinitely
+        /> {gettext("Defer indefinitely")}
       </label>
       <.day_time
-        label="Planned"
+        label={gettext("Planned")}
         form={@form}
         id={@id}
         field={:planned_at}
         record={@record}
         zone={@zone}
+        target={@target}
+        preview={@previews["planned"]}
       />
       <p :if={inherited(@record, @inherited, :planned_at, @zone)} class="hint inherited">
         {inherited(@record, @inherited, :planned_at, @zone)}
       </p>
-      <.day_time label="Due" form={@form} id={@id} field={:due_at} record={@record} zone={@zone} />
+      <.day_time
+        label={gettext("Due")}
+        form={@form}
+        id={@id}
+        field={:due_at}
+        record={@record}
+        zone={@zone}
+        target={@target}
+        preview={@previews["due"]}
+      />
       <p :if={inherited(@record, @inherited, :due_at, @zone)} class="hint inherited">
         {inherited(@record, @inherited, :due_at, @zone)}
       </p>
-      <p class="hint">A day with no time starts at {default_hint()}.</p>
+      <p class="hint">
+        {gettext("Type a day such as “tom”, “fri”, “1w”, or “24/12 14:00”.")}
+        {gettext("A day with no time starts at %{times}.", times: default_hint())}
+      </p>
     </div>
     """
   end
@@ -74,6 +100,8 @@ defmodule MarskalWeb.DateFields do
   attr :field, :atom, required: true
   attr :record, :any, required: true
   attr :zone, :string, required: true
+  attr :target, :any, required: true
+  attr :preview, :any, default: nil
   attr :disabled, :boolean, default: false
 
   defp day_time(assigns) do
@@ -89,33 +117,168 @@ defmodule MarskalWeb.DateFields do
       assign(assigns,
         key: key,
         date: date && Date.to_iso8601(date),
-        time: time && Calendar.strftime(time, "%H:%M")
+        time: time && Calendar.strftime(time, "%H:%M"),
+        saved: text(Map.fetch!(assigns.record, assigns.field), assigns.field, assigns.zone)
       )
 
     ~H"""
     <div class="day-time">
-      <label for={"#{@id}-#{@key}-date"}>{@label}</label>
-      <div class="day-time__inputs">
-        <input
-          id={"#{@id}-#{@key}-date"}
-          class="input"
-          type="date"
-          name={"#{@form}[#{@key}_date]"}
-          value={@date}
-          disabled={@disabled}
-        />
-        <input
-          id={"#{@id}-#{@key}-time"}
-          class="input"
-          type="time"
-          name={"#{@form}[#{@key}_time]"}
-          value={@time}
-          disabled={@disabled || is_nil(@date)}
-          aria-label={"#{@label} time"}
-        />
-      </div>
+      <label for={"#{@id}-#{@key}"}>{@label}</label>
+      <input type="hidden" name={"#{@form}[#{@key}_date]"} value={@date} disabled={@disabled} />
+      <input type="hidden" name={"#{@form}[#{@key}_time]"} value={@time} disabled={@disabled} />
+      <input
+        id={"#{@id}-#{@key}"}
+        class="input"
+        type="text"
+        name={"#{@form}[#{@key}_text]"}
+        value={typed(@preview) || @saved}
+        data-saved={@saved}
+        disabled={@disabled}
+        autocomplete="off"
+        spellcheck="false"
+        phx-debounce="150"
+        phx-hook=".DateText"
+        phx-target={@target}
+        data-key={@key}
+        data-commit
+        aria-describedby={"#{@id}-#{@key}-reads"}
+        aria-invalid={to_string(error?(@preview))}
+      />
+      <p
+        id={"#{@id}-#{@key}-reads"}
+        class={["hint", "reads", error?(@preview) && "reads--error"]}
+        aria-live="polite"
+      >
+        {preview_text(@preview)}
+      </p>
     </div>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".DateText" extension="ts">
+      import {ViewHook} from "phoenix_live_view"
+
+      // Typed text is saved on Enter or on leaving the field, and Esc puts
+      // back what is saved (ADR 0032). data-saved is the saved text, so
+      // unchanged text sends nothing. The server answers with the field's
+      // new text, or nothing when it cannot read it; then it renders the
+      // typed text with the error, for the user to fix.
+      export default class extends ViewHook<HTMLInputElement> {
+        mounted() {
+          this.el.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+              event.preventDefault()
+              this.commit()
+            } else if (event.key === "Escape" && this.el.value !== this.el.dataset.saved) {
+              event.preventDefault()
+              event.stopPropagation()
+              this.el.value = this.el.dataset.saved ?? ""
+              this.el.dispatchEvent(new Event("input", {bubbles: true}))
+            }
+          })
+          this.el.addEventListener("blur", () => this.commit())
+        }
+
+        commit() {
+          if (this.el.value === this.el.dataset.saved) return
+          const payload = {key: this.el.dataset.key, text: this.el.value}
+          this.pushEventTo(this.el, "date-commit", payload, (reply: {text?: string}) => {
+            if (reply.text !== undefined) this.el.value = reply.text
+          })
+        }
+      }
+    </script>
     """
+  end
+
+  defp typed({:error, text}), do: text
+  defp typed(_preview), do: nil
+
+  defp error?(preview), do: match?({:error, _}, preview)
+
+  defp preview_text(nil), do: nil
+  defp preview_text({:error, _text}), do: gettext("Can't read that as a day.")
+  defp preview_text(:blank), do: gettext("No date")
+  defp preview_text({:ok, text}), do: text
+
+  ## Reading typed text (ADR 0032)
+
+  @doc """
+  What `text` typed in the field `key` ("defer", "planned", "due") reads as:
+  `nil` when it is what the field already shows, `:blank`, `{:error, text}`,
+  or `{:ok, text}` naming the day and time it would save.
+  """
+  def preview(key, text, record, user) do
+    field = field(key)
+    zone = Marskal.Accounts.timezone(user)
+
+    if text == text(Map.fetch!(record, field), field, zone) do
+      nil
+    else
+      case read(text, field, user) do
+        {:ok, date, time} -> {:ok, long(date, time || Dates.default_time(field), zone)}
+        :blank -> :blank
+        :error -> {:error, text}
+      end
+    end
+  end
+
+  @doc """
+  The attrs that saving `text` in the field `key` means: `{:ok, attrs}`, or
+  `:error` when it cannot be read. A day and minute the field already has
+  keeps the stored instant, so nothing is patched.
+  """
+  def commit(key, text, record, user) do
+    field = field(key)
+    zone = Marskal.Accounts.timezone(user)
+
+    case read(text, field, user) do
+      :blank ->
+        {:ok, %{Atom.to_string(field) => nil}}
+
+      {:ok, date, time} ->
+        picked = Dates.from_local(date, time, field, zone)
+        stored = Map.fetch!(record, field)
+        at = if stored && same_minute?(stored, picked), do: stored, else: picked
+        {:ok, %{Atom.to_string(field) => at}}
+
+      :error ->
+        :error
+    end
+  end
+
+  @doc """
+  The text a date field shows for a stored instant: the day and the time,
+  so a day typed without one shows the time it took.
+  """
+  def text(nil, _field, _zone), do: ""
+
+  def text(%DateTime{} = datetime, _field, zone) do
+    {date, time} = Dates.to_local(datetime, zone)
+    Marskal.DateFormat.date_time(NaiveDateTime.new!(date, time))
+  end
+
+  @doc "The field a key names."
+  def field(key), do: @keys |> Enum.find(fn {_field, k} -> k == key end) |> elem(0)
+
+  defp read(text, field, user) do
+    preferences = Marskal.Accounts.preferences(user)
+    now = preferences.timezone |> DateTime.now!() |> DateTime.to_naive()
+
+    Marskal.DateInput.parse(text, now,
+      week_start: preferences.week_start,
+      order: Marskal.DateFormat.numeric_order(locale: preferences.locale),
+      day_month: Marskal.DateFormat.day_month_order(locale: preferences.locale),
+      language: preferences.locale |> String.split("-") |> hd(),
+      evening: Dates.evening_time(field)
+    )
+  end
+
+  # "Friday, 23 October, 17:00", with the year when it is not this one.
+  defp long(date, time, zone) do
+    style = if date.year == Dates.today(zone).year, do: :long, else: :long_year
+
+    gettext("%{day}, %{time}",
+      day: Marskal.DateFormat.date(date, style),
+      time: Marskal.DateFormat.time(time)
+    )
   end
 
   # What a blank field goes by instead, from the task or project above.

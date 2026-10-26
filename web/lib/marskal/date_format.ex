@@ -44,6 +44,30 @@ defmodule Marskal.DateFormat do
     )
   end
 
+  @doc """
+  The order the locale writes a numeric date in: `:dmy` ("22/11/2033"),
+  `:mdy` ("11/22/33"), or `:ymd` ("2033-11-22").
+  """
+  def numeric_order(opts \\ []) do
+    text = Marskal.Cldr.Date.to_string!(~D[2033-11-22], format: :yMd, locale: locale(opts))
+    [day, month, year] = for part <- ["22", "11", "33"], do: :binary.match(text, part)
+
+    cond do
+      year < month -> :ymd
+      month < day -> :mdy
+      true -> :dmy
+    end
+  end
+
+  @doc """
+  The order the locale writes a day and month in, without a year: `:dm`
+  ("22/11") or `:md` ("11/22"). A year-first locale may write either.
+  """
+  def day_month_order(opts \\ []) do
+    text = Marskal.Cldr.Date.to_string!(~D[2033-11-22], format: :Md, locale: locale(opts))
+    if :binary.match(text, "22") < :binary.match(text, "11"), do: :dm, else: :md
+  end
+
   @doc "The locales a user can pick, each with the region its conventions come from."
   def locales do
     Marskal.Cldr.known_locale_names()

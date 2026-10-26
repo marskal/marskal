@@ -32,6 +32,22 @@ defmodule Marskal.DateFormatTest do
     assert DateFormat.time(@time, locale: "da") == "16.30"
   end
 
+  test "every locale writes numeric dates in an order typed dates can read" do
+    assert DateFormat.numeric_order(locale: "en") == :mdy
+    assert DateFormat.numeric_order(locale: "en-150") == :dmy
+    assert DateFormat.numeric_order(locale: "da") == :dmy
+    assert DateFormat.numeric_order(locale: "en-SE") == :ymd
+    assert DateFormat.day_month_order(locale: "en-SE") == :dm
+    assert DateFormat.day_month_order(locale: "en-CA") == :md
+
+    for {locale, _region} <- DateFormat.locales(),
+        do:
+          assert(
+            DateFormat.numeric_order(locale: locale) in [:dmy, :mdy, :ymd] and
+              DateFormat.day_month_order(locale: locale) in [:dm, :md]
+          )
+  end
+
   test "without a locale it uses the process's" do
     Marskal.Cldr.put_locale("en-DK")
     assert DateFormat.time(@time) == "16.30"
