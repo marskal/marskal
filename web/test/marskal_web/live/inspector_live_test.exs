@@ -103,7 +103,8 @@ defmodule MarskalWeb.InspectorLiveTest do
     {:ok, inbox} = Tasks.create_task(user, %{"title" => "Bread"}, command())
     {:ok, inbox_view, _html} = live(conn, ~p"/inbox")
     inbox_view |> element("#inbox-tasks li.task-row", "Bread") |> render_click()
-    inbox_view |> form("#inspector-task", task: %{location: "none"}) |> render_change()
+    inbox_view |> element("#inspector-task-location-field") |> render_hook("location-open", %{})
+    inbox_view |> element("#inspector-task-location-view-none button") |> render_click()
 
     refute has_element?(inbox_view, "#inbox-tasks", "Bread")
     assert Tasks.get_task(user, inbox.id).inbox == false
@@ -263,7 +264,8 @@ defmodule MarskalWeb.InspectorLiveTest do
     assert has_element?(view, "#open-tasks", "Oat milk")
     assert has_element?(view, "#inspector-task-title[value='Oat milk']")
     assert has_element?(view, "#sidebar", "Launch")
-    assert has_element?(view, "#inspector-task-location option", "Launch")
+    view |> element("#inspector-task-location-field") |> render_hook("location-open", %{})
+    assert has_element?(view, "#inspector-task-location-results", "Launch")
   end
 
   test "a flag set in the inspector puts a task in Flagged, and a project flags its tasks", %{
@@ -306,6 +308,42 @@ defmodule MarskalWeb.InspectorLiveTest do
 
     view |> element("#flagged-tasks li.task-row", "Paint") |> render_click()
     assert has_element?(view, "#inspector-task-flagged-by-project")
+  end
+
+  test "the location field finds a project by name or folder path", %{conn: conn, user: user} do
+    {:ok, task} = Tasks.create_task(user, %{"title" => "Fix the header"}, command())
+    {:ok, work} = Marskal.ProjectFolders.create_folder(user, %{"name" => "Work"}, command())
+
+    {:ok, website} =
+      Projects.create_project(
+        user,
+        %{"title" => "Website", "project_folder_id" => work.id},
+        command()
+      )
+
+    {:ok, _} = Projects.create_project(user, %{"title" => "Wedding"}, command())
+    {:ok, done} = Projects.create_project(user, %{"title" => "Webinar"}, command())
+    {:ok, _} = Projects.update_project(user, done.id, %{"state" => "done"}, command())
+
+    {:ok, view, _html} = live(conn, ~p"/inbox?task=#{task.id}")
+    assert has_element?(view, "#inspector-task-location[value='Inbox']")
+
+    view |> element("#inspector-task-location-field") |> render_hook("location-open", %{})
+    assert has_element?(view, "#inspector-task-location-view-inbox[data-current]")
+    assert has_element?(view, "#inspector-task-location-results", "Wedding")
+    refute has_element?(view, "#inspector-task-location-results", "Webinar")
+
+    view |> element("#inspector-task-location") |> render_change(%{location_query: "wo/we"})
+    assert has_element?(view, "#inspector-task-location-results", "Website")
+    refute has_element?(view, "#inspector-task-location-results", "Wedding")
+
+    view |> element("#inspector-task-location-project-#{website.id} button") |> render_click()
+    refute has_element?(view, "#inspector-task-location-results")
+    assert has_element?(view, "#inspector-task-location[value='Website']")
+
+    task = Tasks.get_task(user, task.id)
+    assert task.project_id == website.id
+    refute task.inbox
   end
 
   defp command, do: Ecto.UUID.generate(version: 7)

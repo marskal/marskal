@@ -36,7 +36,7 @@ defmodule MarskalWeb.TaskStreamTest do
     refute has_element?(open, "#open-tasks", "Milk")
 
     inbox |> element("#inbox-tasks li.task-row", "Milk") |> render_click()
-    inbox |> form("#inspector-task", task: %{location: "none"}) |> render_change()
+    move_to(inbox, "none")
     refute has_element?(inbox, "#inbox-tasks", "Milk")
 
     {:ok, open, _html} = live(conn, ~p"/open")
@@ -87,13 +87,13 @@ defmodule MarskalWeb.TaskStreamTest do
     {:ok, project} = Marskal.Projects.create_project(user, %{"title" => "Shop"}, command())
     {:ok, inbox, _html} = live(conn, ~p"/inbox?task=#{task.id}")
 
-    assert has_element?(inbox, "#inspector-task-location option[value='inbox'][selected]")
+    assert has_element?(inbox, "#inspector-task-location[value='Inbox']")
 
-    inbox |> form("#inspector-task", task: %{location: project.id}) |> render_change()
+    move_to(inbox, "project-#{project.id}")
     assert Marskal.Tasks.get_task(user, task.id).project_id == project.id
     refute Marskal.Tasks.get_task(user, task.id).inbox
 
-    inbox |> form("#inspector-task", task: %{location: "inbox"}) |> render_change()
+    move_to(inbox, "view-inbox")
     task = Marskal.Tasks.get_task(user, task.id)
     assert task.inbox
     assert task.project_id == nil
@@ -128,6 +128,14 @@ defmodule MarskalWeb.TaskStreamTest do
     other = log_in_user(build_conn(), user_fixture())
     {:ok, _inbox, html} = live(other, ~p"/inbox")
     refute html =~ "Secret"
+  end
+
+  # Picks a location from the inspector's list, by its option's id suffix.
+  defp move_to(view, "none"), do: move_to(view, "view-none")
+
+  defp move_to(view, option) do
+    view |> element("#inspector-task-location-field") |> render_hook("location-open", %{})
+    view |> element("#inspector-task-location-#{option} button") |> render_click()
   end
 
   defp command, do: Ecto.UUID.generate(version: 7)

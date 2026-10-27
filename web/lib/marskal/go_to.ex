@@ -37,6 +37,15 @@ defmodule Marskal.GoTo do
     outline(all, shown, nil, []) ++ tags(all.tags, shown)
   end
 
+  @doc """
+  The user's projects alone, in sidebar order, each with its folders. What
+  the default sidebar hides is marked hidden.
+  """
+  def projects(user) do
+    all = ProjectNav.build(user, [:done, :dropped, :deferred])
+    all |> outline(ProjectNav.build(user), nil, []) |> Enum.filter(&(&1.type == :project))
+  end
+
   defp outline(all, shown, folder_id, ancestors) do
     all
     |> ProjectNav.children(folder_id)
