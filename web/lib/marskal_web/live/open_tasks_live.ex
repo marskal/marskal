@@ -9,6 +9,14 @@ defmodule MarskalWeb.OpenTasksLive do
 
   alias Marskal.Tasks
 
+  # Outline rows sent on the first paint. Further pages follow the scroll
+  # (`phx-viewport-bottom`) or Show more. Down at the last row loads the
+  # next page. End stays on the last row already rendered.
+  @row_page 50
+
+  @doc false
+  def row_page, do: @row_page
+
   # The open stream, and :flagged, its flagged tasks with the inbox's
   # (ADR 0025).
   @impl true
@@ -18,7 +26,8 @@ defmodule MarskalWeb.OpenTasksLive do
     {:ok,
      socket
      |> MarskalWeb.Outline.attach()
-     |> assign(:page_title, title)}
+     |> assign(:page_title, title)
+     |> assign(:shown, @row_page)}
   end
 
   # Opening the inspector patches this page. That is not a new view, so
@@ -61,6 +70,7 @@ defmodule MarskalWeb.OpenTasksLive do
         repeating={@task_tags.repeating}
         flagged={@task_tags.flagged}
         zone={Marskal.Accounts.timezone(@current_scope.user)}
+        limit={@shown}
         nested={!@flagged?}
         collapsed={@collapsed}
         mark_inbox={@flagged?}
@@ -82,9 +92,27 @@ defmodule MarskalWeb.OpenTasksLive do
     """
   end
 
+  @impl true
+  def handle_event("load-more", _params, socket) do
+    {:noreply, update(socket, :shown, &(&1 + @row_page))}
+  end
+
   defp load_tasks(socket) do
     user = socket.assigns.current_scope.user
-    opts = [show: socket.assigns.visibility]
+    visibility = socket.assigns.visibility
+
+    # Also show is a different list. Start its window over. An inspector
+    # patch and any other reload keep the rows already read.
+    socket =
+      if socket.assigns[:window_for] == visibility do
+        socket
+      else
+        socket
+        |> assign(:window_for, visibility)
+        |> assign(:shown, @row_page)
+      end
+
+    opts = [show: visibility]
 
     # Subtasks show under their parents (ADR 0009). Flagged stays flat:
     # a parent task does not flag its subtasks (ADR 0025).

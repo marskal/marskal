@@ -54,15 +54,22 @@ defmodule MarskalWeb.TaskComponents do
     default: nil,
     doc: "the task being added inline on an outline, from `MarskalWeb.Outline`"
 
+  attr :limit, :integer,
+    default: nil,
+    doc: "outline rows to render from the top; nil renders the whole list"
+
   slot :empty_state, doc: "shown instead of `empty` when there are no tasks"
 
   def list(assigns) do
+    {shown, more?} = window(rows(assigns), assigns.limit)
+
     assigns =
       assign(assigns,
         now: DateTime.utc_now(),
         today: Marskal.Dates.today(assigns.zone),
         inherited_hint: "From the task or project above",
-        rows: rows(assigns)
+        rows: shown,
+        more?: more?
       )
 
     # Rows keep a disclosure column only when some row can use it.
@@ -335,173 +342,191 @@ defmodule MarskalWeb.TaskComponents do
         margin: 0;
         padding: 0;
       }
+
+      .task-window .more {
+        display: block;
+        width: 100%;
+        margin-top: 0.75rem;
+        border-color: var(--border);
+        background: transparent;
+        color: var(--muted);
+      }
     </style>
     <%= if @tasks == [] do %>
       {render_slot(@empty_state)}
       <p :if={@empty_state == [] and @empty} class="empty">{@empty}</p>
     <% end %>
-    <ul
-      id={@id}
-      class="task-list"
-      phx-hook=".Outline"
-      data-outline={@outline}
-      data-nested={@nested}
+    <div
+      id={@limit != nil && "#{@id}-window"}
+      class={@limit != nil && "task-window"}
+      phx-viewport-bottom={@more? && "load-more"}
     >
-      <%= for %{task: task, dates: d, depth: depth, children?: children?} <- @rows do %>
-        <.new_row
-          :if={new_row_at?(@new_row, task.id, :above)}
-          anchor_id={task.id}
-          depth={depth}
-          outline={@outline}
-          disclosures={@disclosures}
-        />
-        <li
-          id={"task-#{task.id}"}
-          class={[
-            "task-row",
-            MarskalWeb.Inspector.selected?(:task, task.id, @inspector) && "is-selected",
-            (MapSet.member?(@unavailable, task.id) or MapSet.member?(@deferred, task.id)) &&
-              "is-unavailable",
-            (task.state != :to_do or MapSet.member?(@resolved, task.id)) && "is-resolved"
-          ]}
-          style={depth > 0 && "--depth: #{depth}"}
-          data-depth={(@outline or @nested) && depth}
-          data-inspect-type="task"
-          data-inspect-id={task.id}
-          aria-current={MarskalWeb.Inspector.selected?(:task, task.id, @inspector) && "true"}
-          phx-click="inspect"
-          phx-value-type="task"
-          phx-value-id={task.id}
-        >
-          <span :if={@disclosures} class="disclosure">
-            <button
-              :if={children?}
-              type="button"
-              phx-click="outline-toggle"
-              phx-value-id={task.id}
-              aria-expanded={to_string(not MapSet.member?(@collapsed, task.id))}
-              aria-label={
-                if MapSet.member?(@collapsed, task.id), do: "Show subtasks", else: "Hide subtasks"
-              }
-            >
-              <Lucideicons.chevron_right
-                :if={MapSet.member?(@collapsed, task.id)}
-                class="icon"
-                aria-hidden="true"
-              />
-              <Lucideicons.chevron_down
-                :if={not MapSet.member?(@collapsed, task.id)}
-                class="icon"
-                aria-hidden="true"
-              />
-            </button>
-          </span>
-          <span :if={:complete in @actions} class="check-form">
-            <button
-              type="button"
-              class={check_class(task)}
-              phx-click={check_event(task)}
-              phx-value-id={task.id}
-              title={check_label(task)}
-              aria-label={check_label(task)}
-            >
-              <span :if={task.state == :dropped} class="check__dropped" aria-hidden="true">
-                <Lucideicons.square_off class="icon" />
-              </span>
-              <span :if={task.state == :done} class="check__complete" aria-hidden="true">
-                <Lucideicons.square_check_big class="icon" />
-              </span>
-              <span :if={task.state == :to_do} class="check__idle" aria-hidden="true">
-                <Lucideicons.square class="icon" />
-              </span>
-              <span :if={task.state == :to_do} class="check__hint" aria-hidden="true">
-                <Lucideicons.square_check_big class="icon" />
-              </span>
-            </button>
-          </span>
-          <div class="body">
-            <button
-              type="button"
-              class="select title"
-              phx-click="inspect"
-              phx-value-type="task"
-              phx-value-id={task.id}
-            >
-              <span :if={!(@outline or @nested) && @parents[task.id]} class="crumb">
-                {@parents[task.id].title}<span class="chevron" aria-hidden="true">›</span>
-              </span>
-              {task.title}
-            </button>
-            <MarskalWeb.UrlLink.link url={task.url} />
-            <div class="meta">
-              <span
-                :if={
-                  (@mark_inbox and task.inbox) or d.planned_at != nil or d.due_at != nil or
-                    MapSet.member?(@unavailable, task.id) or MapSet.member?(@deferred, task.id) or
-                    MapSet.member?(@repeating, task.id) or
-                    MapSet.member?(@flagged, task.id)
+      <ul
+        id={@id}
+        class="task-list"
+        phx-hook=".Outline"
+        data-outline={@outline}
+        data-nested={@nested}
+      >
+        <%= for %{task: task, dates: d, depth: depth, children?: children?} <- @rows do %>
+          <.new_row
+            :if={new_row_at?(@new_row, task.id, :above)}
+            anchor_id={task.id}
+            depth={depth}
+            outline={@outline}
+            disclosures={@disclosures}
+          />
+          <li
+            id={"task-#{task.id}"}
+            class={[
+              "task-row",
+              MarskalWeb.Inspector.selected?(:task, task.id, @inspector) && "is-selected",
+              (MapSet.member?(@unavailable, task.id) or MapSet.member?(@deferred, task.id)) &&
+                "is-unavailable",
+              (task.state != :to_do or MapSet.member?(@resolved, task.id)) && "is-resolved"
+            ]}
+            style={depth > 0 && "--depth: #{depth}"}
+            data-depth={(@outline or @nested) && depth}
+            data-inspect-type="task"
+            data-inspect-id={task.id}
+            aria-current={MarskalWeb.Inspector.selected?(:task, task.id, @inspector) && "true"}
+            phx-click="inspect"
+            phx-value-type="task"
+            phx-value-id={task.id}
+          >
+            <span :if={@disclosures} class="disclosure">
+              <button
+                :if={children?}
+                type="button"
+                phx-click="outline-toggle"
+                phx-value-id={task.id}
+                aria-expanded={to_string(not MapSet.member?(@collapsed, task.id))}
+                aria-label={
+                  if MapSet.member?(@collapsed, task.id), do: "Show subtasks", else: "Hide subtasks"
                 }
-                class="marks"
               >
+                <Lucideicons.chevron_right
+                  :if={MapSet.member?(@collapsed, task.id)}
+                  class="icon"
+                  aria-hidden="true"
+                />
+                <Lucideicons.chevron_down
+                  :if={not MapSet.member?(@collapsed, task.id)}
+                  class="icon"
+                  aria-hidden="true"
+                />
+              </button>
+            </span>
+            <span :if={:complete in @actions} class="check-form">
+              <button
+                type="button"
+                class={check_class(task)}
+                phx-click={check_event(task)}
+                phx-value-id={task.id}
+                title={check_label(task)}
+                aria-label={check_label(task)}
+              >
+                <span :if={task.state == :dropped} class="check__dropped" aria-hidden="true">
+                  <Lucideicons.square_off class="icon" />
+                </span>
+                <span :if={task.state == :done} class="check__complete" aria-hidden="true">
+                  <Lucideicons.square_check_big class="icon" />
+                </span>
+                <span :if={task.state == :to_do} class="check__idle" aria-hidden="true">
+                  <Lucideicons.square class="icon" />
+                </span>
+                <span :if={task.state == :to_do} class="check__hint" aria-hidden="true">
+                  <Lucideicons.square_check_big class="icon" />
+                </span>
+              </button>
+            </span>
+            <div class="body">
+              <button
+                type="button"
+                class="select title"
+                phx-click="inspect"
+                phx-value-type="task"
+                phx-value-id={task.id}
+              >
+                <span :if={!(@outline or @nested) && @parents[task.id]} class="crumb">
+                  {@parents[task.id].title}<span class="chevron" aria-hidden="true">›</span>
+                </span>
+                {task.title}
+              </button>
+              <MarskalWeb.UrlLink.link url={task.url} />
+              <div class="meta">
                 <span
-                  :if={MapSet.member?(@flagged, task.id)}
-                  class="mark mark--flag"
-                  title={flag_label(task)}
+                  :if={
+                    (@mark_inbox and task.inbox) or d.planned_at != nil or d.due_at != nil or
+                      MapSet.member?(@unavailable, task.id) or MapSet.member?(@deferred, task.id) or
+                      MapSet.member?(@repeating, task.id) or
+                      MapSet.member?(@flagged, task.id)
+                  }
+                  class="marks"
                 >
-                  <Lucideicons.flag class="icon" aria-label={flag_label(task)} />
+                  <span
+                    :if={MapSet.member?(@flagged, task.id)}
+                    class="mark mark--flag"
+                    title={flag_label(task)}
+                  >
+                    <Lucideicons.flag class="icon" aria-label={flag_label(task)} />
+                  </span>
+                  <span
+                    :if={MapSet.member?(@repeating, task.id)}
+                    class="mark mark--repeat"
+                    title="Repeats"
+                  >
+                    <Lucideicons.repeat class="icon" aria-label="Repeats" />
+                  </span>
+                  <span :if={@mark_inbox and task.inbox} class="mark mark--inbox">Inbox</span>
+                  <span :if={MapSet.member?(@unavailable, task.id)} class="mark mark--unavailable">
+                    Unavailable
+                  </span>
+                  <span :if={MapSet.member?(@deferred, task.id)} class="mark mark--deferred">
+                    {deferred_label(d, @zone, @today, @now)}
+                  </span>
+                  <span
+                    :if={d.planned_at}
+                    class={[
+                      "mark mark--planned",
+                      planned_today?(task, d, @zone, @today) && "mark--today",
+                      inherited?(task, d, :planned_at) && "mark--inherited"
+                    ]}
+                    title={inherited?(task, d, :planned_at) && @inherited_hint}
+                  >
+                    Planned {MarskalWeb.DateFields.short(d.planned_at, :planned_at, @zone, @today)}
+                  </span>
+                  <span
+                    :if={d.due_at}
+                    class={[
+                      "mark mark--due",
+                      Marskal.Dates.overdue?(%{state: task.state, due_at: d.due_at}, @now) &&
+                        "mark--overdue",
+                      inherited?(task, d, :due_at) && "mark--inherited"
+                    ]}
+                    title={inherited?(task, d, :due_at) && @inherited_hint}
+                  >
+                    Due {MarskalWeb.DateFields.short(d.due_at, :due_at, @zone, @today)}
+                  </span>
                 </span>
-                <span
-                  :if={MapSet.member?(@repeating, task.id)}
-                  class="mark mark--repeat"
-                  title="Repeats"
-                >
-                  <Lucideicons.repeat class="icon" aria-label="Repeats" />
-                </span>
-                <span :if={@mark_inbox and task.inbox} class="mark mark--inbox">Inbox</span>
-                <span :if={MapSet.member?(@unavailable, task.id)} class="mark mark--unavailable">
-                  Unavailable
-                </span>
-                <span :if={MapSet.member?(@deferred, task.id)} class="mark mark--deferred">
-                  {deferred_label(d, @zone, @today, @now)}
-                </span>
-                <span
-                  :if={d.planned_at}
-                  class={[
-                    "mark mark--planned",
-                    planned_today?(task, d, @zone, @today) && "mark--today",
-                    inherited?(task, d, :planned_at) && "mark--inherited"
-                  ]}
-                  title={inherited?(task, d, :planned_at) && @inherited_hint}
-                >
-                  Planned {MarskalWeb.DateFields.short(d.planned_at, :planned_at, @zone, @today)}
-                </span>
-                <span
-                  :if={d.due_at}
-                  class={[
-                    "mark mark--due",
-                    Marskal.Dates.overdue?(%{state: task.state, due_at: d.due_at}, @now) &&
-                      "mark--overdue",
-                    inherited?(task, d, :due_at) && "mark--inherited"
-                  ]}
-                  title={inherited?(task, d, :due_at) && @inherited_hint}
-                >
-                  Due {MarskalWeb.DateFields.short(d.due_at, :due_at, @zone, @today)}
-                </span>
-              </span>
-              <MarskalWeb.TagComponents.chips entries={Map.get(@tags, task.id, [])} />
+                <MarskalWeb.TagComponents.chips entries={Map.get(@tags, task.id, [])} />
+              </div>
+              <MarskalWeb.FormattedNotes.block text={task.notes} />
             </div>
-            <MarskalWeb.FormattedNotes.block text={task.notes} />
-          </div>
-        </li>
-        <.new_row
-          :if={new_row_at?(@new_row, task.id, :below)}
-          anchor_id={task.id}
-          depth={depth + if(@new_row.child?, do: 1, else: 0)}
-          outline={@outline}
-          disclosures={@disclosures}
-        />
-      <% end %>
-    </ul>
+          </li>
+          <.new_row
+            :if={new_row_at?(@new_row, task.id, :below)}
+            anchor_id={task.id}
+            depth={depth + if(@new_row.child?, do: 1, else: 0)}
+            outline={@outline}
+            disclosures={@disclosures}
+          />
+        <% end %>
+      </ul>
+      <button :if={@more?} id={"#{@id}-more"} type="button" class="more" phx-click="load-more">
+        {gettext("Show more")}
+      </button>
+    </div>
     <script :type={Phoenix.LiveView.ColocatedHook} name=".Outline" extension="ts">
       import {ViewHook} from "phoenix_live_view"
       import Sortable from "sortablejs"
@@ -696,6 +721,10 @@ defmodule MarskalWeb.TaskComponents do
 
       export default class extends ViewHook<HTMLUListElement> {
         focusId: string | null = null
+        // Down at the last rendered row asks for the next page, then steps
+        // into it. End stays put: a long list does not load the rest just
+        // to jump to the end.
+        pendingMove: "next" | null = null
         prefix: Prefix | null = null
         prefixTimer = 0
         selectTimer = 0
@@ -812,6 +841,11 @@ defmodule MarskalWeb.TaskComponents do
           return name === "collapse" ? expanded : !expanded
         }
 
+        moreButton(): HTMLButtonElement | null {
+          const button = document.getElementById(`${this.el.id}-more`)
+          return button instanceof HTMLButtonElement ? button : null
+        }
+
         rows(): HTMLElement[] {
           return Array.from(this.el.querySelectorAll<HTMLElement>(":scope > .task-row"))
         }
@@ -864,10 +898,18 @@ defmodule MarskalWeb.TaskComponents do
 
         run(name: Action, row: HTMLElement, id: string) {
           if (name.startsWith("move-")) {
+            if (this.pendingMove) return
             const next = this.target(name, row)
-            if (!next || next === row) return
-            next.querySelector<HTMLElement>("button.select")?.focus()
-            this.select(next)
+            if (next && next !== row) {
+              next.querySelector<HTMLElement>("button.select")?.focus()
+              this.select(next)
+              return
+            }
+            if (name === "move-next" && this.moreButton()) {
+              this.focusId = id
+              this.pendingMove = "next"
+              this.pushEvent("load-more", {})
+            }
             return
           }
 
@@ -967,7 +1009,22 @@ defmodule MarskalWeb.TaskComponents do
         }
 
         // A move can re-create the row, so focus goes back to it by id.
+        // Loading the next page steps into the row that just appeared.
         updated() {
+          if (this.pendingMove === "next" && this.focusId) {
+            const rows = this.rows()
+            const current = this.el.querySelector<HTMLElement>(`#task-${CSS.escape(this.focusId)}`)
+            const index = current ? rows.indexOf(current) : -1
+            const target = rows[index + 1]
+            this.pendingMove = null
+            this.focusId = null
+            if (target) {
+              target.querySelector<HTMLElement>("button.select")?.focus()
+              this.select(target)
+            }
+            return
+          }
+
           if (!this.focusId) return
           const title = this.el.querySelector<HTMLElement>(`#task-${CSS.escape(this.focusId)} button.select`)
           if (title && document.activeElement !== title) title.focus()
@@ -1083,6 +1140,41 @@ defmodule MarskalWeb.TaskComponents do
   def parse_location("inbox"), do: :inbox
   def parse_location(value) when value in ["none", ""], do: :none
   def parse_location(project_id) when is_binary(project_id), do: project_id
+
+  # `limit` keeps the top of the outline. The cut stops before the next
+  # row, unless that row is inside the subtree of the last one shown: an
+  # expanded parent keeps the children that follow it. End does not ask
+  # for the rows past the cut.
+  defp window(rows, nil), do: {rows, false}
+
+  defp window(rows, limit) when is_integer(limit) and limit >= 0 do
+    case Enum.split(rows, limit) do
+      {shown, []} ->
+        {shown, false}
+
+      {shown, [next | _] = rest} ->
+        if subtree?(shown, next) do
+          depth = cut_depth(shown, next)
+          {extra, rest} = Enum.split_while(rest, &(&1.depth > depth))
+          {shown ++ extra, rest != []}
+        else
+          {shown, true}
+        end
+    end
+  end
+
+  defp subtree?(shown, next) do
+    case List.last(shown) do
+      nil -> false
+      last -> next.depth > last.depth
+    end
+  end
+
+  defp cut_depth(shown, next) do
+    Enum.find_value(Enum.reverse(shown), 0, fn row ->
+      if row.depth < next.depth, do: row.depth
+    end)
+  end
 
   # One row per task shown, with the dates it goes by: its own, or those
   # inherited from the task or project above
