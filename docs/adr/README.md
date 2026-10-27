@@ -42,6 +42,7 @@ This directory holds **ADRs** — durable decisions and their context.
 | [0031](0031-keyboard-keymap.md) | Keyboard keymap | Accepted |
 | [0032](0032-date-shorthand.md) | Typed dates and the calendar | Accepted |
 | [0033](0033-go-to.md) | Go to, and search later | Accepted |
+| [0034](0034-builtin-collation.md) | Built-in collation (`PG_UNICODE_FAST`) | Accepted |
 
 ## When to add an ADR
 
