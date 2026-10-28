@@ -163,10 +163,11 @@ defmodule Marskal.Changes do
     end
   end
 
-  @doc "A field value as JSON carries it: ISO 8601 for instants, strings for enums."
+  @doc "A field value as JSON carries it: ISO 8601 for instants and intervals, strings for enums."
   def encode_value(nil), do: nil
   def encode_value(value) when is_boolean(value), do: value
   def encode_value(value) when is_atom(value), do: Atom.to_string(value)
   def encode_value(%DateTime{} = value), do: DateTime.to_iso8601(value)
+  def encode_value(%Duration{} = value), do: Duration.to_iso8601(value)
   def encode_value(value), do: value
 end

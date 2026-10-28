@@ -19,7 +19,8 @@ defmodule Marskal.Sync do
 
   @entities [
     {"user_preferences", Marskal.Accounts.UserPreferences,
-     ~w(id timezone week_start locale home_view keymap inserted_at updated_at)a},
+     ~w(id timezone week_start locale home_view keymap default_review_interval inserted_at
+        updated_at)a},
     {"recurrence_series", Marskal.Recurrence.Series,
      ~w(id kind mode anchor interval frequency weekdays on_days
         ends_at end_count week_start stopped_at discarded_at inserted_at updated_at)a},
@@ -29,7 +30,8 @@ defmodule Marskal.Sync do
         updated_at)a},
     {"project", Marskal.Projects.Project,
      ~w(id title notes url flagged state project_folder_id rank defer_until deferred_indefinitely planned_at
-        due_at series_id occurrence_for resolved_at discarded_at inserted_at updated_at)a},
+        due_at series_id occurrence_for review_interval next_review_on last_reviewed_at
+        resolved_at discarded_at inserted_at updated_at)a},
     {"project_folder", Marskal.ProjectFolders.ProjectFolder,
      ~w(id name parent_id state rank discarded_at inserted_at updated_at)a},
     {"tag", Marskal.Tags.Tag,

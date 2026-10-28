@@ -24,6 +24,9 @@ config :marskal,
   ecto_repos: [Marskal.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+# Intervals decode to `Duration` (ADR 0026).
+config :marskal, Marskal.Repo, types: Marskal.PostgresTypes
+
 # Configure the endpoint
 config :marskal, MarskalWeb.Endpoint,
   url: [host: "localhost"],
