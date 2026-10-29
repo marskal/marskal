@@ -84,7 +84,8 @@ defmodule MarskalWeb.InspectorPanel do
           font-size: 0.9rem;
         }
 
-        .form {
+        .form,
+        .rest {
           display: flex;
           flex-direction: column;
           gap: 0.85rem;
@@ -147,7 +148,8 @@ defmodule MarskalWeb.InspectorPanel do
 
         textarea.input {
           resize: vertical;
-          min-height: 8rem;
+          /* Four lines, plus this field's padding and border. Drag to grow it. */
+          min-height: calc(4 * 1.45em + 0.9rem + 2px);
           line-height: 1.45;
         }
 
@@ -516,11 +518,13 @@ defmodule MarskalWeb.InspectorPanel do
   attr :change_version, :any, default: nil
 
   defp task_form(assigns) do
+    assigns = assign(assigns, :form_id, "inspector-task")
+
     ~H"""
     <section class="inspector-form" data-inspect-type="task" data-inspect-id={@record.id}>
       <p :if={@error} class="errors" role="alert">{@error}</p>
       <form
-        id="inspector-task"
+        id={@form_id}
         class="form"
         phx-change="save"
         data-autosave
@@ -565,9 +569,14 @@ defmodule MarskalWeb.InspectorPanel do
           place={@place}
           parent={@outline[:parent]}
         />
+      </form>
+      <%!-- Tags are their own form, so they cannot nest here. The fields after
+            them name this form, and a change still posts every field. --%>
+      <.tag_picker id="inspector-task-tags" myself={@myself} tagging={@tagging} picker={@picker} />
+      <div class="rest" data-autosave>
         <div class="field">
           <label for="inspector-task-state">State</label>
-          <select id="inspector-task-state" class="input" name="task[state]">
+          <select id="inspector-task-state" class="input" name="task[state]" form={@form_id}>
             <option
               :for={{label, value} <- task_states()}
               value={value}
@@ -582,13 +591,14 @@ defmodule MarskalWeb.InspectorPanel do
         </div>
         <div class="field">
           <label class="toggle">
-            <input type="hidden" name="task[flagged]" value="false" />
+            <input type="hidden" name="task[flagged]" value="false" form={@form_id} />
             <input
               type="checkbox"
               id="inspector-task-flagged"
               name="task[flagged]"
               value="true"
               checked={@record.flagged}
+              form={@form_id}
             /> Flagged
           </label>
           <p
@@ -601,6 +611,7 @@ defmodule MarskalWeb.InspectorPanel do
         </div>
         <MarskalWeb.DateFields.inputs
           form="task"
+          form_id={@form_id}
           id="inspector-task-dates"
           record={@record}
           zone={@zone}
@@ -621,7 +632,7 @@ defmodule MarskalWeb.InspectorPanel do
             Delete
           </button>
         </div>
-      </form>
+      </div>
       <.notes_dialog form="task" myself={@myself} record={@record} />
       <.live_component
         module={MarskalWeb.RepeatPanel}
@@ -630,7 +641,6 @@ defmodule MarskalWeb.InspectorPanel do
         record={@record}
         change_version={@change_version}
       />
-      <.tag_picker id="inspector-task-tags" myself={@myself} tagging={@tagging} picker={@picker} />
       <.meta record={@record} zone={@zone} />
     </section>
     """
@@ -649,11 +659,13 @@ defmodule MarskalWeb.InspectorPanel do
   attr :calendar, :map, default: nil
 
   defp project_form(assigns) do
+    assigns = assign(assigns, :form_id, "inspector-project")
+
     ~H"""
     <section class="inspector-form" data-inspect-type="project" data-inspect-id={@record.id}>
       <p :if={@error} class="errors" role="alert">{@error}</p>
       <form
-        id="inspector-project"
+        id={@form_id}
         class="form"
         phx-change="save"
         data-autosave
@@ -707,9 +719,24 @@ defmodule MarskalWeb.InspectorPanel do
             </option>
           </select>
         </div>
+      </form>
+      <%!-- Tags are their own form, so they cannot nest here. The fields after
+            them name this form, and a change still posts every field. --%>
+      <.tag_picker
+        id="inspector-project-tags"
+        myself={@myself}
+        tagging={@tagging}
+        picker={@picker}
+      />
+      <div class="rest" data-autosave>
         <div class="field">
           <label for="inspector-project-state">State</label>
-          <select id="inspector-project-state" class="input" name="project[state]">
+          <select
+            id="inspector-project-state"
+            class="input"
+            name="project[state]"
+            form={@form_id}
+          >
             <option
               :for={{label, value} <- task_states()}
               value={value}
@@ -720,17 +747,19 @@ defmodule MarskalWeb.InspectorPanel do
           </select>
         </div>
         <label class="toggle">
-          <input type="hidden" name="project[flagged]" value="false" />
+          <input type="hidden" name="project[flagged]" value="false" form={@form_id} />
           <input
             type="checkbox"
             id="inspector-project-flagged"
             name="project[flagged]"
             value="true"
             checked={@record.flagged}
+            form={@form_id}
           /> Flagged
         </label>
         <MarskalWeb.DateFields.inputs
           form="project"
+          form_id={@form_id}
           id="inspector-project-dates"
           record={@record}
           zone={@zone}
@@ -751,7 +780,7 @@ defmodule MarskalWeb.InspectorPanel do
           </button>
           <.link navigate={~p"/projects/#{@record.id}"} class="open">Open project</.link>
         </div>
-      </form>
+      </div>
       <.notes_dialog form="project" myself={@myself} record={@record} />
       <.live_component
         module={MarskalWeb.RepeatPanel}
@@ -760,7 +789,6 @@ defmodule MarskalWeb.InspectorPanel do
         record={@record}
         change_version={@change_version}
       />
-      <.tag_picker id="inspector-project-tags" myself={@myself} tagging={@tagging} picker={@picker} />
       <.meta record={@record} zone={@zone} />
     </section>
     """
@@ -1210,7 +1238,7 @@ defmodule MarskalWeb.InspectorPanel do
         id={"inspector-#{@form}-notes"}
         class="input"
         name={"#{@form}[notes]"}
-        rows="8"
+        rows="4"
         placeholder={@placeholder}
         phx-debounce="300"
       >{@record.notes}</textarea>

@@ -13,6 +13,11 @@ defmodule MarskalWeb.DateFields do
   @keys %{defer_until: "defer", planned_at: "planned", due_at: "due"}
 
   attr :form, :string, required: true, doc: "the form's param name, such as \"task\""
+
+  attr :form_id, :string,
+    default: nil,
+    doc: "id of the form element, when these inputs sit outside it"
+
   attr :id, :string, required: true
   attr :record, :any, required: true
   attr :zone, :string, required: true
@@ -44,6 +49,7 @@ defmodule MarskalWeb.DateFields do
         :if={not @record.deferred_indefinitely}
         label={gettext("Defer until")}
         form={@form}
+        form_id={@form_id}
         id={@id}
         field={:defer_until}
         record={@record}
@@ -56,18 +62,25 @@ defmodule MarskalWeb.DateFields do
         {inherited_defer(@record, @inherited, @zone)}
       </p>
       <label class="indefinite">
-        <input type="hidden" name={"#{@form}[deferred_indefinitely]"} value="false" />
+        <input
+          type="hidden"
+          name={"#{@form}[deferred_indefinitely]"}
+          value="false"
+          {form_owner(@form_id)}
+        />
         <input
           type="checkbox"
           id={"#{@id}-indefinite"}
           name={"#{@form}[deferred_indefinitely]"}
           value="true"
           checked={@record.deferred_indefinitely}
+          {form_owner(@form_id)}
         /> {gettext("Defer indefinitely")}
       </label>
       <.day_time
         label={gettext("Planned")}
         form={@form}
+        form_id={@form_id}
         id={@id}
         field={:planned_at}
         record={@record}
@@ -82,6 +95,7 @@ defmodule MarskalWeb.DateFields do
       <.day_time
         label={gettext("Due")}
         form={@form}
+        form_id={@form_id}
         id={@id}
         field={:due_at}
         record={@record}
@@ -103,6 +117,7 @@ defmodule MarskalWeb.DateFields do
 
   attr :label, :string, required: true
   attr :form, :string, required: true
+  attr :form_id, :string, default: nil
   attr :id, :string, required: true
   attr :field, :atom, required: true
   attr :record, :any, required: true
@@ -133,8 +148,8 @@ defmodule MarskalWeb.DateFields do
     <div class="day-time">
       <label for={"#{@id}-#{@key}"}>{@label}</label>
       <div class="day-time__entry">
-        <input type="hidden" name={"#{@form}[#{@key}_date]"} value={@date} />
-        <input type="hidden" name={"#{@form}[#{@key}_time]"} value={@time} />
+        <input type="hidden" name={"#{@form}[#{@key}_date]"} value={@date} {form_owner(@form_id)} />
+        <input type="hidden" name={"#{@form}[#{@key}_time]"} value={@time} {form_owner(@form_id)} />
         <input
           id={"#{@id}-#{@key}"}
           class="input"
@@ -151,6 +166,7 @@ defmodule MarskalWeb.DateFields do
           data-commit
           aria-describedby={"#{@id}-#{@key}-reads"}
           aria-invalid={to_string(error?(@preview))}
+          {form_owner(@form_id)}
         />
         <button
           type="button"
@@ -399,6 +415,11 @@ defmodule MarskalWeb.DateFields do
     </script>
     """
   end
+
+  # The inspector puts these inputs after Tags, outside the <form>. Naming the
+  # form keeps a change posted with the fields that stayed inside it.
+  defp form_owner(nil), do: %{}
+  defp form_owner(id), do: %{form: id}
 
   defp typed({:error, text}), do: text
   defp typed(_preview), do: nil
