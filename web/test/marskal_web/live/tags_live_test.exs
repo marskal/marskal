@@ -149,9 +149,7 @@ defmodule MarskalWeb.TagsLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/open?#{[task: task.id]}")
 
-      view
-      |> form("#inspector-task-tags-picker", tag_query: "per/wi")
-      |> render_change()
+      view |> element("#inspector-task-tags-query") |> render_change(%{"tag_query" => "per/wi"})
 
       view
       |> element("#inspector-task-tags-picker button.suggestion", "Wife")
@@ -173,8 +171,11 @@ defmodule MarskalWeb.TagsLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/open?#{[task: task.id]}")
 
-      view |> form("#inspector-task-tags-picker", tag_query: "wai") |> render_change()
-      view |> form("#inspector-task-tags-picker", tag_query: "wai") |> render_submit()
+      view |> element("#inspector-task-tags-query") |> render_change(%{"tag_query" => "wai"})
+
+      view
+      |> element("#inspector-task-tags-picker")
+      |> render_hook("tag-pick", %{"tag_query" => "wai"})
 
       assert has_element?(view, "#inspector-task-tags li[data-tag-id='#{waiting.id}']")
     end
@@ -185,11 +186,15 @@ defmodule MarskalWeb.TagsLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/open?#{[task: task.id]}")
 
-      view |> form("#inspector-task-tags-picker", tag_query: "Someday/maybe") |> render_change()
+      view
+      |> element("#inspector-task-tags-query")
+      |> render_change(%{"tag_query" => "Someday/maybe"})
+
+      view |> element("#inspector-task-tags-parent") |> render_change(%{"tag_parent" => lists.id})
 
       view
-      |> form("#inspector-task-tags-picker", tag_query: "Someday/maybe", tag_parent: lists.id)
-      |> render_submit(%{action: "create"})
+      |> element("#inspector-task-tags-picker button", "Create")
+      |> render_click()
 
       [created] = Tags.list_tags(user) |> Enum.filter(&(&1.parent_id == lists.id))
       assert created.name == "Someday/maybe"
@@ -202,7 +207,7 @@ defmodule MarskalWeb.TagsLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}?#{[project: project.id]}")
 
-      view |> form("#inspector-project-tags-picker", tag_query: "home") |> render_change()
+      view |> element("#inspector-project-tags-query") |> render_change(%{"tag_query" => "home"})
 
       view
       |> element("#inspector-project-tags-picker button.suggestion", "Home")
