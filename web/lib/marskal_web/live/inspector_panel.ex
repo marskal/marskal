@@ -49,14 +49,14 @@ defmodule MarskalWeb.InspectorPanel do
     picker =
       if socket.assigns[:loaded_selection] == selection,
         do: socket.assigns[:picker],
-        else: %{query: "", results: []}
+        else: empty_picker()
 
     socket
     |> assign(:record, record)
     |> assign(:options, options(user, record))
     |> assign(:tagging, tagging(user, record))
     |> assign(:outline, outline(user, record))
-    |> assign(:picker, picker || %{query: "", results: []})
+    |> assign(:picker, picker || empty_picker())
     |> assign(:place, if(same?, do: socket.assigns[:place]))
     |> assign(:date_previews, if(same?, do: socket.assigns[:date_previews] || %{}, else: %{}))
     |> assign(:calendar, if(same?, do: socket.assigns[:calendar]))
@@ -147,7 +147,8 @@ defmodule MarskalWeb.InspectorPanel do
 
         textarea.input {
           resize: vertical;
-          min-height: 8rem;
+          /* Four lines, plus this field's padding and border. Drag to grow it. */
+          min-height: calc(4 * 1.45em + 0.9rem + 2px);
           line-height: 1.45;
         }
 
@@ -565,6 +566,7 @@ defmodule MarskalWeb.InspectorPanel do
           place={@place}
           parent={@outline[:parent]}
         />
+        <.tag_picker id="inspector-task-tags" myself={@myself} tagging={@tagging} picker={@picker} />
         <div class="field">
           <label for="inspector-task-state">State</label>
           <select id="inspector-task-state" class="input" name="task[state]">
@@ -630,7 +632,6 @@ defmodule MarskalWeb.InspectorPanel do
         record={@record}
         change_version={@change_version}
       />
-      <.tag_picker id="inspector-task-tags" myself={@myself} tagging={@tagging} picker={@picker} />
       <.meta record={@record} zone={@zone} />
     </section>
     """
@@ -707,6 +708,12 @@ defmodule MarskalWeb.InspectorPanel do
             </option>
           </select>
         </div>
+        <.tag_picker
+          id="inspector-project-tags"
+          myself={@myself}
+          tagging={@tagging}
+          picker={@picker}
+        />
         <div class="field">
           <label for="inspector-project-state">State</label>
           <select id="inspector-project-state" class="input" name="project[state]">
@@ -760,7 +767,6 @@ defmodule MarskalWeb.InspectorPanel do
         record={@record}
         change_version={@change_version}
       />
-      <.tag_picker id="inspector-project-tags" myself={@myself} tagging={@tagging} picker={@picker} />
       <.meta record={@record} zone={@zone} />
     </section>
     """
@@ -1116,9 +1122,10 @@ defmodule MarskalWeb.InspectorPanel do
   attr :tagging, :map, required: true
   attr :picker, :map, required: true
 
-  # Tags on a task or project (ADR 0005). Enter adds the first suggestion;
-  # Create makes a tag with the typed text as its name, under the chosen
-  # parent.
+  # Tags on a task or project (ADR 0005), inside the task or project form.
+  # Search and the parent menu have their own change events, so neither saves
+  # the task. Enter adds the first suggestion, or creates one when nothing
+  # matches. Create uses the typed name under the chosen parent.
   defp tag_picker(assigns) do
     ~H"""
     <div class="field" id={@id}>
@@ -1145,7 +1152,7 @@ defmodule MarskalWeb.InspectorPanel do
           <TagComponents.path tag={tag} />
         </li>
       </ul>
-      <form id={"#{@id}-picker"} phx-change="tag-search" phx-submit="tag-pick" phx-target={@myself}>
+      <div id={"#{@id}-picker"} phx-hook=".TagQuery" phx-target={@myself}>
         <input
           id={"#{@id}-query"}
           class="input"
@@ -1154,7 +1161,9 @@ defmodule MarskalWeb.InspectorPanel do
           value={@picker.query}
           placeholder="Add a tag…"
           autocomplete="off"
+          phx-change="tag-search"
           phx-debounce="150"
+          phx-target={@myself}
         />
         <ul :if={String.trim(@picker.query) != ""} class="suggestions">
           <li :for={tag <- @picker.results}>
@@ -1169,18 +1178,55 @@ defmodule MarskalWeb.InspectorPanel do
             </button>
           </li>
           <li class="create">
-            <select name="tag_parent" class="input" aria-label="Create inside">
-              <option value="">Top level</option>
-              <option :for={tag <- @tagging.parents} value={tag.id}>
+            <select
+              id={"#{@id}-parent"}
+              name="tag_parent"
+              class="input"
+              aria-label="Create inside"
+              phx-change="tag-parent"
+              phx-target={@myself}
+            >
+              <option value="" selected={@picker.parent == ""}>Top level</option>
+              <option
+                :for={tag <- @tagging.parents}
+                value={tag.id}
+                selected={tag.id == @picker.parent}
+              >
                 {TagComponents.path_text(tag)}
               </option>
             </select>
-            <button type="submit" name="action" value="create">
+            <button
+              type="button"
+              phx-click="tag-pick"
+              phx-value-action="create"
+              phx-target={@myself}
+            >
               Create “{String.trim(@picker.query)}”
             </button>
           </li>
         </ul>
-      </form>
+        <script :type={Phoenix.LiveView.ColocatedHook} name=".TagQuery" extension="ts">
+          import {ViewHook} from "phoenix_live_view"
+
+          // Enter reads the typed name and the parent menu now, rather than
+          // waiting for the debounced search, and does not submit the task.
+          export default class extends ViewHook<HTMLElement> {
+            mounted() {
+              this.el.addEventListener("keydown", (event: KeyboardEvent) => {
+                if (event.key !== "Enter" || event.isComposing) return
+                const query = this.el.querySelector("input")
+                if (!(query instanceof HTMLInputElement) || event.target !== query) return
+                event.preventDefault()
+                const select = this.el.querySelector("select")
+                this.pushEventTo(this.el, "tag-pick", {
+                  tag_query: query.value,
+                  tag_parent: select instanceof HTMLSelectElement ? select.value : ""
+                })
+              })
+            }
+          }
+        </script>
+      </div>
     </div>
     """
   end
@@ -1210,7 +1256,7 @@ defmodule MarskalWeb.InspectorPanel do
         id={"inspector-#{@form}-notes"}
         class="input"
         name={"#{@form}[notes]"}
-        rows="8"
+        rows="4"
         placeholder={@placeholder}
         phx-debounce="300"
       >{@record.notes}</textarea>
@@ -1638,7 +1684,16 @@ defmodule MarskalWeb.InspectorPanel do
   end
 
   def handle_event("tag-search", %{"tag_query" => query}, socket) do
-    {:noreply, assign(socket, :picker, %{query: query, results: suggestions(socket, query)})}
+    {:noreply,
+     assign(socket, :picker, %{
+       query: query,
+       parent: socket.assigns.picker[:parent] || "",
+       results: suggestions(socket, query)
+     })}
+  end
+
+  def handle_event("tag-parent", %{"tag_parent" => parent}, socket) do
+    {:noreply, update(socket, :picker, &Map.put(&1, :parent, parent))}
   end
 
   def handle_event("location-open", _params, socket) do
@@ -1667,13 +1722,24 @@ defmodule MarskalWeb.InspectorPanel do
   def handle_event("tag-add", %{"id" => tag_id}, socket), do: link_tag(socket, :tag, tag_id)
   def handle_event("tag-remove", %{"id" => tag_id}, socket), do: link_tag(socket, :untag, tag_id)
 
-  def handle_event("tag-pick", %{"tag_query" => query} = params, socket) do
-    case {params["action"], socket.assigns.picker.results} do
-      {"create", _} -> create_and_link(socket, query, params["tag_parent"])
+  def handle_event("tag-pick", params, socket) do
+    %{query: stored_query, results: results} = socket.assigns.picker
+    query = params["tag_query"] || stored_query
+
+    parent =
+      case params do
+        %{"tag_parent" => parent} -> parent
+        _ -> socket.assigns.picker[:parent] || ""
+      end
+
+    case {params["action"], results} do
+      {"create", _} -> create_and_link(socket, query, parent)
       {_, [first | _]} -> link_tag(socket, :tag, first.id)
-      {_, []} -> create_and_link(socket, query, params["tag_parent"])
+      {_, []} -> create_and_link(socket, query, parent)
     end
   end
+
+  defp empty_picker, do: %{query: "", results: [], parent: ""}
 
   # Each save is one command carrying only the fields that differ. The form
   # posts its whole state, so a resent event changes nothing and needs no
@@ -1750,7 +1816,7 @@ defmodule MarskalWeb.InspectorPanel do
         {:noreply,
          assign(socket,
            tagging: tagging(user, record),
-           picker: %{query: "", results: []},
+           picker: empty_picker(),
            error: nil
          )}
 

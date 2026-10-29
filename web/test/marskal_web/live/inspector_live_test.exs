@@ -47,7 +47,7 @@ defmodule MarskalWeb.InspectorLiveTest do
     assert has_element?(view, "#inspector-task")
     assert has_element?(view, "#open-tasks li.is-selected", "Milk")
     assert has_element?(view, "#inspector-task-title[value='Milk']")
-    assert has_element?(view, "#inspector-task option[value='to_do'][selected]")
+    assert has_element?(view, "#inspector-task-state option[value='to_do'][selected]")
 
     view
     |> form("#inspector-task", task: %{title: "Oat milk", notes: "Buy **oat**"})
@@ -98,7 +98,7 @@ defmodule MarskalWeb.InspectorLiveTest do
     view |> form("#inspector-task", task: %{state: "done"}) |> render_change()
 
     assert has_element?(view, "#open-tasks li.is-resolved", "Milk")
-    assert has_element?(view, "#inspector-task option[value='done'][selected]")
+    assert has_element?(view, "#inspector-task-state option[value='done'][selected]")
 
     {:ok, inbox} = Tasks.create_task(user, %{"title" => "Bread"}, command())
     {:ok, inbox_view, _html} = live(conn, ~p"/inbox")
@@ -164,7 +164,7 @@ defmodule MarskalWeb.InspectorLiveTest do
 
     view |> form("#inspector-project", project: %{state: "done"}) |> render_change()
     refute has_element?(view, "#sidebar a", "Launch site")
-    assert has_element?(view, "#inspector-project option[value='done'][selected]")
+    assert has_element?(view, "#inspector-project-state option[value='done'][selected]")
   end
 
   test "clicking the current page in the sidebar only moves the inspector", %{
@@ -344,6 +344,58 @@ defmodule MarskalWeb.InspectorLiveTest do
     task = Tasks.get_task(user, task.id)
     assert task.project_id == website.id
     refute task.inbox
+  end
+
+  test "the inspector leads with title, URL, notes, place, and tags", %{conn: conn, user: user} do
+    {:ok, _task} = Tasks.create_task(user, %{"title" => "Milk", "inbox" => false}, command())
+    {:ok, project} = Projects.create_project(user, %{"title" => "Launch"}, command())
+
+    {:ok, view, _html} = live(conn, ~p"/open")
+    view |> element("#open-tasks li.task-row", "Milk") |> render_click()
+
+    assert field_order(render(view), [
+             "inspector-task-title",
+             "inspector-task-url",
+             "inspector-task-notes",
+             "inspector-task-location",
+             "inspector-task-tags",
+             "inspector-task-state",
+             "inspector-task-flagged",
+             "inspector-task-dates",
+             "inspector-task-delete",
+             "inspector-task-repeat"
+           ])
+
+    assert has_element?(view, ~s(#inspector-task-notes[rows="4"]))
+
+    {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}?#{[project: project.id]}")
+
+    assert field_order(render(view), [
+             "inspector-project-title",
+             "inspector-project-url",
+             "inspector-project-notes",
+             "inspector-project-folder",
+             "inspector-project-tags",
+             "inspector-project-state",
+             "inspector-project-flagged",
+             "inspector-project-dates",
+             "inspector-project-delete",
+             "inspector-project-repeat"
+           ])
+
+    assert has_element?(view, ~s(#inspector-project-notes[rows="4"]))
+  end
+
+  defp field_order(html, ids) do
+    indexes =
+      Enum.map(ids, fn id ->
+        case :binary.match(html, "id=\"#{id}\"") do
+          {index, _length} -> index
+          :nomatch -> flunk("missing ##{id}")
+        end
+      end)
+
+    assert indexes == Enum.sort(indexes)
   end
 
   defp command, do: Ecto.UUID.generate(version: 7)
