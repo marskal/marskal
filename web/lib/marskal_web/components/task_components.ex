@@ -54,15 +54,22 @@ defmodule MarskalWeb.TaskComponents do
     default: nil,
     doc: "the task being added inline on an outline, from `MarskalWeb.Outline`"
 
+  attr :limit, :integer,
+    default: nil,
+    doc: "outline rows to render from the top; nil renders the whole list"
+
   slot :empty_state, doc: "shown instead of `empty` when there are no tasks"
 
   def list(assigns) do
+    {shown, more?} = window(rows(assigns), assigns.limit)
+
     assigns =
       assign(assigns,
         now: DateTime.utc_now(),
         today: Marskal.Dates.today(assigns.zone),
         inherited_hint: "From the task or project above",
-        rows: rows(assigns)
+        rows: shown,
+        more?: more?
       )
 
     # Rows keep a disclosure column only when some row can use it.
@@ -335,6 +342,15 @@ defmodule MarskalWeb.TaskComponents do
         margin: 0;
         padding: 0;
       }
+
+      .task-more {
+        display: block;
+        width: 100%;
+        margin-top: 0.75rem;
+        border-color: var(--border);
+        background: transparent;
+        color: var(--muted);
+      }
     </style>
     <%= if @tasks == [] do %>
       {render_slot(@empty_state)}
@@ -502,6 +518,9 @@ defmodule MarskalWeb.TaskComponents do
         />
       <% end %>
     </ul>
+    <button :if={@more?} id={"#{@id}-more"} type="button" class="task-more" phx-click="load-more">
+      {gettext("Show more")}
+    </button>
     <script :type={Phoenix.LiveView.ColocatedHook} name=".Outline" extension="ts">
       import {ViewHook} from "phoenix_live_view"
       import Sortable from "sortablejs"
@@ -696,6 +715,15 @@ defmodule MarskalWeb.TaskComponents do
 
       export default class extends ViewHook<HTMLUListElement> {
         focusId: string | null = null
+        // A windowed list loads its next page when Show more scrolls into
+        // view, and Down at the last row loads it and steps into it. End
+        // stays put: a long list does not load the rest to jump to the end.
+        loading = false
+        afterLoad: (() => void) | null = null
+        watched: HTMLButtonElement | null = null
+        moreObserver = new IntersectionObserver((entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) this.loadMore()
+        })
         prefix: Prefix | null = null
         prefixTimer = 0
         selectTimer = 0
@@ -812,6 +840,48 @@ defmodule MarskalWeb.TaskComponents do
           return name === "collapse" ? expanded : !expanded
         }
 
+        moreButton(): HTMLButtonElement | null {
+          const button = document.getElementById(`${this.el.id}-more`)
+          return button instanceof HTMLButtonElement ? button : null
+        }
+
+        // Watching afresh reports the button's state now, so a page that
+        // leaves it in view loads the next one too.
+        watchMore() {
+          this.moreObserver.disconnect()
+          this.watched = this.moreButton()
+          if (this.watched) this.moreObserver.observe(this.watched)
+        }
+
+        loadMore(then?: () => void) {
+          if (then) this.afterLoad = then
+          if (this.loading) return
+          this.loading = true
+          this.pushEvent("load-more", {})
+            .then(() => {
+              const after = this.afterLoad
+              this.afterLoad = null
+              after?.()
+            })
+            .catch(() => {
+              this.afterLoad = null
+            })
+            .finally(() => {
+              this.loading = false
+              this.watchMore()
+            })
+        }
+
+        // The row after the given one, once the next page is in.
+        stepFrom(id: string) {
+          const rows = this.rows()
+          const current = this.el.querySelector<HTMLElement>(`#task-${CSS.escape(id)}`)
+          const target = current ? rows[rows.indexOf(current) + 1] : undefined
+          if (!target) return
+          target.querySelector<HTMLElement>("button.select")?.focus()
+          this.select(target)
+        }
+
         rows(): HTMLElement[] {
           return Array.from(this.el.querySelectorAll<HTMLElement>(":scope > .task-row"))
         }
@@ -865,9 +935,12 @@ defmodule MarskalWeb.TaskComponents do
         run(name: Action, row: HTMLElement, id: string) {
           if (name.startsWith("move-")) {
             const next = this.target(name, row)
-            if (!next || next === row) return
-            next.querySelector<HTMLElement>("button.select")?.focus()
-            this.select(next)
+            if (next && next !== row) {
+              next.querySelector<HTMLElement>("button.select")?.focus()
+              this.select(next)
+              return
+            }
+            if (name === "move-next" && this.moreButton()) this.loadMore(() => this.stepFrom(id))
             return
           }
 
@@ -925,6 +998,7 @@ defmodule MarskalWeb.TaskComponents do
         mounted() {
           this.el.addEventListener("keydown", this.onKeydown)
           this.el.addEventListener("click", this.onClick)
+          this.watchMore()
           // Back to a row when an inline new task closes.
           this.handleEvent("outline-focus", ({id}: {id: string}) => {
             const row = this.el.querySelector<HTMLElement>(`#task-${CSS.escape(id)}`)
@@ -968,6 +1042,7 @@ defmodule MarskalWeb.TaskComponents do
 
         // A move can re-create the row, so focus goes back to it by id.
         updated() {
+          if (this.moreButton() !== this.watched) this.watchMore()
           if (!this.focusId) return
           const title = this.el.querySelector<HTMLElement>(`#task-${CSS.escape(this.focusId)} button.select`)
           if (title && document.activeElement !== title) title.focus()
@@ -983,6 +1058,7 @@ defmodule MarskalWeb.TaskComponents do
           document.removeEventListener("pointermove", this.onPointerMove)
           document.removeEventListener("click", this.onClickCapture, true)
           this.sortable?.destroy()
+          this.moreObserver.disconnect()
         }
       }
     </script>
@@ -1083,6 +1159,25 @@ defmodule MarskalWeb.TaskComponents do
   def parse_location("inbox"), do: :inbox
   def parse_location(value) when value in ["none", ""], do: :none
   def parse_location(project_id) when is_binary(project_id), do: project_id
+
+  # `limit` keeps the top of the outline. The cut stops before the next
+  # row, unless that row is inside the subtree of the last one shown: an
+  # expanded parent keeps the children that follow it. End does not ask
+  # for the rows past the cut.
+  defp window(rows, nil), do: {rows, false}
+
+  defp window(rows, limit) when is_integer(limit) and limit >= 0 do
+    {shown, rest} = Enum.split(rows, limit)
+
+    case List.last(shown) do
+      nil ->
+        {shown, rest != []}
+
+      last ->
+        {subtree, rest} = Enum.split_while(rest, &(&1.depth > last.depth))
+        {shown ++ subtree, rest != []}
+    end
+  end
 
   # One row per task shown, with the dates it goes by: its own, or those
   # inherited from the task or project above

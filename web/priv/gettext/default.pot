@@ -696,6 +696,11 @@ msgstr ""
 msgid "Show dropped tasks, projects, folders, and tags"
 msgstr ""
 
+#: lib/marskal_web/components/task_components.ex
+#, elixir-autogen, elixir-format
+msgid "Show more"
+msgstr ""
+
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Show this help"
