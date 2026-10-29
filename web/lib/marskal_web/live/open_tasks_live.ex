@@ -9,9 +9,9 @@ defmodule MarskalWeb.OpenTasksLive do
 
   alias Marskal.Tasks
 
-  # Outline rows sent on the first paint. Further pages follow the scroll
-  # (`phx-viewport-bottom`) or Show more. Down at the last row loads the
-  # next page. End stays on the last row already rendered.
+  # Outline rows sent on the first paint. The next page loads as Show
+  # more scrolls into view, on its click, or on Down at the last row.
+  # End stays on the last row already rendered.
   @row_page 50
 
   @doc false
