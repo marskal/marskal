@@ -17,7 +17,8 @@ defmodule Marskal.MixProject do
       dialyzer: [
         plt_add_apps: [:ex_unit],
         ignore_warnings: ".dialyzer_ignore.exs"
-      ]
+      ],
+      package: [licenses: ["Apache-2.0"]]
     ]
   end
 

@@ -24,3 +24,8 @@ devenv up
 
 Open **http://marskal.localhost:8275**. Setup, seed accounts, and the rest of
 the local workflow are in **[web/README.md](web/README.md)**.
+
+## License
+
+Copyright 2026 Mikkel T. Hoegh. Licensed under the
+[Apache License, Version 2.0](LICENSE).
