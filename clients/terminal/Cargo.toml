@@ -3,6 +3,7 @@ name = "marskal"
 version = "0.1.0"
 edition = "2024"
 description = "Marskal tasks from the terminal, for people and agents (ADR 0020)"
+license = "Apache-2.0"
 publish = false
 
 [dependencies]

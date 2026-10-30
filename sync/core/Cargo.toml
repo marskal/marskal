@@ -3,6 +3,7 @@ name = "marskal-sync"
 version = "0.1.0"
 edition = "2024"
 description = "The Marskal client sync engine: local SQLite, outbox, and pull merge (ADR 0018)"
+license = "Apache-2.0"
 publish = false
 
 [dependencies]

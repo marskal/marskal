@@ -3,6 +3,7 @@ name = "marskal-sync-ffi"
 version = "0.1.0"
 edition = "2024"
 description = "UniFFI bindings over the Marskal client sync engine, for the iOS app (ADR 0029)"
+license = "Apache-2.0"
 publish = false
 
 [lib]
