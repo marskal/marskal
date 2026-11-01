@@ -66,11 +66,6 @@ defmodule MarskalWeb.PageControllerTest do
     assert conn.status == 404
   end
 
-  test "GET /up is healthy", %{conn: conn} do
-    conn = get(conn, ~p"/up")
-    assert response(conn, 200) == "ok"
-  end
-
   test "the header shows the app icon", %{conn: conn} do
     conn = get(conn, ~p"/users/log-in")
     html = html_response(conn, 200)

@@ -20,8 +20,14 @@ defmodule MarskalWeb.Router do
     plug MarskalWeb.SecurityHeaders
   end
 
+  # No session: a monitor would otherwise collect a cookie on every check.
+  # `devenv up` probes this path too.
+  pipeline :health do
+    plug MarskalWeb.SecurityHeaders
+  end
+
   scope "/", MarskalWeb do
-    pipe_through :browser
+    pipe_through :health
 
     get "/up", HealthController, :show
   end
