@@ -22,120 +22,99 @@ defmodule MarskalWeb.UserLive.Security do
       change_version={assigns[:change_version] || 0}
       visibility={assigns[:visibility]}
     >
-      <.header>{gettext("Settings")}</.header>
-      <MarskalWeb.SettingsComponents.tabs current={:security} />
-
-      <.form for={@email_form} id="email_form" phx-submit="update_email" phx-change="validate_email">
-        <.input
-          field={@email_form[:email]}
-          type="email"
-          label={gettext("Email")}
-          autocomplete="username"
-          spellcheck="false"
-          required
-        />
-        <.button variant="primary" phx-disable-with={gettext("Changing...")}>
-          {gettext("Change Email")}
-        </.button>
-      </.form>
-
-      <div class="divider" />
-
-      <.form
-        for={@password_form}
-        id="password_form"
-        action={~p"/users/update-password"}
-        method="post"
-        phx-change="validate_password"
-        phx-submit="update_password"
-        phx-trigger-action={@trigger_submit}
-      >
-        <input
-          name={@password_form[:email].name}
-          type="hidden"
-          id="hidden_user_email"
-          spellcheck="false"
-          value={@current_email}
-        />
-        <.input
-          field={@password_form[:password]}
-          type="password"
-          label={gettext("New password")}
-          autocomplete="new-password"
-          spellcheck="false"
-          required
-        />
-        <.input
-          field={@password_form[:password_confirmation]}
-          type="password"
-          label={gettext("Confirm new password")}
-          autocomplete="new-password"
-          spellcheck="false"
-        />
-        <.button variant="primary" phx-disable-with={gettext("Saving...")}>
-          {gettext("Save Password")}
-        </.button>
-      </.form>
-
-      <div class="divider" />
-
-      <style :type={MarskalWeb.ColocatedCSS}>
-        @scope (.device-list) {
-          ul {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-          }
-
-          li {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: var(--space);
-            padding: 0.65rem 0.85rem;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-          }
-
-          li div {
-            display: flex;
-            flex-direction: column;
-          }
-
-          .muted {
-            color: var(--muted);
-            font-size: 0.9rem;
-          }
-        }
-      </style>
-
-      <section id="devices" class="device-list">
-        <h2>{gettext("Devices")}</h2>
-        <p class="muted">
-          {gettext("Programs signed in as you, such as the %{command} command.", command: "marskal")}
-        </p>
-        <p :if={@devices == []} class="empty">{gettext("No devices are signed in.")}</p>
-        <ul :if={@devices != []}>
-          <li :for={device <- @devices} id={"device-#{device.id}"}>
-            <div>
-              <strong>{device.name}</strong>
-              <span class="muted">{last_used(device, @current_scope.user)}</span>
+      <MarskalWeb.SettingsComponents.page current={:security}>
+        <section id="sign-in">
+          <h2>{gettext("Sign-in")}</h2>
+          <.form
+            for={@email_form}
+            id="email_form"
+            phx-submit="update_email"
+            phx-change="validate_email"
+          >
+            <.input
+              field={@email_form[:email]}
+              type="email"
+              label={gettext("Email")}
+              autocomplete="username"
+              spellcheck="false"
+              required
+            />
+            <p class="hint">
+              {gettext("A link to confirm the change goes to the new address.")}
+            </p>
+            <div class="actions">
+              <.button variant="primary" phx-disable-with={gettext("Changing...")}>
+                {gettext("Change email")}
+              </.button>
             </div>
-            <button
-              class="btn"
-              phx-click="sign_out_device"
-              phx-value-id={device.id}
-              data-confirm={gettext("Sign out %{name}?", name: device.name)}
-            >
-              {gettext("Sign out")}
-            </button>
-          </li>
-        </ul>
-      </section>
+          </.form>
+
+          <.form
+            for={@password_form}
+            id="password_form"
+            action={~p"/users/update-password"}
+            method="post"
+            phx-change="validate_password"
+            phx-submit="update_password"
+            phx-trigger-action={@trigger_submit}
+          >
+            <input
+              name={@password_form[:email].name}
+              type="hidden"
+              id="hidden_user_email"
+              spellcheck="false"
+              value={@current_email}
+            />
+            <.input
+              field={@password_form[:password]}
+              type="password"
+              label={gettext("New password")}
+              autocomplete="new-password"
+              spellcheck="false"
+              required
+            />
+            <.input
+              field={@password_form[:password_confirmation]}
+              type="password"
+              label={gettext("Confirm new password")}
+              autocomplete="new-password"
+              spellcheck="false"
+            />
+            <p class="hint">
+              {gettext("Other browsers signed in as you are signed out.")}
+            </p>
+            <div class="actions">
+              <.button variant="primary" phx-disable-with={gettext("Saving...")}>
+                {gettext("Save password")}
+              </.button>
+            </div>
+          </.form>
+        </section>
+
+        <section id="devices">
+          <h2>{gettext("Devices")}</h2>
+          <p class="hint">
+            {gettext("Programs signed in as you, such as the %{command} command.", command: "marskal")}
+          </p>
+          <p :if={@devices == []} class="empty">{gettext("No devices are signed in.")}</p>
+          <ul :if={@devices != []} class="devices">
+            <li :for={device <- @devices} id={"device-#{device.id}"}>
+              <div>
+                <strong>{device.name}</strong>
+                <span class="hint">{last_used(device, @current_scope.user)}</span>
+              </div>
+              <button
+                class="btn"
+                phx-click="sign_out_device"
+                phx-value-id={device.id}
+                data-confirm={gettext("Sign out %{name}?", name: device.name)}
+              >
+                {gettext("Sign out")}
+              </button>
+            </li>
+          </ul>
+        </section>
+      </MarskalWeb.SettingsComponents.page>
     </Layouts.app>
     """
   end

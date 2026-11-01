@@ -110,6 +110,11 @@ msgstr ""
 
 #: lib/marskal_web/live/user_live/security.ex
 #, elixir-autogen, elixir-format
+msgid "A link to confirm the change goes to the new address."
+msgstr ""
+
+#: lib/marskal_web/live/user_live/security.ex
+#, elixir-autogen, elixir-format
 msgid "A link to confirm your email change has been sent to the new address."
 msgstr ""
 
@@ -159,6 +164,11 @@ msgstr ""
 msgid "Back from the sidebar"
 msgstr ""
 
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar"
+msgstr ""
+
 #: lib/marskal_web/date_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Can't read that as a day."
@@ -166,7 +176,7 @@ msgstr ""
 
 #: lib/marskal_web/live/user_live/security.ex
 #, elixir-autogen, elixir-format
-msgid "Change Email"
+msgid "Change email"
 msgstr ""
 
 #: lib/marskal_web/live/user_live/security.ex
@@ -567,6 +577,11 @@ msgstr ""
 msgid "Move among siblings"
 msgstr ""
 
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Navigation"
+msgstr ""
+
 #: lib/marskal_web/live/folder_live.ex
 #, elixir-autogen, elixir-format
 msgid "New folder"
@@ -648,6 +663,11 @@ msgstr ""
 #: lib/marskal_web/live/user_live/settings.ex
 #, elixir-autogen, elixir-format
 msgid "Open tasks"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/security.ex
+#, elixir-autogen, elixir-format
+msgid "Other browsers signed in as you are signed out."
 msgstr ""
 
 #: lib/marskal_web/live/user_live/confirmation.ex
@@ -739,7 +759,7 @@ msgstr ""
 
 #: lib/marskal_web/live/user_live/security.ex
 #, elixir-autogen, elixir-format
-msgid "Save Password"
+msgid "Save password"
 msgstr ""
 
 #: lib/marskal_web/live/user_live/security.ex
@@ -770,7 +790,6 @@ msgstr ""
 
 #: lib/marskal_web/components/settings_components.ex
 #: lib/marskal_web/live/go_to.ex
-#: lib/marskal_web/live/user_live/security.ex
 #: lib/marskal_web/live/user_live/settings.ex
 #, elixir-autogen, elixir-format
 msgid "Settings"
@@ -824,6 +843,11 @@ msgstr ""
 #: lib/marskal_web/live/user_live/security.ex
 #, elixir-autogen, elixir-format
 msgid "Sign out %{name}?"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/security.ex
+#, elixir-autogen, elixir-format
+msgid "Sign-in"
 msgstr ""
 
 #: lib/marskal_web/components/layouts.ex

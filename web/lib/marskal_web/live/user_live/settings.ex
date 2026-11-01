@@ -18,57 +18,62 @@ defmodule MarskalWeb.UserLive.Settings do
       change_version={assigns[:change_version] || 0}
       visibility={assigns[:visibility]}
     >
-      <.header>{gettext("Settings")}</.header>
-      <MarskalWeb.SettingsComponents.tabs current={:preferences} />
-
-      <.form for={@preferences_form} id="preferences_form" phx-change="update_preferences">
-        <.input
-          field={@preferences_form[:week_start]}
-          type="select"
-          label={gettext("Week starts on")}
-          options={[{gettext("Monday"), 1}, {gettext("Saturday"), 6}, {gettext("Sunday"), 7}]}
-        />
-        <p>
-          {gettext("Repeats every few weeks keep the day they were made with.")}
-        </p>
-        <.input
-          field={@preferences_form[:locale]}
-          type="select"
-          label={gettext("Dates and times")}
-          options={locale_options(@current_scope.user)}
-        />
-        <p>
-          {gettext("The order of day and month, and the clock, as in the region you pick.")}
-        </p>
-        <.input
-          field={@preferences_form[:home_view]}
-          type="select"
-          label={gettext("Home view")}
-          options={[
-            {gettext("Inbox"), "inbox"},
-            {gettext("Open tasks"), "open_tasks"},
-            {gettext("Agenda"), "agenda"},
-            {gettext("Flagged"), "flagged"}
-          ]}
-        />
-        <p>
-          {gettext("Select what view is “Home” – where you land when logging in.")}
-        </p>
-        <.input
-          field={@preferences_form[:keymap]}
-          type="select"
-          label={gettext("Keymap")}
-          options={[
-            {gettext("Standard"), "standard"},
-            {gettext("Vim-style"), "vim"}
-          ]}
-        />
-        <p>
-          {gettext(
-            "Standard uses the arrow keys, Space to complete, Delete to drop, f to flag, and n for a new task. Vim-style adds j, k, x, dd, and others. Press ? on any page for the full list."
-          )}
-        </p>
-      </.form>
+      <MarskalWeb.SettingsComponents.page current={:preferences}>
+        <.form for={@preferences_form} id="preferences_form" phx-change="update_preferences">
+          <section id="preferences-dates">
+            <h2>{gettext("Calendar")}</h2>
+            <.input
+              field={@preferences_form[:week_start]}
+              type="select"
+              label={gettext("Week starts on")}
+              options={[{gettext("Monday"), 1}, {gettext("Saturday"), 6}, {gettext("Sunday"), 7}]}
+            />
+            <p class="hint">
+              {gettext("Repeats every few weeks keep the day they were made with.")}
+            </p>
+            <.input
+              field={@preferences_form[:locale]}
+              type="select"
+              label={gettext("Dates and times")}
+              options={locale_options(@current_scope.user)}
+            />
+            <p class="hint">
+              {gettext("The order of day and month, and the clock, as in the region you pick.")}
+            </p>
+          </section>
+          <section id="preferences-navigation">
+            <h2>{gettext("Navigation")}</h2>
+            <.input
+              field={@preferences_form[:home_view]}
+              type="select"
+              label={gettext("Home view")}
+              options={[
+                {gettext("Inbox"), "inbox"},
+                {gettext("Open tasks"), "open_tasks"},
+                {gettext("Agenda"), "agenda"},
+                {gettext("Flagged"), "flagged"}
+              ]}
+            />
+            <p class="hint">
+              {gettext("Select what view is “Home” – where you land when logging in.")}
+            </p>
+            <.input
+              field={@preferences_form[:keymap]}
+              type="select"
+              label={gettext("Keymap")}
+              options={[
+                {gettext("Standard"), "standard"},
+                {gettext("Vim-style"), "vim"}
+              ]}
+            />
+            <p class="hint">
+              {gettext(
+                "Standard uses the arrow keys, Space to complete, Delete to drop, f to flag, and n for a new task. Vim-style adds j, k, x, dd, and others. Press ? on any page for the full list."
+              )}
+            </p>
+          </section>
+        </.form>
+      </MarskalWeb.SettingsComponents.page>
     </Layouts.app>
     """
   end

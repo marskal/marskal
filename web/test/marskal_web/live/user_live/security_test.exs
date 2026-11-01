@@ -91,7 +91,7 @@ defmodule MarskalWeb.UserLive.SecurityTest do
           "user" => %{"email" => "with spaces"}
         })
 
-      assert result =~ "Change Email"
+      assert result =~ "Change email"
       assert result =~ "must have the @ sign and no spaces"
     end
 
@@ -105,7 +105,7 @@ defmodule MarskalWeb.UserLive.SecurityTest do
         })
         |> render_submit()
 
-      assert result =~ "Change Email"
+      assert result =~ "Change email"
       assert result =~ "did not change"
     end
   end
@@ -157,7 +157,7 @@ defmodule MarskalWeb.UserLive.SecurityTest do
           }
         })
 
-      assert result =~ "Save Password"
+      assert result =~ "Save password"
       assert result =~ "should be at least 12 character(s)"
       assert result =~ "does not match password"
     end
@@ -175,7 +175,7 @@ defmodule MarskalWeb.UserLive.SecurityTest do
         })
         |> render_submit()
 
-      assert result =~ "Save Password"
+      assert result =~ "Save password"
       assert result =~ "should be at least 12 character(s)"
       assert result =~ "does not match password"
     end
