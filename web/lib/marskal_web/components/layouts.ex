@@ -323,8 +323,8 @@ defmodule MarskalWeb.Layouts do
           }
           if (!this.el.classList.contains("is-inspector-open")) return
           event.preventDefault()
-          // A new task's fields are the inspector. Escape ends the draft,
-          // the same as Escape in its title.
+          // The new task is only a title so far. Escape drops it, the same
+          // as Escape in that title.
           if (document.getElementById("inspector-new-task")) {
             this.pushEvent("inline-cancel", {})
             return
@@ -345,6 +345,10 @@ defmodule MarskalWeb.Layouts do
           this.phone.addEventListener("change", this.onResize)
           this.handleEvent("quick-capture:added", ({id}: {id: string}) => {
             document.getElementById(id)?.closest("dialog")?.close()
+          })
+          this.handleEvent("inspector-focus", () => {
+            const url = document.getElementById("inspector-task-url")
+            if (url instanceof HTMLElement) url.focus({preventScroll: true})
           })
           this.setNav(false)
           this.sync()

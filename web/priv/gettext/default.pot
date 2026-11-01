@@ -133,11 +133,6 @@ msgstr ""
 msgid "Add a task with this tag"
 msgstr ""
 
-#: lib/marskal_web/live/inspector_panel.ex
-#, elixir-autogen, elixir-format
-msgid "Added when you press Enter."
-msgstr ""
-
 #: lib/marskal_web/live/go_to.ex
 #, elixir-autogen, elixir-format
 msgid "Agenda"
@@ -366,14 +361,8 @@ msgid "Flag"
 msgstr ""
 
 #: lib/marskal_web/live/go_to.ex
-#: lib/marskal_web/live/inspector_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Flagged"
-msgstr ""
-
-#: lib/marskal_web/live/inspector_panel.ex
-#, elixir-autogen, elixir-format
-msgid "Flagged by its project."
 msgstr ""
 
 #: lib/marskal_web/components/nav_components.ex
@@ -500,6 +489,11 @@ msgstr ""
 msgid "Keys act on the focused task, folder, project, or tag, not while you type. Off a Mac, Cmd is Ctrl."
 msgstr ""
 
+#: lib/marskal_web/live/inspector_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Leaving the title saves the task."
+msgstr ""
+
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Light"
@@ -523,11 +517,6 @@ msgstr ""
 #: lib/marskal_web/controllers/user_session_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Logged out successfully."
-msgstr ""
-
-#: lib/marskal_web/live/inspector_panel.ex
-#, elixir-autogen, elixir-format
-msgid "Markdown is fine…"
 msgstr ""
 
 #: lib/marskal_web/components/layouts/root.html.heex
@@ -760,11 +749,6 @@ msgstr ""
 msgid "Standard uses the arrow keys, Space to complete, Delete to drop, f to flag, and n for a new task. Vim-style adds j, k, x, dd, and others. Press ? on any page for the full list."
 msgstr ""
 
-#: lib/marskal_web/live/inspector_panel.ex
-#, elixir-autogen, elixir-format
-msgid "State"
-msgstr ""
-
 #: lib/marskal_web/live/user_live/confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "Stay logged in"
@@ -822,11 +806,6 @@ msgstr ""
 msgid "The link works for an hour."
 msgstr ""
 
-#: lib/marskal_web/outline.ex
-#, elixir-autogen, elixir-format
-msgid "The task was added, but a tag could not."
-msgstr ""
-
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Theme"
@@ -845,11 +824,6 @@ msgstr ""
 #: lib/marskal_web/date_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Type a day such as “tom”, “fri”, “1w”, or “24/12 14:00”."
-msgstr ""
-
-#: lib/marskal_web/live/inspector_panel.ex
-#, elixir-autogen, elixir-format
-msgid "URL"
 msgstr ""
 
 #: lib/marskal_web/live/go_to.ex
@@ -956,11 +930,6 @@ msgstr ""
 #: lib/marskal_web/live/repeat_panel.ex
 #, elixir-autogen, elixir-format
 msgid "dropped %{when}"
-msgstr ""
-
-#: lib/marskal_web/live/inspector_panel.ex
-#, elixir-autogen, elixir-format
-msgid "https://… or file://…"
 msgstr ""
 
 #: lib/marskal_web/live/repeat_panel.ex

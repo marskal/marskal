@@ -1155,39 +1155,30 @@ defmodule MarskalWeb.TaskComponents do
         <script :type={Phoenix.LiveView.ColocatedHook} name=".NewTask" extension="ts">
           import {ViewHook} from "phoenix_live_view"
 
-          // The title and the inspector are one draft. Focus moving into the
-          // inspector, or into the notes dialog, is not leaving the row.
-          // A click on the inspector's padding would blur the title onto
-          // nothing; keeping the pointer down from taking focus avoids that.
+          // Leaving the title saves the task. Focus moving to the inspector's
+          // own title keeps it unsaved: that field is the same title. Enter
+          // submits this form, so that blur must not save a second time.
           export default class extends ViewHook {
-            onPointerDown = (event: PointerEvent) => {
-              const target = event.target
-              if (!(target instanceof Element) || !target.closest(".app-inspector")) return
-              if (target.closest("input, textarea, select, button, a, label")) return
-              if (document.activeElement instanceof Element && document.activeElement.closest("#task-new")) {
-                event.preventDefault()
-              }
-            }
-
             mounted() {
+              let skipBlur = false
+              this.el.addEventListener("keydown", (event: KeyboardEvent) => {
+                if (event.key === "Enter") skipBlur = true
+              })
               this.el.addEventListener("focusout", () => {
+                const skip = skipBlur
+                skipBlur = false
                 window.setTimeout(() => {
-                  if (!this.el.isConnected) return
+                  if (skip || !this.el.isConnected) return
                   const active = document.activeElement
-                  if (active instanceof Element && active.closest(".app-inspector, #task-new, dialog")) return
+                  if (active instanceof Element && active.closest("#task-new, #inspector-new-task-title")) return
                   const input = this.el.querySelector("input")
                   if (input instanceof HTMLInputElement) this.pushEvent("inline-blur", {value: input.value})
                 }, 0)
               })
-              document.addEventListener("pointerdown", this.onPointerDown, true)
               this.handleEvent("inline-title", ({title}: {title: string}) => {
                 const input = this.el.querySelector("input")
                 if (input instanceof HTMLInputElement && document.activeElement !== input) input.value = title
               })
-            }
-
-            destroyed() {
-              document.removeEventListener("pointerdown", this.onPointerDown, true)
             }
           }
         </script>

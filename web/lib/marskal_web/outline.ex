@@ -15,7 +15,6 @@ defmodule MarskalWeb.Outline do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [attach_hook: 4, push_event: 3, put_flash: 3]
 
-  alias Marskal.Tags
   alias Marskal.Tasks
 
   @moves %{
@@ -33,7 +32,6 @@ defmodule MarskalWeb.Outline do
     |> assign(:new_row, nil)
     |> MarskalWeb.TaskKeys.attach()
     |> attach_hook(:outline, :handle_event, &handle_event/3)
-    |> attach_hook(:outline_info, :handle_info, &handle_info/2)
   end
 
   defp handle_event("outline-collapsed", %{"ids" => ids}, socket) when is_list(ids),
@@ -87,8 +85,8 @@ defmodule MarskalWeb.Outline do
 
   # A task added inline (ADR 0031): `o` opens a row below `id`, `O` one
   # above. Below a row whose subtasks show, the new task is its first
-  # subtask, as it reads on screen. The inspector edits that draft — URL,
-  # notes, and the rest — and Enter saves them with the task.
+  # subtask, as it reads on screen. Leaving the title saves it, and the
+  # inspector edits that task. Enter saves it and opens the next row.
   defp handle_event("inline-new", %{"id" => id, "where" => where}, socket)
        when where in ["above", "below"] do
     user = socket.assigns.current_scope.user
@@ -99,370 +97,120 @@ defmodule MarskalWeb.Outline do
 
       anchor ->
         where = String.to_existing_atom(where)
-        {:halt, assign(socket, :new_row, new_row(user, anchor, where, socket.assigns.collapsed))}
+        {:halt, assign(socket, :new_row, new_row(anchor, where, socket.assigns.collapsed))}
     end
   end
 
   # Enter adds the task and opens the next row below it, for a list typed
-  # in one go. An empty row ends. The title here is what the row holds;
-  # the inspector's fields are already on the draft.
+  # in one go. An empty row ends.
   defp handle_event("inline-create", %{"title" => title}, socket) do
     case {socket.assigns.new_row, String.trim(title)} do
       {nil, _title} -> {:halt, socket}
-      {draft, ""} -> {:halt, close(socket, draft.anchor_id)}
-      {draft, title} -> {:halt, create(socket, %{draft | title: title}, title)}
+      {new_row, ""} -> {:halt, close(socket, new_row.anchor_id)}
+      {new_row, title} -> {:halt, create(socket, new_row, title)}
     end
   end
 
-  # The outline title, as it is typed, so the inspector shows the same one.
+  # The outline title and the inspector title stay the same string.
   defp handle_event("inline-title", %{"title" => title}, socket) do
     case socket.assigns.new_row do
-      nil -> {:halt, socket}
-      draft -> {:halt, assign(socket, :new_row, %{draft | title: title, error: nil})}
+      nil ->
+        {:halt, socket}
+
+      new_row ->
+        socket = assign(socket, :new_row, %{new_row | title: title})
+        {:halt, push_event(socket, "inline-title", %{title: title})}
     end
   end
 
   defp handle_event("inline-cancel", _params, socket) do
     case socket.assigns.new_row do
       nil -> {:halt, socket}
-      draft -> {:halt, close(socket, draft.anchor_id)}
+      new_row -> {:halt, close(socket, new_row.anchor_id)}
     end
   end
 
-  # Leaving the row closes it when nothing was typed. A typed title waits.
-  # Moving into the inspector is not leaving: the hook does not send this.
-  defp handle_event("inline-blur", params, socket) do
-    case {socket.assigns.new_row, String.trim(params["value"] || "")} do
-      {%{}, ""} -> {:halt, assign(socket, :new_row, nil)}
-      _ -> {:halt, socket}
-    end
-  end
-
-  # The new-task form posts here, not to the inspector component, so the
-  # draft changes in this same event. A message would be applied after the
-  # reply, and the form would paint the draft from before the keystroke.
-  defp handle_event("draft-save", %{"_target" => ["task", target]} = params, socket)
-       when target in ["defer_text", "planned_text", "due_text"] do
-    case socket.assigns.new_row do
-      nil ->
-        {:halt, socket}
-
-      draft ->
-        key = %{"defer_text" => "defer", "planned_text" => "planned", "due_text" => "due"}
-
-        preview =
-          MarskalWeb.DateFields.preview(
-            key[target],
-            params["task"][target] || "",
-            draft_record(draft),
-            socket.assigns.current_scope.user
-          )
-
-        previews = Map.put(draft.date_previews, key[target], preview)
-        {:halt, assign(socket, :new_row, %{draft | date_previews: previews})}
-    end
-  end
-
-  defp handle_event("draft-save", %{"task" => params}, socket) do
-    case socket.assigns.new_row do
-      nil ->
-        {:halt, socket}
-
-      draft ->
-        patch = fields(params)
-        draft = Map.merge(draft, patch)
-
-        {:halt, socket |> assign(:new_row, draft) |> push_draft_title(patch, draft)}
-    end
-  end
-
-  # Enter in the inspector. An empty title waits; the outline's own Enter
-  # is what ends an empty row.
-  defp handle_event("draft-create", %{"task" => params}, socket) do
-    case socket.assigns.new_row do
-      nil ->
-        {:halt, socket}
-
-      draft ->
-        draft = Map.merge(draft, fields(params))
-        title = String.trim(draft.title || "")
-
-        if title == "" do
-          {:halt, assign(socket, :new_row, draft)}
-        else
-          {:halt, create(socket, draft, title)}
-        end
+  # Leaving the title saves a task that has one, and the inspector edits
+  # that task. An empty title saves nothing. Enter is the outline's own
+  # submit, so the hook does not send this then.
+  defp handle_event("inline-blur", %{"value" => value}, socket) do
+    case {socket.assigns.new_row, String.trim(value || "")} do
+      {nil, _title} -> {:halt, socket}
+      {_new_row, ""} -> {:halt, assign(socket, :new_row, nil)}
+      {new_row, title} -> {:halt, commit(socket, new_row, title)}
     end
   end
 
   defp handle_event(_event, _params, socket), do: {:cont, socket}
 
-  # The inspector edits the draft and sends the change here. Patches merge
-  # onto the current draft, so an older round trip cannot drop a newer one.
-  defp handle_info({:new_task_patch, patch}, socket) when is_map(patch) do
-    case socket.assigns[:new_row] do
-      nil ->
-        {:halt, socket}
+  defp new_row(anchor, :below, collapsed) do
+    child? =
+      not MapSet.member?(collapsed, anchor.id) and Marskal.Tasks.Outline.children(anchor) != []
 
-      draft ->
-        draft = Map.merge(draft, patch)
-        {:halt, socket |> assign(:new_row, draft) |> push_draft_title(patch, draft)}
+    %{anchor_id: anchor.id, where: :below, child?: child?, title: ""}
+  end
+
+  defp new_row(anchor, :above, _collapsed),
+    do: %{anchor_id: anchor.id, where: :above, child?: false, title: ""}
+
+  # Enter: the task is saved and the next empty row opens under it.
+  defp create(socket, new_row, title) do
+    case insert(socket, new_row, title) do
+      {:ok, socket, task} ->
+        assign(socket, :new_row, %{anchor_id: task.id, where: :below, child?: false, title: ""})
+
+      {:error, socket} ->
+        socket
     end
   end
 
-  defp handle_info({:new_task_location, %{inbox: inbox, project_id: project_id}}, socket) do
-    case socket.assigns[:new_row] do
-      nil ->
-        {:halt, socket}
-
-      draft ->
-        home? = inbox == draft.home_inbox and project_id == draft.home_project_id
-
-        draft = %{
-          draft
-          | inbox: inbox,
-            project_id: project_id,
-            parent_id: if(home?, do: draft.home_parent_id, else: nil),
-            error: nil
-        }
-
-        {:halt, assign(socket, :new_row, draft)}
-    end
-  end
-
-  defp handle_info({:new_task_tag, action, tag_id}, socket) when action in [:add, :remove] do
-    case socket.assigns[:new_row] do
-      nil ->
-        {:halt, socket}
-
-      draft ->
-        tag_ids =
-          case action do
-            :add -> Enum.uniq(draft.tag_ids ++ [tag_id])
-            :remove -> Enum.reject(draft.tag_ids, &(&1 == tag_id))
-          end
-
-        {:halt, assign(socket, :new_row, %{draft | tag_ids: tag_ids, error: nil})}
-    end
-  end
-
-  defp handle_info(_message, socket), do: {:cont, socket}
-
-  defp new_row(user, anchor, where, collapsed) do
-    {child?, parent_id} =
-      case where do
-        :below ->
-          child? =
-            not MapSet.member?(collapsed, anchor.id) and
-              Marskal.Tasks.Outline.children(anchor) != []
-
-          {child?, if(child?, do: anchor.id, else: anchor.parent_id)}
-
-        :above ->
-          {false, anchor.parent_id}
-      end
-
-    parent_title =
-      cond do
-        is_nil(parent_id) -> nil
-        parent_id == anchor.id -> anchor.title
-        true -> user |> Tasks.get_task(parent_id) |> then(&(&1 && &1.title))
-      end
-
-    %{
-      anchor_id: anchor.id,
-      where: where,
-      child?: child?,
-      home_inbox: anchor.inbox,
-      home_project_id: anchor.project_id,
-      home_parent_id: parent_id,
-      parent_title: parent_title,
-      title: "",
-      notes: "",
-      url: "",
-      flagged: false,
-      state: :to_do,
-      inbox: anchor.inbox,
-      project_id: anchor.project_id,
-      parent_id: parent_id,
-      defer_until: nil,
-      deferred_indefinitely: false,
-      planned_at: nil,
-      due_at: nil,
-      tag_ids: [],
-      date_previews: %{},
-      error: nil
-    }
-  end
-
-  defp create(socket, draft, title) do
-    user = socket.assigns.current_scope.user
-
-    case Tasks.get_task(user, draft.anchor_id) do
-      nil ->
+  # Leaving the title: the task is saved and the inspector edits it.
+  defp commit(socket, new_row, title) do
+    case insert(socket, new_row, title) do
+      {:ok, socket, task} ->
         socket
         |> assign(:new_row, nil)
-        |> put_flash(:error, gettext("Could not add the task."))
+        |> MarskalWeb.Inspector.select("task", task.id)
+        |> push_event("inspector-focus", %{})
 
-      anchor ->
-        insert(socket, user, anchor, draft, title)
+      {:error, socket} ->
+        socket
     end
   end
 
-  defp insert(socket, user, anchor, draft, title) do
-    case Tasks.create_task(
-           user,
-           new_attrs(anchor, draft, title),
-           Ecto.UUID.generate(version: 7)
-         ) do
-      {:ok, task} ->
-        socket
-        |> note_tag_failure(user, task, draft.tag_ids)
-        |> follow_on(user, draft, task)
+  defp insert(socket, new_row, title) do
+    user = socket.assigns.current_scope.user
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        draft = %{draft | title: title, error: changeset_error(changeset)}
-
-        socket
-        |> assign(:new_row, draft)
-        |> push_event("inline-title", %{title: title})
-
-      {:error, _} ->
-        socket
-        |> assign(:new_row, %{draft | title: title})
-        |> put_flash(:error, gettext("Could not add the task."))
-    end
-  end
-
-  defp note_tag_failure(socket, user, task, tag_ids) do
-    case tag_draft(user, task, tag_ids) do
-      :ok ->
-        socket
-
-      {:error, _} ->
-        put_flash(socket, :error, gettext("The task was added, but a tag could not."))
-    end
-  end
-
-  # A task filed somewhere else is not in this outline, so the next row
-  # would have nothing to sit under.
-  defp follow_on(socket, user, draft, task) do
-    if moved?(draft),
-      do: close(socket, draft.anchor_id),
-      else: assign(socket, :new_row, new_row(user, task, :below, MapSet.new()))
-  end
-
-  defp push_draft_title(socket, patch, draft) do
-    if Map.has_key?(patch, :title),
-      do: push_event(socket, "inline-title", %{title: draft.title}),
-      else: socket
-  end
-
-  defp moved?(draft),
-    do: draft.inbox != draft.home_inbox or draft.project_id != draft.home_project_id
-
-  defp new_attrs(anchor, draft, title) do
-    base = %{
-      "title" => title,
-      "notes" => blank(draft.notes),
-      "url" => blank(draft.url),
-      "flagged" => draft.flagged,
-      "state" => Atom.to_string(draft.state),
-      "inbox" => draft.inbox,
-      "project_id" => draft.project_id,
-      "defer_until" => draft.defer_until,
-      "deferred_indefinitely" => draft.deferred_indefinitely,
-      "planned_at" => draft.planned_at,
-      "due_at" => draft.due_at
-    }
-
-    if moved?(draft) do
-      base
+    with %{} = anchor <- Tasks.get_task(user, new_row.anchor_id),
+         {:ok, task} <-
+           Tasks.create_task(
+             user,
+             new_attrs(anchor, new_row, title),
+             Ecto.UUID.generate(version: 7)
+           ) do
+      {:ok, socket, task}
     else
-      case draft do
-        %{child?: true} ->
-          first = anchor |> Marskal.Tasks.Outline.children() |> List.first()
-          Map.merge(base, %{"parent_id" => anchor.id, "before_id" => first && first.id})
-
-        %{where: :below} ->
-          Map.merge(base, %{"parent_id" => anchor.parent_id, "after_id" => anchor.id})
-
-        %{where: :above} ->
-          Map.merge(base, %{"parent_id" => anchor.parent_id, "before_id" => anchor.id})
-      end
+      _ ->
+        {:error,
+         socket |> assign(:new_row, nil) |> put_flash(:error, gettext("Could not add the task."))}
     end
   end
 
-  defp fields(params) do
-    params
-    |> Map.take(["title", "notes", "url", "flagged", "state", "deferred_indefinitely"])
-    |> Enum.reduce(%{}, fn
-      {"title", title}, patch ->
-        Map.put(patch, :title, title)
+  defp new_attrs(anchor, new_row, title) do
+    base = %{"title" => title, "inbox" => anchor.inbox, "project_id" => anchor.project_id}
 
-      {"notes", notes}, patch ->
-        Map.put(patch, :notes, notes || "")
+    case new_row do
+      %{child?: true} ->
+        first = anchor |> Marskal.Tasks.Outline.children() |> List.first()
+        Map.merge(base, %{"parent_id" => anchor.id, "before_id" => first && first.id})
 
-      {"url", url}, patch ->
-        Map.put(patch, :url, url || "")
+      %{where: :below} ->
+        Map.merge(base, %{"parent_id" => anchor.parent_id, "after_id" => anchor.id})
 
-      {"flagged", flagged}, patch ->
-        Map.put(patch, :flagged, flagged in [true, "true"])
-
-      {"state", state}, patch ->
-        Map.put(patch, :state, state_atom(state))
-
-      {"deferred_indefinitely", value}, patch ->
-        Map.put(patch, :deferred_indefinitely, value in [true, "true"])
-    end)
-    |> Map.put(:error, nil)
+      %{where: :above} ->
+        Map.merge(base, %{"parent_id" => anchor.parent_id, "before_id" => anchor.id})
+    end
   end
-
-  defp state_atom(value) when value in ~w(to_do done dropped), do: String.to_existing_atom(value)
-  defp state_atom(_value), do: :to_do
-
-  # What the date fields read. They need the draft's current values.
-  defp draft_record(draft) do
-    %Tasks.Task{
-      title: draft.title,
-      notes: draft.notes,
-      url: draft.url,
-      flagged: draft.flagged,
-      state: draft.state,
-      inbox: draft.inbox,
-      project_id: draft.project_id,
-      parent_id: draft.parent_id,
-      defer_until: draft.defer_until,
-      deferred_indefinitely: draft.deferred_indefinitely,
-      planned_at: draft.planned_at,
-      due_at: draft.due_at
-    }
-  end
-
-  defp blank(nil), do: nil
-
-  defp blank(value) when is_binary(value) do
-    if String.trim(value) == "", do: nil, else: value
-  end
-
-  defp tag_draft(_user, _task, []), do: :ok
-
-  defp tag_draft(user, task, tag_ids) do
-    Enum.reduce_while(tag_ids, :ok, fn tag_id, :ok ->
-      case Tags.tag_task(user, task.id, tag_id, Ecto.UUID.generate(version: 7)) do
-        {:ok, _} -> {:cont, :ok}
-        {:error, reason} -> {:halt, {:error, reason}}
-      end
-    end)
-  end
-
-  defp changeset_error(changeset) do
-    {field, error} = hd(changeset.errors)
-    "#{field_label(field)} #{MarskalWeb.CoreComponents.translate_error(error)}."
-  end
-
-  defp field_label(:url), do: "URL"
-  defp field_label(field), do: Phoenix.Naming.humanize(field)
 
   # Focus goes back to the row the new one was opened from, or the last
   # task added.

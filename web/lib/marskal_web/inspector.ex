@@ -59,6 +59,14 @@ defmodule MarskalWeb.Inspector do
     continue_if_defined(socket, :handle_params, 3)
   end
 
+  @doc """
+  Opens the inspector on a record. The history entry is replaced, as when
+  the list keys move the selection (ADR 0031).
+  """
+  def select(socket, type, id) when type in ~w(task project folder tag) do
+    push_patch(socket, to: query_path(socket, %{type => id}), replace: true)
+  end
+
   # A selection the list keys make replaces the history entry, so moving
   # down a list does not leave one entry per row (ADR 0031).
   defp on_event("inspect", %{"type" => type, "id" => id} = params, socket)
