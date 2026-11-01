@@ -108,7 +108,7 @@ msgstr[1] ""
 msgid "A day with no time starts at %{times}."
 msgstr ""
 
-#: lib/marskal_web/live/user_live/settings.ex
+#: lib/marskal_web/live/user_live/security.ex
 #, elixir-autogen, elixir-format
 msgid "A link to confirm your email change has been sent to the new address."
 msgstr ""
@@ -134,6 +134,7 @@ msgid "Add a task with this tag"
 msgstr ""
 
 #: lib/marskal_web/live/go_to.ex
+#: lib/marskal_web/live/user_live/settings.ex
 #, elixir-autogen, elixir-format
 msgid "Agenda"
 msgstr ""
@@ -161,6 +162,16 @@ msgstr ""
 #: lib/marskal_web/date_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Can't read that as a day."
+msgstr ""
+
+#: lib/marskal_web/live/user_live/security.ex
+#, elixir-autogen, elixir-format
+msgid "Change Email"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/security.ex
+#, elixir-autogen, elixir-format
+msgid "Changing..."
 msgstr ""
 
 #: lib/marskal_web/live/user_live/check_email.ex
@@ -200,6 +211,7 @@ msgid "Confirm and log in"
 msgstr ""
 
 #: lib/marskal_web/live/user_live/reset_password.ex
+#: lib/marskal_web/live/user_live/security.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm new password"
 msgstr ""
@@ -254,6 +266,11 @@ msgstr ""
 msgid "Dark"
 msgstr ""
 
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Dates and times"
+msgstr ""
+
 #: lib/marskal_web/date_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Defer indefinitely"
@@ -272,6 +289,11 @@ msgstr ""
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Delete"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/security.ex
+#, elixir-autogen, elixir-format
+msgid "Devices"
 msgstr ""
 
 #: lib/marskal_web/components/layouts.ex
@@ -319,8 +341,19 @@ msgid "Edit in the inspector"
 msgstr ""
 
 #: lib/marskal_web/live/user_live/forgot_password.ex
+#: lib/marskal_web/live/user_live/security.ex
 #, elixir-autogen, elixir-format
 msgid "Email"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/security.ex
+#, elixir-autogen, elixir-format
+msgid "Email change link is invalid or it has expired."
+msgstr ""
+
+#: lib/marskal_web/live/user_live/security.ex
+#, elixir-autogen, elixir-format
+msgid "Email changed successfully."
 msgstr ""
 
 #: lib/marskal_web/components/keys_help.ex
@@ -354,6 +387,7 @@ msgid "Flag"
 msgstr ""
 
 #: lib/marskal_web/live/go_to.ex
+#: lib/marskal_web/live/user_live/settings.ex
 #, elixir-autogen, elixir-format
 msgid "Flagged"
 msgstr ""
@@ -431,6 +465,11 @@ msgstr ""
 msgid "Home"
 msgstr ""
 
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Home view"
+msgstr ""
+
 #: lib/marskal_web/live/user_live/check_email.ex
 #, elixir-autogen, elixir-format
 msgid "If %{email} has an account, we've sent it a link to choose a new password."
@@ -443,6 +482,7 @@ msgstr ""
 
 #: lib/marskal_web/live/go_to.ex
 #: lib/marskal_web/live/inspector_panel.ex
+#: lib/marskal_web/live/user_live/settings.ex
 #, elixir-autogen, elixir-format
 msgid "Inbox"
 msgstr ""
@@ -517,6 +557,11 @@ msgstr ""
 msgid "Missed %{count} times, %{first} to %{last}"
 msgstr ""
 
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Monday"
+msgstr ""
+
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Move among siblings"
@@ -528,6 +573,7 @@ msgid "New folder"
 msgstr ""
 
 #: lib/marskal_web/live/user_live/reset_password.ex
+#: lib/marskal_web/live/user_live/security.ex
 #, elixir-autogen, elixir-format
 msgid "New password"
 msgstr ""
@@ -567,6 +613,11 @@ msgstr ""
 msgid "No date"
 msgstr ""
 
+#: lib/marskal_web/live/user_live/security.ex
+#, elixir-autogen, elixir-format
+msgid "No devices are signed in."
+msgstr ""
+
 #: lib/marskal_web/live/inspector_panel.ex
 #, elixir-autogen, elixir-format
 msgid "No project"
@@ -592,6 +643,11 @@ msgstr ""
 #: lib/marskal_web/live/project_live.ex
 #, elixir-autogen, elixir-format
 msgid "Open"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Open tasks"
 msgstr ""
 
 #: lib/marskal_web/live/user_live/confirmation.ex
@@ -626,6 +682,16 @@ msgstr ""
 msgid "Planned"
 msgstr ""
 
+#: lib/marskal_web/components/settings_components.ex
+#, elixir-autogen, elixir-format
+msgid "Preferences"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Preferences saved."
+msgstr ""
+
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Previous and next row"
@@ -634,6 +700,11 @@ msgstr ""
 #: lib/marskal_web/date_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Previous month"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/security.ex
+#, elixir-autogen, elixir-format
+msgid "Programs signed in as you, such as the %{command} command."
 msgstr ""
 
 #: lib/marskal_web/live/user_live/registration.ex
@@ -646,6 +717,11 @@ msgstr ""
 msgid "Reload"
 msgstr ""
 
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Repeats every few weeks keep the day they were made with."
+msgstr ""
+
 #: lib/marskal_web/user_notifier.ex
 #, elixir-autogen, elixir-format
 msgid "Reset your Marskal password"
@@ -654,6 +730,32 @@ msgstr ""
 #: lib/marskal_web/live/user_live/forgot_password.ex
 #, elixir-autogen, elixir-format
 msgid "Reset your password"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Saturday"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/security.ex
+#, elixir-autogen, elixir-format
+msgid "Save Password"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/security.ex
+#, elixir-autogen, elixir-format
+msgid "Saving..."
+msgstr ""
+
+#: lib/marskal_web/components/settings_components.ex
+#: lib/marskal_web/live/user_live/security.ex
+#, elixir-autogen, elixir-format
+msgid "Security"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Select what view is “Home” – where you land when logging in."
 msgstr ""
 
 #: lib/marskal_web/live/user_live/forgot_password.ex
@@ -666,7 +768,10 @@ msgstr ""
 msgid "Set password"
 msgstr ""
 
+#: lib/marskal_web/components/settings_components.ex
 #: lib/marskal_web/live/go_to.ex
+#: lib/marskal_web/live/user_live/security.ex
+#: lib/marskal_web/live/user_live/settings.ex
 #, elixir-autogen, elixir-format
 msgid "Settings"
 msgstr ""
@@ -711,6 +816,16 @@ msgstr ""
 msgid "Sidebar width"
 msgstr ""
 
+#: lib/marskal_web/live/user_live/security.ex
+#, elixir-autogen, elixir-format
+msgid "Sign out"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/security.ex
+#, elixir-autogen, elixir-format
+msgid "Sign out %{name}?"
+msgstr ""
+
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Something went wrong!"
@@ -751,6 +866,11 @@ msgstr ""
 msgid "Subtask of %{title}. Choosing another location moves it out."
 msgstr ""
 
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Sunday"
+msgstr ""
+
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Tab"
@@ -786,6 +906,11 @@ msgstr ""
 #: lib/marskal_web/live/user_live/check_email.ex
 #, elixir-autogen, elixir-format
 msgid "The link works for an hour."
+msgstr ""
+
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "The order of day and month, and the clock, as in the region you pick."
 msgstr ""
 
 #: lib/marskal_web/components/layouts.ex
@@ -869,6 +994,11 @@ msgstr ""
 msgid "We've sent a link to %{email}. Open it to confirm your account."
 msgstr ""
 
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Week starts on"
+msgstr ""
+
 #: lib/marskal_web/controllers/user_session_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Welcome back!"
@@ -904,9 +1034,19 @@ msgstr ""
 msgid "dropped %{when}"
 msgstr ""
 
+#: lib/marskal_web/live/user_live/security.ex
+#, elixir-autogen, elixir-format
+msgid "last used %{date}"
+msgstr ""
+
 #: lib/marskal_web/live/repeat_panel.ex
 #, elixir-autogen, elixir-format
 msgid "missed"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/security.ex
+#, elixir-autogen, elixir-format
+msgid "not used yet"
 msgstr ""
 
 #: lib/marskal_web/live/repeat_panel.ex

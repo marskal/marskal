@@ -121,7 +121,7 @@ defmodule MarskalWeb.DeviceLive do
             <.header>Signed in</.header>
             <p id="device-done">You can go back to your device.</p>
             <p class="muted">
-              Sign it out any time from <.link navigate={~p"/users/settings"}>settings</.link>.
+              Sign it out any time from <.link href={~p"/users/settings/security"}>settings</.link>.
             </p>
           <% :error -> %>
             <.header>The device was not signed in</.header>

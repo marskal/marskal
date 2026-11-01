@@ -382,14 +382,14 @@ defmodule MarskalWeb.UserAuthTest do
       user = %{user | authenticated_at: DateTime.add(DateTime.utc_now(:second), -11, :minute)}
 
       conn =
-        %{conn | path_info: ["users", "settings"], query_string: ""}
+        %{conn | path_info: ["users", "settings", "security"], query_string: ""}
         |> assign(:current_scope, Scope.for_user(user))
         |> fetch_flash()
         |> UserAuth.require_sudo_mode([])
 
       assert conn.halted
       assert redirected_to(conn) == ~p"/users/log-in"
-      assert get_session(conn, :user_return_to) == "/users/settings"
+      assert get_session(conn, :user_return_to) == "/users/settings/security"
     end
 
     test "lets a recent login through", %{conn: conn} do

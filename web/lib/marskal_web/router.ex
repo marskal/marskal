@@ -116,6 +116,7 @@ defmodule MarskalWeb.Router do
       live "/device/done", DeviceLive, :done
       live "/oauth/error", DeviceLive, :error
       live "/oauth/consent", ConsentLive, :show
+      live "/users/settings", UserLive.Settings, :edit
     end
 
     post "/users/update-password", UserSessionController, :update_password
@@ -134,8 +135,8 @@ defmodule MarskalWeb.Router do
         {MarskalWeb.Inspector, :default},
         {MarskalWeb.StaticChanged, :default}
       ] do
-      live "/users/settings", UserLive.Settings, :edit
-      live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email
+      live "/users/settings/security", UserLive.Security, :edit
+      live "/users/settings/confirm-email/:token", UserLive.Security, :confirm_email
     end
   end
 

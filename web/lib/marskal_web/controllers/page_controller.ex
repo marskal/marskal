@@ -12,7 +12,7 @@ defmodule MarskalWeb.PageController do
   # Password managers open this to take the user to where a password is
   # changed (W3C, "A Well-Known URL for Changing Passwords").
   def change_password(conn, _params) do
-    redirect(conn, to: ~p"/users/settings")
+    redirect(conn, to: ~p"/users/settings/security")
   end
 
   defp with_query(path, ""), do: path

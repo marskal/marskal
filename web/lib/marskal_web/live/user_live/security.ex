@@ -1,0 +1,245 @@
+defmodule MarskalWeb.UserLive.Security do
+  @moduledoc """
+  Email, password, and the devices signed in as the user. Changing who can
+  sign in needs a recent login, so this page is in the sudo-mode live
+  session; the preferences beside it are not.
+  """
+  use MarskalWeb, :live_view
+
+  on_mount {MarskalWeb.UserAuth, :require_sudo_mode}
+
+  alias Marskal.Accounts
+  alias Marskal.Devices
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <Layouts.app
+      flash={@flash}
+      current_scope={@current_scope}
+      inspector={assigns[:inspector]}
+      nav={assigns[:nav]}
+      change_version={assigns[:change_version] || 0}
+      visibility={assigns[:visibility]}
+    >
+      <.header>{gettext("Settings")}</.header>
+      <MarskalWeb.SettingsComponents.tabs current={:security} />
+
+      <.form for={@email_form} id="email_form" phx-submit="update_email" phx-change="validate_email">
+        <.input
+          field={@email_form[:email]}
+          type="email"
+          label={gettext("Email")}
+          autocomplete="username"
+          spellcheck="false"
+          required
+        />
+        <.button variant="primary" phx-disable-with={gettext("Changing...")}>
+          {gettext("Change Email")}
+        </.button>
+      </.form>
+
+      <div class="divider" />
+
+      <.form
+        for={@password_form}
+        id="password_form"
+        action={~p"/users/update-password"}
+        method="post"
+        phx-change="validate_password"
+        phx-submit="update_password"
+        phx-trigger-action={@trigger_submit}
+      >
+        <input
+          name={@password_form[:email].name}
+          type="hidden"
+          id="hidden_user_email"
+          spellcheck="false"
+          value={@current_email}
+        />
+        <.input
+          field={@password_form[:password]}
+          type="password"
+          label={gettext("New password")}
+          autocomplete="new-password"
+          spellcheck="false"
+          required
+        />
+        <.input
+          field={@password_form[:password_confirmation]}
+          type="password"
+          label={gettext("Confirm new password")}
+          autocomplete="new-password"
+          spellcheck="false"
+        />
+        <.button variant="primary" phx-disable-with={gettext("Saving...")}>
+          {gettext("Save Password")}
+        </.button>
+      </.form>
+
+      <div class="divider" />
+
+      <style :type={MarskalWeb.ColocatedCSS}>
+        @scope (.device-list) {
+          ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+          }
+
+          li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--space);
+            padding: 0.65rem 0.85rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+          }
+
+          li div {
+            display: flex;
+            flex-direction: column;
+          }
+
+          .muted {
+            color: var(--muted);
+            font-size: 0.9rem;
+          }
+        }
+      </style>
+
+      <section id="devices" class="device-list">
+        <h2>{gettext("Devices")}</h2>
+        <p class="muted">
+          {gettext("Programs signed in as you, such as the %{command} command.", command: "marskal")}
+        </p>
+        <p :if={@devices == []} class="empty">{gettext("No devices are signed in.")}</p>
+        <ul :if={@devices != []}>
+          <li :for={device <- @devices} id={"device-#{device.id}"}>
+            <div>
+              <strong>{device.name}</strong>
+              <span class="muted">{last_used(device, @current_scope.user)}</span>
+            </div>
+            <button
+              class="btn"
+              phx-click="sign_out_device"
+              phx-value-id={device.id}
+              data-confirm={gettext("Sign out %{name}?", name: device.name)}
+            >
+              {gettext("Sign out")}
+            </button>
+          </li>
+        </ul>
+      </section>
+    </Layouts.app>
+    """
+  end
+
+  @impl true
+  def mount(%{"token" => token}, _session, socket) do
+    socket =
+      case Accounts.update_user_email(socket.assigns.current_scope.user, token) do
+        {:ok, _user} ->
+          put_flash(socket, :info, gettext("Email changed successfully."))
+
+        {:error, _} ->
+          put_flash(socket, :error, gettext("Email change link is invalid or it has expired."))
+      end
+
+    {:ok, push_navigate(socket, to: ~p"/users/settings/security")}
+  end
+
+  def mount(_params, _session, socket) do
+    user = socket.assigns.current_scope.user
+    email_changeset = Accounts.change_user_email(user, %{}, validate_unique: false)
+    password_changeset = Accounts.change_user_password(user, %{}, hash_password: false)
+
+    socket =
+      socket
+      |> assign(:page_title, gettext("Security"))
+      |> assign(:current_email, user.email)
+      |> assign(:email_form, to_form(email_changeset))
+      |> assign(:password_form, to_form(password_changeset))
+      |> assign(:trigger_submit, false)
+      |> assign(:devices, Devices.list(user))
+
+    {:ok, socket}
+  end
+
+  @impl true
+  def handle_event("validate_email", params, socket) do
+    %{"user" => user_params} = params
+
+    email_form =
+      socket.assigns.current_scope.user
+      |> Accounts.change_user_email(user_params, validate_unique: false)
+      |> Map.put(:action, :validate)
+      |> to_form()
+
+    {:noreply, assign(socket, email_form: email_form)}
+  end
+
+  def handle_event("update_email", params, socket) do
+    %{"user" => user_params} = params
+    user = socket.assigns.current_scope.user
+    true = Accounts.sudo_mode?(user)
+
+    case Accounts.change_user_email(user, user_params) do
+      %{valid?: true} = changeset ->
+        new_user = Ecto.Changeset.apply_action!(changeset, :insert)
+        token = Accounts.build_update_email_token(new_user, user.email)
+        MarskalWeb.UserNotifier.deliver_update_email_instructions(new_user, token)
+
+        info = gettext("A link to confirm your email change has been sent to the new address.")
+        {:noreply, socket |> put_flash(:info, info)}
+
+      changeset ->
+        {:noreply, assign(socket, :email_form, to_form(changeset, action: :insert))}
+    end
+  end
+
+  def handle_event("validate_password", params, socket) do
+    %{"user" => user_params} = params
+
+    password_form =
+      socket.assigns.current_scope.user
+      |> Accounts.change_user_password(user_params, hash_password: false)
+      |> Map.put(:action, :validate)
+      |> to_form()
+
+    {:noreply, assign(socket, password_form: password_form)}
+  end
+
+  def handle_event("sign_out_device", %{"id" => id}, socket) do
+    user = socket.assigns.current_scope.user
+    _ = Devices.sign_out(user, id)
+    {:noreply, assign(socket, :devices, Devices.list(user))}
+  end
+
+  def handle_event("update_password", params, socket) do
+    %{"user" => user_params} = params
+    user = socket.assigns.current_scope.user
+    true = Accounts.sudo_mode?(user)
+
+    case Accounts.change_user_password(user, user_params) do
+      %{valid?: true} = changeset ->
+        {:noreply, assign(socket, trigger_submit: true, password_form: to_form(changeset))}
+
+      changeset ->
+        {:noreply, assign(socket, password_form: to_form(changeset, action: :insert))}
+    end
+  end
+
+  defp last_used(%{last_used_at: nil}, _user), do: gettext("not used yet")
+
+  defp last_used(device, user) do
+    {date, _time} = Marskal.Dates.to_local(device.last_used_at, Accounts.timezone(user))
+
+    gettext("last used %{date}", date: Marskal.DateFormat.date(date, :day_month_year))
+  end
+end
