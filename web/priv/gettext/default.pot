@@ -489,11 +489,6 @@ msgstr ""
 msgid "Keys act on the focused task, folder, project, or tag, not while you type. Off a Mac, Cmd is Ctrl."
 msgstr ""
 
-#: lib/marskal_web/live/inspector_panel.ex
-#, elixir-autogen, elixir-format
-msgid "Leaving the title saves the task."
-msgstr ""
-
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Light"

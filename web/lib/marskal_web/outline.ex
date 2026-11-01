@@ -130,9 +130,9 @@ defmodule MarskalWeb.Outline do
     end
   end
 
-  # Leaving the title saves a task that has one, and the inspector edits
-  # that task. An empty title saves nothing. Enter is the outline's own
-  # submit, so the hook does not send this then.
+  # Leaving a title that has text saves the task, and the inspector edits
+  # it. An empty title saves nothing. Enter is the outline's own submit,
+  # so the hook does not send this then.
   defp handle_event("inline-blur", %{"value" => value}, socket) do
     case {socket.assigns.new_row, String.trim(value || "")} do
       {nil, _title} -> {:halt, socket}

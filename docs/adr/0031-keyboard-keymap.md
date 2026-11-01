@@ -38,10 +38,10 @@ are the product, so they are recorded here.
   task inline on an outline, as a sibling of the current row. Below a row
   whose subtasks show, the new task is its first subtask, where it reads
   on screen. A title is required, so no blank task is saved.
-  Enter adds it and opens the next row below it. Leaving the title also
-  adds it, and the inspector then edits that saved task. Escape, or
-  leaving the row empty, ends without saving and returns to the last
-  row. A list without an outline
+  Enter adds it and opens the next row below it. Once a title has been
+  typed, leaving the field adds it too, and the inspector edits that
+  saved task. Escape, or leaving the row empty, ends without saving and
+  returns to the last row. A list without an outline
   has no place to put it, so there the keys focus the page's add field,
   or the inbox capture when the page has none.
 - One current row. A click and the movement keys both select it, and it

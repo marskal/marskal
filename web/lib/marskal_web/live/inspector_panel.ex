@@ -664,12 +664,11 @@ defmodule MarskalWeb.InspectorPanel do
 
   attr :title, :string, required: true
 
-  # The title being typed into the outline (ADR 0031). Leaving it saves the
-  # task, and this panel becomes the ordinary inspector for that task.
+  # The title being typed into the outline (ADR 0031). Leaving a title that
+  # has text saves the task, and this panel becomes the ordinary inspector.
   defp new_task_form(assigns) do
     ~H"""
     <section class="inspector-form" id="inspector-new-task">
-      <p class="hint" id="inspector-new-task-hint">{gettext("Leaving the title saves the task.")}</p>
       <form
         id="inspector-new-task-form"
         class="form"
@@ -692,9 +691,10 @@ defmodule MarskalWeb.InspectorPanel do
       <script :type={Phoenix.LiveView.ColocatedHook} name=".DraftTitle" extension="ts">
         import {ViewHook} from "phoenix_live_view"
 
-        // The outline row and this field are the same title. Focus moving
-        // from one to the other keeps the task unsaved. Leaving both saves it.
-        // Enter submits the form, so that blur must not save a second time.
+        // The outline row and this field are the same title. A title with
+        // text is saved when either is left. An empty field stays open while
+        // one of them is still focused. Enter submits the form, so that blur
+        // must not save a second time.
         export default class extends ViewHook {
           mounted() {
             let skipBlur = false
@@ -706,10 +706,13 @@ defmodule MarskalWeb.InspectorPanel do
               skipBlur = false
               window.setTimeout(() => {
                 if (skip || !this.el.isConnected) return
-                const active = document.activeElement
-                if (active instanceof Element && active.closest("#task-new, #inspector-new-task-title")) return
                 const input = this.el.querySelector("input")
-                if (input instanceof HTMLInputElement) this.pushEvent("inline-blur", {value: input.value})
+                if (!(input instanceof HTMLInputElement)) return
+                const active = document.activeElement
+                const stillOnTitle =
+                  active instanceof Element && active.closest("#task-new, #inspector-new-task-title")
+                if (stillOnTitle && input.value.trim() === "") return
+                this.pushEvent("inline-blur", {value: input.value})
               }, 0)
             })
             this.handleEvent("inline-title", ({title}: {title: string}) => {

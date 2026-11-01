@@ -236,9 +236,9 @@ defmodule MarskalWeb.OutlineLiveTest do
 
       assert has_element?(view, "#app-shell.is-inspector-open")
       assert has_element?(view, "#inspector-new-task")
-      assert has_element?(view, "#inspector-new-task-hint", "Leaving the title saves the task.")
+      assert has_element?(view, "#inspector-new-task-title")
       refute has_element?(view, "#inspector-task")
-      refute has_element?(view, "#inspector-new-task-url")
+      refute has_element?(view, "#inspector-new-task button")
 
       view |> form("#task-new-form", %{title: "Shop"}) |> render_change()
       assert has_element?(view, "#inspector-new-task-title[value='Shop']")
