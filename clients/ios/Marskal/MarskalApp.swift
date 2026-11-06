@@ -58,6 +58,9 @@ struct RootView: View {
                     Tab("Projects", systemImage: ProjectsView.folderSymbol) {
                         ProjectsView()
                     }
+                    Tab("Tags", systemImage: TagsView.tagSymbol) {
+                        TagsView()
+                    }
                     Tab("Agenda", systemImage: "calendar") {
                         AgendaView()
                     }

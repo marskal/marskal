@@ -49,15 +49,19 @@ public struct ProjectOutline: Sendable {
 
     public var isEmpty: Bool { children(of: nil).isEmpty }
 
-    // Byte by byte, as the server compares ranks; one the server has not
-    // given yet goes last. Ties by id.
     private static func ranked(_ a: Item, _ b: Item) -> Bool {
-        switch (a.rank, b.rank) {
-        case let (x?, y?) where x != y: x.utf8.lexicographicallyPrecedes(y.utf8)
-        case (_?, nil): true
-        case (nil, _?): false
-        default: a.id.uuidString < b.id.uuidString
-        }
+        rankPrecedes(a.rank, a.id, b.rank, b.id)
+    }
+}
+
+/// Sibling order (ADR 0009, 0005): byte by byte, as the server compares
+/// ranks; one the server has not given yet goes last. Ties by id.
+func rankPrecedes(_ a: String?, _ aId: UUID, _ b: String?, _ bId: UUID) -> Bool {
+    switch (a, b) {
+    case let (x?, y?) where x != y: x.utf8.lexicographicallyPrecedes(y.utf8)
+    case (_?, nil): true
+    case (nil, _?): false
+    default: aId.uuidString < bId.uuidString
     }
 }
 

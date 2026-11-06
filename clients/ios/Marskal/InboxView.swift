@@ -147,8 +147,8 @@ struct TaskRow<Detail: View>: View {
 }
 
 extension TaskRow where Detail == EmptyView {
-    init(task: TaskItem, showsProject: Bool = true, complete: @escaping () -> Void) {
-        self.init(task: task, showsProject: showsProject, complete: complete) { EmptyView() }
+    init(task: TaskItem, indented: Bool = true, showsProject: Bool = true, complete: @escaping () -> Void) {
+        self.init(task: task, indented: indented, showsProject: showsProject, complete: complete) { EmptyView() }
     }
 }
 

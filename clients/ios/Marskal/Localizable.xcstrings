@@ -109,6 +109,16 @@
     "Drop" : {
 
     },
+    "Dropped. This tag and the tags inside it are hidden from lists." : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Droppet. Dette tag og tags indeni det er skjult i lister."
+          }
+        }
+      }
+    },
     "Due %@" : {
       "localizations" : {
         "da" : {
@@ -128,6 +138,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Indbakke"
+          }
+        }
+      }
+    },
+    "Inside a dropped tag, so it is hidden from lists." : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ligger i et droppet tag og er derfor skjult i lister."
           }
         }
       }
@@ -180,6 +200,26 @@
         }
       }
     },
+    "No tasks carry this tag itself." : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingen opgaver har selv dette tag."
+          }
+        }
+      }
+    },
+    "No untagged tasks" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingen opgaver uden tags"
+          }
+        }
+      }
+    },
     "Not synced yet" : {
 
     },
@@ -224,6 +264,26 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "On Hold" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "På pause"
+          }
+        }
+      }
+    },
+    "On hold. Tasks with this tag are unavailable." : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "På pause. Opgaver med dette tag er ikke tilgængelige."
           }
         }
       }
@@ -288,6 +348,26 @@
     "Syncing…" : {
 
     },
+    "Tags" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tags"
+          }
+        }
+      }
+    },
+    "Tags Inside" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tags indeni"
+          }
+        }
+      }
+    },
     "Task" : {
 
     },
@@ -347,12 +427,32 @@
         }
       }
     },
+    "This tag was deleted" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tagget er slettet"
+          }
+        }
+      }
+    },
     "Title" : {
       "localizations" : {
         "da" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Titel"
+          }
+        }
+      }
+    },
+    "To-do tasks with no tags of their own or from their project show up here." : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opgaver, der skal gøres, uden egne tags eller tags fra deres projekt, vises her."
           }
         }
       }
@@ -372,6 +472,16 @@
     },
     "Type the address you open Marskal at in a browser, such as marskal.example." : {
 
+    },
+    "Untagged" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uden tags"
+          }
+        }
+      }
     },
     "What do you want to add?" : {
       "localizations" : {
