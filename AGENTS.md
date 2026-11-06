@@ -254,8 +254,8 @@ The repository root is the product, not the web app (ADR 0015).
   Extensions OK if in **nixpkgs** (enable in migrations + devenv as needed).
   Recency is `inserted_at`, not `id`.
 - Databases use the built-in provider, `PG_UNICODE_FAST` (ADR 0034): text
-  sorts by code point. A name sort the user sees takes an ICU `COLLATE` for
-  their locale.
+  sorts by code point. A name sort the user sees takes an ICU `COLLATE`
+  from a fixed map: `da-x-icu` for `da` and `en-DK`, `en-x-icu` otherwise.
 - **Migrations are Ecto.** Enums, `uuidv7()` defaults, and identity columns are
   raw SQL in those migrations (ADR 0016).
 - Server-rendered HEEx / LiveView unless an SPA is justified.
