@@ -26,7 +26,6 @@ defmodule Marskal.DevSeed do
           email: email,
           hashed_password: Argon2.hash_pwd_salt(password),
           confirmed_at: DateTime.utc_now(:second),
-          timezone: "Europe/Copenhagen",
           superuser: superuser
         })
         |> Marskal.Repo.insert!()
