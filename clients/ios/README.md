@@ -28,10 +28,14 @@ the app for the simulator, and adds new strings to
 
 ```sh
 xcrun simctl boot "iPhone 17"
-open /Applications/Xcode.app/Contents/Developer/Applications/Simulator.app
+open -a DeviceHub
 xcrun simctl install booted build/derived/Build/Products/Debug-iphonesimulator/Marskal.app
 xcrun simctl launch booted app.marskal.ios
 ```
+
+After an Xcode update, `xcrun simctl` may say CoreSimulator is out of date.
+Run `sudo xcodebuild -runFirstLaunch` once.
+DeviceHub, inside Xcode, shows the simulator; it replaced Simulator.app.
 
 A debug build offers the dev server, `http://marskal.localhost:8275`
 (`devenv up` in `web/`), on its sign-in screen.
