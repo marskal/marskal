@@ -143,9 +143,11 @@ defmodule MarskalWeb.OutlineLiveTest do
 
   test "the inspector shows a subtask's parent and what it inherits", ctx do
     [a] = add(ctx, ["Paint"])
-
-    {:ok, _} =
-      Tasks.update_task(ctx.user, a.id, %{due_at: ~U[2026-12-01 16:00:00Z]}, command_id())
+    # 1 December next year: never within a week of today, so the label is
+    # the date with its year, not Tomorrow or a weekday.
+    year = Marskal.Dates.today("Europe/Copenhagen").year + 1
+    due = DateTime.new!(Date.new!(year, 12, 1), ~T[16:00:00], "Etc/UTC")
+    {:ok, _} = Tasks.update_task(ctx.user, a.id, %{due_at: due}, command_id())
 
     child = add(ctx, "Buy paint", a)
     {:ok, view, _html} = live(ctx.conn, ~p"/projects/#{ctx.project.id}")
@@ -153,7 +155,7 @@ defmodule MarskalWeb.OutlineLiveTest do
     view |> element("#task-#{child.id} button.select") |> render_click()
 
     assert view |> element("#inspector-task-parent") |> render() =~ "Paint"
-    assert view |> element("#inspector-task-dates") |> render() =~ "From above: 1 Dec"
+    assert view |> element("#inspector-task-dates") |> render() =~ "From above: 1 Dec #{year}"
     refute has_element?(view, "#inspector-task-resolved-above")
 
     {:ok, _} = Tasks.drop_task(ctx.user, a.id, command_id())

@@ -148,19 +148,29 @@ defmodule MarskalWeb.RepeatLiveTest do
     conn: conn,
     user: user
   } do
+    # The labels say Today, Tomorrow, or a weekday near today. 2 March next
+    # year is never within a week of it, and always shows its year.
+    year = Dates.today(@zone).year + 1
+    next = Date.new!(year, 3, 2)
     task = task_fixture(user, %{})
     view = inspect_task(conn, "Trash")
     view |> element("#inspector-task-repeat-open") |> render_click()
 
     view
-    |> form("#{@dialog}-form", repeat: %{repeat: "daily", next: "2026-11-02", anchor: "planned"})
+    |> form("#{@dialog}-form",
+      repeat: %{repeat: "daily", next: Date.to_iso8601(next), anchor: "planned"}
+    )
     |> render_change()
 
-    assert has_element?(view, "#{@dialog}-next", "3 Nov, 4 Nov, 5 Nov, …")
+    assert has_element?(
+             view,
+             "#{@dialog}-next",
+             "3 Mar #{year}, 4 Mar #{year}, 5 Mar #{year}, …"
+           )
 
     view |> form("#{@dialog}-form") |> render_submit()
 
-    planned = Dates.from_local(~D[2026-11-02], nil, :planned_at, @zone)
+    planned = Dates.from_local(next, nil, :planned_at, @zone)
     assert %{planned_at: ^planned, occurrence_for: ^planned} = Tasks.get_task(user, task.id)
   end
 
