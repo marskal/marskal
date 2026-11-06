@@ -39,7 +39,10 @@ are the product, so they are recorded here.
   whose subtasks show, the new task is its first subtask, where it reads
   on screen. A title is required, so no blank task is saved.
   Enter adds it and opens the next row below it; Escape, or leaving the
-  row empty, ends and returns to the last row. A list without an outline
+  row empty, ends and returns to the last row. While the row is open the
+  inspector shows that new task, and the URL, notes, dates, tags, flag,
+  state, and location set there are saved with it. Moving into the
+  inspector does not end the row. A list without an outline
   has no place to put it, so there the keys focus the page's add field,
   or the inbox capture when the page has none.
 - One current row. A click and the movement keys both select it, and it

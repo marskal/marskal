@@ -1075,7 +1075,8 @@ defmodule MarskalWeb.TaskComponents do
   attr :disclosures, :boolean, required: true
 
   # A task being added inline, by `o` and `O` (ADR 0031). Enter adds it and
-  # opens the next below it; Escape, or leaving it empty, ends.
+  # opens the next below it; Escape, or leaving it empty, ends. The
+  # inspector edits the same draft, so moving there does not end the row.
   defp new_row(assigns) do
     ~H"""
     <li id="task-new" class="task-new" style={@depth > 0 && "--depth: #{@depth}"}>
@@ -1133,7 +1134,12 @@ defmodule MarskalWeb.TaskComponents do
       </style>
       <span :if={@disclosures} class="disclosure-space" aria-hidden="true"></span>
       <span class="check-space" aria-hidden="true"><Lucideicons.square class="icon" /></span>
-      <form id="task-new-form" phx-submit="inline-create">
+      <form
+        id="task-new-form"
+        phx-submit="inline-create"
+        phx-change="inline-title"
+        phx-hook=".NewTask"
+      >
         <input
           id={"task-new-title-#{@anchor_id}"}
           type="text"
@@ -1145,8 +1151,46 @@ defmodule MarskalWeb.TaskComponents do
           phx-mounted={JS.focus()}
           phx-keydown="inline-cancel"
           phx-key="Escape"
-          phx-blur="inline-blur"
         />
+        <script :type={Phoenix.LiveView.ColocatedHook} name=".NewTask" extension="ts">
+          import {ViewHook} from "phoenix_live_view"
+
+          // The title and the inspector are one draft. Focus moving into the
+          // inspector, or into the notes dialog, is not leaving the row.
+          // A click on the inspector's padding would blur the title onto
+          // nothing; keeping the pointer down from taking focus avoids that.
+          export default class extends ViewHook {
+            onPointerDown = (event: PointerEvent) => {
+              const target = event.target
+              if (!(target instanceof Element) || !target.closest(".app-inspector")) return
+              if (target.closest("input, textarea, select, button, a, label")) return
+              if (document.activeElement instanceof Element && document.activeElement.closest("#task-new")) {
+                event.preventDefault()
+              }
+            }
+
+            mounted() {
+              this.el.addEventListener("focusout", () => {
+                window.setTimeout(() => {
+                  if (!this.el.isConnected) return
+                  const active = document.activeElement
+                  if (active instanceof Element && active.closest(".app-inspector, #task-new, dialog")) return
+                  const input = this.el.querySelector("input")
+                  if (input instanceof HTMLInputElement) this.pushEvent("inline-blur", {value: input.value})
+                }, 0)
+              })
+              document.addEventListener("pointerdown", this.onPointerDown, true)
+              this.handleEvent("inline-title", ({title}: {title: string}) => {
+                const input = this.el.querySelector("input")
+                if (input instanceof HTMLInputElement && document.activeElement !== input) input.value = title
+              })
+            }
+
+            destroyed() {
+              document.removeEventListener("pointerdown", this.onPointerDown, true)
+            }
+          }
+        </script>
       </form>
     </li>
     """

@@ -34,6 +34,11 @@ defmodule MarskalWeb.Layouts do
   attr :current_nav, :atom, default: nil
   attr :current_id, :string, default: nil
   attr :inspector, :any, default: nil
+
+  attr :new_row, :any,
+    default: nil,
+    doc: "the inline new task, whose fields the inspector edits"
+
   attr :nav, :any, default: nil, doc: "the sidebar tree, assigned by MarskalWeb.Inspector"
   attr :change_version, :integer, default: 0
 
@@ -47,7 +52,7 @@ defmodule MarskalWeb.Layouts do
     ~H"""
     <div
       id="app-shell"
-      class={["app", @inspector && "is-inspector-open"]}
+      class={["app", (@inspector || @new_row) && "is-inspector-open"]}
       data-keymap={keymap(@current_scope)}
       phx-hook=".Inspector"
     >
@@ -195,7 +200,7 @@ defmodule MarskalWeb.Layouts do
         <div
           :if={@current_scope && @current_scope.user}
           class="app-inspector__backdrop"
-          phx-click="close-inspector"
+          phx-click={if(@new_row, do: "inline-cancel", else: "close-inspector")}
         >
         </div>
         <aside
@@ -208,19 +213,22 @@ defmodule MarskalWeb.Layouts do
             <button
               type="button"
               class="app-inspector__close"
-              phx-click="close-inspector"
-              aria-label="Close inspector"
+              phx-click={if(@new_row, do: "inline-cancel", else: "close-inspector")}
+              aria-label={if(@new_row, do: gettext("Cancel new task"), else: "Close inspector")}
             >
               <Lucideicons.arrow_left class="icon app-inspector__back" />
               <Lucideicons.x class="icon app-inspector__x" />
             </button>
-            <h2 class="app-inspector__title">{inspector_title(@inspector)}</h2>
+            <h2 class="app-inspector__title">
+              {if @new_row, do: gettext("New task"), else: inspector_title(@inspector)}
+            </h2>
           </div>
           <.live_component
             module={MarskalWeb.InspectorPanel}
             id="inspector"
             user={@current_scope.user}
             selection={@inspector}
+            new_task={@new_row}
             change_version={@change_version}
           />
         </aside>
@@ -315,6 +323,12 @@ defmodule MarskalWeb.Layouts do
           }
           if (!this.el.classList.contains("is-inspector-open")) return
           event.preventDefault()
+          // A new task's fields are the inspector. Escape ends the draft,
+          // the same as Escape in its title.
+          if (document.getElementById("inspector-new-task")) {
+            this.pushEvent("inline-cancel", {})
+            return
+          }
           // Closing from inside the inspector hands focus back to its row.
           const panel = this.el.querySelector(".app-inspector")
           if (panel?.contains(document.activeElement)) {
@@ -396,7 +410,13 @@ defmodule MarskalWeb.Layouts do
           document.body.classList.toggle("inspector-open", narrow && open)
           // A sheet takes focus as it opens. Beside the list, focus stays
           // on the row, so the list keys go on from there (ADR 0031).
-          if (open && !this.wasOpen && narrow) panel.focus({preventScroll: true})
+          // A new task's title is in the sheet on a narrow window, because
+          // the row it belongs to is covered.
+          if (open && !this.wasOpen && narrow) {
+            const title = document.getElementById("inspector-new-task-title")
+            if (title instanceof HTMLElement) title.focus({preventScroll: true})
+            else panel.focus({preventScroll: true})
+          }
           this.wasOpen = open
         }
       }

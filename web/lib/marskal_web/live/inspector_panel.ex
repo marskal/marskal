@@ -14,7 +14,10 @@ defmodule MarskalWeb.InspectorPanel do
   alias Marskal.Tasks
   alias MarskalWeb.TagComponents
 
-  defp task_states, do: [{"To-Do", "to_do"}, {"Done", "done"}, {"Dropped", "dropped"}]
+  defp task_states do
+    [{gettext("To-Do"), "to_do"}, {gettext("Done"), "done"}, {gettext("Dropped"), "dropped"}]
+  end
+
   defp folder_states, do: [{"Active", "active"}, {"Dropped", "dropped"}]
 
   @date_texts %{"defer_text" => "defer", "planned_text" => "planned", "due_text" => "due"}
@@ -24,16 +27,38 @@ defmodule MarskalWeb.InspectorPanel do
 
   @impl true
   def update(assigns, socket) do
+    assigns = Map.put(assigns, :new_task, assigns[:new_task])
+    was_drafting? = socket.assigns[:new_task] != nil
+    drafting? = assigns.new_task != nil
+
     stale? =
-      socket.assigns[:loaded] != {assigns.selection, assigns[:change_version]} or
+      was_drafting? or
+        socket.assigns[:loaded] != {assigns.selection, assigns[:change_version]} or
         socket.assigns[:user] != assigns.user
 
     socket = assign(socket, assigns)
 
-    if stale? do
-      {:ok, reload(socket)}
-    else
-      {:ok, socket}
+    cond do
+      drafting? ->
+        {:ok, show_draft(socket)}
+
+      stale? ->
+        socket =
+          if was_drafting?,
+            do:
+              assign(socket,
+                picker: nil,
+                place: nil,
+                calendar: nil,
+                date_previews: %{},
+                draft_session: nil
+              ),
+            else: socket
+
+        {:ok, reload(socket)}
+
+      true ->
+        {:ok, socket}
     end
   end
 
@@ -443,14 +468,28 @@ defmodule MarskalWeb.InspectorPanel do
       }
     </style>
     <div id={@id}>
-      <p :if={@selection == nil} class="app-inspector__empty">
+      <p :if={@new_task == nil and @selection == nil} class="app-inspector__empty">
         Select a task, project, folder, or tag to edit.
       </p>
-      <p :if={@selection && @record == nil} class="app-inspector__empty">
+      <p :if={(@new_task == nil and @selection) && @record == nil} class="app-inspector__empty">
         That item is not available.
       </p>
+      <.new_task_form
+        :if={@new_task}
+        zone={Marskal.Accounts.timezone(@user)}
+        myself={@myself}
+        record={@record}
+        options={@options}
+        error={@error}
+        tagging={@tagging}
+        picker={@picker}
+        place={@place}
+        outline={@outline}
+        date_previews={@date_previews}
+        calendar={@calendar}
+      />
       <.task_form
-        :if={match?(%Tasks.Task{}, @record)}
+        :if={@new_task == nil and match?(%Tasks.Task{}, @record)}
         user={@user}
         change_version={assigns[:change_version]}
         zone={Marskal.Accounts.timezone(@user)}
@@ -466,7 +505,7 @@ defmodule MarskalWeb.InspectorPanel do
         calendar={@calendar}
       />
       <.project_form
-        :if={match?(%Projects.Project{}, @record)}
+        :if={@new_task == nil and match?(%Projects.Project{}, @record)}
         user={@user}
         change_version={assigns[:change_version]}
         zone={Marskal.Accounts.timezone(@user)}
@@ -480,14 +519,14 @@ defmodule MarskalWeb.InspectorPanel do
         calendar={@calendar}
       />
       <.folder_form
-        :if={match?(%ProjectFolders.ProjectFolder{}, @record)}
+        :if={@new_task == nil and match?(%ProjectFolders.ProjectFolder{}, @record)}
         myself={@myself}
         record={@record}
         options={@options}
         error={@error}
       />
       <.tag_form
-        :if={match?(%Tag{}, @record)}
+        :if={@new_task == nil and match?(%Tag{}, @record)}
         myself={@myself}
         record={@record}
         options={@options}
@@ -633,6 +672,120 @@ defmodule MarskalWeb.InspectorPanel do
         change_version={@change_version}
       />
       <.meta record={@record} zone={@zone} />
+    </section>
+    """
+  end
+
+  attr :myself, :any, required: true
+  attr :record, :any, required: true
+  attr :options, :list, default: []
+  attr :error, :string, default: nil
+  attr :tagging, :map, required: true
+  attr :picker, :map, required: true
+  attr :zone, :string, required: true
+  attr :outline, :map, default: %{}
+  attr :date_previews, :map, default: %{}
+  attr :calendar, :map, default: nil
+  attr :place, :map, default: nil
+
+  # The task being typed into the outline (ADR 0031). Nothing is saved until
+  # Enter; these fields travel with that task. Repeat waits until it exists.
+  defp new_task_form(assigns) do
+    ~H"""
+    <section class="inspector-form" id="inspector-new-task">
+      <p class="hint" id="inspector-new-task-hint">{gettext("Added when you press Enter.")}</p>
+      <p :if={@error} class="errors" role="alert">{@error}</p>
+      <form
+        id="inspector-new-task-form"
+        class="form"
+        phx-change="draft-save"
+        phx-submit="draft-create"
+      >
+        <div class="field">
+          <label for="inspector-new-task-title">{gettext("Title")}</label>
+          <input
+            id="inspector-new-task-title"
+            class="input"
+            type="text"
+            name="task[title]"
+            value={@record.title}
+            autocomplete="off"
+            phx-debounce="300"
+          />
+        </div>
+        <div class="field">
+          <label for="inspector-new-task-url">{gettext("URL")}</label>
+          <input
+            id="inspector-new-task-url"
+            class="input"
+            type="text"
+            inputmode="url"
+            name="task[url]"
+            value={@record.url}
+            placeholder={gettext("https://… or file://…")}
+            autocomplete="off"
+            spellcheck="false"
+            phx-debounce="300"
+          />
+          <MarskalWeb.UrlLink.link url={@record.url} text />
+        </div>
+        <.notes_field form="task" record={@record} placeholder={gettext("Markdown is fine…")} />
+        <.location_picker
+          id="inspector-new-task-location"
+          myself={@myself}
+          task={@record}
+          projects={@options}
+          place={@place}
+          parent={@outline[:parent]}
+        />
+        <.tag_picker
+          id="inspector-new-task-tags"
+          myself={@myself}
+          tagging={@tagging}
+          picker={@picker}
+        />
+        <div class="field">
+          <label for="inspector-new-task-state">{gettext("State")}</label>
+          <select id="inspector-new-task-state" class="input" name="task[state]">
+            <option
+              :for={{label, value} <- task_states()}
+              value={value}
+              selected={value == Atom.to_string(@record.state)}
+            >
+              {label}
+            </option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="toggle">
+            <input type="hidden" name="task[flagged]" value="false" />
+            <input
+              type="checkbox"
+              id="inspector-new-task-flagged"
+              name="task[flagged]"
+              value="true"
+              checked={@record.flagged}
+            /> {gettext("Flagged")}
+          </label>
+          <p
+            :if={!@record.flagged and project_flagged?(@record, @options)}
+            class="hint"
+            id="inspector-new-task-flagged-by-project"
+          >
+            {gettext("Flagged by its project.")}
+          </p>
+        </div>
+        <MarskalWeb.DateFields.inputs
+          form="task"
+          id="inspector-new-task-dates"
+          record={@record}
+          zone={@zone}
+          target={@myself}
+          previews={@date_previews}
+          calendar={@calendar}
+        />
+      </form>
+      <.notes_dialog form="task" myself={@myself} record={@record} />
     </section>
     """
   end
@@ -1239,7 +1392,7 @@ defmodule MarskalWeb.InspectorPanel do
     ~H"""
     <div class="field">
       <div class="field-head">
-        <label for={"inspector-#{@form}-notes"}>Notes</label>
+        <label for={"inspector-#{@form}-notes"}>{gettext("Notes")}</label>
         <button
           type="button"
           id={"inspector-#{@form}-notes-expand"}
@@ -1574,13 +1727,18 @@ defmodule MarskalWeb.InspectorPanel do
   end
 
   def handle_event("save", %{"task" => params}, socket) do
-    attrs =
-      params
-      |> Map.take(["title", "notes", "url", "flagged", "state"])
-      |> Map.reject(fn {_key, value} -> value == nil end)
-      |> Map.merge(date_params(params, socket))
+    if socket.assigns[:new_task] do
+      send(self(), {:new_task_patch, field_patch(params)})
+      {:noreply, socket}
+    else
+      attrs =
+        params
+        |> Map.take(["title", "notes", "url", "flagged", "state"])
+        |> Map.reject(fn {_key, value} -> value == nil end)
+        |> Map.merge(date_params(params, socket))
 
-    save(socket, &Tasks.update_task(&1, &2, drop_blank_title(attrs, "title"), &3))
+      save(socket, &Tasks.update_task(&1, &2, drop_blank_title(attrs, "title"), &3))
+    end
   end
 
   def handle_event("save", %{"project" => params}, socket) do
@@ -1600,6 +1758,15 @@ defmodule MarskalWeb.InspectorPanel do
   def handle_event("save", %{"tag" => params}, socket) do
     attrs = Map.take(params, ["name", "parent_id", "state"])
     save(socket, &Tags.update_tag(&1, &2, drop_blank_title(attrs, "name"), &3))
+  end
+
+  def handle_event(
+        "date-commit",
+        %{"key" => key, "text" => text},
+        %{assigns: %{new_task: draft}} = socket
+      )
+      when key in ["defer", "planned", "due"] and is_map(draft) do
+    draft_date(socket, key, text, &MarskalWeb.DateFields.commit(key, text, &1, &2))
   end
 
   def handle_event("date-commit", %{"key" => key, "text" => text}, socket)
@@ -1636,6 +1803,30 @@ defmodule MarskalWeb.InspectorPanel do
 
   def handle_event("calendar-close", _params, socket),
     do: {:noreply, assign(socket, :calendar, nil)}
+
+  def handle_event(
+        "calendar-pick",
+        %{"key" => key, "date" => iso},
+        %{assigns: %{new_task: draft}} = socket
+      )
+      when key in ["defer", "planned", "due"] and is_map(draft) do
+    case Date.from_iso8601(iso) do
+      {:ok, date} ->
+        attrs = MarskalWeb.DateFields.pick(key, date, socket.assigns.record, socket.assigns.user)
+        previews = Map.delete(socket.assigns.date_previews, key)
+
+        send(
+          self(),
+          {:new_task_patch,
+           atomize(attrs) |> Map.put(:error, nil) |> Map.put(:date_previews, previews)}
+        )
+
+        {:noreply, assign(socket, calendar: nil, date_previews: previews)}
+
+      {:error, _} ->
+        {:noreply, socket}
+    end
+  end
 
   def handle_event("calendar-pick", %{"key" => key, "date" => iso}, socket)
       when key in ["defer", "planned", "due"] do
@@ -1716,7 +1907,13 @@ defmodule MarskalWeb.InspectorPanel do
 
   def handle_event("location-pick", %{"location" => value}, socket) do
     attrs = value |> MarskalWeb.TaskComponents.parse_location() |> Tasks.location_attrs()
-    socket |> assign(:place, nil) |> save(&Tasks.update_task(&1, &2, attrs, &3))
+
+    if socket.assigns[:new_task] do
+      send(self(), {:new_task_location, attrs})
+      {:noreply, assign(socket, :place, nil)}
+    else
+      socket |> assign(:place, nil) |> save(&Tasks.update_task(&1, &2, attrs, &3))
+    end
   end
 
   def handle_event("tag-add", %{"id" => tag_id}, socket), do: link_tag(socket, :tag, tag_id)
@@ -1740,6 +1937,154 @@ defmodule MarskalWeb.InspectorPanel do
   end
 
   defp empty_picker, do: %{query: "", results: [], parent: ""}
+
+  # The outline's unsaved task. Picker, calendar, and date previews stay
+  # while the same row is open; a new row starts them over.
+  defp show_draft(socket) do
+    draft = socket.assigns.new_task
+    user = socket.assigns.user
+    session = {draft.anchor_id, draft.where}
+    same? = socket.assigns[:draft_session] == session
+    tree = draft_tree(socket, user, draft, same?)
+    record = draft_record(draft)
+
+    socket
+    |> assign(:record, record)
+    |> assign(:draft_tree, tree)
+    |> assign(:draft_session, session)
+    |> assign(
+      :options,
+      reuse(same?, socket.assigns[:options], fn -> task_projects(user, record) end)
+    )
+    |> assign(:tagging, draft_tagging(user, draft, tree))
+    |> assign(:outline, %{parent: draft_parent(draft)})
+    |> assign(:picker, draft_picker(socket, same?))
+    |> assign(:place, reuse(same?, socket.assigns[:place], fn -> nil end))
+    |> assign(:date_previews, draft.date_previews || %{})
+    |> assign(:calendar, reuse(same?, socket.assigns[:calendar], fn -> nil end))
+    |> assign(:error, draft.error)
+    |> assign(:loaded, nil)
+  end
+
+  # A tag created from the picker is not in the tree loaded when the row
+  # opened. Reload only then; typing must not rebuild it.
+  defp draft_tree(_socket, user, _draft, false), do: Tags.tree(user)
+
+  defp draft_tree(socket, user, draft, true) do
+    if Enum.all?(draft.tag_ids, &Tree.get(socket.assigns.draft_tree, &1)),
+      do: socket.assigns.draft_tree,
+      else: Tags.tree(user)
+  end
+
+  defp draft_picker(socket, true), do: socket.assigns[:picker] || empty_picker()
+  defp draft_picker(_socket, false), do: empty_picker()
+
+  defp reuse(true, value, _fresh), do: value
+  defp reuse(false, _value, fresh), do: fresh.()
+
+  defp draft_record(draft) do
+    %Tasks.Task{
+      title: draft.title,
+      notes: draft.notes,
+      url: draft.url,
+      flagged: draft.flagged,
+      state: draft.state,
+      inbox: draft.inbox,
+      project_id: draft.project_id,
+      parent_id: draft.parent_id,
+      defer_until: draft.defer_until,
+      deferred_indefinitely: draft.deferred_indefinitely,
+      planned_at: draft.planned_at,
+      due_at: draft.due_at
+    }
+  end
+
+  defp draft_parent(%{parent_id: id, parent_title: title})
+       when is_binary(id) and is_binary(title),
+       do: %{title: title}
+
+  defp draft_parent(_draft), do: nil
+
+  defp draft_tagging(user, draft, tree) do
+    direct =
+      draft.tag_ids
+      |> Enum.flat_map(&List.wrap(Tree.get(tree, &1)))
+      |> Enum.sort_by(&Tree.position(tree, &1.id))
+
+    own = MapSet.new(direct, & &1.id)
+
+    inherited =
+      if draft.project_id do
+        user
+        |> Tags.project_tags(%Projects.Project{id: draft.project_id}, tree)
+        |> Enum.reject(&MapSet.member?(own, &1.id))
+      else
+        []
+      end
+
+    %{tree: tree, direct: direct, inherited: inherited, parents: visible_tags(tree)}
+  end
+
+  defp field_patch(params) do
+    params
+    |> Map.take(["title", "notes", "url", "flagged", "state", "deferred_indefinitely"])
+    |> Enum.reduce(%{}, fn
+      {"title", title}, patch ->
+        Map.put(patch, :title, title)
+
+      {"notes", notes}, patch ->
+        Map.put(patch, :notes, notes || "")
+
+      {"url", url}, patch ->
+        Map.put(patch, :url, url || "")
+
+      {"flagged", flagged}, patch ->
+        Map.put(patch, :flagged, flagged in [true, "true"])
+
+      {"state", state}, patch ->
+        Map.put(patch, :state, state_atom(state))
+
+      {"deferred_indefinitely", value}, patch ->
+        Map.put(patch, :deferred_indefinitely, value in [true, "true"])
+    end)
+    |> Map.put(:error, nil)
+  end
+
+  defp state_atom(value) when value in ~w(to_do done dropped), do: String.to_existing_atom(value)
+  defp state_atom(_value), do: :to_do
+
+  defp atomize(attrs) do
+    Map.new(attrs, fn {key, value} ->
+      {if(is_binary(key), do: String.to_existing_atom(key), else: key), value}
+    end)
+  end
+
+  # `read` is `commit/4` without the key and text it already closed over.
+  # `:error` stays in the field; a date is patched onto the draft.
+  defp draft_date(socket, key, text, read) do
+    %{user: user, record: record} = socket.assigns
+
+    case read.(record, user) do
+      {:ok, attrs} ->
+        previews = Map.delete(socket.assigns.date_previews, key)
+
+        send(
+          self(),
+          {:new_task_patch,
+           atomize(attrs) |> Map.put(:error, nil) |> Map.put(:date_previews, previews)}
+        )
+
+        field = MarskalWeb.DateFields.field(key)
+        zone = Marskal.Accounts.timezone(user)
+        text = MarskalWeb.DateFields.text(Map.get(atomize(attrs), field), field, zone)
+        {:reply, %{text: text}, assign(socket, :date_previews, previews)}
+
+      :error ->
+        previews = Map.put(socket.assigns.date_previews, key, {:error, text})
+        send(self(), {:new_task_patch, %{date_previews: previews}})
+        {:reply, %{}, assign(socket, :date_previews, previews)}
+    end
+  end
 
   # Each save is one command carrying only the fields that differ. The form
   # posts its whole state, so a resent event changes nothing and needs no
@@ -1791,6 +2136,11 @@ defmodule MarskalWeb.InspectorPanel do
     %{tree: tree, direct: direct} = socket.assigns.tagging
     taken = MapSet.new(direct, & &1.id)
     tree |> Tags.search(query) |> Enum.reject(&MapSet.member?(taken, &1.id))
+  end
+
+  defp link_tag(%{assigns: %{new_task: draft}} = socket, action, tag_id) when is_map(draft) do
+    send(self(), {:new_task_tag, if(action == :tag, do: :add, else: :remove), tag_id})
+    {:noreply, assign(socket, picker: empty_picker(), error: nil)}
   end
 
   defp link_tag(socket, action, tag_id) do
