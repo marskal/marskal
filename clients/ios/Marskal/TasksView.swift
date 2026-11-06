@@ -70,6 +70,27 @@ struct TasksView: View {
 
     private func row(_ task: TaskItem) -> some View {
         TaskRow(task: task) { model.setState(task, .done) }
+            .taskActions(task, moving: $moving)
+    }
+}
+
+extension TaskItem: @retroactive Identifiable {}
+
+extension View {
+    /// Done on a leading swipe; Drop and Move on a trailing one and in the
+    /// context menu. Move sets `moving`, for the view to show a MoveSheet.
+    func taskActions(_ task: TaskItem, moving: Binding<TaskItem?>) -> some View {
+        modifier(TaskActions(task: task, moving: moving))
+    }
+}
+
+private struct TaskActions: ViewModifier {
+    let task: TaskItem
+    @Binding var moving: TaskItem?
+    @Environment(AppModel.self) private var model
+
+    func body(content: Content) -> some View {
+        content
             .swipeActions(edge: .leading) {
                 Button("Done", systemImage: "checkmark") { model.setState(task, .done) }
                     .tint(.green)
@@ -88,14 +109,14 @@ struct TasksView: View {
     }
 }
 
-extension TaskItem: @retroactive Identifiable {}
-
 /// A task in a list: a circle that marks it Done, its title, project, and
 /// flag, and whatever the list shows after them.
 struct TaskRow<Detail: View>: View {
     let task: TaskItem
     /// By its depth in the outline.
     var indented = true
+    /// Its project under the title; off where the list is that project.
+    var showsProject = true
     let complete: () -> Void
     @ViewBuilder var detail: Detail
 
@@ -111,7 +132,7 @@ struct TaskRow<Detail: View>: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(task.title)
-                if let project = task.project {
+                if showsProject, let project = task.project {
                     Text(project)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -133,8 +154,8 @@ struct TaskRow<Detail: View>: View {
 }
 
 extension TaskRow where Detail == EmptyView {
-    init(task: TaskItem, complete: @escaping () -> Void) {
-        self.init(task: task, complete: complete) { EmptyView() }
+    init(task: TaskItem, showsProject: Bool = true, complete: @escaping () -> Void) {
+        self.init(task: task, showsProject: showsProject, complete: complete) { EmptyView() }
     }
 }
 
@@ -198,7 +219,7 @@ private struct CaptureSheet: View {
 
 /// Where a task can go: the Inbox, No project, or an open project
 /// (ADR 0017).
-private struct MoveSheet: View {
+struct MoveSheet: View {
     let task: TaskItem
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
@@ -213,7 +234,7 @@ private struct MoveSheet: View {
                 if !model.projects.isEmpty {
                     Section("Projects") {
                         ForEach(model.projects, id: \.id) { project in
-                            choice(project.title, systemImage: "folder", .project(id: project.id))
+                            choice(project.title, systemImage: ProjectsView.projectSymbol, .project(id: project.id))
                         }
                     }
                 }
