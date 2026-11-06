@@ -37,6 +37,17 @@ in
     package = pkgs.postgresql_18;
     listen_addresses = "127.0.0.1";
     port = 8271; # off the default, so other devenvs do not clash
+    # The built-in provider's PG_UNICODE_FAST for collation and ctype (ADR
+    # 0034); glibc's C.UTF-8 for the other categories. This replaces
+    # devenv's default `--locale=C`. template1 gets it too, so the databases
+    # below and `mix ecto.create` are the same kind. initdb runs only on an
+    # empty data directory: an older cluster is made again (see the ADR).
+    initdbArgs = [
+      "--encoding=UTF8"
+      "--locale-provider=builtin"
+      "--builtin-locale=PG_UNICODE_FAST"
+      "--locale=C.UTF-8"
+    ];
     initialDatabases = [
       { name = "marskal_dev"; }
       { name = "marskal_test"; }
