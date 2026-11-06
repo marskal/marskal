@@ -207,6 +207,13 @@ INSERT OR REPLACE INTO meta (key, value) VALUES ('needs_snapshot', '1');
 ALTER TABLE user_preferences ADD COLUMN keymap TEXT NOT NULL DEFAULT 'standard';
 INSERT OR REPLACE INTO meta (key, value) VALUES ('needs_snapshot', '1');
 "#,
+    // ADR 0009. A folder's subfolders and projects are one list by rank.
+    // Rows pulled before this have none, so the next pull is a snapshot.
+    r#"
+ALTER TABLE projects ADD COLUMN rank TEXT;
+ALTER TABLE project_folders ADD COLUMN rank TEXT;
+INSERT OR REPLACE INTO meta (key, value) VALUES ('needs_snapshot', '1');
+"#,
 ];
 
 /// Brings the database to the latest schema. `user_version` counts the

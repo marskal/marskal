@@ -678,10 +678,12 @@ fn a_preferences_row_from_before_home_view_reads_as_open_tasks() {
         .query_row("PRAGMA user_version", [], |row| row.get(0))
         .unwrap();
     conn.execute_batch(&format!(
-        "ALTER TABLE user_preferences DROP COLUMN keymap;
+        "ALTER TABLE projects DROP COLUMN rank;
+         ALTER TABLE project_folders DROP COLUMN rank;
+         ALTER TABLE user_preferences DROP COLUMN keymap;
          ALTER TABLE user_preferences DROP COLUMN home_view;
          PRAGMA user_version = {version};",
-        version = version - 2
+        version = version - 3
     ))
     .unwrap();
     drop(conn);
@@ -768,7 +770,9 @@ fn a_database_from_before_urls_asks_for_a_snapshot() {
     // Back to the schema a client built before URLs left.
     let conn = rusqlite::Connection::open(&path).unwrap();
     conn.execute_batch(
-        "ALTER TABLE tasks DROP COLUMN flagged;
+        "ALTER TABLE projects DROP COLUMN rank;
+         ALTER TABLE project_folders DROP COLUMN rank;
+         ALTER TABLE tasks DROP COLUMN flagged;
          ALTER TABLE projects DROP COLUMN flagged;
          ALTER TABLE tasks DROP COLUMN url;
          ALTER TABLE projects DROP COLUMN url;
@@ -960,4 +964,53 @@ fn a_subtask_is_on_the_agenda_by_its_parent_s_planned() {
             ("Sand".into(), "2026-10-02T13:00:00Z".into()),
         ]
     );
+}
+
+#[test]
+fn pulled_projects_and_folders_keep_their_rank() {
+    let (mut store, _clock) = store();
+    let folder = Uuid::now_v7();
+    let project = Uuid::now_v7();
+    let folder_row = json!({
+        "id": folder.to_string(),
+        "name": "Home",
+        "parent_id": null,
+        "state": "active",
+        "rank": "a",
+        "discarded_at": null,
+        "inserted_at": "2026-10-01T08:00:00Z",
+        "updated_at": "2026-10-01T08:00:00Z"
+    });
+    let project_row = json!({
+        "id": project.to_string(),
+        "title": "Garden",
+        "notes": null,
+        "url": null,
+        "flagged": false,
+        "state": "to_do",
+        "project_folder_id": folder.to_string(),
+        "rank": "V",
+        "defer_until": null,
+        "deferred_indefinitely": false,
+        "planned_at": null,
+        "due_at": null,
+        "resolved_at": null,
+        "discarded_at": null,
+        "inserted_at": "2026-10-01T08:00:00Z",
+        "updated_at": "2026-10-01T08:00:00Z"
+    });
+    store
+        .apply_pull(&pull(
+            1,
+            true,
+            vec![
+                ("project_folder", folder_row.as_object().unwrap().clone()),
+                ("project", project_row.as_object().unwrap().clone()),
+            ],
+        ))
+        .unwrap();
+
+    let world = store.world().unwrap();
+    assert_eq!(world.folders[0].rank.as_deref(), Some("a"));
+    assert_eq!(world.project(project).unwrap().rank.as_deref(), Some("V"));
 }
