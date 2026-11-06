@@ -42,6 +42,7 @@ This file is **short and actionable**. Rationale and history live in
 | Keyboard keymap | [0031](docs/adr/0031-keyboard-keymap.md) |
 | Typed dates, calendar | [0032](docs/adr/0032-date-shorthand.md) |
 | Go to, search | [0033](docs/adr/0033-go-to.md) |
+| Database collation | [0034](docs/adr/0034-builtin-collation.md) |
 | Repository layout | [0015](docs/adr/0015-repository-layout.md) |
 
 ---
@@ -252,6 +253,9 @@ The repository root is the product, not the web app (ADR 0015).
   not a sequence. Real **foreign keys**. DB constraints for real invariants.
   Extensions OK if in **nixpkgs** (enable in migrations + devenv as needed).
   Recency is `inserted_at`, not `id`.
+- Databases use the built-in provider, `PG_UNICODE_FAST` (ADR 0034): text
+  sorts by code point. A name sort the user sees takes an ICU `COLLATE`
+  from a fixed map: `da-x-icu` for `da` and `en-DK`, `en-x-icu` otherwise.
 - **Migrations are Ecto.** Enums, `uuidv7()` defaults, and identity columns are
   raw SQL in those migrations (ADR 0016).
 - Server-rendered HEEx / LiveView unless an SPA is justified.
