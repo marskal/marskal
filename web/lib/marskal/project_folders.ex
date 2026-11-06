@@ -4,16 +4,23 @@ defmodule Marskal.ProjectFolders do
   """
 
   import Ecto.Query
+  alias Marskal.Accounts
   alias Marskal.Accounts.User
   alias Marskal.Changes
+  alias Marskal.Collation
   alias Marskal.ProjectFolders.ProjectFolder
   alias Marskal.Projects.Project
   alias Marskal.Repo
 
+  @doc """
+  The user's live folders, active and dropped, by name in the order of
+  their locale (ADR 0034): the Folder and Inside selects show this order.
+  """
   def list_all(%User{} = user) do
     ProjectFolder
     |> where([f], f.user_id == ^user.id and is_nil(f.discarded_at))
-    |> order_by([f], asc: f.name, asc: f.id)
+    |> Collation.order_by_name(:name, Accounts.locale(user))
+    |> order_by([f], asc: f.id)
     |> Repo.all()
   end
 
