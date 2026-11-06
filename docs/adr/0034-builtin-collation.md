@@ -77,7 +77,8 @@ CREATE DATABASE marskal
   TEMPLATE template0
   ENCODING 'UTF8'
   LOCALE_PROVIDER builtin
-  BUILTIN_LOCALE 'PG_UNICODE_FAST';
+  BUILTIN_LOCALE 'PG_UNICODE_FAST'
+  LOCALE 'C.UTF-8';
 ```
 
 - Text sorts by Unicode code point. For valid UTF-8 that is byte order.
@@ -121,10 +122,14 @@ default `--locale=C` — appending would keep it — with:
 --locale=C.UTF-8
 ```
 
-`--locale=C.UTF-8` is the glibc locale for those other categories. On
-Postgres 18, full-text parsing still follows that libc ctype. Marskal
-does not use full-text search. The NixOS module creates its two
-databases with the `CREATE DATABASE` above rather than through
+`--locale=C.UTF-8`, and `LOCALE 'C.UTF-8'` above, is the glibc locale
+for those other categories. Without it, a database takes the
+template's, which is whatever the host's cluster was made with. glibc
+has `C.UTF-8` built in from 2.35, and Postgres refuses a connection to
+a database whose locale the host lacks, so this one is always there,
+and it matches development. On Postgres 18, full-text parsing still
+follows that libc ctype. Marskal does not use full-text search. The
+NixOS module creates its two databases with the `CREATE DATABASE` above rather than through
 `ensureDatabases`, which would inherit `template1`'s libc locale. The
 module does not change the host's `initdbArgs`; the cluster may hold
 other databases.
