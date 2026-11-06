@@ -196,8 +196,9 @@ in
       ];
     };
 
-    # Each database on the built-in provider with PG_UNICODE_FAST (ADR 0034),
-    # owned by its role. ensureDatabases would copy template1 and its libc
+    # Each database on the built-in provider with PG_UNICODE_FAST, and
+    # glibc's C.UTF-8 for the other categories (ADR 0034), owned by its
+    # role. ensureDatabases would copy template1 and its libc
     # locale, and ensureDBOwnership needs ensureDatabases. This runs after
     # ensureUsers in the same script, and only creates: a database made
     # another way is left as it is. The host's initdbArgs stay its own.
@@ -205,7 +206,7 @@ in
       lib.concatMapStrings
         (database: ''
           psql -tAc "SELECT 1 FROM pg_database WHERE datname = '${database}'" | grep -q 1 \
-            || psql -v ON_ERROR_STOP=1 -tAc "CREATE DATABASE ${database} OWNER ${database} TEMPLATE template0 ENCODING 'UTF8' LOCALE_PROVIDER builtin BUILTIN_LOCALE 'PG_UNICODE_FAST'"
+            || psql -v ON_ERROR_STOP=1 -tAc "CREATE DATABASE ${database} OWNER ${database} TEMPLATE template0 ENCODING 'UTF8' LOCALE_PROVIDER builtin BUILTIN_LOCALE 'PG_UNICODE_FAST' LOCALE 'C.UTF-8'"
         '')
         [
           "marskal"
