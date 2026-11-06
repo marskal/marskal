@@ -178,7 +178,7 @@ in
     };
     users.groups.marskal = { };
 
-    # Named like its database, so peer auth and ensureDBOwnership line up.
+    # Named like its database, so peer auth lines up.
     users.users.marskal_hydra = {
       isSystemUser = true;
       group = "marskal_hydra";
@@ -190,21 +190,28 @@ in
 
     services.postgresql = {
       enable = true;
-      ensureDatabases = [
-        "marskal"
-        "marskal_hydra"
-      ];
       ensureUsers = [
-        {
-          name = "marskal";
-          ensureDBOwnership = true;
-        }
-        {
-          name = "marskal_hydra";
-          ensureDBOwnership = true;
-        }
+        { name = "marskal"; }
+        { name = "marskal_hydra"; }
       ];
     };
+
+    # Each database on the built-in provider with PG_UNICODE_FAST (ADR 0034),
+    # owned by its role. ensureDatabases would copy template1 and its libc
+    # locale, and ensureDBOwnership needs ensureDatabases. This runs after
+    # ensureUsers in the same script, and only creates: a database made
+    # another way is left as it is. The host's initdbArgs stay its own.
+    systemd.services.postgresql-setup.script = lib.mkAfter (
+      lib.concatMapStrings
+        (database: ''
+          psql -tAc "SELECT 1 FROM pg_database WHERE datname = '${database}'" | grep -q 1 \
+            || psql -v ON_ERROR_STOP=1 -tAc "CREATE DATABASE ${database} OWNER ${database} TEMPLATE template0 ENCODING 'UTF8' LOCALE_PROVIDER builtin BUILTIN_LOCALE 'PG_UNICODE_FAST'"
+        '')
+        [
+          "marskal"
+          "marskal_hydra"
+        ]
+    );
 
     systemd.services.marskal-hydra-secrets = {
       description = "Generate Hydra secrets";
