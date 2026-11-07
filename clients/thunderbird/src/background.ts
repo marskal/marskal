@@ -40,5 +40,5 @@ async function addSelected(list: messenger.MessageList): Promise<void> {
 }
 
 function notify(message: string): Promise<string> {
-  return messenger.notifications.create({ type: "basic", title: "Marskal", message, iconUrl: "icon.svg" });
+  return messenger.notifications.create({ type: "basic", title: "Marskal", message, iconUrl: "logo.svg" });
 }
