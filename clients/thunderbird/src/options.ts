@@ -28,6 +28,8 @@ signedOutView.addEventListener("submit", (event) => {
     show("Enter the server’s address, such as https://tasks.marskal.example.");
     return;
   }
+  // Shows an http address as the https one that is used.
+  serverInput.value = server;
 
   // Asked for before anything is awaited: Thunderbird grants permissions
   // only while handling the click.

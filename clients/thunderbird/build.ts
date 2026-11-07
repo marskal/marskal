@@ -1,5 +1,6 @@
 // Builds the extension into dist/: the scripts bundled by esbuild, the
-// static pages beside them, and the toolbar icon from lucide-static.
+// static pages beside them (the app's logo among them, for the add-on list
+// and notifications), and the toolbar icon from lucide-static.
 
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { build } from "esbuild";
@@ -30,7 +31,3 @@ const icon = await readFile(
 const style =
   "<style>svg { color: #18181b } @media (prefers-color-scheme: dark) { svg { color: #fbfbfe } }</style>";
 await writeFile(new URL("icon.svg", dist), icon.replace(/<svg[^>]*>/, (tag) => `${tag}\n  ${style}`));
-
-// The add-on list and notifications show the app's logo, which carries
-// its own background and reads on any theme.
-await cp(new URL("../../web/priv/static/images/icon.svg", import.meta.url), new URL("logo.svg", dist));
