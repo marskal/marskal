@@ -22,7 +22,7 @@
     "page": "options.html"
   },
   "icons": {
-    "64": "icon.svg"
+    "64": "logo.svg"
   },
   "permissions": ["messagesRead", "menus", "storage", "notifications"],
   "optional_host_permissions": ["http://*/*", "https://*/*"]

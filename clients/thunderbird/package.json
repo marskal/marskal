@@ -7,7 +7,7 @@
     "build": "node build.ts",
     "check": "tsc",
     "test": "node --test 'test/*.test.ts'",
-    "package": "node build.ts && cd dist && zip -qr ../marskal-thunderbird.xpi ."
+    "package": "node build.ts && rm -f marskal-thunderbird.xpi && cd dist && zip -qr ../marskal-thunderbird.xpi ."
   },
   "dependencies": {
     "uuid": "^14.0.2"

@@ -20,9 +20,17 @@ await build({
 
 await cp(new URL("./static/", import.meta.url), dist, { recursive: true });
 
-// Thunderbird colours toolbar icons through context-stroke.
+// The toolbar icon picks its own colour from the colour scheme it is
+// drawn in. Thunderbird coloured neither context-stroke nor theme_icons
+// reliably, which left the icon dark on a dark theme.
 const icon = await readFile(
   new URL("./node_modules/lucide-static/icons/inbox.svg", import.meta.url),
   "utf8",
 );
-await writeFile(new URL("icon.svg", dist), icon.replaceAll("currentColor", "context-stroke"));
+const style =
+  "<style>svg { color: #18181b } @media (prefers-color-scheme: dark) { svg { color: #fbfbfe } }</style>";
+await writeFile(new URL("icon.svg", dist), icon.replace(/<svg[^>]*>/, (tag) => `${tag}\n  ${style}`));
+
+// The add-on list and notifications show the app's logo, which carries
+// its own background and reads on any theme.
+await cp(new URL("../../web/priv/static/images/icon.svg", import.meta.url), new URL("logo.svg", dist));
