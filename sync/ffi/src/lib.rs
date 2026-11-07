@@ -235,6 +235,9 @@ pub struct ProjectItem {
     pub flagged: bool,
     pub state: TaskState,
     pub folder_id: Option<Uuid>,
+    /// Its place among its folder's subfolders and projects, compared byte
+    /// by byte. `None` until the server gives it one (ADR 0009).
+    pub rank: Option<String>,
     pub dates: Dates,
     pub series_id: Option<Uuid>,
     pub inserted_at: Option<Timestamp>,
@@ -245,6 +248,8 @@ pub struct FolderItem {
     pub id: Uuid,
     pub name: String,
     pub parent_id: Option<Uuid>,
+    /// As for a project's.
+    pub rank: Option<String>,
     /// False for a dropped folder.
     pub active: bool,
 }
@@ -482,6 +487,7 @@ impl Store {
                     id: f.id,
                     name: f.name,
                     parent_id: f.parent_id,
+                    rank: f.rank,
                     active: f.state == core::FolderState::Active,
                 })
                 .collect();
@@ -813,6 +819,7 @@ fn project(p: core::Project) -> ProjectItem {
         flagged: p.flagged,
         state: p.state.into(),
         folder_id: p.project_folder_id,
+        rank: p.rank,
         series_id: p.series_id,
     }
 }
