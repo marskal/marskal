@@ -10,15 +10,14 @@ Marskal for Thunderbird
 
 ## Summary
 
-Add mail as tasks to the inbox of Marskal, a personal task manager you run
-on your own server.
+Add mail as tasks to the inbox of Marskal, an open-source, self-hosted
+personal task manager.
 
 ## Description
 
-Marskal is a personal task manager: an inbox for capturing what comes up,
-projects and nested tasks, tags, planned and due dates, and tasks that
-repeat. It is open source, and you run it on your own server; the homepage
-says how.
+Marskal is an open-source, self-hosted personal task manager: an inbox for
+capturing what comes up, projects and nested tasks, tags, planned and due
+dates, and tasks that repeat. The homepage says how to self-host it.
 
 This add-on turns mail into tasks in your Marskal inbox, so a message that
 needs doing can leave your mail inbox.
