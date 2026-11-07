@@ -5,6 +5,7 @@
 
 import { Api, ApiError, type TokenResponse } from "./api.ts";
 import { outcome, type Command, type Outcome } from "./command.ts";
+import { ext } from "./ext.ts";
 
 export interface Account {
   server: string;
@@ -26,23 +27,23 @@ const LOCK = "marskal-account";
 const MARGIN_MS = 60_000;
 
 export async function account(): Promise<Account | null> {
-  const stored = await messenger.storage.local.get(KEY);
+  const stored = await ext().storage.local.get(KEY);
   return (stored[KEY] as Account | undefined) ?? null;
 }
 
 export async function signIn(server: string, tokens: TokenResponse): Promise<void> {
-  await messenger.storage.local.set({ [KEY]: fromResponse(server, tokens) });
+  await ext().storage.local.set({ [KEY]: fromResponse(server, tokens) });
 }
 
 /** Revokes the device at the server, if it can, and forgets the tokens. */
-export async function signOut(): Promise<void> {
+export async function signOut(clientId: string): Promise<void> {
   await navigator.locks.request(LOCK, async () => {
     const current = await account();
     if (!current) return;
     try {
-      await new Api(current.server).revoke(current.refreshToken);
+      await new Api(current.server, clientId).revoke(current.refreshToken);
     } finally {
-      await messenger.storage.local.remove(KEY);
+      await ext().storage.local.remove(KEY);
     }
   });
 }
@@ -51,20 +52,20 @@ export async function signOut(): Promise<void> {
  * Pushes `commands`. Refreshes the access token when it is about to expire,
  * or when the server no longer takes it.
  */
-export async function push(commands: Command[]): Promise<Outcome> {
-  let current = await fresh(false);
-  const api = new Api(current.server);
+export async function push(clientId: string, commands: Command[]): Promise<Outcome> {
+  let current = await fresh(clientId, false);
+  const api = new Api(current.server, clientId);
 
   try {
     return outcome(commands, await api.push(current.accessToken, commands));
   } catch (error) {
     if (!(error instanceof ApiError && error.kind === "unauthorized")) throw error;
-    current = await fresh(true);
+    current = await fresh(clientId, true);
     return outcome(commands, await api.push(current.accessToken, commands));
   }
 }
 
-function fresh(force: boolean): Promise<Account> {
+function fresh(clientId: string, force: boolean): Promise<Account> {
   return navigator.locks.request(LOCK, async () => {
     // Read inside the lock: another page may just have refreshed.
     const current = await account();
@@ -73,17 +74,17 @@ function fresh(force: boolean): Promise<Account> {
 
     let tokens: TokenResponse;
     try {
-      tokens = await new Api(current.server).refresh(current.refreshToken);
+      tokens = await new Api(current.server, clientId).refresh(current.refreshToken);
     } catch (error) {
       if (error instanceof ApiError && (error.code === "invalid_grant" || error.kind === "unauthorized")) {
-        await messenger.storage.local.remove(KEY);
+        await ext().storage.local.remove(KEY);
         throw new SignedOut();
       }
       throw error;
     }
 
     const next = fromResponse(current.server, tokens);
-    await messenger.storage.local.set({ [KEY]: next });
+    await ext().storage.local.set({ [KEY]: next });
     return next;
   });
 }

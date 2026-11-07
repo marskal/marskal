@@ -1,9 +1,12 @@
 // The popup of the button on a displayed message: check the title, then add
 // the message to the inbox (ADR 0024).
 
-import { account, push, SignedOut } from "./account.ts";
-import { describeError, readMessage } from "./capture.ts";
-import { insertCommand, type Command } from "./command.ts";
+import { account, push, SignedOut } from "@marskal/webext-common/account";
+import { insertCommand, type Command } from "@marskal/webext-common/command";
+import { cleanTitle, describeError } from "@marskal/webext-common/text";
+import { v7 as uuidv7 } from "uuid";
+import { readMessage } from "./capture.ts";
+import { CLIENT_ID } from "./client.ts";
 
 const form = document.querySelector<HTMLFormElement>("#capture")!;
 const titleInput = document.querySelector<HTMLInputElement>("#title")!;
@@ -56,12 +59,12 @@ async function add(): Promise<void> {
   try {
     if (!command) {
       const fields = await readMessage(message, withText.checked);
-      const title = titleInput.value.replace(/\s+/g, " ").trim();
+      const title = cleanTitle(titleInput.value);
       if (title) fields.title = title;
-      command = insertCommand(fields);
+      command = insertCommand(fields, uuidv7);
     }
 
-    const { added, problems } = await push([command]);
+    const { added, problems } = await push(CLIENT_ID, [command]);
     if (added === 1) {
       show("Added to the inbox.");
       setTimeout(() => window.close(), 1200);

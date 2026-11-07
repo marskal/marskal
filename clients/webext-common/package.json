@@ -1,0 +1,19 @@
+{
+  "name": "@marskal/webext-common",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts",
+    "./static/*": "./static/*"
+  },
+  "scripts": {
+    "check": "tsc",
+    "test": "node --test 'test/*.test.ts'"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^7.0.2",
+    "uuid": "^14.0.2"
+  }
+}

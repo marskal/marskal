@@ -1,8 +1,13 @@
-// Push commands and their results (ADR 0019). The extension only inserts
-// inbox tasks, so it needs nothing of the client library (ADR 0024).
+// Push commands and their results (ADR 0019). A capture extension only
+// inserts inbox tasks, so it needs nothing of the client library (ADR 0024).
 
-import { v7 as uuidv7 } from "uuid";
-import type { TaskFields } from "./mail.ts";
+/** An inbox task as an extension sends it. */
+export interface TaskFields {
+  title: string;
+  notes: string;
+  url: string | null;
+  inbox: true;
+}
 
 export interface Command {
   id: string;
@@ -25,11 +30,16 @@ export interface Outcome {
   problems: string[];
 }
 
-export function insertCommand(fields: TaskFields, now: Date = new Date()): Command {
+/**
+ * An insert of `fields`, with a new command id and task id from `newId`, a
+ * UUIDv7 generator. The extension passes its own, so this package has no
+ * dependencies of its own to install.
+ */
+export function insertCommand(fields: TaskFields, newId: () => string, now: Date = new Date()): Command {
   return {
-    id: uuidv7(),
+    id: newId(),
     entity: "task",
-    entity_id: uuidv7(),
+    entity_id: newId(),
     op: "insert",
     fields,
     at: now.toISOString(),

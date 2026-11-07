@@ -19,6 +19,8 @@ await build({
   logLevel: "warning",
 });
 
+// The shared stylesheet and logo first, then this extension's own pages.
+await cp(new URL("../webext-common/static/", import.meta.url), dist, { recursive: true });
 await cp(new URL("./static/", import.meta.url), dist, { recursive: true });
 
 // The toolbar icon picks its own colour from the colour scheme it is

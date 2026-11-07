@@ -12,7 +12,8 @@ and the sender, date, and text in the notes.
 It only adds tasks. It keeps no copy of them and cannot read them.
 Thunderbird 140 (the oldest supported ESR) and later. It talks to the
 server over HTTPS only. The source is at https://github.com/marskal/marskal,
-in `clients/thunderbird`.
+in `clients/thunderbird`; signing in and sending tasks are in
+`clients/webext-common`, shared with the browser extension.
 
 ```sh
 devenv shell
@@ -43,10 +44,13 @@ The extension accepts only HTTPS, and turns an `http://` address into
 ## Building
 
 The add-ons site rebuilds the extension from its source to check the
-`.xpi`. On any OS with Node.js 24.20.0 and npm 11.19.0
-(https://nodejs.org/en/download), and `zip`:
+`.xpi`. The source archive holds two folders: `clients/thunderbird`, the
+extension, and `clients/webext-common`, code it shares with the browser
+extension, which npm links in. On any OS with Node.js 24.20.0 and npm
+11.19.0 (https://nodejs.org/en/download), and `zip`:
 
 ```sh
+cd clients/thunderbird
 npm ci
 npm run package
 ```
@@ -60,5 +64,6 @@ added. `npm ci` installs exactly the versions in `package-lock.json`.
 Raise `version` in `static/manifest.json`, commit, then run `npm run
 package` and `npm run source`. Upload `marskal-thunderbird.xpi` to
 addons.thunderbird.net and, when asked for source code, upload
-`marskal-thunderbird-source.zip`: the committed `clients/thunderbird`,
-without tests. The listing's text and privacy policy are in `LISTING.md`.
+`marskal-thunderbird-source.zip`: the committed `clients/thunderbird` and
+`clients/webext-common`, without tests. The listing's text and privacy
+policy are in `LISTING.md`.

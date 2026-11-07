@@ -92,5 +92,6 @@ Sign in in the options (the browser opens the server; sign in there with
 the account above and allow the device), open a message, and choose Add to
 Marskal inbox. The task appears in the server's Inbox.
 
-The source archive builds the `.xpi` with `npm ci` and `npm run package`;
-its README gives the Node.js and npm versions.
+The source archive builds the `.xpi` with `npm ci` and `npm run package`
+in `clients/thunderbird`; the README there gives the Node.js and npm
+versions.
