@@ -1,9 +1,12 @@
 // "Add to Marskal inbox" in the message list's context menu: every selected
 // message becomes an inbox task, with no popup (ADR 0024).
 
-import { push, SignedOut } from "./account.ts";
-import { allMessages, describeError, readMessage } from "./capture.ts";
-import { insertCommand } from "./command.ts";
+import { push, SignedOut } from "@marskal/webext-common/account";
+import { insertCommand } from "@marskal/webext-common/command";
+import { describeError } from "@marskal/webext-common/text";
+import { v7 as uuidv7 } from "uuid";
+import { allMessages, readMessage } from "./capture.ts";
+import { CLIENT_ID } from "./client.ts";
 
 const MENU_ID = "add-to-inbox";
 // The push takes at most 1000 commands (ADR 0019).
@@ -27,9 +30,9 @@ async function addSelected(list: messenger.MessageList): Promise<void> {
     }
 
     const commands = await Promise.all(
-      messages.map(async (message) => insertCommand(await readMessage(message, true))),
+      messages.map(async (message) => insertCommand(await readMessage(message, true), uuidv7)),
     );
-    const { added, problems } = await push(commands);
+    const { added, problems } = await push(CLIENT_ID, commands);
 
     const summary = added === 1 ? "Added 1 message to the inbox." : `Added ${added} messages to the inbox.`;
     await notify([summary, ...problems].join("\n"));

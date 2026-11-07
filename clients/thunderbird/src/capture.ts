@@ -1,6 +1,7 @@
 // Reads a message from Thunderbird into task fields (ADR 0024).
 
-import { messageText, taskFields, type TaskFields } from "./mail.ts";
+import type { TaskFields } from "@marskal/webext-common/command";
+import { messageText, taskFields } from "./mail.ts";
 
 export async function readMessage(message: messenger.MessageHeader, withText: boolean): Promise<TaskFields> {
   const text = withText
@@ -28,8 +29,4 @@ export async function allMessages(list: messenger.MessageList): Promise<messenge
     id = page.id;
   }
   return messages;
-}
-
-export function describeError(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

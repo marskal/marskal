@@ -46,21 +46,6 @@ declare namespace messenger {
     const onInstalled: { addListener(listener: () => void): void };
   }
 
-  namespace storage {
-    const local: {
-      get(keys: string | string[]): Promise<Record<string, unknown>>;
-      set(items: Record<string, unknown>): Promise<void>;
-      remove(keys: string | string[]): Promise<void>;
-    };
-    const onChanged: {
-      addListener(listener: (changes: Record<string, unknown>, area: string) => void): void;
-    };
-  }
-
-  namespace permissions {
-    function request(permissions: { origins: string[] }): Promise<boolean>;
-  }
-
   namespace notifications {
     function create(options: { type: "basic"; title: string; message: string; iconUrl?: string }): Promise<string>;
   }

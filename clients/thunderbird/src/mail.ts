@@ -1,9 +1,9 @@
 // A message as an inbox task (ADR 0024). Pure, so Node can test it.
 
-/** The server's limits, in characters (`Marskal.Tasks.Task`, ADR 0022). */
-export const TITLE_MAX = 500;
-export const NOTES_MAX = 32_768;
-export const URL_MAX = 2048;
+import type { TaskFields } from "@marskal/webext-common/command";
+import { NOTES_MAX, TITLE_MAX, URL_MAX, clip, fit } from "@marskal/webext-common/text";
+
+export { NOTES_MAX, TITLE_MAX };
 
 const CUT_MARK = "\n\n[Cut to fit; the rest is in the message.]";
 
@@ -14,13 +14,6 @@ export interface Mail {
   headerMessageId: string;
   /** The readable text, or null to leave it out of the notes. */
   text: string | null;
-}
-
-export interface TaskFields {
-  title: string;
-  notes: string;
-  url: string | null;
-  inbox: true;
 }
 
 export interface TextPart {
@@ -66,10 +59,7 @@ function notes(mail: Mail, formatDate: (date: Date) => string): string {
   const text = mail.text?.trim();
   if (!text) return head;
 
-  const whole = `${head}\n\n${text}`;
-  if (length(whole) <= NOTES_MAX) return whole;
-
-  return clip(whole, NOTES_MAX - length(CUT_MARK)).trimEnd() + CUT_MARK;
+  return fit(`${head}\n\n${text}`, NOTES_MAX, CUT_MARK);
 }
 
 /**
@@ -97,15 +87,4 @@ export async function messageText(
 
 function localDate(date: Date): string {
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
-}
-
-// Postgres counts code points; a code point never splits a grapheme count
-// the server would see as larger.
-function length(text: string): number {
-  return Array.from(text).length;
-}
-
-function clip(text: string, max: number): string {
-  const chars = Array.from(text);
-  return chars.length <= max ? text : chars.slice(0, max).join("");
 }

@@ -8,9 +8,10 @@
     "check": "tsc",
     "test": "node --test 'test/*.test.ts'",
     "package": "node build.ts && rm -f marskal-thunderbird.xpi && cd dist && zip -qr ../marskal-thunderbird.xpi .",
-    "source": "rm -f marskal-thunderbird-source.zip && git -C ../.. archive --format=zip -o \"$PWD/marskal-thunderbird-source.zip\" HEAD:clients/thunderbird ':!test' ':!devenv.*' ':!.gitignore'"
+    "source": "rm -f marskal-thunderbird-source.zip && git -C ../.. archive --format=zip -o \"$PWD/marskal-thunderbird-source.zip\" HEAD clients/thunderbird clients/webext-common ':!clients/*/test/*' ':!clients/*/devenv.*' ':!clients/*/.gitignore'"
   },
   "dependencies": {
+    "@marskal/webext-common": "file:../webext-common",
     "uuid": "^14.0.2"
   },
   "devDependencies": {

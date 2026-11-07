@@ -4,10 +4,7 @@
 
 import type { Command, PushResult } from "./command.ts";
 
-/** This program's OAuth client (ADR 0024). */
-export const CLIENT_ID = "marskal-thunderbird";
-
-/** It never pulls, so it does not ask to read (ADR 0024). */
+/** A capture extension never pulls, so it does not ask to read (ADR 0024). */
 export const SCOPE = "offline_access sync:write";
 
 export type ApiErrorKind = "unauthorized" | "forbidden" | "oauth" | "http" | "network";
@@ -47,7 +44,7 @@ export interface Endpoints {
 
 /**
  * The server's URL as entered, without a trailing slash, path, query, or
- * fragment. Mail goes only over HTTPS, so an http address becomes https.
+ * fragment. Captures go only over HTTPS, so an http address becomes https.
  * Null when it is not a web address.
  */
 export function serverUrl(input: string): string | null {
@@ -63,8 +60,8 @@ export function serverUrl(input: string): string | null {
 }
 
 /**
- * The host permission for a server. Without the port: Thunderbird, like
- * Firefox, does not apply a match pattern that has one.
+ * The host permission for a server. Without the port: Thunderbird and
+ * Firefox do not apply a match pattern that has one.
  */
 export function hostPattern(server: string): string {
   const url = new URL(server);
@@ -73,20 +70,23 @@ export function hostPattern(server: string): string {
 
 export class Api {
   server: string;
+  /** The extension's OAuth client. */
+  clientId: string;
   #endpoints: Promise<Endpoints> | null = null;
 
-  constructor(server: string) {
+  constructor(server: string, clientId: string) {
     this.server = server;
+    this.clientId = clientId;
   }
 
   deviceCode(): Promise<DeviceCode> {
-    return this.#form("device_authorization_endpoint", { client_id: CLIENT_ID, scope: SCOPE });
+    return this.#form("device_authorization_endpoint", { client_id: this.clientId, scope: SCOPE });
   }
 
   pollToken(deviceCode: string): Promise<TokenResponse> {
     return this.#form("token_endpoint", {
       grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-      client_id: CLIENT_ID,
+      client_id: this.clientId,
       device_code: deviceCode,
     });
   }
@@ -94,7 +94,7 @@ export class Api {
   refresh(refreshToken: string): Promise<TokenResponse> {
     return this.#form("token_endpoint", {
       grant_type: "refresh_token",
-      client_id: CLIENT_ID,
+      client_id: this.clientId,
       refresh_token: refreshToken,
     });
   }
@@ -104,7 +104,7 @@ export class Api {
     const endpoints = await this.#metadata();
     const response = await send(endpoints.revocation_endpoint, {
       method: "POST",
-      body: new URLSearchParams({ client_id: CLIENT_ID, token }),
+      body: new URLSearchParams({ client_id: this.clientId, token }),
     });
     if (!response.ok) throw new ApiError("http", `The server answered ${response.status}.`);
   }

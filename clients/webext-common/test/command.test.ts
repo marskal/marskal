@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { v7 as uuidv7 } from "uuid";
 import { insertCommand, outcome } from "../src/command.ts";
-import type { TaskFields } from "../src/mail.ts";
+import type { TaskFields } from "../src/command.ts";
 
 const fields = (title: string): TaskFields => ({ title, notes: "", url: null, inbox: true });
 
 test("an insert command has fresh UUIDv7 ids and the time", () => {
-  const command = insertCommand(fields("Milk"), new Date("2026-10-08T09:30:00Z"));
+  const command = insertCommand(fields("Milk"), uuidv7, new Date("2026-10-08T09:30:00Z"));
 
   assert.equal(command.entity, "task");
   assert.equal(command.op, "insert");
@@ -17,7 +18,7 @@ test("an insert command has fresh UUIDv7 ids and the time", () => {
 });
 
 test("applied, noop, and replayed commands count as added", () => {
-  const commands = ["A", "B", "C"].map((title) => insertCommand(fields(title)));
+  const commands = ["A", "B", "C"].map((title) => insertCommand(fields(title), uuidv7));
   const results = commands.map((command, i) => ({
     id: command.id,
     status: (["applied", "noop", "replayed"] as const)[i]!,
@@ -27,7 +28,7 @@ test("applied, noop, and replayed commands count as added", () => {
 });
 
 test("rejected and missing commands are problems", () => {
-  const [a, b, c] = ["A", "B", "C"].map((title) => insertCommand(fields(title)));
+  const [a, b, c] = ["A", "B", "C"].map((title) => insertCommand(fields(title), uuidv7));
 
   assert.deepEqual(
     outcome(
@@ -45,7 +46,7 @@ test("rejected and missing commands are problems", () => {
 });
 
 test("a rejection without field errors gives its reason", () => {
-  const command = insertCommand(fields("A"));
+  const command = insertCommand(fields("A"), uuidv7);
   assert.deepEqual(outcome([command], [{ id: command.id, status: "rejected", reason: "not_found" }]).problems, [
     "“A” was refused: not_found.",
   ]);
