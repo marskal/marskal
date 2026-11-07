@@ -43,6 +43,7 @@ This file is **short and actionable**. Rationale and history live in
 | Typed dates, calendar | [0032](docs/adr/0032-date-shorthand.md) |
 | Go to, search | [0033](docs/adr/0033-go-to.md) |
 | Database collation | [0034](docs/adr/0034-builtin-collation.md) |
+| Browser extension | [0035](docs/adr/0035-browser-extension.md) |
 | Repository layout | [0015](docs/adr/0015-repository-layout.md) |
 
 ---
@@ -211,8 +212,9 @@ The repository root is the product, not the web app (ADR 0015).
   has its own `devenv.nix`; no root Cargo workspace.
 - Offline clients link one Rust library, `sync/core` (ADR 0018). Do not
   reimplement that engine in a shell. The Phoenix app does not call it.
-- `clients/thunderbird` is capture only (ADR 0024): it pushes inbox inserts
-  and never pulls, so it speaks the wire format itself. A client that shows
+- `clients/thunderbird` (ADR 0024) and `clients/browser` (ADR 0035, Firefox
+  and Chromium from one source) are capture only: they push inbox inserts
+  and never pull, so they speak the wire format themselves. A client that shows
   or edits tasks links the library. Sign-in and push live in
   `clients/webext-common`, which a capture extension links as
   `file:../webext-common`; it has no runtime dependencies.

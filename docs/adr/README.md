@@ -43,6 +43,7 @@ This directory holds **ADRs** — durable decisions and their context.
 | [0032](0032-date-shorthand.md) | Typed dates and the calendar | Accepted |
 | [0033](0033-go-to.md) | Go to, and search later | Accepted |
 | [0034](0034-builtin-collation.md) | Built-in collation (`PG_UNICODE_FAST`) | Accepted |
+| [0035](0035-browser-extension.md) | Browser extension | Accepted |
 
 ## When to add an ADR
 
