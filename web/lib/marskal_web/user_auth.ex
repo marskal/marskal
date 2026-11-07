@@ -337,7 +337,7 @@ defmodule MarskalWeb.UserAuth do
   end
 
   @doc """
-  Plug for routes that need a recent login, such as the settings page.
+  Plug for routes that need a recent login, such as the security settings.
 
   It sends the user to log in again and back to the page afterwards. The
   `:require_sudo_mode` hook checks the same on a LiveView, but a LiveView

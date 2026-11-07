@@ -54,7 +54,8 @@ defmodule MarskalWeb.PageControllerTest do
   end
 
   test "the well-known change-password URL leads to settings", %{conn: conn} do
-    assert redirected_to(get(conn, "/.well-known/change-password")) == ~p"/users/settings"
+    assert redirected_to(get(conn, "/.well-known/change-password")) ==
+             ~p"/users/settings/security"
 
     # Password managers trust it only when other well-known paths are not found.
     conn =

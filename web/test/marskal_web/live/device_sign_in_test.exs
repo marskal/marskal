@@ -161,7 +161,7 @@ defmodule MarskalWeb.DeviceSignInTest do
 
     test "lists devices and signs one out", %{conn: conn, user: user} do
       tokens = signed_in_device(user)
-      {:ok, lv, html} = live(conn, ~p"/users/settings")
+      {:ok, lv, html} = live(conn, ~p"/users/settings/security")
       assert html =~ "marskal on laptop"
 
       refute lv |> element("#devices button", "Sign out") |> render_click() =~ "marskal on laptop"
