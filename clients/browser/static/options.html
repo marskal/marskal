@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Marskal</title>
+    <link rel="stylesheet" href="style.css" />
+    <script type="module" src="options.js"></script>
+  </head>
+  <body>
+    <form id="signed-out" hidden>
+      <label>
+        Server
+        <input id="server" type="url" placeholder="https://tasks.marskal.example" required />
+      </label>
+      <p class="muted">
+        A new tab opens the server, where you confirm a code and name this
+        device. This browser can then add tasks, but not read them.
+      </p>
+      <p class="muted">
+        Each page you add is sent to this server, over HTTPS, as a task: its
+        title, its address, and any text you selected on it. Nothing is sent
+        until you add a page.
+      </p>
+      <button id="sign-in" type="submit">Sign in</button>
+    </form>
+
+    <section id="pending" hidden>
+      <p>In your browser, confirm the code</p>
+      <p class="code" id="user-code"></p>
+      <p class="muted">If no page opened, go to <a id="verification" target="_blank"></a>.</p>
+      <button id="cancel" type="button" class="secondary">Cancel</button>
+    </section>
+
+    <section id="signed-in" hidden>
+      <p>Signed in to <strong id="signed-in-server"></strong>.</p>
+      <button id="sign-out" type="button" class="secondary">Sign out</button>
+    </section>
+
+    <p id="status" role="status"></p>
+  </body>
+</html>

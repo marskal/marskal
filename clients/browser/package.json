@@ -1,0 +1,23 @@
+{
+  "name": "marskal-browser",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "node build.ts",
+    "check": "tsc",
+    "test": "node --test 'test/*.test.ts'",
+    "package": "node build.ts && rm -f marskal-firefox.zip marskal-chromium.zip && (cd dist/firefox && zip -qr ../../marskal-firefox.zip .) && (cd dist/chromium && zip -qr ../../marskal-chromium.zip .)",
+    "source": "rm -f marskal-browser-source.zip && git -C ../.. archive --format=zip -o \"$PWD/marskal-browser-source.zip\" HEAD clients/browser clients/webext-common ':!clients/*/test/*' ':!clients/*/devenv.*' ':!clients/*/.gitignore'"
+  },
+  "dependencies": {
+    "@marskal/webext-common": "file:../webext-common",
+    "uuid": "^14.0.2"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2"
+  }
+}
