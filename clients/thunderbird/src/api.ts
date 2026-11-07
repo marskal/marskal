@@ -39,15 +39,16 @@ export interface TokenResponse {
   expires_in: number;
 }
 
-interface Endpoints {
+export interface Endpoints {
   device_authorization_endpoint: string;
   token_endpoint: string;
   revocation_endpoint: string;
 }
 
 /**
- * The server's URL as entered: http or https, without a trailing slash,
- * path, query, or fragment. Null when it is not one.
+ * The server's URL as entered, without a trailing slash, path, query, or
+ * fragment. Mail goes only over HTTPS, so an http address becomes https.
+ * Null when it is not a web address.
  */
 export function serverUrl(input: string): string | null {
   let url: URL;
@@ -56,7 +57,8 @@ export function serverUrl(input: string): string | null {
   } catch {
     return null;
   }
-  if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+  if (url.protocol === "http:") url.protocol = "https:";
+  if (url.protocol !== "https:") return null;
   return url.origin;
 }
 
@@ -120,6 +122,7 @@ export class Api {
   #metadata(): Promise<Endpoints> {
     this.#endpoints ??= send(`${this.server}/.well-known/oauth-authorization-server`, {})
       .then((response) => json<Endpoints>(response))
+      .then(requireHttps)
       .catch((error: unknown) => {
         this.#endpoints = null;
         throw error;
@@ -132,6 +135,17 @@ export class Api {
     const response = await send(endpoints[endpoint], { method: "POST", body: new URLSearchParams(fields) });
     return json<T>(response);
   }
+}
+
+/** Tokens go only over HTTPS, wherever the metadata points. */
+export function requireHttps(endpoints: Endpoints): Endpoints {
+  const used = [endpoints.device_authorization_endpoint, endpoints.token_endpoint, endpoints.revocation_endpoint];
+  for (const url of used) {
+    if (!url?.startsWith("https://")) {
+      throw new ApiError("http", `The server named an endpoint that is not HTTPS: ${url}`);
+    }
+  }
+  return endpoints;
 }
 
 async function send(url: string, init: RequestInit): Promise<Response> {

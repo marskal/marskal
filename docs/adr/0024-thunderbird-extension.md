@@ -35,6 +35,11 @@ Thunderbird back to the **oldest supported ESR**, now 140, and no further;
 the minimum version moves up when that ESR ends. TypeScript, built to plain
 JavaScript; its own `devenv.nix` with Node.
 
+It is listed on addons.thunderbird.net as **Marskal for Thunderbird**, ID
+`thunderbird@marskal.app`, which never changes. Each release uploads the
+`.xpi` and the committed source it builds from, since the scripts are
+bundled; the listing text and privacy policy are in `LISTING.md` beside it.
+
 ### What it does
 
 - A **button on a displayed message** opens a popup: the title, editable,
@@ -60,11 +65,12 @@ JavaScript; its own `devenv.nix` with Node.
   refresh grants, from `priv/hydra/clients` like the terminal's (ADR 0021).
 - Scopes **`offline_access sync:write`**. It never pulls, so it does not ask
   to read.
-- The options page takes the server's URL, asks Thunderbird for access to
-  that host and to the OAuth endpoints its metadata names, starts the device
-  grant, and opens the verification link in the default browser. The user
-  confirms the code and names the device in the web app, as for the
-  terminal. Sign out revokes the refresh token at Hydra.
+- The options page takes the server's URL, **HTTPS only** (an `http://`
+  address becomes `https://`), lists the mail that is sent, asks Thunderbird
+  for access to that host, refuses OAuth endpoints that are not HTTPS,
+  starts the device grant, and opens the verification link in the default
+  browser. The user confirms the code and names the device in the web app,
+  as for the terminal. Sign out revokes the refresh token at Hydra.
 - Tokens are kept in the extension's local storage, in the Thunderbird
   profile. One background script does every refresh, one at a time, so the
   rotating refresh token is never used twice.
@@ -83,7 +89,8 @@ JavaScript; its own `devenv.nix` with Node.
 
 - One more OAuth client file on the server. The extension asks for access to
   the server's host, and reaches Hydra because Hydra is on that host: behind
-  it in production, and on `marskal.localhost` beside Phoenix in development.
+  it in production, and on `marskal.localhost` beside Phoenix in development,
+  which the extension reaches only once Phoenix serves HTTPS there.
   Thunderbird's host permissions ignore the port. The consent
   page shows its name and that it can only write.
 - `mid:` links open the message where the system hands `mid:` to Thunderbird

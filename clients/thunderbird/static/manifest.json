@@ -1,12 +1,17 @@
 {
   "manifest_version": 3,
   "name": "Marskal",
-  "description": "Add mail to your Marskal inbox as tasks.",
+  "description": "Add mail as tasks to Marskal, an open-source, self-hosted personal task manager.",
   "version": "0.1.0",
+  "author": "Mikkel T. Hoegh",
+  "homepage_url": "https://github.com/marskal/marskal",
   "browser_specific_settings": {
     "gecko": {
-      "id": "thunderbird@marskal",
-      "strict_min_version": "140.0"
+      "id": "thunderbird@marskal.app",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": ["personalCommunications"]
+      }
     }
   },
   "background": {
@@ -25,5 +30,5 @@
     "64": "logo.svg"
   },
   "permissions": ["messagesRead", "menus", "storage", "notifications"],
-  "optional_host_permissions": ["http://*/*", "https://*/*"]
+  "optional_host_permissions": ["https://*/*"]
 }
