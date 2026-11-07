@@ -25,6 +25,14 @@ devenv up
 Open **http://marskal.localhost:8275**. Setup, seed accounts, and the rest of
 the local workflow are in **[web/README.md](web/README.md)**.
 
+## Self-hosting
+
+Marskal is self-hosted: you run your own server. Documentation for doing so
+will be provided in due time. Until then, the server is packaged as a NixOS
+module, `nixosModules.default` in [`web/flake.nix`](web/flake.nix)
+([ADR 0004](docs/adr/0004-hosting-vps-nix.md)). Serve it over HTTPS; the
+Thunderbird add-on connects only over HTTPS.
+
 ## License
 
 Copyright 2026 Mikkel T. Hoegh. Licensed under the

@@ -17,7 +17,7 @@ personal task manager.
 
 Marskal is an open-source, self-hosted personal task manager: an inbox for
 capturing what comes up, projects and nested tasks, tags, planned and due
-dates, and tasks that repeat. The homepage says how to self-host it.
+dates, and tasks that repeat. The homepage has more on self-hosting it.
 
 This add-on turns mail into tasks in your Marskal inbox, so a message that
 needs doing can leave your mail inbox.
