@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# The release PR (ADR 0038). From the current origin/master, in a worktree
+# of its own so the checkout you are in is left alone: batch the changelog
+# fragments into the next version, set that version everywhere, and open
+# the PR. Merging it tags and publishes the release
+# (.github/workflows/release.yml).
+#
+#   release            open the release PR
+#   release --preview  print the next version and its notes; change nothing
+set -euo pipefail
+
+here=$(cd "$(dirname "$0")" && pwd)
+repo=$(git -C "$here" rev-parse --show-toplevel)
+cd "$repo"
+
+git fetch --quiet origin master
+
+if [[ ${1:-} == --preview ]]; then
+  preview=$(mktemp -d)
+  trap 'git worktree remove --force "$preview"' EXIT
+  git worktree add --quiet --detach "$preview" origin/master
+  cd "$preview"
+  if ! version=$(changie next auto 2>/dev/null); then
+    echo "Nothing to release: origin/master has no changelog fragments."
+    exit 0
+  fi
+  echo "Next version: ${version#v}"
+  echo
+  changie batch auto --dry-run
+  exit 0
+fi
+
+work=$(mktemp -d)
+trap 'git -C "$repo" worktree remove --force "$work" 2>/dev/null || true' EXIT
+git worktree add --quiet --detach "$work" origin/master
+cd "$work"
+
+if ! version=$(changie next auto 2>/dev/null); then
+  echo "Nothing to release: origin/master has no changelog fragments." >&2
+  exit 1
+fi
+version=${version#v}
+branch="release-v$version"
+if git ls-remote --exit-code --heads origin "$branch" >/dev/null; then
+  echo "$branch is already on origin. Merge or close its PR first." >&2
+  exit 1
+fi
+
+echo "Releasing $version"
+git switch --quiet -c "$branch"
+changie batch auto
+changie merge
+"$here/set-version" "$version"
+
+git add .changes CHANGELOG.md \
+  web/mix.exs web/nix/package.nix \
+  clients/terminal/Cargo.toml clients/terminal/Cargo.lock \
+  clients/ios/project.yml \
+  clients/browser/static/manifest.json clients/thunderbird/static/manifest.json
+git commit --quiet -m "Release $version"
+git push --quiet -u origin "$branch"
+
+{
+  echo "Merging this tags the merge commit \`v$version\` and publishes the release (ADR 0038)."
+  echo "Then ship the components that have a section below."
+  echo
+  tail -n +2 ".changes/$version.md"
+} > "$work/.pr-body"
+gh pr create --base master --head "$branch" --label "no changelog" \
+  --title "Release $version" --body-file "$work/.pr-body"

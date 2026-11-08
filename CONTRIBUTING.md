@@ -22,25 +22,29 @@ request `no changelog`, or the Changelog check fails.
 ## Releasing
 
 Marskal has one version for every component. A release is one pull request,
-labelled `no changelog`:
+made by a task in the `tools/` devenv:
 
-1. `changie batch auto` collects the fragments into the next version, and
-   `changie merge` rewrites `CHANGELOG.md`. `changie next auto` shows the
-   version first.
-2. Set that version in every component, changed or not:
-   - `web/mix.exs` and `web/nix/package.nix`
-   - `clients/terminal/Cargo.toml` (then `cargo build` there, for
-     `Cargo.lock`)
-   - `MARKETING_VERSION` in `clients/ios/project.yml`
-   - `clients/browser/static/manifest.json`
-   - `clients/thunderbird/static/manifest.json`
-3. Merge, then tag the merge commit and publish the release:
+```sh
+cd tools
+devenv tasks run release:preview   # the next version and its notes
+devenv tasks run release:pr        # open the release PR
+```
 
-   ```sh
-   git tag v0.2.0 <merge commit> && git push origin v0.2.0
-   gh release create v0.2.0 --notes-file .changes/0.2.0.md
-   ```
+`release:pr` works from `origin/master` in a worktree of its own, so the
+checkout you are in is left alone. It runs `changie batch auto` and
+`changie merge`, sets the new version in every component
+(`tools/scripts/set-version`), commits on `release-v<version>`, and opens
+the PR, labelled `no changelog`.
 
-4. Ship the components that have a section in that version. A host deploys
-   the web app by pointing its flake input at the tag. Raise
-   `CURRENT_PROJECT_VERSION` for every iOS upload, release or not.
+Merging that PR tags the merge commit `v<version>` and publishes the GitHub
+release with its notes (`.github/workflows/release.yml`). Then ship the
+components that have a section in that version: a host deploys the web app
+by pointing its flake input at the tag. Raise `CURRENT_PROJECT_VERSION` for
+every iOS upload, release or not.
+
+To publish a version whose notes are already on `master` without a release
+PR, run the Release workflow by hand with that version.
+
+When a component's version moves to another file, or a component joins,
+change `tools/scripts/set-version` and the paths `tools/scripts/release`
+commits.

@@ -1,0 +1,63 @@
+# Tags and publishes a release when its PR is merged (ADR 0038): a push to
+# master that adds .changes/<version>.md. Run it by hand with a version to
+# release one whose notes are already on master, such as 0.1.0.
+name: Release
+
+on:
+  push:
+    branches: [master]
+    paths: [".changes/*.md"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version whose .changes/<version>.md is on master, such as 0.1.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Tag and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Find the version
+        id: version
+        env:
+          INPUT: ${{ github.event.inputs.version }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [[ -n "$INPUT" ]]; then
+            version=$INPUT
+          else
+            version=$(git diff --name-only --diff-filter=A "$BEFORE" HEAD -- '.changes/*.md' \
+              | grep -E '^\.changes/[0-9]+\.[0-9]+\.[0-9]+\.md$' \
+              | sed -E 's|^\.changes/(.*)\.md$|\1|' | sort -V | tail -n 1)
+          fi
+          if [[ -z "$version" ]]; then
+            echo "No new version in this push."
+            exit 0
+          fi
+          if [[ ! -f ".changes/$version.md" ]]; then
+            echo "::error::.changes/$version.md is not on master."
+            exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+            echo "v$version is already tagged."
+            exit 0
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Tag and publish
+        if: steps.version.outputs.version != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          tail -n +2 ".changes/$VERSION.md" > notes.md
+          gh release create "v$VERSION" --target "$GITHUB_SHA" \
+            --title "Marskal $VERSION" --notes-file notes.md
