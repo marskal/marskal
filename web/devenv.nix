@@ -4,7 +4,7 @@ let
 in
 {
   packages = [
-    pkgs.forgejo-cli # `fj`, for pull requests on gitte.hoegh.digital
+    pkgs.gh # pull requests on github.com/marskal/marskal (ADR 0037)
     pkgs.libpq
     pkgs.ory-hydra # the OAuth 2.1 server (ADR 0021)
     pkgs.pkg-config
