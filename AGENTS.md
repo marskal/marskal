@@ -204,7 +204,7 @@ The repository root is the product, not the web app (ADR 0015).
 - **`docs/`** — ADRs, at the root.
 - Do not add a root `devenv.nix`.
 - **`tools/`** — repository-wide chores in a devenv of its own, not a
-  program: `devenv tasks run release:pr` opens the release PR (ADR 0038).
+  program: `devenv shell release-pr` opens the release PR (ADR 0038).
 - **`sync/core/`** — the Rust client engine (ADR 0018): SQLite, outbox, pull
   merge, reads, and the operations every shell shares. `devenv shell` there
   for cargo. **`sync/fixtures/`** — vectors both Elixir and Rust run

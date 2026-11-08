@@ -82,7 +82,7 @@ Alternatives considered:
   3. When the PR is merged, tag the merge commit `v<version>` and publish
      a GitHub release with that version's notes.
   4. Ship the components that have entries in that release.
-- The `tools/` devenv runs these steps: `devenv tasks run release:pr` opens
+- The `tools/` devenv runs these steps: `devenv shell release-pr` opens
   the release PR, and merging it tags and publishes the release.
 - A host deploys a release by pointing its flake input at the tag. Store
   uploads stay manual until CI does them.
