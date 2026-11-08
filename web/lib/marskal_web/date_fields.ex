@@ -12,6 +12,22 @@ defmodule MarskalWeb.DateFields do
   # Form key prefix for each stored field.
   @keys %{defer_until: "defer", planned_at: "planned", due_at: "due"}
 
+  attr :field, :atom, required: true, doc: ":defer_until, :planned_at, or :due_at"
+
+  @doc """
+  The icon a date goes by on rows and in the inspector, as in the iOS app:
+  an hourglass for Defer, a calendar for Planned, an alarm clock for Due.
+  Decorative: the words beside or behind it say which date it is.
+  """
+  def icon(%{field: :defer_until} = assigns),
+    do: ~H|<Lucideicons.hourglass class="icon date-icon" aria-hidden="true" />|
+
+  def icon(%{field: :planned_at} = assigns),
+    do: ~H|<Lucideicons.calendar class="icon date-icon" aria-hidden="true" />|
+
+  def icon(%{field: :due_at} = assigns),
+    do: ~H|<Lucideicons.alarm_clock class="icon date-icon" aria-hidden="true" />|
+
   attr :form, :string, required: true, doc: "the form's param name, such as \"task\""
   attr :id, :string, required: true
   attr :record, :any, required: true
@@ -63,7 +79,7 @@ defmodule MarskalWeb.DateFields do
           name={"#{@form}[deferred_indefinitely]"}
           value="true"
           checked={@record.deferred_indefinitely}
-        /> {gettext("Defer indefinitely")}
+        /> <.icon field={:defer_until} /> {gettext("Defer indefinitely")}
       </label>
       <.day_time
         label={gettext("Planned")}
@@ -131,7 +147,9 @@ defmodule MarskalWeb.DateFields do
 
     ~H"""
     <div class="day-time">
-      <label for={"#{@id}-#{@key}"}>{@label}</label>
+      <label for={"#{@id}-#{@key}"} class="day-time__label">
+        <.icon field={@field} /> {@label}
+      </label>
       <div class="day-time__entry">
         <input type="hidden" name={"#{@form}[#{@key}_date]"} value={@date} />
         <input type="hidden" name={"#{@form}[#{@key}_time]"} value={@time} />

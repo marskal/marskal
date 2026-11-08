@@ -299,6 +299,12 @@ defmodule MarskalWeb.InspectorPanel do
           position: relative;
         }
 
+        .day-time__label {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+        }
+
         .day-time__entry {
           display: flex;
           gap: 0.4rem;
