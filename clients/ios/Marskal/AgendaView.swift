@@ -12,10 +12,12 @@ struct AgendaView: View {
             List {
                 Section {
                     ForEach(model.agenda) { item in
-                        TaskRow(task: item.task, indented: false) {
-                            model.setState(item.task, .done)
-                        } detail: {
-                            AgendaTime(item: item)
+                        NavigationLink(value: TaskRoute(id: item.task.id)) {
+                            TaskRow(task: item.task, indented: false) {
+                                model.setState(item.task, .done)
+                            } detail: {
+                                AgendaTime(item: item)
+                            }
                         }
                         .swipeActions(edge: .leading) {
                             Button("Done", systemImage: "checkmark") { model.setState(item.task, .done) }
@@ -45,6 +47,7 @@ struct AgendaView: View {
             }
             .refreshable { await model.refresh() }
             .navigationTitle("Today")
+            .taskDestination()
         }
     }
 }

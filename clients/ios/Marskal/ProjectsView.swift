@@ -16,6 +16,7 @@ struct ProjectsView: View {
                     case .project(let id): ProjectView(projectId: id)
                     }
                 }
+                .taskDestination()
         }
     }
 }
@@ -107,8 +108,10 @@ private struct ProjectView: View {
         List {
             Section {
                 ForEach(tasks) { task in
-                    TaskRow(task: task, showsProject: false) { model.setState(task, .done) }
-                        .taskActions(task, moving: $moving)
+                    NavigationLink(value: TaskRoute(id: task.id)) {
+                        TaskRow(task: task, showsProject: false) { model.setState(task, .done) }
+                    }
+                    .taskActions(task, moving: $moving)
                 }
             } footer: {
                 SyncStatus()

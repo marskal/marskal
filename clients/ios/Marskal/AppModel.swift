@@ -265,6 +265,16 @@ final class AppModel {
         change { try $0.moveTask(id: task.id, location: location) }
     }
 
+    /// Changes a task's title, notes, URL, or flag, as one command.
+    func edit(_ task: TaskItem, _ changes: [TaskChange]) {
+        change { try $0.editTask(id: task.id, changes: changes) }
+    }
+
+    /// Deletes a task and its subtasks.
+    func delete(_ task: TaskItem) {
+        change { try $0.deleteTask(id: task.id) }
+    }
+
     // Applies a change here, where it shows at once, and sends it soon.
     private func change(_ apply: (Store) throws -> Void) {
         guard let store else { return }
@@ -278,6 +288,13 @@ final class AppModel {
         reload()
         WidgetCenter.shared.reloadAllTimelines()
         syncSoon()
+    }
+
+    /// A task, Done and Dropped ones too, or `nil` once it is deleted.
+    func task(_ id: UUID) -> TaskItem? {
+        _ = revision
+        guard let store else { return nil }
+        return try? store.task(id: id)
     }
 
     /// A project's open tasks, in outline order.
@@ -295,7 +312,12 @@ final class AppModel {
     }
 
     /// To-do tasks with no tags, the Inbox's included.
-    var untagged: [TaskItem] { TagOutline.untagged(inbox + open) }
+    var untagged: [TaskItem] {
+        _ = revision
+        guard let store else { return [] }
+        let open = (try? store.tasks(filter: .open(unavailable: false))) ?? []
+        return TagOutline.untagged(inbox + open)
+    }
 
     /// Reads the lists again.
     func reload() {
