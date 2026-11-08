@@ -23,13 +23,12 @@ struct TaskDetailView: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
     @State private var title = ""
-    @State private var notes = ""
     @State private var url = ""
     @State private var moving: TaskItem?
     @State private var confirmingDelete = false
     @FocusState private var focus: Field?
 
-    private enum Field { case title, notes, url }
+    private enum Field { case title, url }
 
     var body: some View {
         let task = model.task(taskId)
@@ -72,9 +71,11 @@ struct TaskDetailView: View {
                             focus = nil
                         }
                     }
-                TextField("Notes", text: $notes, axis: .vertical)
-                    .lineLimit(3...)
-                    .focused($focus, equals: .notes)
+                NavigationLink {
+                    NotesEditor(taskId: taskId)
+                } label: {
+                    notesPreview(task)
+                }
             }
 
             Section {
@@ -147,6 +148,20 @@ struct TaskDetailView: View {
         }
     }
 
+    /// The first lines of the notes: a captured email can run long. The
+    /// whole of them opens on a page of its own.
+    @ViewBuilder
+    private func notesPreview(_ task: TaskItem) -> some View {
+        let notes = task.notes?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if notes.isEmpty {
+            Text("Notes")
+                .foregroundStyle(.tertiary)
+        } else {
+            Text(verbatim: notes)
+                .lineLimit(6)
+        }
+    }
+
     // A project's title is the user's own text, not translated.
     private func place(_ task: TaskItem) -> Text {
         if task.inbox { return Text("Inbox") }
@@ -179,13 +194,11 @@ struct TaskDetailView: View {
     private func load(_ task: TaskItem?) {
         guard let task else { return }
         if focus != .title { title = task.title }
-        if focus != .notes { notes = task.notes ?? "" }
         if focus != .url { url = task.url ?? "" }
     }
 
     private func saveAll() {
         save(.title)
-        save(.notes)
         save(.url)
     }
 
@@ -202,10 +215,6 @@ struct TaskDetailView: View {
             } else if new != task.title {
                 model.edit(task, [.title(title: new)])
             }
-        case .notes:
-            guard notes != (task.notes ?? "") else { return }
-            let new = notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : notes
-            if new != task.notes { model.edit(task, [.notes(notes: new)]) }
         case .url:
             guard url != (task.url ?? "") else { return }
             // A bad URL stays in the field, with the footer saying why.
@@ -213,5 +222,51 @@ struct TaskDetailView: View {
             let new = trimmedURL.isEmpty ? nil : trimmedURL
             if new != task.url { model.edit(task, [.url(url: new)]) }
         }
+    }
+}
+
+/// A task's notes on a page of their own, to read in full and edit. Saves
+/// when editing ends or the page closes, and only when they changed.
+private struct NotesEditor: View {
+    let taskId: UUID
+    @Environment(AppModel.self) private var model
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var notes = ""
+    @State private var loaded = ""
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        TextEditor(text: $notes)
+            .focused($focused)
+            .contentMargins(.horizontal, 16, for: .scrollContent)
+            .navigationTitle("Notes")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                if focused {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done", role: .confirm) { focused = false }
+                    }
+                }
+            }
+            .onAppear {
+                loaded = model.task(taskId)?.notes ?? ""
+                notes = loaded
+                // Empty notes are there to be written; long ones to be read first.
+                if loaded.isEmpty { focused = true }
+            }
+            .onChange(of: focused) { _, now in
+                if !now { save() }
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase != .active { save() }
+            }
+            .onDisappear { save() }
+    }
+
+    private func save() {
+        guard notes != loaded, let task = model.task(taskId) else { return }
+        let new = notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : notes
+        if new != task.notes { model.edit(task, [.notes(notes: new)]) }
+        loaded = notes
     }
 }
