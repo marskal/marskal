@@ -12,7 +12,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "6.0"
-    MARKETING_VERSION: 0.1.0
+    MARKETING_VERSION: 0.2.0
     CURRENT_PROJECT_VERSION: 1
     # Apple silicon only; no Intel simulator.
     EXCLUDED_ARCHS[sdk=iphonesimulator*]: x86_64
