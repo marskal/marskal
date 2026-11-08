@@ -1,0 +1,4 @@
+component: Web
+kind: Fixed
+body: Live reload works again in development, so saving a file reloads the open browser tab.
+time: 2026-11-08T21:15:38.446819+01:00
