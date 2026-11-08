@@ -13,6 +13,14 @@ defmodule MarskalWeb.SidebarTest do
     %{conn: log_in_user(conn, user), user: user}
   end
 
+  test "the sidebar ends with the version mix.exs gives", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/open")
+
+    version = to_string(Application.spec(:marskal, :vsn))
+    assert version == Mix.Project.config()[:version]
+    assert has_element?(view, "#sidebar .sidebar-version", "Marskal #{version}")
+  end
+
   test "folders and tags with something inside get a toggle for that list", %{
     conn: conn,
     user: user

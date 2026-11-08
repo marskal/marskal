@@ -88,9 +88,15 @@ defmodule MarskalWeb.NavComponents do
           <Lucideicons.log_out class="icon" /> Log out
         </.link>
       </div>
+
+      <p class="sidebar-version">{gettext("Marskal %{version}", version: version())}</p>
     </aside>
     """
   end
+
+  # The running release's version: mix.exs's, which the release PR sets
+  # (ADR 0038).
+  defp version, do: to_string(Application.spec(:marskal, :vsn))
 
   attr :navigate, :string, required: true
   attr :current, :boolean, default: false
