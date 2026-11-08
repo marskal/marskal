@@ -1,4 +1,4 @@
-{ ... }:
+{ pkgs, ... }:
 {
   # The terminal client, `marskal` (ADR 0020). It links sync/core by path.
   # nixpkgs' Rust: rustc, cargo, clippy, rustfmt, and rust-analyzer.
@@ -7,4 +7,8 @@
   # Point `cargo run` at the local web app (web/, `devenv up`), not the
   # server you use day to day. Its database is its own: <server>.db.
   env.MARSKAL_SERVER = "http://marskal.localhost:8275";
+
+  packages = [
+    pkgs.changie # changelog fragments (ADR 0038)
+  ];
 }

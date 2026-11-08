@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# The single-quoted $1s below are perl capture groups, not shell variables.
+# shellcheck disable=SC2016
+# Writes VERSION into every component's version file (ADR 0038), in the
+# repository at the current directory. Fails if a file did not change, so a
+# moved version line is noticed rather than skipped.
+set -euo pipefail
+
+version=${1:?usage: set-version VERSION}
+[[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "not a version: $version" >&2; exit 1; }
+
+set_in() {
+  local file=$1 expression=$2
+  local before
+  before=$(cat "$file")
+  perl -0pi -e "$expression" "$file"
+  if [[ $(cat "$file") == "$before" ]] && ! grep -q "$version" "$file"; then
+    echo "set-version: no version line changed in $file" >&2
+    exit 1
+  fi
+  echo "  $file"
+}
+
+set_in web/mix.exs 's/^(\s*version: )"[^"]*"/$1"'"$version"'"/m'
+set_in web/nix/package.nix 's/^(  version = )"[^"]*";/$1"'"$version"'";/m'
+set_in clients/terminal/Cargo.toml 's/^(version = )"[^"]*"/$1"'"$version"'"/m'
+set_in clients/terminal/Cargo.lock 's/(\nname = "marskal"\nversion = )"[^"]*"/$1"'"$version"'"/'
+set_in clients/ios/project.yml 's/^(\s*MARKETING_VERSION: ).*$/${1}'"$version"'/m'
+set_in clients/browser/static/manifest.json 's/^(  "version": )"[^"]*"/$1"'"$version"'"/m'
+set_in clients/thunderbird/static/manifest.json 's/^(  "version": )"[^"]*"/$1"'"$version"'"/m'

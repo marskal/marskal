@@ -45,7 +45,7 @@ This file is **short and actionable**. Rationale and history live in
 | Database collation | [0034](docs/adr/0034-builtin-collation.md) |
 | Browser extension | [0035](docs/adr/0035-browser-extension.md) |
 | Development on GitHub | [0037](docs/adr/0037-github.md) |
-| Changelog, releases (proposed) | [0038](docs/adr/0038-changelog-and-releases.md) |
+| Changelog, releases | [0038](docs/adr/0038-changelog-and-releases.md) |
 | Repository layout | [0015](docs/adr/0015-repository-layout.md) |
 
 ---
@@ -203,6 +203,8 @@ The repository root is the product, not the web app (ADR 0015).
   to it. Do not add a second app directory beside `web/`.
 - **`docs/`** — ADRs, at the root.
 - Do not add a root `devenv.nix`.
+- **`tools/`** — repository-wide chores in a devenv of its own, not a
+  program: `devenv tasks run release:pr` opens the release PR (ADR 0038).
 - **`sync/core/`** — the Rust client engine (ADR 0018): SQLite, outbox, pull
   merge, reads, and the operations every shell shares. `devenv shell` there
   for cargo. **`sync/fixtures/`** — vectors both Elixir and Rust run
@@ -383,6 +385,10 @@ The repository root is the product, not the web app (ADR 0015).
 - Significant architecture choices → new/updated **ADR**, not a novel in this file.
 - PRs go to GitHub, `marskal/marskal` (ADR 0037). Open them with `gh`, which
   is in the `web/` devenv. A stacked PR targets the branch below it.
+- A PR that changes what a user or an operator sees adds a changelog
+  fragment with `changie new` (ADR 0038, `CONTRIBUTING.md`): one per
+  component, a sentence for the people who use it. A refactor, test, ADR,
+  or CI change needs none; label that PR `no changelog`.
 - After opening a PR, add a task for the user to review it, with the
   `marskal` CLI, in the Marskal project:
   `marskal add -p 01a16ef6-31de-7f06-ab38-fd5a3209d488 -u <PR URL> "Review PR #<n>: <PR title>"`.

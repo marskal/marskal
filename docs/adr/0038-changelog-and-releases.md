@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted. The first release was backfilled, amended 2026-11-08.
 
 ## Context
 
@@ -82,6 +82,8 @@ Alternatives considered:
   3. When the PR is merged, tag the merge commit `v<version>` and publish
      a GitHub release with that version's notes.
   4. Ship the components that have entries in that release.
+- The `tools/` devenv runs these steps: `devenv tasks run release:pr` opens
+  the release PR, and merging it tags and publishes the release.
 - A host deploys a release by pointing its flake input at the tag. Store
   uploads stay manual until CI does them.
 - CI fails a PR that touches a component's directory without a fragment,
@@ -98,9 +100,10 @@ Alternatives considered:
 - Every user-facing PR takes one more step. The CI check and a line in
   `AGENTS.md` make it part of the routine for agents too.
 - Releasing is a deliberate step, not a side effect of merging.
-- `0.1.0` is where every component stands now. The first release collects
-  only the fragments written from here on; the changelog starts there, not
-  at the project's beginning.
+- `0.1.0` is the first version in the changelog. Its notes were written
+  afterwards from the pull requests merged until then, as fragments batched
+  into `.changes/0.1.0.md`, so the changelog covers the project from its
+  start. Its tag is `v0.1.0`.
 - Required next: `.changie.yaml`; changie in the devenvs; the CI check; a
   release checklist in `CONTRIBUTING.md`; and the rule in `AGENTS.md`.
   The desktop widget (ADR 0036) joins the components when it ships.
