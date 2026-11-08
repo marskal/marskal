@@ -295,7 +295,12 @@ final class AppModel {
     }
 
     /// To-do tasks with no tags, the Inbox's included.
-    var untagged: [TaskItem] { TagOutline.untagged(inbox + open) }
+    var untagged: [TaskItem] {
+        _ = revision
+        guard let store else { return [] }
+        let open = (try? store.tasks(filter: .open(unavailable: false))) ?? []
+        return TagOutline.untagged(inbox + open)
+    }
 
     /// Reads the lists again.
     func reload() {
