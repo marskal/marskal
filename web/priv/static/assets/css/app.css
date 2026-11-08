@@ -143,10 +143,20 @@ h1 {
   }
 }
 
+/* A column, so the version sits at the bottom when the outline is short. */
 .sidebar {
+  display: flex;
+  flex-direction: column;
   padding: 1rem 1rem 2rem;
   border-right: 1px solid var(--border);
   background: var(--surface);
+}
+
+.sidebar-version {
+  margin: auto 0 0;
+  padding-top: 1.5rem;
+  font-size: 0.75rem;
+  color: var(--muted);
 }
 
 .sidebar:focus {
