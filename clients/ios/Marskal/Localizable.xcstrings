@@ -111,6 +111,16 @@
         }
       }
     },
+    "All deferred" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alt er udsat"
+          }
+        }
+      }
+    },
     "Cancel" : {
 
     },
@@ -339,6 +349,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dens underopgaver slettes med den. Marker en opgave Udført eller Opgiv den for at afslutte den."
+          }
+        }
+      }
+    },
+    "Its tasks still to do are deferred." : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dens opgaver, der mangler, er udsat."
           }
         }
       }
@@ -594,6 +614,16 @@
     },
     "Server address" : {
 
+    },
+    "Show Deferred" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vis udsatte"
+          }
+        }
+      }
     },
     "Sign In" : {
 

@@ -21,12 +21,17 @@ struct InboxView: View {
             .animation(.default, value: model.inbox.map(\.id))
             .overlay {
                 if model.inbox.isEmpty && !model.syncing {
-                    ContentUnavailableView("The Inbox is empty", systemImage: "tray")
+                    if model.hidesDeferred(at: .inbox) {
+                        DeferredHidden()
+                    } else {
+                        ContentUnavailableView("The Inbox is empty", systemImage: "tray")
+                    }
                 }
             }
             .refreshable { await model.refresh() }
             .navigationTitle("Inbox")
             .taskDestination()
+            .showDeferredToggle()
             .toolbar {
                 // Not the bottom bar: the tab bar covers it.
                 ToolbarItem(placement: .primaryAction) {

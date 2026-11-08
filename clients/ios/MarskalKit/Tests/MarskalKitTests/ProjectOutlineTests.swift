@@ -62,6 +62,17 @@ struct ProjectOutlineTests {
             now: now)
 
         #expect(names(outline.children(of: nil)) == ["Open", "Back"])
+
+        let all = ProjectOutline(
+            folders: [],
+            projects: [
+                project("Open", rank: "A"),
+                project("Done", rank: "B", state: .done),
+                project("Later", rank: "D", dates: later),
+                project("Paused", rank: "E", dates: paused),
+            ],
+            showsDeferred: true, now: now)
+        #expect(names(all.children(of: nil)) == ["Open", "Later", "Paused"])
     }
 
     @Test func aDroppedFolderHidesWhatIsInIt() {

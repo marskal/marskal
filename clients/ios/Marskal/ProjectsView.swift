@@ -75,6 +75,7 @@ private struct FolderView: View {
         }
         .refreshable { await model.refresh() }
         .navigationTitle(title)
+        .showDeferredToggle()
     }
 
     private var title: Text {
@@ -128,11 +129,16 @@ private struct LocationView: View {
             if deleted {
                 ContentUnavailableView("This project was deleted", systemImage: ProjectsView.projectSymbol)
             } else if tasks.isEmpty && !model.syncing {
-                empty
+                if model.hidesDeferred(at: location) {
+                    DeferredHidden()
+                } else {
+                    empty
+                }
             }
         }
         .refreshable { await model.refresh() }
         .navigationTitle(title)
+        .showDeferredToggle()
         .sheet(item: $moving) { task in
             MoveSheet(task: task)
         }

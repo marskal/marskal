@@ -118,6 +118,7 @@ private struct TagView: View {
         }
         .refreshable { await model.refresh() }
         .navigationTitle(Text(verbatim: tag?.name ?? ""))
+        .showDeferredToggle()
         .toolbar {
             ToolbarItem(placement: .status) {
                 SyncStatus()
@@ -170,6 +171,7 @@ private struct UntaggedView: View {
         }
         .refreshable { await model.refresh() }
         .navigationTitle("Untagged")
+        .showDeferredToggle()
         .toolbar {
             ToolbarItem(placement: .status) {
                 SyncStatus()

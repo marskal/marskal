@@ -287,3 +287,41 @@ struct RowDates: View {
         DateValue(task.dates, field) == nil ? AnyShapeStyle(.tertiary) : AnyShapeStyle(.secondary)
     }
 }
+
+extension View {
+    /// The Show Deferred toggle in the toolbar, for a list of tasks or
+    /// projects. One setting for every list, as on the web.
+    func showDeferredToggle() -> some View {
+        modifier(ShowDeferredToggle())
+    }
+}
+
+private struct ShowDeferredToggle: ViewModifier {
+    @Environment(AppModel.self) private var model
+
+    func body(content: Content) -> some View {
+        @Bindable var model = model
+        content.toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Toggle(isOn: $model.showsDeferred) {
+                    Label("Show Deferred", systemImage: DateField.defer.symbol)
+                }
+            }
+        }
+    }
+}
+
+/// An empty list whose open tasks are all deferred.
+struct DeferredHidden: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        ContentUnavailableView {
+            Label("All deferred", systemImage: DateField.defer.symbol)
+        } description: {
+            Text("Its tasks still to do are deferred.")
+        } actions: {
+            Button("Show Deferred") { model.showsDeferred = true }
+        }
+    }
+}

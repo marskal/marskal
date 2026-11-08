@@ -1,0 +1,4 @@
+component: iOS
+kind: Changed
+body: Deferred tasks and projects are hidden from lists until their Defer passes. The Show Deferred button in the toolbar brings them back, on that device.
+time: 2026-11-08T21:29:56.865285+01:00

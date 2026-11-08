@@ -2,8 +2,8 @@ import Foundation
 
 /// Folders and projects as the web app's sidebar shows them (ADR 0009):
 /// a folder's subfolders and projects are one list by rank. Active folders
-/// and To-Do projects that are not deferred; a project in a folder that is
-/// left out is not hoisted to the top.
+/// and To-Do projects, deferred ones only with `showsDeferred`; a project
+/// in a folder that is left out is not hoisted to the top.
 public struct ProjectOutline: Sendable {
     public enum Item: Sendable, Hashable, Identifiable {
         case folder(FolderItem)
@@ -27,9 +27,9 @@ public struct ProjectOutline: Sendable {
     private let children: [UUID?: [Item]]
     private let folders: [UUID: FolderItem]
 
-    public init(folders: [FolderItem], projects: [ProjectItem], now: Date = .now) {
+    public init(folders: [FolderItem], projects: [ProjectItem], showsDeferred: Bool = false, now: Date = .now) {
         let active = folders.filter(\.active)
-        let shown = projects.filter { $0.state == .toDo && !$0.dates.isDeferred(at: now) }
+        let shown = projects.filter { $0.state == .toDo && (showsDeferred || !$0.dates.isDeferred(at: now)) }
 
         var children: [UUID?: [Item]] = [:]
         for folder in active { children[folder.parentId, default: []].append(.folder(folder)) }
