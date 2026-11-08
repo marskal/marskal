@@ -1,0 +1,4 @@
+component: Terminal
+kind: Security
+body: Saving your sign-in now makes the token file readable only by you, also when an older file had looser permissions.
+time: 2026-11-08T19:31:54.362264+01:00

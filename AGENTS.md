@@ -213,7 +213,11 @@ The repository root is the product, not the web app (ADR 0015).
 - The first shell is `clients/terminal`: one `marskal` binary with subcommands,
   `--json` for agents, and later `marskal tui` (ADR 0020). XDG base
   directories on every platform, macOS included. Each Rust program
-  has its own `devenv.nix`; no root Cargo workspace.
+  has its own `devenv.nix` and `Cargo.lock`; no root Cargo workspace
+  (ADR 0018 says why). Crates use each other by path.
+- `clients/shell-common` (ADR 0018): what Rust shells share around the
+  engine: XDG paths, OAuth sign-in, the token store. A shell's client id,
+  keychain names, and sync calls stay in the shell.
 - Offline clients link one Rust library, `sync/core` (ADR 0018). Do not
   reimplement that engine in a shell. The Phoenix app does not call it.
 - `clients/thunderbird` (ADR 0024) and `clients/browser` (ADR 0035, Firefox

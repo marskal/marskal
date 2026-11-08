@@ -3,9 +3,9 @@
 use marskal_sync::Store;
 use serde::Serialize;
 
-use crate::api::{Api, ApiError};
-use crate::auth::TokenStore;
+use crate::api::{Api, ApiError, SyncApi};
 use crate::error::{CliError, Result};
+use marskal_shell_common::TokenStore;
 
 const PUSH_BATCH: usize = 1000;
 

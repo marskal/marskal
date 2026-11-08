@@ -15,6 +15,10 @@ library.
 Shells amended by [ADR 0020](0020-terminal-client.md): the terminal client is
 one program, `clients/terminal`, not `clients/tui`.
 
+Amended 2026-11-08: the Rust shells share sign-in and file locations through
+`clients/shell-common`, and the reasons for keeping every crate out of a
+Cargo workspace are recorded under "Rust crates and builds".
+
 ## Context
 
 ADR 0014 specifies offline sync and assumed one native client, an iOS app,
@@ -78,6 +82,39 @@ does not add a third.
 
 The iOS app is not an Elixir umbrella. There is no shared UI core.
 
+### Rust crates and builds
+
+What every Rust shell needs around the engine lives in one more crate,
+**`clients/shell-common`** (`marskal-shell-common`): the XDG directories
+(ADR 0020), the OAuth client and the device-grant poll (ADR 0021), and the
+token store with its keychain fallback and refresh lock. It does no sync and
+draws no UI. Each shell keeps its own client id, keychain names, messages,
+and the sync calls it makes. The library still stores no secrets; the shells
+do, through this crate.
+
+Every Rust crate is its own Cargo project, with its own `Cargo.lock`,
+`target/`, and `devenv.nix`. A crate uses another by path, as
+`clients/terminal` uses `sync/core`. There is **no Cargo workspace**:
+
+- **Toolchains differ.** `clients/ios` builds with rust-overlay's Apple
+  targets and the terminal client with nixpkgs' Rust, and a desktop shell
+  on a webview toolkit needs WebKitGTK on Linux. A workspace resolves one
+  lock for all of them, so each program's dependency tree would follow the
+  others'.
+- **Nix builds vendor a lock.** A program packaged with Nix vendors its
+  dependencies from its `Cargo.lock`. One lock for every crate would mean
+  another shell's dependency update changes the terminal client's hash and
+  rebuilds it.
+- **Profiles belong to the root.** Cargo reads `[profile.*]` only from the
+  workspace root. A size-tuned release profile for one shell would apply to
+  every member, or move to flags.
+- **Upgrades stay local.** A dependency bump for one program does not move
+  another until someone chooses to.
+
+The cost is accepted: a shared crate compiles once per program, a shared
+dependency can sit at different versions in different locks, and there is
+no single `cargo test`. CI runs each crate in its own devenv.
+
 ### Alternatives considered
 
 - **A port per shell, locked only by fixtures.** Rejected for this client set.
@@ -105,6 +142,9 @@ The iOS app is not an Elixir umbrella. There is no shared UI core.
   every shell.
 - When the crate exists, its toolchain is not a root `devenv.nix` that wraps
   `web/` (ADR 0015).
+- A change to `clients/shell-common` is a change to every shell that uses
+  it: run their tests too. Keychain service names and token paths are part
+  of a shell's contract; changing one signs its users out.
 - Library tests cover the client rules against those fixtures: dirty-field
   pull merge, discard, `resolved_at`, a rank between two neighbors, and link
   ids.

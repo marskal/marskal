@@ -11,7 +11,6 @@ mod auth;
 mod config;
 mod error;
 mod output;
-mod paths;
 mod state;
 mod sync;
 
@@ -25,12 +24,12 @@ use marskal_sync::dates::{self, DateField};
 use marskal_sync::{Location, NewProject, NewTask, Store, TaskFilter, TaskPatch, TaskState};
 use uuid::Uuid;
 
-use crate::api::Api;
-use crate::auth::TokenStore;
 use crate::config::{Config, default_server, normalize_server};
 use crate::error::{CliError, Result};
 use crate::output::Output;
 use crate::state::State;
+use marskal_shell_common::TokenStore;
+use marskal_shell_common::paths;
 
 const STALE_AFTER_SECONDS: i64 = 60;
 
@@ -334,7 +333,7 @@ impl Context {
     }
 
     fn tokens(&self) -> Option<TokenStore> {
-        self.server.as_deref().map(TokenStore::new)
+        self.server.as_deref().map(auth::store)
     }
 
     /// Syncs, reporting a failure instead of returning it.
@@ -346,7 +345,7 @@ impl Context {
             return Some("not signed in".into());
         };
 
-        match sync::sync(&mut self.store, &Api::new(&server), &tokens) {
+        match sync::sync(&mut self.store, &api::connect(&server), &tokens) {
             Ok(_) => None,
             Err(e) => Some(e.message),
         }
@@ -415,8 +414,8 @@ fn run(cli: Cli, output: &Output) -> Result<()> {
                 })?,
             };
 
-            let api = Api::new(&server);
-            let tokens = TokenStore::new(&server);
+            let api = api::connect(&server);
+            let tokens = auth::store(&server);
             // offline_access is what earns a refresh token (ADR 0021).
             let scope = if *read_only {
                 "offline_access sync:read"
@@ -451,7 +450,7 @@ fn run(cli: Cli, output: &Output) -> Result<()> {
                 if let Some(stored) = tokens.load()?
                     && !cli.offline
                 {
-                    let _ = Api::new(server).revoke(&stored.refresh_token);
+                    let _ = api::connect(server).revoke(&stored.refresh_token);
                 }
                 tokens.delete()?;
             }
@@ -483,7 +482,7 @@ fn run(cli: Cli, output: &Output) -> Result<()> {
             }
             let server = context.server.clone().ok_or_else(CliError::not_signed_in)?;
             let tokens = context.tokens().ok_or_else(CliError::not_signed_in)?;
-            let report = sync::sync(&mut context.store, &Api::new(&server), &tokens)?;
+            let report = sync::sync(&mut context.store, &api::connect(&server), &tokens)?;
             output.synced(&report, &context.store.rejections(true)?);
             context.store.mark_rejections_seen()?;
             Ok(())

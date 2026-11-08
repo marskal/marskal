@@ -1,6 +1,6 @@
-//! Where `marskal` keeps its files: the XDG Base Directory spec on every
-//! platform, macOS included (ADR 0020). An unset or relative variable
-//! falls back to the spec's default.
+//! Where the Rust shells keep their files: the XDG Base Directory spec on
+//! every platform, macOS included (ADR 0020). An unset or relative variable
+//! falls back to the spec's default. The shells share these directories.
 
 use std::path::PathBuf;
 
@@ -42,7 +42,7 @@ pub fn create_data_dir() -> std::io::Result<PathBuf> {
     }
 }
 
-/// `$XDG_STATE_HOME/marskal`: what `marskal` records (`state.toml`), the
+/// `$XDG_STATE_HOME/marskal`: what each shell records, the
 /// token file where there is no keychain, and the refresh lock.
 pub fn state_dir() -> PathBuf {
     base("XDG_STATE_HOME", ".local/state").join("marskal")
