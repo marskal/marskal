@@ -18,6 +18,8 @@ final class AppModel {
     /// Folders and projects as the sidebar shows them.
     private(set) var outline = ProjectOutline(folders: [], projects: [])
     private(set) var projectsById: [UUID: ProjectItem] = [:]
+    /// Tags as the sidebar shows them.
+    private(set) var tagOutline = TagOutline(tags: [])
     /// Counts reloads, so a view that reads the store when it draws, such
     /// as a project's tasks, draws again after a change or a sync.
     private(set) var revision = 0
@@ -106,6 +108,7 @@ final class AppModel {
         projects = []
         outline = ProjectOutline(folders: [], projects: [])
         projectsById = [:]
+        tagOutline = TagOutline(tags: [])
         offline = false
         preferences = nil
         lastSyncedAt = nil
@@ -284,6 +287,16 @@ final class AppModel {
         return (try? store.tasks(filter: .project(id: id))) ?? []
     }
 
+    /// Open tasks with a tag or one inside it, newest first.
+    func tasks(withTag id: UUID) -> [TaskItem] {
+        _ = revision
+        guard let store else { return [] }
+        return (try? store.tasks(filter: .tag(id: id))) ?? []
+    }
+
+    /// To-do tasks with no tags, the Inbox's included.
+    var untagged: [TaskItem] { TagOutline.untagged(inbox + open) }
+
     /// Reads the lists again.
     func reload() {
         guard let store else { return }
@@ -294,6 +307,7 @@ final class AppModel {
             projects = all.filter { $0.state == .toDo }
             projectsById = Dictionary(uniqueKeysWithValues: all.map { ($0.id, $0) })
             outline = ProjectOutline(folders: try store.folders(), projects: all)
+            tagOutline = TagOutline(tags: try store.tags())
             preferences = try store.preferences()
             let status = try store.status()
             lastSyncedAt = status.lastSyncedAt
