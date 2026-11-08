@@ -9,23 +9,29 @@ struct AgendaView: View {
 
     var body: some View {
         NavigationStack {
-            List(model.agenda) { item in
-                TaskRow(task: item.task, indented: false) {
-                    model.setState(item.task, .done)
-                } detail: {
-                    AgendaTime(item: item)
-                }
-                .swipeActions(edge: .leading) {
-                    Button("Done", systemImage: "checkmark") { model.setState(item.task, .done) }
-                        .tint(.green)
-                }
-                .swipeActions(edge: .trailing) {
-                    Button("Drop", systemImage: "xmark") { model.setState(item.task, .dropped) }
-                        .tint(.gray)
-                }
-                .contextMenu {
-                    Button("Done", systemImage: "checkmark") { model.setState(item.task, .done) }
-                    Button("Drop", systemImage: "xmark") { model.setState(item.task, .dropped) }
+            List {
+                Section {
+                    ForEach(model.agenda) { item in
+                        TaskRow(task: item.task, indented: false) {
+                            model.setState(item.task, .done)
+                        } detail: {
+                            AgendaTime(item: item)
+                        }
+                        .swipeActions(edge: .leading) {
+                            Button("Done", systemImage: "checkmark") { model.setState(item.task, .done) }
+                                .tint(.green)
+                        }
+                        .swipeActions(edge: .trailing) {
+                            Button("Drop", systemImage: "xmark") { model.setState(item.task, .dropped) }
+                                .tint(.gray)
+                        }
+                        .contextMenu {
+                            Button("Done", systemImage: "checkmark") { model.setState(item.task, .done) }
+                            Button("Drop", systemImage: "xmark") { model.setState(item.task, .dropped) }
+                        }
+                    }
+                } footer: {
+                    SyncStatus()
                 }
             }
             .animation(.default, value: model.agenda.map(\.id))
@@ -39,11 +45,6 @@ struct AgendaView: View {
             }
             .refreshable { await model.refresh() }
             .navigationTitle("Today")
-            .toolbar {
-                ToolbarItem(placement: .status) {
-                    SyncStatus()
-                }
-            }
         }
     }
 }

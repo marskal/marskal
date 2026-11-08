@@ -10,7 +10,6 @@ import WidgetKit
 final class AppModel {
     private(set) var session: Session?
     private(set) var inbox: [TaskItem] = []
-    private(set) var open: [TaskItem] = []
     private(set) var agenda: [AgendaItem] = []
     private(set) var preferences: Preferences?
     private(set) var lastSyncedAt: Date?
@@ -103,7 +102,6 @@ final class AppModel {
         WidgetCenter.shared.reloadAllTimelines()
         self.session = nil
         inbox = []
-        open = []
         agenda = []
         projects = []
         outline = ProjectOutline(folders: [], projects: [])
@@ -291,7 +289,6 @@ final class AppModel {
         guard let store else { return }
         do {
             inbox = try store.tasks(filter: .inbox)
-            open = try store.tasks(filter: .open(unavailable: false))
             agenda = try Agenda.today(store)
             let all = try store.projects()
             projects = all.filter { $0.state == .toDo }

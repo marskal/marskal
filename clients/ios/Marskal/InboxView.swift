@@ -1,9 +1,9 @@
 import MarskalKit
 import SwiftUI
 
-/// The Inbox and the open tasks, read from the local database. Capture
-/// with the add button; check a task off with its circle or a swipe.
-struct TasksView: View {
+/// The Inbox, read from the local database. Capture with the add button;
+/// check a task off with its circle or a swipe, or move it out.
+struct InboxView: View {
     @Environment(AppModel.self) private var model
     @State private var capturing = false
     @State private var moving: TaskItem?
@@ -12,26 +12,25 @@ struct TasksView: View {
     var body: some View {
         NavigationStack {
             List {
-                if !model.inbox.isEmpty {
-                    Section("Inbox") {
-                        ForEach(model.inbox, id: \.id) { row($0) }
-                    }
-                }
-                if !model.open.isEmpty {
-                    Section("Open Tasks") {
-                        ForEach(model.open, id: \.id) { row($0) }
-                    }
+                Section {
+                    ForEach(model.inbox) { row($0) }
+                } footer: {
+                    SyncStatus()
                 }
             }
-            .animation(.default, value: model.inbox.map(\.id) + model.open.map(\.id))
+            .animation(.default, value: model.inbox.map(\.id))
             .overlay {
-                if model.inbox.isEmpty && model.open.isEmpty && !model.syncing {
-                    ContentUnavailableView("Nothing to do", systemImage: "checkmark.circle")
+                if model.inbox.isEmpty && !model.syncing {
+                    ContentUnavailableView("The Inbox is empty", systemImage: "tray")
                 }
             }
             .refreshable { await model.refresh() }
-            .navigationTitle(Text(verbatim: "Marskal"))
+            .navigationTitle("Inbox")
             .toolbar {
+                // Not the bottom bar: the tab bar covers it.
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Add to Inbox", systemImage: "plus") { capturing = true }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button("Sign Out", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
@@ -40,12 +39,6 @@ struct TasksView: View {
                     } label: {
                         Label("More", systemImage: "ellipsis")
                     }
-                }
-                ToolbarItem(placement: .status) {
-                    SyncStatus()
-                }
-                ToolbarItem(placement: .bottomBar) {
-                    Button("Add to Inbox", systemImage: "plus") { capturing = true }
                 }
             }
             .sheet(isPresented: $capturing) {
@@ -283,26 +276,32 @@ struct MoveSheet: View {
     }
 }
 
+/// How the last sync went, below a page's list: the bottom bar would put
+/// it behind the tab bar.
 struct SyncStatus: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        Group {
-            if model.syncing {
-                Text("Syncing…")
-            } else if model.offline {
-                if model.pending > 0 {
-                    Text("Offline, \(model.pending) changes waiting")
-                } else {
-                    Text("Offline")
-                }
-            } else if let at = model.lastSyncedAt {
-                Text("Synced \(at, format: .relative(presentation: .named))")
+        if model.syncing {
+            Text("Syncing…")
+        } else if model.offline {
+            if model.pending > 0 {
+                Text("Offline, \(model.pending) changes waiting")
             } else {
-                Text("Not synced yet")
+                Text("Offline")
             }
+        } else if let at = model.lastSyncedAt {
+            // Redrawn each minute from the sync, as the wording changes.
+            TimelineView(.periodic(from: at, by: 60)) { context in
+                if context.date.timeIntervalSince(at) < 60 {
+                    Text("Synced just now")
+                } else {
+                    // Whole minutes or more, so never in seconds.
+                    Text("Synced \(at, format: .relative(presentation: .named))")
+                }
+            }
+        } else {
+            Text("Not synced yet")
         }
-        .font(.caption)
-        .foregroundStyle(.secondary)
     }
 }
