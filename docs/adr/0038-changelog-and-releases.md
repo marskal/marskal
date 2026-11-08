@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted. The first release was backfilled, amended 2026-11-08.
 
 ## Context
 
@@ -98,9 +98,10 @@ Alternatives considered:
 - Every user-facing PR takes one more step. The CI check and a line in
   `AGENTS.md` make it part of the routine for agents too.
 - Releasing is a deliberate step, not a side effect of merging.
-- `0.1.0` is where every component stands now. The first release collects
-  only the fragments written from here on; the changelog starts there, not
-  at the project's beginning.
+- `0.1.0` is the first version in the changelog. Its notes were written
+  afterwards from the pull requests merged until then, as fragments batched
+  into `.changes/0.1.0.md`, so the changelog covers the project from its
+  start. Its tag is `v0.1.0`.
 - Required next: `.changie.yaml`; changie in the devenvs; the CI check; a
   release checklist in `CONTRIBUTING.md`; and the rule in `AGENTS.md`.
   The desktop widget (ADR 0036) joins the components when it ships.

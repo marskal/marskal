@@ -12,6 +12,7 @@
   };
 
   packages = [
+    pkgs.changie # changelog fragments (ADR 0038)
     pkgs.xcodegen
     pkgs.jq # scripts/install-phone reads the device list
     pkgs.resvg # scripts/make-icons renders the logo

@@ -1,0 +1,43 @@
+# Changelog fragments (ADR 0038). A PR adds one with `changie new`; a release
+# runs `changie batch auto` and `changie merge`. One version for Marskal.
+changesDir: .changes
+unreleasedDir: unreleased
+headerPath: header.tpl.md
+changelogPath: CHANGELOG.md
+versionExt: md
+versionFormat: '## {{.Version}} - {{.Time.Format "2006-01-02"}}'
+componentFormat: '### {{.Component}}'
+kindFormat: '#### {{.Kind}}'
+changeFormat: '- {{.Body}}'
+newlines:
+  afterChangelogHeader: 1
+  beforeComponent: 1
+  beforeKind: 1
+  afterKind: 1
+  endOfVersion: 2
+# The programs people get (ADR 0038). A library change is written up under
+# each program it changes.
+components:
+  - Web
+  - Terminal
+  - iOS
+  - Browser extension
+  - Thunderbird extension
+# `auto` is how `changie batch auto` picks the next version: SemVer 0.x, so
+# anything new or breaking is a minor version and a fix is a patch.
+kinds:
+  - label: Added
+    auto: minor
+  - label: Changed
+    auto: minor
+  - label: Deprecated
+    auto: minor
+  - label: Removed
+    auto: minor
+  - label: Fixed
+    auto: patch
+  - label: Security
+    auto: patch
+  # The web app's: what someone running it must do.
+  - label: Upgrading
+    auto: minor

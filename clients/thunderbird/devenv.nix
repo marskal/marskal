@@ -6,5 +6,8 @@
     enable = true;
     npm.enable = true;
   };
-  packages = [ pkgs.zip ];
+  packages = [
+    pkgs.zip
+    pkgs.changie # changelog fragments (ADR 0038)
+  ];
 }

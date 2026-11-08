@@ -1,0 +1,39 @@
+# A PR that changes a component adds a changelog fragment (ADR 0038). The
+# `no changelog` label skips the check, for a change nobody using Marskal
+# would notice, and for a release PR, which removes the fragments.
+name: Changelog
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  fragment:
+    name: Changelog fragment
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'no changelog') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require a fragment when a component changes
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          changed=$(git diff --name-only "$BASE...$HEAD")
+          if ! grep -qE '^(web|clients|sync)/' <<<"$changed"; then
+            echo "No component changed."
+            exit 0
+          fi
+          added=$(git diff --name-only --diff-filter=A "$BASE...$HEAD")
+          if grep -qE '^\.changes/unreleased/[^/]+\.yaml$' <<<"$added"; then
+            echo "Found a changelog fragment."
+            exit 0
+          fi
+          echo "::error::This PR changes a component but adds no changelog fragment. Run 'changie new' in any devenv, or label the PR 'no changelog' if nobody using Marskal would notice the change (ADR 0038)."
+          exit 1
