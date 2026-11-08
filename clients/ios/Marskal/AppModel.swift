@@ -14,7 +14,14 @@ final class AppModel {
     private(set) var agenda: [AgendaItem] = []
     private(set) var preferences: Preferences?
     private(set) var lastSyncedAt: Date?
+    /// Open projects, by title, for moving a task.
     private(set) var projects: [ProjectItem] = []
+    /// Folders and projects as the sidebar shows them.
+    private(set) var outline = ProjectOutline(folders: [], projects: [])
+    private(set) var projectsById: [UUID: ProjectItem] = [:]
+    /// Counts reloads, so a view that reads the store when it draws, such
+    /// as a project's tasks, draws again after a change or a sync.
+    private(set) var revision = 0
     private(set) var pending: UInt64 = 0
     private(set) var syncing = false
     /// The last sync could not reach the server. Changes wait in the outbox.
@@ -99,6 +106,8 @@ final class AppModel {
         open = []
         agenda = []
         projects = []
+        outline = ProjectOutline(folders: [], projects: [])
+        projectsById = [:]
         offline = false
         preferences = nil
         lastSyncedAt = nil
@@ -270,6 +279,13 @@ final class AppModel {
         syncSoon()
     }
 
+    /// A project's open tasks, in outline order.
+    func tasks(inProject id: UUID) -> [TaskItem] {
+        _ = revision
+        guard let store else { return [] }
+        return (try? store.tasks(filter: .project(id: id))) ?? []
+    }
+
     /// Reads the lists again.
     func reload() {
         guard let store else { return }
@@ -277,11 +293,15 @@ final class AppModel {
             inbox = try store.tasks(filter: .inbox)
             open = try store.tasks(filter: .open(unavailable: false))
             agenda = try Agenda.today(store)
-            projects = try store.projects().filter { $0.state == .toDo }
+            let all = try store.projects()
+            projects = all.filter { $0.state == .toDo }
+            projectsById = Dictionary(uniqueKeysWithValues: all.map { ($0.id, $0) })
+            outline = ProjectOutline(folders: try store.folders(), projects: all)
             preferences = try store.preferences()
             let status = try store.status()
             lastSyncedAt = status.lastSyncedAt
             pending = status.pending
+            revision += 1
         } catch StoreError.Closed {
         } catch {
             problem = .database

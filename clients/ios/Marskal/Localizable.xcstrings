@@ -153,8 +153,38 @@
     "Move…" : {
 
     },
+    "No open tasks" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingen åbne opgaver"
+          }
+        }
+      }
+    },
+    "No projects" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingen projekter"
+          }
+        }
+      }
+    },
     "Not synced yet" : {
 
+    },
+    "Nothing in this folder" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Intet i denne mappe"
+          }
+        }
+      }
     },
     "Nothing planned or due today" : {
       "localizations" : {
@@ -198,7 +228,24 @@
 
     },
     "Projects" : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Projekter"
+          }
+        }
+      }
+    },
+    "Projects you haven’t finished show up here." : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Projekter, der ikke er afsluttet, vises her."
+          }
+        }
+      }
     },
     "Server" : {
 
@@ -292,6 +339,16 @@
     },
     "This device was signed out on the server. Sign in again to keep syncing." : {
 
+    },
+    "This project was deleted" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Projektet er slettet"
+          }
+        }
+      }
     },
     "Title" : {
       "localizations" : {

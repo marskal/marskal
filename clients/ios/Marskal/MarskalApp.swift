@@ -55,6 +55,9 @@ struct RootView: View {
                     Tab("Tasks", systemImage: "checklist") {
                         TasksView()
                     }
+                    Tab("Projects", systemImage: ProjectsView.folderSymbol) {
+                        ProjectsView()
+                    }
                     Tab("Agenda", systemImage: "calendar") {
                         AgendaView()
                     }
