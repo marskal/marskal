@@ -4,6 +4,33 @@ What changed in each release of Marskal, by component. One version
 covers every component; a component without a section did not change
 (ADR 0038).
 
+## 0.2.0 - 2026-11-08
+
+### Web
+
+#### Added
+
+- The sidebar shows which version of Marskal is running, at its bottom.
+
+#### Changed
+
+- Task rows mark Defer with an hourglass, Planned with a calendar, and Due with an alarm clock instead of words, and the inspector labels its date fields with the same icons.
+
+#### Fixed
+
+- Live reload works again in development, so saving a file reloads the open browser tab.
+
+### iOS
+
+#### Added
+
+- Set a task's Defer, Planned, and Due in its detail, on a calendar that starts your week where your preferences do, with Today, Tomorrow, and Next Week a tap away. Defer can be indefinite.
+- Task lists show each task's Defer, Planned, and Due under its title: the time when it is today, otherwise the day.
+
+#### Changed
+
+- Deferred tasks and projects are hidden from lists until their Defer passes. The Show Deferred button in the toolbar brings them back, on that device.
+
 ## 0.1.0 - 2026-11-08
 
 ### Web
