@@ -1,0 +1,4 @@
+component: iOS
+kind: Added
+body: 'Task lists show each task''s Defer, Planned, and Due under its title: the time when it is today, otherwise the day.'
+time: 2026-11-08T21:15:12.645512+01:00

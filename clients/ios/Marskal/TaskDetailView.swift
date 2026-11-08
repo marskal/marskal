@@ -13,8 +13,8 @@ extension View {
     }
 }
 
-/// One task: its title, notes, URL, and flag to edit, where it is, and
-/// Done, Drop, Reopen, and Delete. A text field saves when it loses focus,
+/// One task: its title, notes, URL, flag, and dates to edit, where it is,
+/// and Done, Drop, Reopen, and Delete. A text field saves when it loses focus,
 /// so typing is one change rather than one per key.
 struct TaskDetailView: View {
     let taskId: UUID
@@ -25,6 +25,7 @@ struct TaskDetailView: View {
     @State private var title = ""
     @State private var url = ""
     @State private var moving: TaskItem?
+    @State private var editingDate: DateField?
     @State private var confirmingDelete = false
     @FocusState private var focus: Field?
 
@@ -54,6 +55,9 @@ struct TaskDetailView: View {
         .onDisappear { saveAll() }
         .sheet(item: $moving) { task in
             MoveSheet(task: task)
+        }
+        .sheet(item: $editingDate) { field in
+            if let task { DateSheet(task: task, field: field) }
         }
     }
 
@@ -104,6 +108,8 @@ struct TaskDetailView: View {
                     Text("Its project is flagged, so it is too.")
                 }
             }
+
+            TaskDatesSection(task: task) { editingDate = $0 }
 
             Section {
                 Button { moving = task } label: {

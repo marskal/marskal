@@ -742,6 +742,72 @@ pub fn url_is_valid(url: String) -> bool {
     core::url::valid(&url)
 }
 
+/// Which date a day is for, since each has its own default time.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum DateField {
+    Defer,
+    Planned,
+    Due,
+}
+
+impl From<DateField> for core::dates::DateField {
+    fn from(field: DateField) -> core::dates::DateField {
+        match field {
+            DateField::Defer => core::dates::DateField::Defer,
+            DateField::Planned => core::dates::DateField::Planned,
+            DateField::Due => core::dates::DateField::Due,
+        }
+    }
+}
+
+/// A day on a calendar, in no zone.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct LocalDate {
+    pub year: i16,
+    pub month: i8,
+    pub day: i8,
+}
+
+/// A time on a wall clock.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct LocalTime {
+    pub hour: i8,
+    pub minute: i8,
+}
+
+/// The time a day gets for `field` when none is given: Defer 00:00,
+/// Planned 09:00, Due 17:00.
+#[uniffi::export]
+pub fn default_time(field: DateField) -> LocalTime {
+    let time = core::dates::DateField::from(field).default_time();
+    LocalTime {
+        hour: time.hour(),
+        minute: time.minute(),
+    }
+}
+
+/// The instant for `date` at `time`, or the field's default time, on the
+/// wall clock of the IANA zone `zone`. A time a DST change skips moves
+/// forward; a repeated one takes the first.
+#[uniffi::export]
+pub fn local_instant(
+    date: LocalDate,
+    time: Option<LocalTime>,
+    field: DateField,
+    zone: String,
+) -> Result<Timestamp> {
+    let invalid = |error: jiff::Error| StoreError::Invalid {
+        message: error.to_string(),
+    };
+    let zone = jiff::tz::TimeZone::get(&zone).map_err(invalid)?;
+    let date = jiff::civil::Date::new(date.year, date.month, date.day).map_err(invalid)?;
+    let time = time
+        .map(|t| jiff::civil::Time::new(t.hour, t.minute, 0, 0))
+        .transpose()
+        .map_err(invalid)?;
+    Ok(core::dates::from_local(date, time, field.into(), &zone))
+}
+
 fn timestamp(text: &Option<String>) -> Option<Timestamp> {
     text.as_deref().and_then(|t| t.parse().ok())
 }

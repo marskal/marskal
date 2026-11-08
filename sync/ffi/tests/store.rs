@@ -1,6 +1,7 @@
 use jiff::Timestamp;
 use marskal_sync_ffi::{
-    Defer, Location, NewProject, NewTask, Store, StoreError, TaskChange, TaskFilter, TaskState,
+    DateField, Defer, LocalDate, LocalTime, Location, NewProject, NewTask, Store, StoreError,
+    TaskChange, TaskFilter, TaskState, default_time, local_instant,
 };
 use serde_json::{Value, json};
 use uuid::Uuid;
@@ -317,4 +318,49 @@ fn the_agenda_carries_the_time_each_task_is_on_it_for() {
             (report, at("2020-05-04T15:00:00Z"), true),
         ]
     );
+}
+
+#[test]
+fn a_day_takes_the_fields_default_time_in_the_zone() {
+    let day = LocalDate {
+        year: 2026,
+        month: 9,
+        day: 30,
+    };
+    let zone = || "Europe/Copenhagen".to_string();
+
+    assert_eq!(
+        local_instant(day, None, DateField::Due, zone()).unwrap(),
+        at("2026-09-30T15:00:00Z")
+    );
+    let two_thirty = LocalTime {
+        hour: 14,
+        minute: 30,
+    };
+    assert_eq!(
+        local_instant(day, Some(two_thirty), DateField::Due, zone()).unwrap(),
+        at("2026-09-30T12:30:00Z")
+    );
+    assert_eq!(
+        default_time(DateField::Planned),
+        LocalTime { hour: 9, minute: 0 }
+    );
+}
+
+#[test]
+fn an_unknown_zone_or_day_is_invalid() {
+    let day = LocalDate {
+        year: 2026,
+        month: 2,
+        day: 30,
+    };
+    assert!(matches!(
+        local_instant(day, None, DateField::Due, "Europe/Copenhagen".into()),
+        Err(StoreError::Invalid { .. })
+    ));
+    let day = LocalDate { day: 3, ..day };
+    assert!(matches!(
+        local_instant(day, None, DateField::Due, "Mars/Olympus".into()),
+        Err(StoreError::Invalid { .. })
+    ));
 }

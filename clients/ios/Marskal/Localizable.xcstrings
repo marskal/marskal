@@ -111,17 +111,87 @@
         }
       }
     },
+    "All deferred" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alt er udsat"
+          }
+        }
+      }
+    },
     "Cancel" : {
 
     },
     "Check the address and your connection. Your changes are kept and sent later." : {
 
     },
+    "Clear" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ryd"
+          }
+        }
+      }
+    },
     "Close" : {
 
     },
     "Current" : {
 
+    },
+    "Dates in gray come from a task above it or its project." : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Datoer i gråt kommer fra en opgave over den eller fra dens projekt."
+          }
+        }
+      }
+    },
+    "Day" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dag"
+          }
+        }
+      }
+    },
+    "Defer" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Udsæt"
+          }
+        }
+      }
+    },
+    "Deferred indefinitely" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Udsat på ubestemt tid"
+          }
+        }
+      }
+    },
+    "Deferred until %@" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Udsat til %@"
+          }
+        }
+      }
     },
     "Delete" : {
       "localizations" : {
@@ -193,6 +263,16 @@
         }
       }
     },
+    "Due" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frist"
+          }
+        }
+      }
+    },
     "Due %@" : {
       "localizations" : {
         "da" : {
@@ -213,12 +293,32 @@
         }
       }
     },
+    "Hidden until you clear Defer." : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skjult, indtil du rydder Udsæt."
+          }
+        }
+      }
+    },
     "Inbox" : {
       "localizations" : {
         "da" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Indbakke"
+          }
+        }
+      }
+    },
+    "Indefinitely" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "På ubestemt tid"
           }
         }
       }
@@ -249,6 +349,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dens underopgaver slettes med den. Marker en opgave Udført eller Opgiv den for at afslutte den."
+          }
+        }
+      }
+    },
+    "Its tasks still to do are deferred." : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dens opgaver, der mangler, er udsat."
           }
         }
       }
@@ -290,6 +400,16 @@
     },
     "Move…" : {
 
+    },
+    "Next Week" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Næste uge"
+          }
+        }
+      }
     },
     "No Project" : {
       "localizations" : {
@@ -337,6 +457,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ingen opgaver uden tags"
+          }
+        }
+      }
+    },
+    "None" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingen"
           }
         }
       }
@@ -439,6 +569,26 @@
         }
       }
     },
+    "Planned" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planlagt"
+          }
+        }
+      }
+    },
+    "Planned %@" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planlagt %@"
+          }
+        }
+      }
+    },
     "Projects" : {
       "localizations" : {
         "da" : {
@@ -464,6 +614,16 @@
     },
     "Server address" : {
 
+    },
+    "Show Deferred" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vis udsatte"
+          }
+        }
+      }
     },
     "Sign In" : {
 
@@ -608,6 +768,16 @@
         }
       }
     },
+    "Time" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klokkeslæt"
+          }
+        }
+      }
+    },
     "Title" : {
       "localizations" : {
         "da" : {
@@ -634,6 +804,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "I dag"
+          }
+        }
+      }
+    },
+    "Tomorrow" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I morgen"
           }
         }
       }
@@ -670,6 +850,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hvad vil du tilføje?"
+          }
+        }
+      }
+    },
+    "Without a time, it is at %@." : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uden klokkeslæt er det kl. %@."
           }
         }
       }

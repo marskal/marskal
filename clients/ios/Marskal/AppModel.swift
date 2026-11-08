@@ -28,6 +28,15 @@ final class AppModel {
     /// The last sync could not reach the server. Changes wait in the outbox.
     private(set) var offline = false
     private(set) var signingIn = false
+    /// Deferred tasks and projects show in lists (ADR 0006). This device's
+    /// choice, as the web app's is the browser's.
+    var showsDeferred = UserDefaults.standard.bool(forKey: AppModel.showsDeferredKey) {
+        didSet {
+            UserDefaults.standard.set(showsDeferred, forKey: AppModel.showsDeferredKey)
+            reload()
+        }
+    }
+    private static let showsDeferredKey = "showsDeferred"
     var problem: Problem?
 
     private var store: Store?
@@ -55,6 +64,11 @@ final class AppModel {
     /// has brought it, or the device's (ADR 0027).
     var locale: Locale {
         preferences.map { Locale(identifier: $0.locale) } ?? .current
+    }
+
+    /// The zone, week start, and locale dates are picked and shown on.
+    var clock: UserClock {
+        UserClock(preferences: preferences)
     }
 
     // MARK: Sign-in
@@ -265,7 +279,7 @@ final class AppModel {
         change { try $0.moveTask(id: task.id, location: location) }
     }
 
-    /// Changes a task's title, notes, URL, or flag, as one command.
+    /// Changes a task's title, notes, URL, flag, or dates, as one command.
     func edit(_ task: TaskItem, _ changes: [TaskChange]) {
         change { try $0.editTask(id: task.id, changes: changes) }
     }
@@ -298,8 +312,18 @@ final class AppModel {
     }
 
     /// The open tasks in the Inbox, in No project, or in a project, in
-    /// outline order.
+    /// outline order. Deferred ones only while they are shown.
     func tasks(at location: Location) -> [TaskItem] {
+        shown(allTasks(at: location))
+    }
+
+    /// Whether the Inbox, No project, or a project has open tasks that are
+    /// hidden because they are deferred.
+    func hidesDeferred(at location: Location) -> Bool {
+        !showsDeferred && allTasks(at: location).contains(where: \.deferred)
+    }
+
+    private func allTasks(at location: Location) -> [TaskItem] {
         _ = revision
         guard let store else { return [] }
         let filter: TaskFilter = switch location {
@@ -310,31 +334,38 @@ final class AppModel {
         return (try? store.tasks(filter: filter)) ?? []
     }
 
+    /// Leaves out deferred tasks unless they are shown. A deferred task's
+    /// subtasks are deferred too, so an outline loses whole branches.
+    private func shown(_ tasks: [TaskItem]) -> [TaskItem] {
+        showsDeferred ? tasks : tasks.filter { !$0.deferred }
+    }
+
     /// Open tasks with a tag or one inside it, newest first.
     func tasks(withTag id: UUID) -> [TaskItem] {
         _ = revision
         guard let store else { return [] }
-        return (try? store.tasks(filter: .tag(id: id))) ?? []
+        return shown((try? store.tasks(filter: .tag(id: id))) ?? [])
     }
 
     /// To-do tasks with no tags, the Inbox's included.
     var untagged: [TaskItem] {
         _ = revision
         guard let store else { return [] }
-        let open = (try? store.tasks(filter: .open(unavailable: false))) ?? []
-        return TagOutline.untagged(inbox + open)
+        // Only a tag makes a task unavailable, so none of these is.
+        let open = (try? store.tasks(filter: .open(unavailable: true))) ?? []
+        return TagOutline.untagged(inbox + shown(open))
     }
 
     /// Reads the lists again.
     func reload() {
         guard let store else { return }
         do {
-            inbox = try store.tasks(filter: .inbox)
+            inbox = shown(try store.tasks(filter: .inbox))
             agenda = try Agenda.today(store)
             let all = try store.projects()
             projects = all.filter { $0.state == .toDo }
             projectsById = Dictionary(uniqueKeysWithValues: all.map { ($0.id, $0) })
-            outline = ProjectOutline(folders: try store.folders(), projects: all)
+            outline = ProjectOutline(folders: try store.folders(), projects: all, showsDeferred: showsDeferred)
             tagOutline = TagOutline(tags: try store.tags())
             preferences = try store.preferences()
             let status = try store.status()
