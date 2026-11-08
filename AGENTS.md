@@ -45,6 +45,7 @@ This file is **short and actionable**. Rationale and history live in
 | Database collation | [0034](docs/adr/0034-builtin-collation.md) |
 | Browser extension | [0035](docs/adr/0035-browser-extension.md) |
 | Development on GitHub | [0037](docs/adr/0037-github.md) |
+| Changelog, releases (proposed) | [0038](docs/adr/0038-changelog-and-releases.md) |
 | Repository layout | [0015](docs/adr/0015-repository-layout.md) |
 
 ---

@@ -45,6 +45,7 @@ This directory holds **ADRs** — durable decisions and their context.
 | [0034](0034-builtin-collation.md) | Built-in collation (`PG_UNICODE_FAST`) | Accepted |
 | [0035](0035-browser-extension.md) | Browser extension | Accepted |
 | [0037](0037-github.md) | Development on GitHub | Accepted |
+| [0038](0038-changelog-and-releases.md) | Changelog and releases | Proposed |
 
 ## When to add an ADR
 
