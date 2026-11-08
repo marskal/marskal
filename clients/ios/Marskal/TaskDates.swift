@@ -111,7 +111,7 @@ extension DateField: @retroactive Identifiable {
 
     var symbol: String {
         switch self {
-        case .defer: "moon.zzz"
+        case .defer: "hourglass"
         case .planned: "calendar"
         case .due: "alarm"
         }
