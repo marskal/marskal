@@ -380,7 +380,8 @@ The repository root is the product, not the web app (ADR 0015).
 - Update `devenv.nix` when tooling changes.
 - Prefer vertical slices; ask before large scope expansions.
 - Significant architecture choices → new/updated **ADR**, not a novel in this file.
-- PRs are created with the `fj` CLI available in the devenv in the /web folder.
+- PRs go to GitHub, `marskal/marskal` (ADR 0037). Open them with `gh`, which
+  is in the `web/` devenv. A stacked PR targets the branch below it.
 - After opening a PR, add a task for the user to review it, with the
   `marskal` CLI, in the Marskal project:
   `marskal add -p 01a16ef6-31de-7f06-ab38-fd5a3209d488 -u <PR URL> "Review PR #<n>: <PR title>"`.
