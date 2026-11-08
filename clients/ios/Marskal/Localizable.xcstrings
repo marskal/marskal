@@ -45,6 +45,26 @@
         }
       }
     },
+    "A URL must be absolute, such as https://marskal.example." : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En URL skal være absolut, som https://marskal.example."
+          }
+        }
+      }
+    },
+    "A task or project above it is resolved, so this task is too." : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En opgave eller et projekt over den er afsluttet, så det er denne opgave også."
+          }
+        }
+      }
+    },
     "Add" : {
 
     },
@@ -103,11 +123,65 @@
     "Current" : {
 
     },
+    "Delete" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slet"
+          }
+        }
+      }
+    },
+    "Delete Task" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slet opgave"
+          }
+        }
+      }
+    },
+    "Delete this task?" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slet denne opgave?"
+          }
+        }
+      }
+    },
     "Done" : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Udført"
+          }
+        }
+      }
     },
     "Drop" : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opgiv"
+          }
+        }
+      }
+    },
+    "Dropped" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opgivet"
+          }
+        }
+      }
     },
     "Dropped. This tag and the tags inside it are hidden from lists." : {
       "localizations" : {
@@ -130,7 +204,14 @@
       }
     },
     "Flagged" : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Markeret"
+          }
+        }
+      }
     },
     "Inbox" : {
       "localizations" : {
@@ -148,6 +229,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ligger i et droppet tag og er derfor skjult i lister."
+          }
+        }
+      }
+    },
+    "Its project is flagged, so it is too." : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dens projekt er markeret, så det er den også."
+          }
+        }
+      }
+    },
+    "Its subtasks are deleted with it. To finish a task, mark it Done or Drop it." : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dens underopgaver slettes med den. Marker en opgave Udført eller Opgiv den for at afslutte den."
+          }
+        }
+      }
+    },
+    "Mark Done" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marker udført"
           }
         }
       }
@@ -179,6 +290,16 @@
     },
     "Move…" : {
 
+    },
+    "No Project" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Intet projekt"
+          }
+        }
+      }
     },
     "No open tasks" : {
       "localizations" : {
@@ -222,6 +343,16 @@
     },
     "Not synced yet" : {
 
+    },
+    "Notes" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noter"
+          }
+        }
+      }
     },
     "Nothing in this folder" : {
       "localizations" : {
@@ -288,6 +419,26 @@
         }
       }
     },
+    "Open Link" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åbn link"
+          }
+        }
+      }
+    },
+    "Place" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Placering"
+          }
+        }
+      }
+    },
     "Projects" : {
       "localizations" : {
         "da" : {
@@ -304,6 +455,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Projekter, der ikke er afsluttet, vises her."
+          }
+        }
+      }
+    },
+    "Reopen" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Genåbn"
           }
         }
       }
@@ -437,6 +598,16 @@
         }
       }
     },
+    "This task was deleted" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne opgave er slettet"
+          }
+        }
+      }
+    },
     "Title" : {
       "localizations" : {
         "da" : {
@@ -472,6 +643,16 @@
     },
     "Type the address you open Marskal at in a browser, such as marskal.example." : {
 
+    },
+    "URL" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL"
+          }
+        }
+      }
     },
     "Untagged" : {
       "localizations" : {

@@ -26,6 +26,7 @@ struct InboxView: View {
             }
             .refreshable { await model.refresh() }
             .navigationTitle("Inbox")
+            .taskDestination()
             .toolbar {
                 // Not the bottom bar: the tab bar covers it.
                 ToolbarItem(placement: .primaryAction) {
@@ -62,8 +63,10 @@ struct InboxView: View {
     }
 
     private func row(_ task: TaskItem) -> some View {
-        TaskRow(task: task) { model.setState(task, .done) }
-            .taskActions(task, moving: $moving)
+        NavigationLink(value: TaskRoute(id: task.id)) {
+            TaskRow(task: task) { model.setState(task, .done) }
+        }
+        .taskActions(task, moving: $moving)
     }
 }
 

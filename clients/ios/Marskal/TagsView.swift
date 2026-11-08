@@ -33,6 +33,7 @@ struct TagsView: View {
                 case .untagged: UntaggedView()
                 }
             }
+            .taskDestination()
         }
     }
 }
@@ -129,8 +130,10 @@ private struct TagView: View {
 
     private func rows(_ tasks: [TaskItem]) -> some View {
         ForEach(tasks) { task in
-            TaskRow(task: task, indented: false) { model.setState(task, .done) }
-                .taskActions(task, moving: $moving)
+            NavigationLink(value: TaskRoute(id: task.id)) {
+                TaskRow(task: task, indented: false) { model.setState(task, .done) }
+            }
+            .taskActions(task, moving: $moving)
         }
     }
 
@@ -151,8 +154,10 @@ private struct UntaggedView: View {
     var body: some View {
         let tasks = model.untagged
         List(tasks) { task in
-            TaskRow(task: task, indented: false) { model.setState(task, .done) }
-                .taskActions(task, moving: $moving)
+            NavigationLink(value: TaskRoute(id: task.id)) {
+                TaskRow(task: task, indented: false) { model.setState(task, .done) }
+            }
+            .taskActions(task, moving: $moving)
         }
         .animation(.default, value: tasks.map(\.id))
         .overlay {
