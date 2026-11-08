@@ -163,6 +163,26 @@
         }
       }
     },
+    "Deferred indefinitely" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Udsat på ubestemt tid"
+          }
+        }
+      }
+    },
+    "Deferred until %@" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Udsat til %@"
+          }
+        }
+      }
+    },
     "Delete" : {
       "localizations" : {
         "da" : {
@@ -535,6 +555,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Planlagt"
+          }
+        }
+      }
+    },
+    "Planned %@" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planlagt %@"
           }
         }
       }

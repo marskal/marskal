@@ -60,4 +60,22 @@ struct UserClockTests {
         #expect(clock().label(due, for: .planned, now: now).contains("17"))
         #expect(clock().label(at("2027-01-04T16:00:00Z"), for: .due, now: now).contains("2027"))
     }
+
+    @Test func aRowShowsTodaysTimeAndOtherwiseTheDay() {
+        // Sunday 8 November 2026, 11:00 in Copenhagen.
+        let now = at("2026-11-08T10:00:00Z")
+        let english = UserClock(zone: copenhagen, weekStart: 1, locale: Locale(identifier: "en_DK"))
+        #expect(english.shortLabel(at("2026-11-08T16:00:00Z"), now: now) == "17.00")
+        #expect(english.shortLabel(at("2026-11-09T16:00:00Z"), now: now) == "tomorrow")
+        #expect(english.shortLabel(at("2026-11-07T16:00:00Z"), now: now) == "yesterday")
+        // Late tonight in Copenhagen is still today, though tomorrow in UTC.
+        #expect(english.shortLabel(at("2026-11-08T22:30:00Z"), now: now) == "23.30")
+        #expect(english.shortLabel(at("2026-11-13T16:00:00Z"), now: now) == "Fri")
+        #expect(english.shortLabel(at("2026-11-20T16:00:00Z"), now: now) == "20 Nov")
+        #expect(english.shortLabel(at("2026-11-01T16:00:00Z"), now: now) == "1 Nov")
+        #expect(english.shortLabel(at("2027-01-04T16:00:00Z"), now: now).contains("2027"))
+
+        let danish = UserClock(zone: copenhagen, weekStart: 1, locale: Locale(identifier: "da"))
+        #expect(danish.shortLabel(at("2026-11-09T16:00:00Z"), now: now) == "i morgen")
+    }
 }

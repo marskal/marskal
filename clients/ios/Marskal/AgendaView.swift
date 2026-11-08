@@ -13,7 +13,7 @@ struct AgendaView: View {
                 Section {
                     ForEach(model.agenda) { item in
                         NavigationLink(value: TaskRoute(id: item.task.id)) {
-                            TaskRow(task: item.task, indented: false) {
+                            TaskRow(task: item.task, indented: false, showsDates: false) {
                                 model.setState(item.task, .done)
                             } detail: {
                                 AgendaTime(item: item)

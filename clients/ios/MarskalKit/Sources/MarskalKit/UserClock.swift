@@ -101,6 +101,30 @@ public struct UserClock: Sendable {
         return at.formatted(style)
     }
 
+    /// A date in the little room a list row has: the time when it is
+    /// today, "tomorrow" or "yesterday", the weekday in the six days after
+    /// tomorrow, otherwise the day and month, with the year when it is not
+    /// this year's.
+    public func shortLabel(_ at: Date, now: Date = .now) -> String {
+        let style = Date.FormatStyle(locale: locale, calendar: calendar, timeZone: zone)
+        let days = calendar.dateComponents([.day], from: today(now), to: calendar.startOfDay(for: at)).day ?? 0
+        switch days {
+        case 0:
+            return at.formatted(style.hour().minute())
+        case -1, 1:
+            let relative = RelativeDateTimeFormatter()
+            relative.locale = locale
+            relative.calendar = calendar
+            relative.dateTimeStyle = .named
+            return relative.localizedString(from: DateComponents(day: days))
+        case 2...7:
+            return at.formatted(style.weekday(.abbreviated))
+        default:
+            let day = style.day().month(.abbreviated)
+            return at.formatted(calendar.isDate(at, equalTo: now, toGranularity: .year) ? day : day.year())
+        }
+    }
+
     /// The time a day with no time gets for `field`, such as "17:00".
     public func defaultTimeLabel(for field: DateField) -> String {
         let at = instant(on: today(), at: nil, for: field)

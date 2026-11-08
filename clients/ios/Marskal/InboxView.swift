@@ -113,6 +113,8 @@ struct TaskRow<Detail: View>: View {
     var indented = true
     /// Its project under the title; off where the list is that project.
     var showsProject = true
+    /// Its dates under the title; off where the list shows its time.
+    var showsDates = true
     let complete: () -> Void
     @ViewBuilder var detail: Detail
 
@@ -128,10 +130,19 @@ struct TaskRow<Detail: View>: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(task.title)
-                if showsProject, let project = task.project {
-                    Text(project)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                let project = showsProject ? task.project : nil
+                if project != nil || (showsDates && RowDates.any(task)) {
+                    HStack(spacing: 10) {
+                        if let project {
+                            Text(project)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        if showsDates {
+                            RowDates(task: task)
+                        }
+                    }
+                    .font(.footnote)
                 }
             }
 
@@ -150,8 +161,13 @@ struct TaskRow<Detail: View>: View {
 }
 
 extension TaskRow where Detail == EmptyView {
-    init(task: TaskItem, indented: Bool = true, showsProject: Bool = true, complete: @escaping () -> Void) {
-        self.init(task: task, indented: indented, showsProject: showsProject, complete: complete) { EmptyView() }
+    init(
+        task: TaskItem, indented: Bool = true, showsProject: Bool = true, showsDates: Bool = true,
+        complete: @escaping () -> Void
+    ) {
+        self.init(
+            task: task, indented: indented, showsProject: showsProject, showsDates: showsDates, complete: complete
+        ) { EmptyView() }
     }
 }
 

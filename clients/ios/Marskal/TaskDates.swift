@@ -228,3 +228,62 @@ struct DateSheet: View {
         dismiss()
     }
 }
+
+/// A task's dates on its row, as the web app's list marks them: Defer
+/// while it is deferred, then Planned and Due, each an icon and a short
+/// label. A date it goes by but does not have is dimmed; an overdue Due is
+/// red, and Planned for today takes the tint.
+struct RowDates: View {
+    let task: TaskItem
+    @Environment(AppModel.self) private var model
+
+    /// Whether the row has any to show.
+    static func any(_ task: TaskItem) -> Bool {
+        task.deferred || task.effective.plannedAt != nil || task.effective.dueAt != nil
+    }
+
+    var body: some View {
+        let clock = model.clock
+        HStack(spacing: 8) {
+            if task.deferred {
+                if let at = task.effective.deferUntil, !task.effective.deferredIndefinitely {
+                    mark(.defer, clock.shortLabel(at), style: dimmed(.defer))
+                        .accessibilityLabel(Text("Deferred until \(clock.label(at, for: .defer))"))
+                } else {
+                    mark(.defer, nil, style: dimmed(.defer))
+                        .accessibilityLabel(Text("Deferred indefinitely"))
+                }
+            }
+            if let at = task.effective.plannedAt {
+                let today = task.state == .toDo && clock.calendar.isDateInToday(at)
+                mark(.planned, clock.shortLabel(at), style: today ? AnyShapeStyle(.tint) : dimmed(.planned))
+                    .accessibilityLabel(Text("Planned \(clock.label(at, for: .planned))"))
+            }
+            if let at = task.effective.dueAt {
+                mark(.due, clock.shortLabel(at), style: task.overdue ? AnyShapeStyle(.red) : dimmed(.due))
+                    .accessibilityLabel(Text("Due \(clock.label(at, for: .due))"))
+            }
+        }
+        .monospacedDigit()
+        .lineLimit(1)
+        .fixedSize()
+    }
+
+    private func mark(_ field: DateField, _ label: String?, style: AnyShapeStyle) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: field.symbol)
+                .imageScale(.small)
+            if let label {
+                Text(verbatim: label)
+            }
+        }
+        .foregroundStyle(style)
+        // One element, read by the label each mark sets.
+        .accessibilityElement(children: .ignore)
+    }
+
+    // Inherited: from a task above it or its project.
+    private func dimmed(_ field: DateField) -> AnyShapeStyle {
+        DateValue(task.dates, field) == nil ? AnyShapeStyle(.tertiary) : AnyShapeStyle(.secondary)
+    }
+}
