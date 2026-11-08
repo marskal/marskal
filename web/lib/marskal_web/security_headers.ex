@@ -11,6 +11,10 @@ defmodule MarskalWeb.SecurityHeaders do
   The policy has no `form-action`: Chrome applies it to the redirects after a
   form post, and signing in for an OAuth client posts the log-in form and
   then follows Hydra to that client's redirect URI.
+
+  In development the live reload frame is served before this plug.
+  `MarskalWeb.LiveReloadFrame` puts this embedder policy on that response,
+  which is what lets the browser show the frame.
   """
 
   import Plug.Conn
