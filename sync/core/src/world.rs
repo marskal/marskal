@@ -25,6 +25,8 @@ pub enum TaskFilter {
     Inbox,
     /// A project's open tasks, in outline order.
     Project(Uuid),
+    /// Open tasks in no project and out of the inbox, in outline order.
+    NoProject,
     /// Open tasks with the tag or one below it, newest first.
     Tag(Uuid),
     /// Open tasks flagged by themselves or their project, inbox included,
@@ -239,6 +241,9 @@ impl World {
             TaskFilter::Inbox => self.outline(|task| task.inbox && task.parent_id.is_none()),
             TaskFilter::Project(id) => self.outline(|task| {
                 task.project_id == Some(id) && !task.inbox && task.parent_id.is_none()
+            }),
+            TaskFilter::NoProject => self.outline(|task| {
+                task.project_id.is_none() && !task.inbox && task.parent_id.is_none()
             }),
             TaskFilter::Tag(id) => {
                 let subtree = self.tag_subtree(id);

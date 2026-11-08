@@ -332,6 +332,7 @@ fn a_move_takes_subtasks_along_and_leaves_the_parent() {
     store.move_task(child, Location::NoProject).unwrap();
     let world = store.world().unwrap();
     assert_eq!(world.task(child).unwrap().parent_id, None);
+    assert_eq!(titles(&store, TaskFilter::NoProject), ["Socks"]);
 
     // The child's move patches only its location; the server places it.
     let last = store.pending(100).unwrap().pop().unwrap();

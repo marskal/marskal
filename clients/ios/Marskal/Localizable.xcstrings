@@ -311,22 +311,22 @@
         }
       }
     },
-    "No projects" : {
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ingen projekter"
-          }
-        }
-      }
-    },
     "No tasks carry this tag itself." : {
       "localizations" : {
         "da" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ingen opgaver har selv dette tag."
+          }
+        }
+      }
+    },
+    "No tasks outside projects" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingen opgaver uden for projekter"
           }
         }
       }
@@ -449,16 +449,6 @@
         }
       }
     },
-    "Projects you haven’t finished show up here." : {
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Projekter, der ikke er afsluttet, vises her."
-          }
-        }
-      }
-    },
     "Reopen" : {
       "localizations" : {
         "da" : {
@@ -538,6 +528,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Opgaver, der er planlagt eller har frist i dag, vises her."
+          }
+        }
+      }
+    },
+    "Tasks you move out of the Inbox without a project show up here." : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opgaver, du flytter ud af indbakken uden et projekt, vises her."
           }
         }
       }
