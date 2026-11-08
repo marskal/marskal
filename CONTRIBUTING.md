@@ -22,15 +22,15 @@ request `no changelog`, or the Changelog check fails.
 ## Releasing
 
 Marskal has one version for every component. A release is one pull request,
-made by a task in the `tools/` devenv:
+made by a script in the `tools/` devenv:
 
 ```sh
 cd tools
-devenv tasks run release:preview   # the next version and its notes
-devenv tasks run release:pr        # open the release PR
+devenv shell release-preview   # the next version and its notes
+devenv shell release-pr        # open the release PR
 ```
 
-`release:pr` works from `origin/master` in a worktree of its own, so the
+`release-pr` works from `origin/master` in a worktree of its own, so the
 checkout you are in is left alone. It runs `changie batch auto` and
 `changie merge`, sets the new version in every component
 (`tools/scripts/set-version`), commits on `release-v<version>`, and opens

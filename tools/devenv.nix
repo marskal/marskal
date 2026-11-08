@@ -9,18 +9,17 @@
     pkgs.perl
   ];
 
-  # devenv shows a task's output only when it fails, unless told to: what
-  # these print is the point of running them.
-  tasks = {
-    "release:preview" = {
+  # Scripts, not tasks: in a terminal, devenv's task view keeps only the
+  # last lines of a task's output, and what these print is the point.
+  # Run them as `devenv shell release-preview`.
+  scripts = {
+    release-preview = {
       description = "Show the next version and its notes, changing nothing";
-      exec = "${config.devenv.root}/scripts/release --preview";
-      showOutput = true;
+      exec = ''${config.devenv.root}/scripts/release --preview'';
     };
-    "release:pr" = {
+    release-pr = {
       description = "Open the release PR: changelog, version bumps, and all";
-      exec = "${config.devenv.root}/scripts/release";
-      showOutput = true;
+      exec = ''${config.devenv.root}/scripts/release'';
     };
   };
 }
