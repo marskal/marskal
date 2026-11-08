@@ -224,8 +224,8 @@ struct MoveSheet: View {
         NavigationStack {
             List {
                 Section {
-                    choice("Inbox", systemImage: "tray", .inbox)
-                    choice("No Project", systemImage: "circle.dashed", .noProject)
+                    choice("Inbox", systemImage: ProjectsView.inboxSymbol, .inbox)
+                    choice("No Project", systemImage: ProjectsView.noProjectSymbol, .noProject)
                 }
                 if !model.projects.isEmpty {
                     Section("Projects") {

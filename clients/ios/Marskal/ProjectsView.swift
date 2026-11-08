@@ -6,6 +6,8 @@ import SwiftUI
 struct ProjectsView: View {
     static let folderSymbol = "folder"
     static let projectSymbol = "list.bullet.rectangle"
+    static let inboxSymbol = "tray"
+    static let noProjectSymbol = "circle.dashed"
 
     var body: some View {
         NavigationStack {
@@ -13,7 +15,7 @@ struct ProjectsView: View {
                 .navigationDestination(for: ProjectRoute.self) { route in
                     switch route {
                     case .folder(let id): FolderView(folderId: id)
-                    case .project(let id): ProjectView(projectId: id)
+                    case .tasks(let location): LocationView(location: location)
                     }
                 }
                 .taskDestination()
@@ -23,11 +25,12 @@ struct ProjectsView: View {
 
 enum ProjectRoute: Hashable {
     case folder(UUID)
-    case project(UUID)
+    /// The Inbox, No project, or a project.
+    case tasks(Location)
 }
 
 /// A folder's subfolders and projects in their order, or the top of the
-/// outline for `nil`.
+/// outline for `nil`, below the Inbox and No project (ADR 0017).
 private struct FolderView: View {
     let folderId: UUID?
     @Environment(AppModel.self) private var model
@@ -35,6 +38,16 @@ private struct FolderView: View {
     var body: some View {
         let items = model.outline.children(of: folderId)
         List {
+            if folderId == nil {
+                Section {
+                    NavigationLink(value: ProjectRoute.tasks(.inbox)) {
+                        Label("Inbox", systemImage: ProjectsView.inboxSymbol)
+                    }
+                    NavigationLink(value: ProjectRoute.tasks(.noProject)) {
+                        Label("No Project", systemImage: ProjectsView.noProjectSymbol)
+                    }
+                }
+            }
             Section {
                 ForEach(items) { item in
                     switch item {
@@ -44,7 +57,7 @@ private struct FolderView: View {
                             Label(folder.name, systemImage: ProjectsView.folderSymbol)
                         }
                     case .project(let project):
-                        NavigationLink(value: ProjectRoute.project(project.id)) {
+                        NavigationLink(value: ProjectRoute.tasks(.project(id: project.id))) {
                             ProjectRow(project: project)
                         }
                     }
@@ -55,15 +68,9 @@ private struct FolderView: View {
         }
         .animation(.default, value: items.map(\.id))
         .overlay {
-            if items.isEmpty && !model.syncing {
-                if folderId == nil {
-                    ContentUnavailableView(
-                        "No projects",
-                        systemImage: ProjectsView.folderSymbol,
-                        description: Text("Projects you haven’t finished show up here."))
-                } else {
-                    ContentUnavailableView("Nothing in this folder", systemImage: ProjectsView.folderSymbol)
-                }
+            // At the top, the Inbox and No project are always there.
+            if folderId != nil && items.isEmpty && !model.syncing {
+                ContentUnavailableView("Nothing in this folder", systemImage: ProjectsView.folderSymbol)
             }
         }
         .refreshable { await model.refresh() }
@@ -95,16 +102,15 @@ private struct ProjectRow: View {
     }
 }
 
-/// A project's open tasks as an outline. Check a task off with its circle
-/// or a swipe.
-private struct ProjectView: View {
-    let projectId: UUID
+/// The open tasks in the Inbox, in No project, or in a project, as an
+/// outline. Check a task off with its circle or a swipe.
+private struct LocationView: View {
+    let location: Location
     @Environment(AppModel.self) private var model
     @State private var moving: TaskItem?
 
     var body: some View {
-        let project = model.projectsById[projectId]
-        let tasks = model.tasks(inProject: projectId)
+        let tasks = model.tasks(at: location)
         List {
             Section {
                 ForEach(tasks) { task in
@@ -119,17 +125,45 @@ private struct ProjectView: View {
         }
         .animation(.default, value: tasks.map(\.id))
         .overlay {
-            if project == nil {
+            if deleted {
                 ContentUnavailableView("This project was deleted", systemImage: ProjectsView.projectSymbol)
             } else if tasks.isEmpty && !model.syncing {
-                ContentUnavailableView("No open tasks", systemImage: "checkmark.circle")
+                empty
             }
         }
         .refreshable { await model.refresh() }
-        // A project's title is the user's own text, not translated.
-        .navigationTitle(Text(verbatim: project?.title ?? ""))
+        .navigationTitle(title)
         .sheet(item: $moving) { task in
             MoveSheet(task: task)
+        }
+    }
+
+    private var deleted: Bool {
+        if case .project(let id) = location { return model.projectsById[id] == nil }
+        return false
+    }
+
+    private var title: Text {
+        switch location {
+        case .inbox: Text("Inbox")
+        case .noProject: Text("No Project")
+        // A project's title is the user's own text, not translated.
+        case .project(let id): Text(verbatim: model.projectsById[id]?.title ?? "")
+        }
+    }
+
+    @ViewBuilder
+    private var empty: some View {
+        switch location {
+        case .inbox:
+            ContentUnavailableView("The Inbox is empty", systemImage: ProjectsView.inboxSymbol)
+        case .noProject:
+            ContentUnavailableView(
+                "No tasks outside projects",
+                systemImage: ProjectsView.noProjectSymbol,
+                description: Text("Tasks you move out of the Inbox without a project show up here."))
+        case .project:
+            ContentUnavailableView("No open tasks", systemImage: "checkmark.circle")
         }
     }
 }

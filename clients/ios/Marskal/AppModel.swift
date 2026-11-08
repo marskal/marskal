@@ -297,11 +297,17 @@ final class AppModel {
         return try? store.task(id: id)
     }
 
-    /// A project's open tasks, in outline order.
-    func tasks(inProject id: UUID) -> [TaskItem] {
+    /// The open tasks in the Inbox, in No project, or in a project, in
+    /// outline order.
+    func tasks(at location: Location) -> [TaskItem] {
         _ = revision
         guard let store else { return [] }
-        return (try? store.tasks(filter: .project(id: id))) ?? []
+        let filter: TaskFilter = switch location {
+        case .inbox: .inbox
+        case .noProject: .noProject
+        case .project(let id): .project(id: id)
+        }
+        return (try? store.tasks(filter: filter)) ?? []
     }
 
     /// Open tasks with a tag or one inside it, newest first.
