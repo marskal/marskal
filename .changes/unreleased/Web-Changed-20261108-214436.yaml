@@ -1,0 +1,4 @@
+component: Web
+kind: Changed
+body: Task rows mark Defer with an hourglass, Planned with a calendar, and Due with an alarm clock instead of words, and the inspector labels its date fields with the same icons.
+time: 2026-11-08T21:44:36.179005+01:00

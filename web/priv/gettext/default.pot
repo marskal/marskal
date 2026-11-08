@@ -292,8 +292,14 @@ msgid "Defer until"
 msgstr ""
 
 #: lib/marskal_web/components/layouts.ex
+#: lib/marskal_web/components/task_components.ex
 #, elixir-autogen, elixir-format
 msgid "Deferred"
+msgstr ""
+
+#: lib/marskal_web/components/task_components.ex
+#, elixir-autogen, elixir-format
+msgid "Deferred until %{when}"
 msgstr ""
 
 #: lib/marskal_web/components/keys_help.ex
@@ -340,9 +346,15 @@ msgstr ""
 msgid "Dropped “%{title}”."
 msgstr ""
 
+#: lib/marskal_web/components/task_components.ex
 #: lib/marskal_web/date_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Due"
+msgstr ""
+
+#: lib/marskal_web/components/task_components.ex
+#, elixir-autogen, elixir-format
+msgid "Due %{when}"
 msgstr ""
 
 #: lib/marskal_web/components/keys_help.ex
@@ -697,9 +709,15 @@ msgstr ""
 msgid "Places"
 msgstr ""
 
+#: lib/marskal_web/components/task_components.ex
 #: lib/marskal_web/date_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Planned"
+msgstr ""
+
+#: lib/marskal_web/components/task_components.ex
+#, elixir-autogen, elixir-format
+msgid "Planned %{when}"
 msgstr ""
 
 #: lib/marskal_web/components/settings_components.ex
