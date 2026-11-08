@@ -52,8 +52,8 @@ struct RootView: View {
                 SignInView()
             } else {
                 TabView {
-                    Tab("Tasks", systemImage: "checklist") {
-                        TasksView()
+                    Tab("Inbox", systemImage: "tray") {
+                        InboxView()
                     }
                     Tab("Projects", systemImage: ProjectsView.folderSymbol) {
                         ProjectsView()

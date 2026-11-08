@@ -123,7 +123,14 @@
 
     },
     "Inbox" : {
-
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indbakke"
+          }
+        }
+      }
     },
     "Mark Task Done" : {
 
@@ -196,9 +203,6 @@
         }
       }
     },
-    "Nothing to do" : {
-
-    },
     "Offline" : {
 
     },
@@ -223,9 +227,6 @@
           }
         }
       }
-    },
-    "Open Tasks" : {
-
     },
     "Projects" : {
       "localizations" : {
@@ -281,21 +282,14 @@
     "Synced %@" : {
 
     },
+    "Synced just now" : {
+
+    },
     "Syncing…" : {
 
     },
     "Task" : {
 
-    },
-    "Tasks" : {
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Opgaver"
-          }
-        }
-      }
     },
     "Tasks planned or due today show up here." : {
       "localizations" : {
@@ -311,6 +305,9 @@
 
     },
     "That is not a server address" : {
+
+    },
+    "The Inbox is empty" : {
 
     },
     "The address you open Marskal at in a browser." : {

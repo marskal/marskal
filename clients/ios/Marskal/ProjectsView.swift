@@ -33,17 +33,23 @@ private struct FolderView: View {
 
     var body: some View {
         let items = model.outline.children(of: folderId)
-        List(items) { item in
-            switch item {
-            case .folder(let folder):
-                NavigationLink(value: ProjectRoute.folder(folder.id)) {
-                    // A folder's name is the user's own text, not translated.
-                    Label(folder.name, systemImage: ProjectsView.folderSymbol)
+        List {
+            Section {
+                ForEach(items) { item in
+                    switch item {
+                    case .folder(let folder):
+                        NavigationLink(value: ProjectRoute.folder(folder.id)) {
+                            // A folder's name is the user's own text, not translated.
+                            Label(folder.name, systemImage: ProjectsView.folderSymbol)
+                        }
+                    case .project(let project):
+                        NavigationLink(value: ProjectRoute.project(project.id)) {
+                            ProjectRow(project: project)
+                        }
+                    }
                 }
-            case .project(let project):
-                NavigationLink(value: ProjectRoute.project(project.id)) {
-                    ProjectRow(project: project)
-                }
+            } footer: {
+                SyncStatus()
             }
         }
         .animation(.default, value: items.map(\.id))
@@ -61,11 +67,6 @@ private struct FolderView: View {
         }
         .refreshable { await model.refresh() }
         .navigationTitle(title)
-        .toolbar {
-            ToolbarItem(placement: .status) {
-                SyncStatus()
-            }
-        }
     }
 
     private var title: Text {
@@ -103,9 +104,15 @@ private struct ProjectView: View {
     var body: some View {
         let project = model.projectsById[projectId]
         let tasks = model.tasks(inProject: projectId)
-        List(tasks) { task in
-            TaskRow(task: task, showsProject: false) { model.setState(task, .done) }
-                .taskActions(task, moving: $moving)
+        List {
+            Section {
+                ForEach(tasks) { task in
+                    TaskRow(task: task, showsProject: false) { model.setState(task, .done) }
+                        .taskActions(task, moving: $moving)
+                }
+            } footer: {
+                SyncStatus()
+            }
         }
         .animation(.default, value: tasks.map(\.id))
         .overlay {
@@ -118,11 +125,6 @@ private struct ProjectView: View {
         .refreshable { await model.refresh() }
         // A project's title is the user's own text, not translated.
         .navigationTitle(Text(verbatim: project?.title ?? ""))
-        .toolbar {
-            ToolbarItem(placement: .status) {
-                SyncStatus()
-            }
-        }
         .sheet(item: $moving) { task in
             MoveSheet(task: task)
         }
