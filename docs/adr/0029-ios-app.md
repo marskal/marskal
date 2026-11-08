@@ -136,6 +136,11 @@ clients/ios/
 - Dates are formatted with Foundation's format styles in the user's
   `locale` preference (ADR 0023, 0027), falling back to the device's locale,
   so a date reads the same on the phone as on the web.
+- Dates are picked on the system calendar, on the user's clock: their
+  zone and week start, not the device's. ADR 0032's typed dates suit a
+  keyboard more than a touch screen, and the Rust library does not read
+  them yet. A day with no time takes the field's default time, from
+  `sync/core` through the bindings, as typed dates do.
 
 ### Alternatives considered
 

@@ -57,6 +57,11 @@ final class AppModel {
         preferences.map { Locale(identifier: $0.locale) } ?? .current
     }
 
+    /// The zone, week start, and locale dates are picked and shown on.
+    var clock: UserClock {
+        UserClock(preferences: preferences)
+    }
+
     // MARK: Sign-in
 
     /// Signs in through the system's web sheet. `authenticate` shows the
@@ -265,7 +270,7 @@ final class AppModel {
         change { try $0.moveTask(id: task.id, location: location) }
     }
 
-    /// Changes a task's title, notes, URL, or flag, as one command.
+    /// Changes a task's title, notes, URL, flag, or dates, as one command.
     func edit(_ task: TaskItem, _ changes: [TaskChange]) {
         change { try $0.editTask(id: task.id, changes: changes) }
     }
