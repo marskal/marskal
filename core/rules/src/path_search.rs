@@ -73,6 +73,64 @@ fn place(pieces: &[String], parts: &[(String, usize)]) -> Option<(usize, usize)>
     Some((first?, last?))
 }
 
+/// What a [`Target`] is, in the order Go to ranks kinds that match equally
+/// well (ADR 0033).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Kind {
+    /// A place the shell names itself, such as the Inbox.
+    View,
+    Project,
+    Folder,
+    Tag,
+}
+
+/// Somewhere to go or put a task: its path, and whether the sidebar hides
+/// it, for being Done, Dropped, Deferred, or in a dropped folder.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Target {
+    pub kind: Kind,
+    pub path: Vec<String>,
+    pub hidden: bool,
+}
+
+/// The targets that match, best first, at most `limit`, by their index in
+/// `targets`, as the server's `Marskal.GoTo.run/3` ranks them: an exact
+/// name, then shown before hidden, then fewer skipped path segments, then
+/// views, projects, folders, and tags in that order, then shallower, then
+/// the order given. A blank query matches nothing.
+pub fn rank(targets: &[Target], query: &str, limit: usize) -> Vec<usize> {
+    let pieces = pieces(query);
+    let whole = whole(query);
+    if pieces.is_empty() {
+        return Vec::new();
+    }
+
+    let mut ranked: Vec<_> = targets
+        .iter()
+        .enumerate()
+        .filter_map(|(index, target)| {
+            let skipped = matches(&target.path, &pieces)?;
+            let own = target.path.last()?;
+            let key = (
+                !is_exact(own, &whole),
+                target.hidden,
+                skipped,
+                target.kind,
+                target.path.len(),
+                index,
+            );
+            Some((key, index))
+        })
+        .collect();
+
+    ranked.sort_unstable();
+    ranked
+        .into_iter()
+        .take(limit)
+        .map(|(_, index)| index)
+        .collect()
+}
+
 fn is_prefix(part: &str, piece: &str) -> bool {
     part.starts_with(piece) || part.split_whitespace().any(|word| word.starts_with(piece))
 }

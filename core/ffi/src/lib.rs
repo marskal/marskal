@@ -747,6 +747,50 @@ pub fn url_is_valid(url: String) -> bool {
     rules::url::valid(&url)
 }
 
+/// What a [`SearchTarget`] is, in the order Go to ranks kinds that match
+/// equally well (ADR 0033).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum TargetKind {
+    /// A place the shell names itself, such as the Inbox.
+    View,
+    Project,
+    Folder,
+    Tag,
+}
+
+/// Somewhere to go or put a task, by its path: a project's folders and
+/// title, say. `hidden` when the sidebar leaves it out.
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct SearchTarget {
+    pub kind: TargetKind,
+    pub path: Vec<String>,
+    pub hidden: bool,
+}
+
+/// The targets matching what the user typed, best first, as indices into
+/// `targets`, ranked as the web's Go to and location picker rank them
+/// (ADR 0033). The query is compared as given: normalize it to NFC first.
+#[uniffi::export]
+pub fn search_targets(targets: Vec<SearchTarget>, query: String, limit: u32) -> Vec<u32> {
+    let targets: Vec<rules::path_search::Target> = targets
+        .into_iter()
+        .map(|t| rules::path_search::Target {
+            kind: match t.kind {
+                TargetKind::View => rules::path_search::Kind::View,
+                TargetKind::Project => rules::path_search::Kind::Project,
+                TargetKind::Folder => rules::path_search::Kind::Folder,
+                TargetKind::Tag => rules::path_search::Kind::Tag,
+            },
+            path: t.path,
+            hidden: t.hidden,
+        })
+        .collect();
+    rules::path_search::rank(&targets, &query, limit as usize)
+        .into_iter()
+        .map(|i| i as u32)
+        .collect()
+}
+
 /// Which date a day is for, since each has its own default time.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
 pub enum DateField {

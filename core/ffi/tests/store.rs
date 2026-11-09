@@ -1,7 +1,8 @@
 use jiff::Timestamp;
 use marskal_ffi::{
-    DateField, Defer, LocalDate, LocalTime, Location, NewProject, NewTask, Store, StoreError,
-    TaskChange, TaskFilter, TaskState, default_time, local_instant,
+    DateField, Defer, LocalDate, LocalTime, Location, NewProject, NewTask, SearchTarget, Store,
+    StoreError, TargetKind, TaskChange, TaskFilter, TaskState, default_time, local_instant,
+    search_targets,
 };
 use serde_json::{Value, json};
 use uuid::Uuid;
@@ -386,4 +387,22 @@ fn a_tag_search_matches_a_path_best_first() {
     );
     assert!(db.store.search_tags(" / ".into(), 20).unwrap().is_empty());
     assert_eq!(db.store.search_tags("wi".into(), 1).unwrap().len(), 1);
+}
+
+#[test]
+fn a_target_search_puts_shown_projects_before_hidden_ones() {
+    let target = |kind, path: &[&str], hidden| SearchTarget {
+        kind,
+        path: path.iter().map(|p| p.to_string()).collect(),
+        hidden,
+    };
+    let targets = vec![
+        target(TargetKind::View, &["Inbox"], false),
+        target(TargetKind::Project, &["Old", "Website"], true),
+        target(TargetKind::Project, &["Work", "Website"], false),
+    ];
+
+    assert_eq!(search_targets(targets.clone(), "web".into(), 20), [2, 1]);
+    assert_eq!(search_targets(targets.clone(), "work/web".into(), 20), [2]);
+    assert!(search_targets(targets, " ".into(), 20).is_empty());
 }

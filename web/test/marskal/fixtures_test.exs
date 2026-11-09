@@ -7,6 +7,7 @@ defmodule Marskal.FixturesTest do
 
   use ExUnit.Case, async: true
 
+  alias Marskal.GoTo
   alias Marskal.PathSearch
   alias Marskal.Rank
   alias Marskal.Tags.Link
@@ -100,6 +101,27 @@ defmodule Marskal.FixturesTest do
     for v <- vectors["tags"]["search"] do
       paths = tree |> Search.run(v["query"], vectors["tags"]["limit"]) |> Enum.map(&Tag.path/1)
       assert paths == v["paths"], inspect(v["query"])
+    end
+  end
+
+  test "path_search.json: go to" do
+    go_to = read("path_search.json")["go_to"]
+
+    targets =
+      for t <- go_to["targets"] do
+        %GoTo.Target{
+          type: String.to_existing_atom(t["kind"]),
+          id: Enum.join(t["path"], "/"),
+          path: t["path"],
+          hidden: t["hidden"]
+        }
+      end
+
+    for v <- go_to["search"] do
+      found = GoTo.run(targets, v["query"], go_to["limit"])
+
+      assert Enum.map(found, fn t -> Enum.find_index(targets, &(&1 == t)) end) == v["results"],
+             inspect(v["query"])
     end
   end
 

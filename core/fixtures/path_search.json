@@ -26,6 +26,209 @@
       "query": "æble"
     }
   ],
+  "go_to": {
+    "limit": 20,
+    "search": [
+      {
+        "query": "w",
+        "results": [
+          4,
+          7,
+          3,
+          13,
+          5,
+          10
+        ]
+      },
+      {
+        "query": "web",
+        "results": [
+          4,
+          10
+        ]
+      },
+      {
+        "query": "website",
+        "results": [
+          4,
+          10
+        ]
+      },
+      {
+        "query": "work/web",
+        "results": [
+          4
+        ]
+      },
+      {
+        "query": "cl/ac",
+        "results": [
+          8
+        ]
+      },
+      {
+        "query": "home",
+        "results": [
+          11,
+          12
+        ]
+      },
+      {
+        "query": "inbox",
+        "results": [
+          0,
+          14
+        ]
+      },
+      {
+        "query": "in",
+        "results": [
+          0,
+          14
+        ]
+      },
+      {
+        "query": "no",
+        "results": [
+          1
+        ]
+      },
+      {
+        "query": "w/w",
+        "results": [
+          4,
+          7,
+          5
+        ]
+      },
+      {
+        "query": " / ",
+        "results": []
+      },
+      {
+        "query": "old",
+        "results": [
+          9
+        ]
+      }
+    ],
+    "targets": [
+      {
+        "hidden": false,
+        "kind": "view",
+        "path": [
+          "Inbox"
+        ]
+      },
+      {
+        "hidden": false,
+        "kind": "view",
+        "path": [
+          "No project"
+        ]
+      },
+      {
+        "hidden": false,
+        "kind": "project",
+        "path": [
+          "Errands"
+        ]
+      },
+      {
+        "hidden": false,
+        "kind": "folder",
+        "path": [
+          "Work"
+        ]
+      },
+      {
+        "hidden": false,
+        "kind": "project",
+        "path": [
+          "Work",
+          "Website"
+        ]
+      },
+      {
+        "hidden": true,
+        "kind": "project",
+        "path": [
+          "Work",
+          "Weekly review"
+        ]
+      },
+      {
+        "hidden": false,
+        "kind": "folder",
+        "path": [
+          "Work",
+          "Clients"
+        ]
+      },
+      {
+        "hidden": false,
+        "kind": "project",
+        "path": [
+          "Work",
+          "Clients",
+          "Wired"
+        ]
+      },
+      {
+        "hidden": false,
+        "kind": "project",
+        "path": [
+          "Work",
+          "Clients",
+          "Acme"
+        ]
+      },
+      {
+        "hidden": true,
+        "kind": "folder",
+        "path": [
+          "Old"
+        ]
+      },
+      {
+        "hidden": true,
+        "kind": "project",
+        "path": [
+          "Old",
+          "Website"
+        ]
+      },
+      {
+        "hidden": false,
+        "kind": "project",
+        "path": [
+          "Home"
+        ]
+      },
+      {
+        "hidden": false,
+        "kind": "tag",
+        "path": [
+          "Home"
+        ]
+      },
+      {
+        "hidden": false,
+        "kind": "tag",
+        "path": [
+          "Person",
+          "Wife"
+        ]
+      },
+      {
+        "hidden": false,
+        "kind": "project",
+        "path": [
+          "Inbox zero"
+        ]
+      }
+    ]
+  },
   "match": [
     {
       "path": [
