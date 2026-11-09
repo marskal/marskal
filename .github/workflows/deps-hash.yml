@@ -1,0 +1,59 @@
+# A web/mix.lock change needs a new `depsHash` in web/nix/package.nix, or the
+# Nix build fails. On a Dependabot PR that changes the lock, this computes
+# the hash and commits it to the PR branch.
+#
+# A push with GITHUB_TOKEN starts no other workflow, and Dependabot stops
+# rebasing a branch someone else has pushed to: comment
+# `@dependabot recreate` to get a fresh one, and this runs again.
+name: Nix deps hash
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - web/mix.lock
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deps-hash-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  deps-hash:
+    name: Update depsHash
+    runs-on: ubuntu-latest
+    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Compute the hash
+        run: |
+          file=web/nix/package.nix
+          # An empty hash fails the deps derivation and prints the real one.
+          sed -i -E 's|(depsHash = )"[^"]*";|\1"";|' "$file"
+          out=$(nix build ./web#default --no-link 2>&1 || true)
+          hash=$(grep -oE 'got: +sha256-[A-Za-z0-9+/=]+' <<<"$out" | awk '{print $2}' | head -n1)
+          if [ -z "$hash" ]; then
+            echo "$out"
+            echo "::error::The build printed no deps hash."
+            exit 1
+          fi
+          sed -i -E "s|(depsHash = )\"\";|\1\"$hash\";|" "$file"
+          echo "depsHash = $hash"
+
+      - name: Commit the hash
+        run: |
+          if git diff --quiet; then
+            echo "depsHash is current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Update depsHash for mix.lock"
+          git push
