@@ -37,7 +37,7 @@ let
   pname = "marskal";
   version = "0.2.0";
 
-  depsHash = "sha256-OZqXPn7+t90YbHHa6qbC73ELvvO+xkHkyBE5vHwFaUY=";
+  depsHash = "sha256-mlrlfJ7hksIcEhgyzhAqqYFwh9JlIlgv1E3Ra2rdURA=";
 
   src = lib.fileset.toSource {
     root = ../.;
