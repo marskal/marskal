@@ -6,6 +6,7 @@
     pkgs.changie
     pkgs.gh
     pkgs.git
+    pkgs.jq
     pkgs.perl
   ];
 
@@ -20,6 +21,10 @@
     release-pr = {
       description = "Open the release PR: changelog, version bumps, and all";
       exec = ''${config.devenv.root}/scripts/release'';
+    };
+    update-locks = {
+      description = "Update every devenv.lock and flake.lock onto one nixpkgs";
+      exec = ''${config.devenv.root}/scripts/update-locks'';
     };
   };
 }

@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Update every devenv.lock and flake.lock in the repository, in this
+# checkout. All of them follow one nixpkgs channel (ADR 0004), and a
+# flake.lock stays on its devenv.lock's rev, so web/devenv.lock is updated
+# first and its nixpkgs is copied into every other lock. Other inputs
+# (devenv, rust-overlay) update in each lock on their own.
+set -euo pipefail
+
+here=$(cd "$(dirname "$0")" && pwd)
+repo=$(git -C "$here" rev-parse --show-toplevel)
+cd "$repo"
+
+rev() { jq -r '.nodes.nixpkgs.locked.rev // empty' "$1"; }
+
+# Put web/'s nixpkgs node into a lock that has one.
+pin() {
+  if [[ -z $(rev "$1") ]]; then
+    echo "$1 has no nixpkgs input" >&2
+    exit 1
+  fi
+  # As Nix writes it: two spaces, no newline at the end.
+  local json
+  json=$(jq --indent 2 --argjson node "$nixpkgs" '.nodes.nixpkgs = $node' "$1")
+  printf '%s' "$json" >"$1"
+}
+
+old=$(rev web/devenv.lock)
+echo "web/devenv.lock"
+(cd web && devenv update >/dev/null)
+nixpkgs=$(jq -c '.nodes.nixpkgs' web/devenv.lock)
+new=$(rev web/devenv.lock)
+
+while read -r yaml; do
+  dir=$(dirname "$yaml")
+  [[ $dir == web ]] && continue
+  echo "$dir/devenv.lock"
+  (cd "$dir" && devenv update >/dev/null)
+  pin "$dir/devenv.lock"
+done < <(git ls-files '*devenv.yaml' 'devenv.yaml')
+
+while read -r flake; do
+  dir=$(dirname "$flake")
+  echo "$dir/flake.lock"
+  nix flake update --flake "./$dir"
+  pin "$dir/flake.lock"
+done < <(git ls-files '*flake.nix' 'flake.nix')
+
+echo
+if [[ $old == "$new" ]]; then
+  echo "nixpkgs stays at ${new:0:12}."
+else
+  echo "nixpkgs: ${old:0:12} -> ${new:0:12}"
+fi
+git status --short -- '*devenv.lock' '*flake.lock'

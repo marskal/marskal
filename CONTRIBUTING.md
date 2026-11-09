@@ -48,3 +48,18 @@ PR, run the Release workflow by hand with that version.
 When a component's version moves to another file, or a component joins,
 change `tools/scripts/set-version` and the paths `tools/scripts/release`
 commits.
+
+## Updating Nix inputs
+
+Every devenv and flake follows one nixpkgs channel (ADR 0004), and each
+flake.lock stays on its devenv.lock's nixpkgs. One script updates them all,
+in the checkout you are in:
+
+```sh
+cd tools
+devenv shell update-locks
+```
+
+It updates `web/devenv.lock`, copies that nixpkgs into every other
+`devenv.lock` and `flake.lock`, and updates their other inputs on their own.
+Dependabot does not read these locks.
