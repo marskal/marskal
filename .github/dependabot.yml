@@ -1,0 +1,52 @@
+# Dependency updates for every component. Minor and patch bumps come as one
+# PR per ecosystem and directory each week; a major bump gets a PR of its own.
+# A dependency bump changes nothing a user reads, so each PR is labelled
+# `no changelog` (ADR 0038).
+#
+# A web/mix.lock bump also needs a new `depsHash` in web/nix/package.nix;
+# the Nix deps hash workflow commits it to the PR.
+version: 2
+
+updates:
+  - package-ecosystem: mix
+    directory: /web
+    schedule:
+      interval: weekly
+    labels: [no changelog]
+    groups:
+      mix:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directories:
+      - /web/assets
+      - /clients/webext-common
+      - /clients/browser
+      - /clients/thunderbird
+    schedule:
+      interval: weekly
+    labels: [no changelog]
+    groups:
+      npm:
+        update-types: [minor, patch]
+
+  - package-ecosystem: cargo
+    directories:
+      - /sync/core
+      - /sync/ffi
+      - /clients/terminal
+    schedule:
+      interval: weekly
+    labels: [no changelog]
+    groups:
+      cargo:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels: [no changelog]
+    groups:
+      github-actions:
+        patterns: ["*"]
