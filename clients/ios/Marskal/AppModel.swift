@@ -264,9 +264,15 @@ final class AppModel {
 
     // MARK: Changes
 
-    /// Captures a task in the Inbox.
-    func capture(_ title: String) {
-        change { _ = try $0.addTask(new: NewTask(title: title)) }
+    /// Captures a task, with its tags, as one change here; each tag is a
+    /// command of its own.
+    func capture(_ new: NewTask, tags: [UUID] = []) {
+        change { store in
+            let id = try store.addTask(new: new)
+            for tag in tags {
+                try store.tagTask(taskId: id, tagId: tag)
+            }
+        }
     }
 
     /// Marks a task Done, Dropped, or To-Do again.
@@ -354,6 +360,15 @@ final class AppModel {
         // Only a tag makes a task unavailable, so none of these is.
         let open = (try? store.tasks(filter: .open(unavailable: true))) ?? []
         return TagOutline.untagged(inbox + shown(open))
+    }
+
+    /// Tags matching a typed query, best first; none for a blank one.
+    func searchTags(_ query: String) -> [TagItem] {
+        _ = revision
+        guard let store else { return [] }
+        // The engine compares text as stored: in NFC.
+        let query = query.precomposedStringWithCanonicalMapping
+        return (try? store.searchTags(query: query, limit: 50)) ?? []
     }
 
     /// Reads the lists again.

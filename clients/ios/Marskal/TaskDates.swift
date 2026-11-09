@@ -121,10 +121,12 @@ extension DateField: @retroactive Identifiable {
 /// Picks one date: a day on the calendar, starting on the user's week
 /// start, and a time if it needs one; without one it takes the field's
 /// default. Today, Tomorrow, and Next Week set the day and save at once.
-/// Defer can also be indefinite.
+/// Defer can also be indefinite. `save` gets the new value, `nil` to
+/// clear it, only when it changed.
 struct DateSheet: View {
-    let task: TaskItem
     let field: DateField
+    let stored: DateValue?
+    let save: (DateValue?) -> Void
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     @State private var day = Date.now
@@ -133,7 +135,6 @@ struct DateSheet: View {
     @State private var indefinitely = false
 
     private var clock: UserClock { model.clock }
-    private var stored: DateValue? { DateValue(task.dates, field) }
 
     var body: some View {
         NavigationStack {
@@ -149,9 +150,9 @@ struct DateSheet: View {
                 if !indefinitely {
                     Section {
                         HStack {
-                            Button("Today") { save(on: clock.today()) }
-                            Button("Tomorrow") { save(on: clock.tomorrow()) }
-                            Button("Next Week") { save(on: clock.nextWeek()) }
+                            Button("Today") { finish(on: clock.today()) }
+                            Button("Tomorrow") { finish(on: clock.tomorrow()) }
+                            Button("Next Week") { finish(on: clock.nextWeek()) }
                         }
                         .buttonStyle(.bordered)
                         .frame(maxWidth: .infinity)
@@ -174,7 +175,7 @@ struct DateSheet: View {
 
                 if stored != nil {
                     Section {
-                        Button("Clear", role: .destructive) { save(nil) }
+                        Button("Clear", role: .destructive) { finish(nil) }
                     }
                 }
             }
@@ -188,7 +189,7 @@ struct DateSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done", role: .confirm) {
-                        save(indefinitely ? .indefinitely : .at(instant(on: day)))
+                        finish(indefinitely ? .indefinitely : .at(instant(on: day)))
                     }
                 }
             }
@@ -217,14 +218,12 @@ struct DateSheet: View {
         clock.instant(on: day, at: timed ? clock.time(of: time) : nil, for: field)
     }
 
-    private func save(on day: Date) {
-        save(.at(instant(on: day)))
+    private func finish(on day: Date) {
+        finish(.at(instant(on: day)))
     }
 
-    private func save(_ value: DateValue?) {
-        if value != stored {
-            model.edit(task, [DateValue.change(field, to: value)])
-        }
+    private func finish(_ value: DateValue?) {
+        if value != stored { save(value) }
         dismiss()
     }
 }

@@ -1,6 +1,50 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%lld subtasks added" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld subtask added"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld subtasks added"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld tasks added" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld task added"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld tasks added"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld tasks added to the Inbox" : {
       "localizations" : {
         "en" : {
@@ -71,6 +115,18 @@
     "Add ${taskTitle} to the Inbox" : {
 
     },
+    "Add Subtask" : {
+
+    },
+    "Add Subtask…" : {
+
+    },
+    "Add Tags" : {
+
+    },
+    "Add Task" : {
+
+    },
     "Add to Inbox" : {
       "localizations" : {
         "da" : {
@@ -125,6 +181,9 @@
 
     },
     "Check the address and your connection. Your changes are kept and sent later." : {
+
+    },
+    "Chosen" : {
 
     },
     "Clear" : {
@@ -430,6 +489,9 @@
           }
         }
       }
+    },
+    "No tags yet" : {
+
     },
     "No tasks carry this tag itself." : {
       "localizations" : {
@@ -833,6 +895,9 @@
           }
         }
       }
+    },
+    "Under" : {
+
     },
     "Untagged" : {
       "localizations" : {

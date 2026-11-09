@@ -7,6 +7,7 @@ struct InboxView: View {
     @Environment(AppModel.self) private var model
     @State private var capturing = false
     @State private var moving: TaskItem?
+    @State private var addingSubtask: TaskItem?
     @State private var confirmingSignOut = false
 
     var body: some View {
@@ -48,10 +49,13 @@ struct InboxView: View {
                 }
             }
             .sheet(isPresented: $capturing) {
-                CaptureSheet()
+                CaptureSheet(place: .inbox)
             }
             .sheet(item: $moving) { task in
                 MoveSheet(task: task)
+            }
+            .sheet(item: $addingSubtask) { task in
+                CaptureSheet(under: task)
             }
             .confirmationDialog("Sign out?", isPresented: $confirmingSignOut, titleVisibility: .visible) {
                 Button("Sign Out", role: .destructive) {
@@ -71,7 +75,7 @@ struct InboxView: View {
         NavigationLink(value: TaskRoute(id: task.id)) {
             TaskRow(task: task) { model.setState(task, .done) }
         }
-        .taskActions(task, moving: $moving)
+        .taskActions(task, moving: $moving, addingSubtask: $addingSubtask)
     }
 }
 
@@ -80,14 +84,19 @@ extension TaskItem: @retroactive Identifiable {}
 extension View {
     /// Done on a leading swipe; Drop and Move on a trailing one and in the
     /// context menu. Move sets `moving`, for the view to show a MoveSheet.
-    func taskActions(_ task: TaskItem, moving: Binding<TaskItem?>) -> some View {
-        modifier(TaskActions(task: task, moving: moving))
+    /// Given `addingSubtask`, the context menu also has Add Subtask, which
+    /// sets it for the view to show a CaptureSheet.
+    func taskActions(
+        _ task: TaskItem, moving: Binding<TaskItem?>, addingSubtask: Binding<TaskItem?>? = nil
+    ) -> some View {
+        modifier(TaskActions(task: task, moving: moving, addingSubtask: addingSubtask))
     }
 }
 
 private struct TaskActions: ViewModifier {
     let task: TaskItem
     @Binding var moving: TaskItem?
+    let addingSubtask: Binding<TaskItem?>?
     @Environment(AppModel.self) private var model
 
     func body(content: Content) -> some View {
@@ -106,6 +115,9 @@ private struct TaskActions: ViewModifier {
                 Button("Done", systemImage: "checkmark") { model.setState(task, .done) }
                 Button("Drop", systemImage: "xmark") { model.setState(task, .dropped) }
                 Button("Move…", systemImage: "folder") { moving = task }
+                if let addingSubtask {
+                    Button("Add Subtask…", systemImage: "plus") { addingSubtask.wrappedValue = task }
+                }
             }
     }
 }
@@ -176,68 +188,33 @@ extension TaskRow where Detail == EmptyView {
     }
 }
 
-/// Quick capture: return adds the title to the Inbox and clears the
-/// field for the next; Add adds it and closes.
-private struct CaptureSheet: View {
+/// Moves a task to another place.
+struct MoveSheet: View {
+    let task: TaskItem
     @Environment(AppModel.self) private var model
-    @Environment(\.dismiss) private var dismiss
-    @State private var title = ""
-    @State private var added = 0
-    @FocusState private var focused: Bool
 
     var body: some View {
-        NavigationStack {
-            Form {
-                // One line: return adds the task and keeps the field for
-                // the next. The Add button adds and closes.
-                TextField("Title", text: $title)
-                    .focused($focused)
-                    .submitLabel(.next)
-                    .onSubmit {
-                        add()
-                        focused = true
-                    }
-
-                if added > 0 {
-                    Text("\(added) tasks added to the Inbox")
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .navigationTitle("Add to Inbox")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", role: .close) { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Add", role: .confirm) {
-                        add()
-                        dismiss()
-                    }
-                    .disabled(trimmed.isEmpty)
-                }
-            }
-            .onAppear { focused = true }
+        PlaceSheet(title: "Move To", current: task.location) { location in
+            if location != task.location { model.move(task, to: location) }
         }
-        .presentationDetents([.medium, .large])
-    }
-
-    private var trimmed: String {
-        title.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private func add() {
-        guard !trimmed.isEmpty else { return }
-        model.capture(trimmed)
-        title = ""
-        added += 1
     }
 }
 
-/// Where a task can go: the Inbox, No project, or an open project
-/// (ADR 0017).
-struct MoveSheet: View {
-    let task: TaskItem
+extension TaskItem {
+    /// The Inbox, No project, or its project (ADR 0017).
+    var location: Location {
+        if inbox { return .inbox }
+        if let projectId { return .project(id: projectId) }
+        return .noProject
+    }
+}
+
+/// Picks where a task goes: the Inbox, No project, or an open project
+/// (ADR 0017). The current place has a checkmark.
+struct PlaceSheet: View {
+    let title: LocalizedStringKey
+    let current: Location
+    let choose: (Location) -> Void
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
 
@@ -256,7 +233,7 @@ struct MoveSheet: View {
                     }
                 }
             }
-            .navigationTitle("Move To")
+            .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -264,12 +241,6 @@ struct MoveSheet: View {
                 }
             }
         }
-    }
-
-    private var current: Location {
-        if task.inbox { return .inbox }
-        if let id = task.projectId { return .project(id: id) }
-        return .noProject
     }
 
     private func choice(_ title: LocalizedStringKey, systemImage: String, _ location: Location) -> some View {
@@ -283,7 +254,7 @@ struct MoveSheet: View {
 
     private func label(_ label: Label<Text, Image>, _ location: Location) -> some View {
         Button {
-            if location != current { model.move(task, to: location) }
+            choose(location)
             dismiss()
         } label: {
             HStack {
