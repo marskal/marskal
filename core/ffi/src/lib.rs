@@ -504,18 +504,7 @@ impl Store {
     pub fn tags(&self) -> Result<Vec<TagItem>> {
         self.with(|store| {
             let world = store.world()?;
-            let mut tags: Vec<TagItem> = world
-                .tags
-                .iter()
-                .map(|t| TagItem {
-                    id: t.id,
-                    name: t.name.clone(),
-                    parent_id: t.parent_id,
-                    path: world.tag_path(t.id),
-                    state: tag_state(t.state),
-                    rank: t.rank.clone(),
-                })
-                .collect();
+            let mut tags: Vec<TagItem> = world.tags.iter().map(|t| tag_item(&world, t)).collect();
             tags.sort_by_cached_key(|t| {
                 (
                     t.path.iter().map(|p| p.to_lowercase()).collect::<Vec<_>>(),
@@ -523,6 +512,20 @@ impl Store {
                 )
             });
             Ok(tags)
+        })
+    }
+
+    /// Tags matching what the user typed, best first, as the web's tag
+    /// autocomplete has them (ADR 0005). Dropped tags are not offered. The
+    /// query is compared as given: normalize it to NFC first.
+    pub fn search_tags(&self, query: String, limit: u32) -> Result<Vec<TagItem>> {
+        self.with(|store| {
+            let world = store.world()?;
+            Ok(world
+                .search_tags(&query, limit as usize)
+                .into_iter()
+                .map(|t| tag_item(&world, t))
+                .collect())
         })
     }
 
@@ -891,6 +894,17 @@ fn project(p: replica::Project) -> ProjectItem {
         folder_id: p.project_folder_id,
         rank: p.rank,
         series_id: p.series_id,
+    }
+}
+
+fn tag_item(world: &replica::World, tag: &replica::Tag) -> TagItem {
+    TagItem {
+        id: tag.id,
+        name: tag.name.clone(),
+        parent_id: tag.parent_id,
+        path: world.tag_path(tag.id),
+        state: tag_state(tag.state),
+        rank: tag.rank.clone(),
     }
 }
 

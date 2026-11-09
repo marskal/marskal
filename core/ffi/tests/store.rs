@@ -364,3 +364,26 @@ fn an_unknown_zone_or_day_is_invalid() {
         Err(StoreError::Invalid { .. })
     ));
 }
+
+#[test]
+fn a_tag_search_matches_a_path_best_first() {
+    let db = Db::new();
+    let person = db.store.add_tag("Person".into(), None).unwrap();
+    let family = db.store.add_tag("Family".into(), Some(person)).unwrap();
+    db.store.add_tag("Wife".into(), Some(family)).unwrap();
+    db.store.add_tag("Old wife".into(), Some(person)).unwrap();
+
+    let paths: Vec<Vec<String>> = db
+        .store
+        .search_tags("per/wi".into(), 20)
+        .unwrap()
+        .into_iter()
+        .map(|t| t.path)
+        .collect();
+    assert_eq!(
+        paths,
+        [vec!["Person", "Old wife"], vec!["Person", "Family", "Wife"]]
+    );
+    assert!(db.store.search_tags(" / ".into(), 20).unwrap().is_empty());
+    assert_eq!(db.store.search_tags("wi".into(), 1).unwrap().len(), 1);
+}

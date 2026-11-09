@@ -6,7 +6,7 @@ use jiff::civil::{Date, Time};
 use jiff::tz::TimeZone;
 use marskal_rules::dates::{self, DateField};
 use marskal_rules::ids::{LinkKind, link_id};
-use marskal_rules::rank;
+use marskal_rules::{path_search, rank};
 use serde_json::Value;
 use uuid::Uuid;
 
@@ -89,6 +89,32 @@ fn dates_json() {
             case["date"],
             case["time"],
             case["why"]
+        );
+    }
+}
+
+#[test]
+fn path_search_json() {
+    let vectors = read("path_search.json");
+
+    for case in vectors["match"].as_array().unwrap() {
+        let path: Vec<String> = serde_json::from_value(case["path"].clone()).unwrap();
+        let query = case["query"].as_str().unwrap();
+        assert_eq!(
+            path_search::matches(&path, &path_search::pieces(query)),
+            case["skipped"].as_u64().map(|n| n as usize),
+            "{query:?} on {path:?}: {}",
+            case["why"]
+        );
+    }
+
+    for case in vectors["exact"].as_array().unwrap() {
+        let name = case["name"].as_str().unwrap();
+        let query = case["query"].as_str().unwrap();
+        assert_eq!(
+            path_search::is_exact(name, &path_search::whole(query)),
+            case["exact"].as_bool().unwrap(),
+            "{name:?} and {query:?}"
         );
     }
 }

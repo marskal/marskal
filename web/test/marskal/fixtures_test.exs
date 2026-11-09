@@ -1,13 +1,18 @@
 defmodule Marskal.FixturesTest do
   @moduledoc """
-  The shared vectors in `core/fixtures`. The Rust `rules` crate runs the
-  same files (ADR 0039), so both sides mint the same ranks and link ids.
+  The shared vectors in `core/fixtures`. The Rust `rules` and `replica`
+  crates run the same files (ADR 0039), so both sides mint the same ranks
+  and link ids, read dates alike, and match a typed path the same way.
   """
 
   use ExUnit.Case, async: true
 
+  alias Marskal.PathSearch
   alias Marskal.Rank
   alias Marskal.Tags.Link
+  alias Marskal.Tags.Search
+  alias Marskal.Tags.Tag
+  alias Marskal.Tags.Tree
 
   @fixtures Path.expand("../../../core/fixtures", __DIR__)
 
@@ -72,6 +77,53 @@ defmodule Marskal.FixturesTest do
 
       assert result == expected, "#{inspect(v["text"])} at #{v["now"]}: #{v["why"]}"
     end
+  end
+
+  test "path_search.json" do
+    vectors = read("path_search.json")
+
+    for v <- vectors["match"] do
+      pieces = PathSearch.pieces(v["query"])
+      skipped = if pieces == [], do: nil, else: PathSearch.match(v["path"], pieces)
+
+      assert skipped == v["skipped"],
+             "#{inspect(v["query"])} on #{inspect(v["path"])}: #{v["why"]}"
+    end
+
+    for v <- vectors["exact"] do
+      assert PathSearch.exact?(v["name"], PathSearch.whole(v["query"])) == v["exact"],
+             "#{inspect(v["name"])} and #{inspect(v["query"])}"
+    end
+
+    tree = vectors["tags"]["rows"] |> tags() |> Tree.new()
+
+    for v <- vectors["tags"]["search"] do
+      paths = tree |> Search.run(v["query"], vectors["tags"]["limit"]) |> Enum.map(&Tag.path/1)
+      assert paths == v["paths"], inspect(v["query"])
+    end
+  end
+
+  # Tag structs from the rows, in the order Tags.list_tags/1 gives them.
+  defp tags(rows) do
+    by_id = Map.new(rows, &{&1["id"], &1})
+
+    ancestors = fn
+      %{"parent_id" => nil}, _ -> []
+      %{"parent_id" => parent}, f -> f.(by_id[parent], f) ++ [by_id[parent]["name"]]
+    end
+
+    rows
+    |> Enum.map(fn row ->
+      %Tag{
+        id: row["id"],
+        name: row["name"],
+        state: String.to_existing_atom(row["state"]),
+        parent_id: row["parent_id"],
+        parent_path: ancestors.(row, ancestors),
+        rank: row["rank"]
+      }
+    end)
+    |> Enum.sort_by(&{is_nil(&1.rank), &1.rank, &1.id})
   end
 
   defp read(name), do: @fixtures |> Path.join(name) |> File.read!() |> Jason.decode!()

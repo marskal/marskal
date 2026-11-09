@@ -14,6 +14,7 @@ use crate::entity::Entity;
 use crate::error::{Error, Result};
 use crate::model::{Folder, Link, Project, Series, Tag, TagState, Task, TaskState};
 use crate::value::from_sql;
+use marskal_rules::path_search;
 
 /// Which tasks to list.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -228,6 +229,69 @@ impl World {
 
         path.reverse();
         path
+    }
+
+    /// Tags matching a typed query, best first, at most `limit`: an exact
+    /// name, then fewer skipped ancestors, then shallower, then tree order
+    /// (ADR 0005, `marskal_rules::path_search`). Dropped tags, and tags under
+    /// them, are not offered.
+    pub fn search_tags(&self, query: &str, limit: usize) -> Vec<&Tag> {
+        let pieces = path_search::pieces(query);
+        let whole = path_search::whole(query);
+        if pieces.is_empty() {
+            return Vec::new();
+        }
+
+        let mut ranked: Vec<_> = self
+            .tags_in_order()
+            .into_iter()
+            .enumerate()
+            .filter(|(_, tag)| self.tag_state(tag.id) != Some(TagState::Dropped))
+            .filter_map(|(position, tag)| {
+                let path = self.tag_path(tag.id);
+                let skipped = path_search::matches(&path, &pieces)?;
+                let exact = !path_search::is_exact(&tag.name, &whole);
+                Some(((exact, skipped, path.len(), position), tag))
+            })
+            .collect();
+
+        ranked.sort_by_key(|(key, _)| *key);
+        ranked.into_iter().take(limit).map(|(_, tag)| tag).collect()
+    }
+
+    // Every tag reachable from the top, each before its children, siblings
+    // by rank. A tag whose parent is gone is left out, as on the server.
+    fn tags_in_order(&self) -> Vec<&Tag> {
+        let mut children: HashMap<Option<Uuid>, Vec<&Tag>> = HashMap::new();
+        for tag in &self.tags {
+            if tag.parent_id.is_none_or(|p| self.tag(p).is_some()) {
+                children.entry(tag.parent_id).or_default().push(tag);
+            }
+        }
+        for siblings in children.values_mut() {
+            // Postgres puts a missing rank last.
+            siblings.sort_by(|a, b| {
+                (a.rank.is_none(), &a.rank, a.id).cmp(&(b.rank.is_none(), &b.rank, b.id))
+            });
+        }
+
+        let mut order = Vec::new();
+        let mut stack: Vec<&Tag> = children
+            .get(&None)
+            .into_iter()
+            .flatten()
+            .rev()
+            .copied()
+            .collect();
+        let mut seen = HashSet::new();
+        while let Some(tag) = stack.pop() {
+            if !seen.insert(tag.id) {
+                continue;
+            }
+            order.push(tag);
+            stack.extend(children.get(&Some(tag.id)).into_iter().flatten().rev());
+        }
+        order
     }
 
     /// The tasks a filter selects, as views.
