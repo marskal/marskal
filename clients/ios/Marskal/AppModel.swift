@@ -18,6 +18,8 @@ final class AppModel {
     /// Folders and projects as the sidebar shows them.
     private(set) var outline = ProjectOutline(folders: [], projects: [])
     private(set) var projectsById: [UUID: ProjectItem] = [:]
+    /// Every live folder, dropped ones too.
+    private(set) var folders: [FolderItem] = []
     /// Tags as the sidebar shows them.
     private(set) var tagOutline = TagOutline(tags: [])
     /// Counts reloads, so a view that reads the store when it draws, such
@@ -122,6 +124,7 @@ final class AppModel {
         projects = []
         outline = ProjectOutline(folders: [], projects: [])
         projectsById = [:]
+        folders = []
         tagOutline = TagOutline(tags: [])
         offline = false
         preferences = nil
@@ -362,6 +365,14 @@ final class AppModel {
         return TagOutline.untagged(inbox + shown(open))
     }
 
+    /// Where a task can go, for the place picker. `current` is kept even
+    /// when its project is resolved.
+    func locations(current: Location?) -> Locations {
+        Locations(
+            folders: folders, projects: Array(projectsById.values),
+            inbox: String(localized: "Inbox"), noProject: String(localized: "No Project"), current: current)
+    }
+
     /// Tags matching a typed query, best first; none for a blank one.
     func searchTags(_ query: String) -> [TagItem] {
         _ = revision
@@ -380,7 +391,8 @@ final class AppModel {
             let all = try store.projects()
             projects = all.filter { $0.state == .toDo }
             projectsById = Dictionary(uniqueKeysWithValues: all.map { ($0.id, $0) })
-            outline = ProjectOutline(folders: try store.folders(), projects: all, showsDeferred: showsDeferred)
+            folders = try store.folders()
+            outline = ProjectOutline(folders: folders, projects: all, showsDeferred: showsDeferred)
             tagOutline = TagOutline(tags: try store.tags())
             preferences = try store.preferences()
             let status = try store.status()

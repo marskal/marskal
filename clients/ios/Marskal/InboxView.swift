@@ -209,30 +209,51 @@ extension TaskItem {
     }
 }
 
-/// Picks where a task goes: the Inbox, No project, or an open project
-/// (ADR 0017). The current place has a checkmark.
+/// Picks where a task goes, as the web's location picker does (ADR 0017,
+/// ADR 0033): the Inbox, No project, and every open project with the
+/// folders it is in. Typing narrows them by name or folder path. A project
+/// the sidebar hides is dimmed and comes last. The current place has a
+/// checkmark.
 struct PlaceSheet: View {
     let title: LocalizedStringKey
     let current: Location
     let choose: (Location) -> Void
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
+    @State private var query = ""
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    choice("Inbox", systemImage: ProjectsView.inboxSymbol, .inbox)
-                    choice("No Project", systemImage: ProjectsView.noProjectSymbol, .noProject)
-                }
-                if !model.projects.isEmpty {
-                    Section("Projects") {
-                        ForEach(model.projects, id: \.id) { project in
-                            choice(project.title, systemImage: ProjectsView.projectSymbol, .project(id: project.id))
+            let found = model.locations(current: current).search(query)
+            List(found) { target in
+                Button {
+                    choose(target.location)
+                    dismiss()
+                } label: {
+                    HStack {
+                        Label {
+                            path(target)
+                        } icon: {
+                            Image(systemName: symbol(target.location))
+                        }
+                        Spacer(minLength: 0)
+                        if target.location == current {
+                            Image(systemName: "checkmark")
+                                .foregroundStyle(.tint)
+                                .accessibilityLabel(Text("Current"))
                         }
                     }
                 }
+                .foregroundStyle(.primary)
             }
+            .overlay {
+                if found.isEmpty {
+                    ContentUnavailableView.search(text: query)
+                }
+            }
+            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always))
+            .autocorrectionDisabled()
+            .textInputAutocapitalization(.never)
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -243,31 +264,27 @@ struct PlaceSheet: View {
         }
     }
 
-    private func choice(_ title: LocalizedStringKey, systemImage: String, _ location: Location) -> some View {
-        label(Label(title, systemImage: systemImage), location)
-    }
-
-    // A project's title is the user's own text, not translated.
-    private func choice(_ title: String, systemImage: String, _ location: Location) -> some View {
-        label(Label(title, systemImage: systemImage), location)
-    }
-
-    private func label(_ label: Label<Text, Image>, _ location: Location) -> some View {
-        Button {
-            choose(location)
-            dismiss()
-        } label: {
-            HStack {
-                label
-                Spacer()
-                if location == current {
-                    Image(systemName: "checkmark")
-                        .foregroundStyle(.tint)
-                        .accessibilityLabel(Text("Current"))
-                }
-            }
+    // Folders in gray, then the name, gray too when the sidebar hides it.
+    // A folder's or project's name is the user's own text, not translated.
+    private func path(_ target: Locations.Target) -> Text {
+        var text = AttributedString()
+        for folder in target.path.dropLast() {
+            var segment = AttributedString("\(folder) › ")
+            segment.foregroundColor = .secondary
+            text += segment
         }
-        .foregroundStyle(.primary)
+        var name = AttributedString(target.path.last ?? "")
+        if target.hidden { name.foregroundColor = .secondary }
+        text += name
+        return Text(text)
+    }
+
+    private func symbol(_ location: Location) -> String {
+        switch location {
+        case .inbox: ProjectsView.inboxSymbol
+        case .noProject: ProjectsView.noProjectSymbol
+        case .project: ProjectsView.projectSymbol
+        }
     }
 }
 
