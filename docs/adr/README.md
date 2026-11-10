@@ -23,10 +23,10 @@ This directory holds **ADRs** — durable decisions and their context.
 | [0012](0012-viewcomponent-scoped-css.md) | ViewComponent widgets with CSS `@scope` | Accepted; widgets superseded at the port by [0016](0016-elixir-phoenix-web.md) |
 | [0013](0013-import-framework.md) | Import framework (file and Todoist OAuth) | Accepted; re-import updates (2026-10-04) |
 | [0014](0014-offline-sync.md) | Offline sync (field patches, change feed) | Accepted; client set amended by [0018](0018-rust-client-sync-library.md); wire format in [0019](0019-sync-api-and-oauth-sign-in.md); recurrence amended 2026-10-03 |
-| [0015](0015-repository-layout.md) | Repository layout (web app, future clients) | Accepted; sharing amended by [0018](0018-rust-client-sync-library.md) |
+| [0015](0015-repository-layout.md) | Repository layout (web app, future clients) | Accepted; sharing amended by [0018](0018-rust-client-sync-library.md); layout by [0039](0039-replica-and-rules.md) |
 | [0016](0016-elixir-phoenix-web.md) | Elixir and Phoenix for the web app | Accepted |
 | [0017](0017-inbox-location.md) | The inbox is a location beside projects | Accepted |
-| [0018](0018-rust-client-sync-library.md) | Rust client sync library | Accepted; shells amended by [0020](0020-terminal-client.md) |
+| [0018](0018-rust-client-sync-library.md) | Rust client sync library | Accepted; shells amended by [0020](0020-terminal-client.md); split by [0039](0039-replica-and-rules.md) |
 | [0019](0019-sync-api-and-oauth-sign-in.md) | Sync API and OAuth sign-in | Accepted; sign-in replaced by [0021](0021-ory-hydra-authorization-server.md) |
 | [0020](0020-terminal-client.md) | Terminal client | Accepted |
 | [0021](0021-ory-hydra-authorization-server.md) | Ory Hydra as the authorization server | Accepted |
@@ -46,6 +46,7 @@ This directory holds **ADRs** — durable decisions and their context.
 | [0035](0035-browser-extension.md) | Browser extension | Accepted |
 | [0037](0037-github.md) | Development on GitHub | Accepted |
 | [0038](0038-changelog-and-releases.md) | Changelog and releases | Accepted |
+| [0039](0039-replica-and-rules.md) | Replica and rules (client library split) | Accepted |
 
 ## When to add an ADR
 
