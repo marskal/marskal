@@ -21,7 +21,8 @@ their own schedules:
 | Browser extension (`clients/browser`) | the Firefox and Chrome stores | `static/manifest.json` |
 | Thunderbird extension (`clients/thunderbird`) | the Thunderbird add-on store | `static/manifest.json` |
 
-`sync/core`, `sync/ffi`, and `clients/webext-common` are libraries that
+`core/replica`, `core/rules`, `core/ffi`, `clients/shell-common`, and
+`clients/webext-common` are libraries that
 ship inside the programs above, not on their own.
 
 Many PRs are open at once, often stacked, and agents write a lot of them.

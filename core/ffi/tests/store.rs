@@ -1,5 +1,5 @@
 use jiff::Timestamp;
-use marskal_sync_ffi::{
+use marskal_ffi::{
     DateField, Defer, LocalDate, LocalTime, Location, NewProject, NewTask, Store, StoreError,
     TaskChange, TaskFilter, TaskState, default_time, local_instant,
 };

@@ -1,4 +1,5 @@
-//! The Marskal client sync engine (ADR 0018).
+//! The Marskal client's local replica of the user's data (ADR 0018,
+//! ADR 0039).
 //!
 //! One SQLite file holds a cache of the user's rows and an outbox of field
 //! patches not yet pushed. A [`Store`] applies a command locally and queues
@@ -11,19 +12,15 @@
 //! and [`Store::apply_pull`] until the response has no more (ADR 0019).
 
 mod clock;
-pub mod dates;
 mod entity;
 mod error;
-pub mod ids;
 mod local;
 mod model;
 mod ops;
 mod pull;
 mod push;
-pub mod rank;
 mod schema;
 mod store;
-pub mod url;
 mod value;
 mod world;
 

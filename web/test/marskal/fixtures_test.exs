@@ -1,7 +1,7 @@
-defmodule Marskal.SyncFixturesTest do
+defmodule Marskal.FixturesTest do
   @moduledoc """
-  The shared vectors in `sync/fixtures`. The Rust client library runs the
-  same files (ADR 0018), so both sides mint the same ranks and link ids.
+  The shared vectors in `core/fixtures`. The Rust `rules` crate runs the
+  same files (ADR 0039), so both sides mint the same ranks and link ids.
   """
 
   use ExUnit.Case, async: true
@@ -9,7 +9,7 @@ defmodule Marskal.SyncFixturesTest do
   alias Marskal.Rank
   alias Marskal.Tags.Link
 
-  @fixtures Path.expand("../../../sync/fixtures", __DIR__)
+  @fixtures Path.expand("../../../core/fixtures", __DIR__)
 
   test "rank.json" do
     vectors = read("rank.json")

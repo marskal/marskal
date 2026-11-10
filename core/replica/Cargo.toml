@@ -1,12 +1,13 @@
 [package]
-name = "marskal-sync"
+name = "marskal-replica"
 version = "0.1.0"
 edition = "2024"
-description = "The Marskal client sync engine: local SQLite, outbox, and pull merge (ADR 0018)"
+description = "The Marskal client's local replica: SQLite, reads, writes, outbox, and pull merge (ADR 0039)"
 license = "Apache-2.0"
 publish = false
 
 [dependencies]
+marskal-rules = { path = "../rules" }
 jiff = { version = "0.2.38", features = ["serde"] }
 rusqlite = { version = "0.41.0", features = ["bundled"] }
 serde = { version = "1.0.229", features = ["derive"] }

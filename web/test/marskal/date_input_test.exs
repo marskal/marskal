@@ -1,7 +1,7 @@
 defmodule Marskal.DateInputTest do
   @moduledoc """
   The rules of ADR 0032 that cut across the shared vectors in
-  `sync/fixtures/date_input.json`, which `Marskal.SyncFixturesTest` runs.
+  `core/fixtures/date_input.json`, which `Marskal.FixturesTest` runs.
   """
 
   use ExUnit.Case, async: true

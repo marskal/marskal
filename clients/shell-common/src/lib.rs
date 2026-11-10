@@ -1,8 +1,8 @@
 //! What Marskal's Rust shells share (ADR 0018): where files go, signing in
-//! with the device grant (ADR 0021), and keeping the tokens. The sync engine
-//! is `sync/core`; this crate is the part around it that every shell would
-//! otherwise copy. Each shell keeps its own client id, keychain names,
-//! messages, and the sync calls it makes.
+//! with the device grant (ADR 0021), and keeping the tokens. The local
+//! replica is `core/replica` (ADR 0039); this crate is the part around it
+//! that every shell would otherwise copy. Each shell keeps its own client
+//! id, keychain names, messages, and the sync calls it makes.
 
 pub mod api;
 pub mod grant;

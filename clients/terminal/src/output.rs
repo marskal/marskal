@@ -4,7 +4,7 @@
 
 use jiff::Timestamp;
 use jiff::tz::TimeZone;
-use marskal_sync::{Rejection, Status, Task, TaskState, TaskView, World};
+use marskal_replica::{Rejection, Status, Task, TaskState, TaskView, World};
 use serde::Serialize;
 use serde_json::{Value, json};
 use uuid::Uuid;
@@ -178,7 +178,7 @@ impl Output {
     }
 
     pub fn tags(&self, world: &World, unsynced: Option<&str>) {
-        let mut tags: Vec<(Vec<String>, &marskal_sync::Tag)> = world
+        let mut tags: Vec<(Vec<String>, &marskal_replica::Tag)> = world
             .tags
             .iter()
             .map(|t| (world.tag_path(t.id), t))
@@ -195,9 +195,9 @@ impl Output {
 
         for (path, tag) in tags {
             let state = match tag.state {
-                marskal_sync::TagState::Active => "",
-                marskal_sync::TagState::OnHold => "  (on hold)",
-                marskal_sync::TagState::Dropped => "  (dropped)",
+                marskal_replica::TagState::Active => "",
+                marskal_replica::TagState::OnHold => "  (on hold)",
+                marskal_replica::TagState::Dropped => "  (dropped)",
             };
             println!("{}  {}{state}", short(&tag.id), path.join(" › "));
         }
@@ -369,7 +369,7 @@ fn state_box(state: TaskState) -> &'static str {
 }
 
 pub fn short(id: &Uuid) -> String {
-    marskal_sync::ids::short(id)
+    marskal_rules::ids::short(id)
 }
 
 // A day on this device's wall clock, short.

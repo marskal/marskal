@@ -6,11 +6,6 @@ use uuid::Uuid;
 /// every link row and duplicate links across devices.
 pub const LINK_NAMESPACE: Uuid = uuid::uuid!("a5c0ffee-0005-5000-8000-000000000005");
 
-/// A new domain key: UUIDv7, minted before insert (ADR 0011).
-pub fn new_id() -> Uuid {
-    Uuid::now_v7()
-}
-
 /// The id people see and type: the last eight hex digits. A UUIDv7 starts
 /// with its timestamp, so its start is shared by rows made together; its
 /// end is random.

@@ -4,7 +4,7 @@
 //! A rank is a string over `0-9A-Za-z`, compared byte by byte. Read it as
 //! the digits after a point in base 62. [`between`] gives a rank strictly
 //! between two neighbors, never ending in `0`, so there is always room for
-//! another. Both sides run `sync/fixtures/rank.json`.
+//! another. Both sides run `core/fixtures/rank.json`.
 
 const DIGITS: &[u8; 62] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 const BASE: u32 = 62;

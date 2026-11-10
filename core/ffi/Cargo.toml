@@ -1,14 +1,14 @@
 [package]
-name = "marskal-sync-ffi"
+name = "marskal-ffi"
 version = "0.1.0"
 edition = "2024"
-description = "UniFFI bindings over the Marskal client sync engine, for the iOS app (ADR 0029)"
+description = "UniFFI bindings over the Marskal replica and rules, for the iOS app (ADR 0029, ADR 0039)"
 license = "Apache-2.0"
 publish = false
 
 [lib]
 crate-type = ["lib", "staticlib", "cdylib"]
-name = "marskal_sync_ffi"
+name = "marskal_ffi"
 
 [[bin]]
 name = "uniffi-bindgen"
@@ -20,7 +20,8 @@ uuid = { version = "1.29.0", features = ["v7"] }
 [dependencies]
 # iOS apps cannot count on reading the system's zone files.
 jiff = { version = "0.2.38", features = ["tzdb-bundle-always"] }
-marskal-sync = { path = "../core" }
+marskal-replica = { path = "../replica" }
+marskal-rules = { path = "../rules" }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 thiserror = "2.0.21"

@@ -1,7 +1,7 @@
 // swift-tools-version: 6.2
 
 // What the app and the widget share (ADR 0029). MarskalCore is the engine,
-// sync/ffi built by scripts/build-core; run that before building this.
+// core/ffi built by scripts/build-core; run that before building this.
 // MarskalKit is the shell around it: sign-in, tokens, and sync.
 import PackageDescription
 

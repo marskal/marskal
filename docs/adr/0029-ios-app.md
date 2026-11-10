@@ -11,6 +11,9 @@ in the app's process, not in an extension of their own. Adds a client to
 [ADR 0021](0021-ory-hydra-authorization-server.md) with the authorization
 code grant that ADR expected for a phone.
 
+Paths amended by [ADR 0039](0039-replica-and-rules.md): `sync/core` is now
+`core/replica` and `core/rules`, and `sync/ffi` is `core/ffi`.
+
 ## Context
 
 ADR 0018 settled the shape: a SwiftUI app in `clients/ios`, the engine in

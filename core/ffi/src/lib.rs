@@ -1,6 +1,7 @@
-//! UniFFI bindings over `marskal-sync` for the iOS app (ADR 0029).
+//! UniFFI bindings over `marskal-replica` and `marskal-rules` for the iOS
+//! app (ADR 0029, ADR 0039).
 //!
-//! `sync/core` keeps its borrowed, typed Rust API for the terminal client.
+//! `core/replica` keeps its borrowed, typed Rust API for the terminal client.
 //! This crate puts a [`Store`] behind a mutex, copies every read into an
 //! owned record, and passes the sync API's bodies through as JSON text: the
 //! shell does the HTTP, and the engine parses what the server sent.
@@ -11,7 +12,8 @@
 use std::sync::{Mutex, MutexGuard};
 
 use jiff::Timestamp;
-use marskal_sync as core;
+use marskal_replica as replica;
+use marskal_rules as rules;
 use uuid::Uuid;
 
 uniffi::setup_scaffolding!();
@@ -48,15 +50,15 @@ pub enum StoreError {
     Storage { message: String },
 }
 
-impl From<core::Error> for StoreError {
-    fn from(error: core::Error) -> StoreError {
+impl From<replica::Error> for StoreError {
+    fn from(error: replica::Error) -> StoreError {
         let message = error.to_string();
         match error {
-            core::Error::NotFound { .. } | core::Error::Ambiguous { .. } => {
+            replica::Error::NotFound { .. } | replica::Error::Ambiguous { .. } => {
                 StoreError::NotFound { message }
             }
-            core::Error::Invalid(_) => StoreError::Invalid { message },
-            core::Error::Sqlite(_) | core::Error::Json(_) => StoreError::Storage { message },
+            replica::Error::Invalid(_) => StoreError::Invalid { message },
+            replica::Error::Sqlite(_) | replica::Error::Json(_) => StoreError::Storage { message },
         }
     }
 }
@@ -79,22 +81,22 @@ pub enum TaskState {
     Dropped,
 }
 
-impl From<core::TaskState> for TaskState {
-    fn from(state: core::TaskState) -> TaskState {
+impl From<replica::TaskState> for TaskState {
+    fn from(state: replica::TaskState) -> TaskState {
         match state {
-            core::TaskState::ToDo => TaskState::ToDo,
-            core::TaskState::Done => TaskState::Done,
-            core::TaskState::Dropped => TaskState::Dropped,
+            replica::TaskState::ToDo => TaskState::ToDo,
+            replica::TaskState::Done => TaskState::Done,
+            replica::TaskState::Dropped => TaskState::Dropped,
         }
     }
 }
 
-impl From<TaskState> for core::TaskState {
-    fn from(state: TaskState) -> core::TaskState {
+impl From<TaskState> for replica::TaskState {
+    fn from(state: TaskState) -> replica::TaskState {
         match state {
-            TaskState::ToDo => core::TaskState::ToDo,
-            TaskState::Done => core::TaskState::Done,
-            TaskState::Dropped => core::TaskState::Dropped,
+            TaskState::ToDo => replica::TaskState::ToDo,
+            TaskState::Done => replica::TaskState::Done,
+            TaskState::Dropped => replica::TaskState::Dropped,
         }
     }
 }
@@ -131,17 +133,17 @@ pub enum Location {
     Project { id: Uuid },
 }
 
-impl From<Location> for core::Location {
-    fn from(location: Location) -> core::Location {
+impl From<Location> for replica::Location {
+    fn from(location: Location) -> replica::Location {
         match location {
-            Location::Inbox => core::Location::Inbox,
-            Location::NoProject => core::Location::NoProject,
-            Location::Project { id } => core::Location::Project(id),
+            Location::Inbox => replica::Location::Inbox,
+            Location::NoProject => replica::Location::NoProject,
+            Location::Project { id } => replica::Location::Project(id),
         }
     }
 }
 
-/// Which tasks to list. See `marskal_sync::TaskFilter`.
+/// Which tasks to list. See `marskal_replica::TaskFilter`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
 pub enum TaskFilter {
     Open { unavailable: bool },
@@ -153,16 +155,16 @@ pub enum TaskFilter {
     All,
 }
 
-impl From<TaskFilter> for core::TaskFilter {
-    fn from(filter: TaskFilter) -> core::TaskFilter {
+impl From<TaskFilter> for replica::TaskFilter {
+    fn from(filter: TaskFilter) -> replica::TaskFilter {
         match filter {
-            TaskFilter::Open { unavailable } => core::TaskFilter::Open { unavailable },
-            TaskFilter::Inbox => core::TaskFilter::Inbox,
-            TaskFilter::Project { id } => core::TaskFilter::Project(id),
-            TaskFilter::NoProject => core::TaskFilter::NoProject,
-            TaskFilter::Tag { id } => core::TaskFilter::Tag(id),
-            TaskFilter::Flagged { unavailable } => core::TaskFilter::Flagged { unavailable },
-            TaskFilter::All => core::TaskFilter::All,
+            TaskFilter::Open { unavailable } => replica::TaskFilter::Open { unavailable },
+            TaskFilter::Inbox => replica::TaskFilter::Inbox,
+            TaskFilter::Project { id } => replica::TaskFilter::Project(id),
+            TaskFilter::NoProject => replica::TaskFilter::NoProject,
+            TaskFilter::Tag { id } => replica::TaskFilter::Tag(id),
+            TaskFilter::Flagged { unavailable } => replica::TaskFilter::Flagged { unavailable },
+            TaskFilter::All => replica::TaskFilter::All,
         }
     }
 }
@@ -396,7 +398,7 @@ pub struct PullSummary {
 /// it holds no lock; every call after that fails with `Closed`.
 #[derive(uniffi::Object)]
 pub struct Store {
-    inner: Mutex<Option<core::Store>>,
+    inner: Mutex<Option<replica::Store>>,
 }
 
 #[uniffi::export]
@@ -405,7 +407,7 @@ impl Store {
     #[uniffi::constructor]
     pub fn open(path: String) -> Result<Store> {
         Ok(Store {
-            inner: Mutex::new(Some(core::Store::open(path)?)),
+            inner: Mutex::new(Some(replica::Store::open(path)?)),
         })
     }
 
@@ -444,7 +446,7 @@ impl Store {
     }
 
     /// The agenda for the day that ends at `until`, earlier days' open
-    /// tasks included. See `marskal_sync::World::agenda`.
+    /// tasks included. See `marskal_replica::World::agenda`.
     pub fn agenda(&self, until: Timestamp) -> Result<Vec<AgendaItem>> {
         self.with(|store| {
             let world = store.world()?;
@@ -490,7 +492,7 @@ impl Store {
                     name: f.name,
                     parent_id: f.parent_id,
                     rank: f.rank,
-                    active: f.state == core::FolderState::Active,
+                    active: f.state == replica::FolderState::Active,
                 })
                 .collect();
             folders.sort_by_cached_key(|f| (f.name.to_lowercase(), f.id));
@@ -527,7 +529,7 @@ impl Store {
     /// Captures a task. Returns its id.
     pub fn add_task(&self, new: NewTask) -> Result<Uuid> {
         self.with(|store| {
-            Ok(store.add_task(core::NewTask {
+            Ok(store.add_task(replica::NewTask {
                 title: new.title,
                 notes: new.notes,
                 url: new.url,
@@ -547,7 +549,7 @@ impl Store {
 
     /// Changes fields of a task, as one command.
     pub fn edit_task(&self, id: Uuid, changes: Vec<TaskChange>) -> Result<()> {
-        let mut patch = core::TaskPatch::default();
+        let mut patch = replica::TaskPatch::default();
         for change in changes {
             match change {
                 TaskChange::Title { title } => patch.title = Some(title),
@@ -589,7 +591,7 @@ impl Store {
     /// Creates a project. Returns its id.
     pub fn add_project(&self, new: NewProject) -> Result<Uuid> {
         self.with(|store| {
-            Ok(store.add_project(core::NewProject {
+            Ok(store.add_project(replica::NewProject {
                 title: new.title,
                 notes: new.notes,
                 url: new.url,
@@ -647,7 +649,7 @@ impl Store {
     pub fn record_push(&self, response: String) -> Result<PushSummary> {
         #[derive(serde::Deserialize)]
         struct Body {
-            results: Vec<core::PushResult>,
+            results: Vec<replica::PushResult>,
         }
         let body: Body = serde_json::from_str(&response)?;
 
@@ -674,7 +676,7 @@ impl Store {
     /// Merges a pull response. Fails with `OtherAccount`, changing
     /// nothing, when the local data belongs to another user.
     pub fn apply_pull(&self, response: String) -> Result<PullSummary> {
-        let response: core::PullResponse = serde_json::from_str(&response)?;
+        let response: replica::PullResponse = serde_json::from_str(&response)?;
 
         self.with(|store| {
             if let Some(local) = store.status()?.user_id
@@ -720,7 +722,7 @@ impl Store {
 }
 
 impl Store {
-    fn lock(&self) -> MutexGuard<'_, Option<core::Store>> {
+    fn lock(&self) -> MutexGuard<'_, Option<replica::Store>> {
         // A panic inside a call leaves the store as SQLite left it, which
         // rolled back any open transaction.
         self.inner
@@ -728,7 +730,7 @@ impl Store {
             .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
-    fn with<T>(&self, f: impl FnOnce(&mut core::Store) -> Result<T>) -> Result<T> {
+    fn with<T>(&self, f: impl FnOnce(&mut replica::Store) -> Result<T>) -> Result<T> {
         match self.lock().as_mut() {
             Some(store) => f(store),
             None => Err(StoreError::Closed),
@@ -739,7 +741,7 @@ impl Store {
 /// Whether a URL may go on a task or project (ADR 0022).
 #[uniffi::export]
 pub fn url_is_valid(url: String) -> bool {
-    core::url::valid(&url)
+    rules::url::valid(&url)
 }
 
 /// Which date a day is for, since each has its own default time.
@@ -750,12 +752,12 @@ pub enum DateField {
     Due,
 }
 
-impl From<DateField> for core::dates::DateField {
-    fn from(field: DateField) -> core::dates::DateField {
+impl From<DateField> for rules::dates::DateField {
+    fn from(field: DateField) -> rules::dates::DateField {
         match field {
-            DateField::Defer => core::dates::DateField::Defer,
-            DateField::Planned => core::dates::DateField::Planned,
-            DateField::Due => core::dates::DateField::Due,
+            DateField::Defer => rules::dates::DateField::Defer,
+            DateField::Planned => rules::dates::DateField::Planned,
+            DateField::Due => rules::dates::DateField::Due,
         }
     }
 }
@@ -779,7 +781,7 @@ pub struct LocalTime {
 /// Planned 09:00, Due 17:00.
 #[uniffi::export]
 pub fn default_time(field: DateField) -> LocalTime {
-    let time = core::dates::DateField::from(field).default_time();
+    let time = rules::dates::DateField::from(field).default_time();
     LocalTime {
         hour: time.hour(),
         minute: time.minute(),
@@ -805,7 +807,7 @@ pub fn local_instant(
         .map(|t| jiff::civil::Time::new(t.hour, t.minute, 0, 0))
         .transpose()
         .map_err(invalid)?;
-    Ok(core::dates::from_local(date, time, field.into(), &zone))
+    Ok(rules::dates::from_local(date, time, field.into(), &zone))
 }
 
 fn timestamp(text: &Option<String>) -> Option<Timestamp> {
@@ -826,7 +828,7 @@ fn dates(
     }
 }
 
-fn task(view: core::TaskView) -> TaskItem {
+fn task(view: replica::TaskView) -> TaskItem {
     let t = view.task;
     TaskItem {
         dates: dates(
@@ -871,7 +873,7 @@ fn task(view: core::TaskView) -> TaskItem {
     }
 }
 
-fn project(p: core::Project) -> ProjectItem {
+fn project(p: replica::Project) -> ProjectItem {
     ProjectItem {
         dates: dates(
             &p.defer_until,
@@ -892,28 +894,28 @@ fn project(p: core::Project) -> ProjectItem {
     }
 }
 
-fn tag_state(state: core::TagState) -> TagState {
+fn tag_state(state: replica::TagState) -> TagState {
     match state {
-        core::TagState::Active => TagState::Active,
-        core::TagState::OnHold => TagState::OnHold,
-        core::TagState::Dropped => TagState::Dropped,
+        replica::TagState::Active => TagState::Active,
+        replica::TagState::OnHold => TagState::OnHold,
+        replica::TagState::Dropped => TagState::Dropped,
     }
 }
 
-fn preferences(p: core::UserPreferences) -> Preferences {
+fn preferences(p: replica::UserPreferences) -> Preferences {
     Preferences {
         timezone: p.timezone,
         week_start: p.week_start,
         locale: p.locale,
         home_view: match p.home_view {
-            core::HomeView::Inbox => HomeView::Inbox,
-            core::HomeView::OpenTasks => HomeView::OpenTasks,
-            core::HomeView::Agenda => HomeView::Agenda,
-            core::HomeView::Flagged => HomeView::Flagged,
+            replica::HomeView::Inbox => HomeView::Inbox,
+            replica::HomeView::OpenTasks => HomeView::OpenTasks,
+            replica::HomeView::Agenda => HomeView::Agenda,
+            replica::HomeView::Flagged => HomeView::Flagged,
         },
         keymap: match p.keymap {
-            core::Keymap::Standard => Keymap::Standard,
-            core::Keymap::Vim => Keymap::Vim,
+            replica::Keymap::Standard => Keymap::Standard,
+            replica::Keymap::Vim => Keymap::Vim,
         },
     }
 }

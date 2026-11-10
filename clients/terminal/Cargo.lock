@@ -1101,12 +1101,34 @@ version = "0.2.0"
 dependencies = [
  "clap",
  "jiff",
+ "marskal-replica",
+ "marskal-rules",
  "marskal-shell-common",
- "marskal-sync",
  "serde",
  "serde_json",
  "toml",
  "ureq",
+ "uuid",
+]
+
+[[package]]
+name = "marskal-replica"
+version = "0.1.0"
+dependencies = [
+ "jiff",
+ "marskal-rules",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "uuid",
+]
+
+[[package]]
+name = "marskal-rules"
+version = "0.1.0"
+dependencies = [
+ "jiff",
  "uuid",
 ]
 
@@ -1119,18 +1141,6 @@ dependencies = [
  "serde",
  "serde_json",
  "ureq",
-]
-
-[[package]]
-name = "marskal-sync"
-version = "0.1.0"
-dependencies = [
- "jiff",
- "rusqlite",
- "serde",
- "serde_json",
- "thiserror",
- "uuid",
 ]
 
 [[package]]

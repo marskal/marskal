@@ -12,7 +12,7 @@ changie new
 
 It asks for the component, the kind, and one sentence for the people who use
 that component. A change to two components gets two fragments; a change in a
-library (`sync/core`, `clients/webext-common`) gets one for each program it
+library (`core/replica`, `core/rules`, `clients/webext-common`) gets one for each program it
 changes. The web app has an extra kind, **Upgrading**, for what someone
 running it must do.
 

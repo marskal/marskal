@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds sync/ffi for the iOS app (ADR 0029): a static library for devices
+# Builds core/ffi for the iOS app (ADR 0029): a static library for devices
 # and one for the Apple silicon simulator, wrapped in
 # MarskalKit/Frameworks/MarskalCoreFFI.xcframework, and the Swift bindings
 # in MarskalKit/Sources/MarskalCore. Both are build products, not committed.
@@ -9,7 +9,7 @@
 set -euo pipefail
 
 ios=$(cd "$(dirname "$0")/.." && pwd)
-manifest=$ios/../../sync/ffi/Cargo.toml
+manifest=$ios/../../core/ffi/Cargo.toml
 kit=$ios/MarskalKit
 profile=${1:-release}
 
@@ -19,7 +19,7 @@ case $profile in
   *) echo "usage: build-core [release|debug]" >&2; exit 64 ;;
 esac
 
-# Its own target directory: this shell's Rust is not sync/ffi's.
+# Its own target directory: this shell's Rust is not core/ffi's.
 export CARGO_TARGET_DIR=$ios/build/cargo
 export IPHONEOS_DEPLOYMENT_TARGET=27.0
 
@@ -50,7 +50,7 @@ cargo build --quiet --manifest-path "$manifest" --lib "${cargo_profile[@]}"
 generated=$ios/build/swift
 rm -rf "$generated"
 (cd "$(dirname "$manifest")" && cargo run --quiet --bin uniffi-bindgen -- \
-  generate --library "$CARGO_TARGET_DIR/$profile/libmarskal_sync_ffi.dylib" \
+  generate --library "$CARGO_TARGET_DIR/$profile/libmarskal_ffi.dylib" \
   --language swift --out-dir "$generated")
 
 headers=$ios/build/headers
@@ -63,8 +63,8 @@ framework=$kit/Frameworks/MarskalCoreFFI.xcframework
 rm -rf "$framework"
 mkdir -p "$kit/Frameworks" "$kit/Sources/MarskalCore"
 /usr/bin/env -u SDKROOT DEVELOPER_DIR="$DEVELOPER_DIR" /usr/bin/xcodebuild -create-xcframework \
-  -library "$CARGO_TARGET_DIR/aarch64-apple-ios/$profile/libmarskal_sync_ffi.a" -headers "$headers" \
-  -library "$CARGO_TARGET_DIR/aarch64-apple-ios-sim/$profile/libmarskal_sync_ffi.a" -headers "$headers" \
+  -library "$CARGO_TARGET_DIR/aarch64-apple-ios/$profile/libmarskal_ffi.a" -headers "$headers" \
+  -library "$CARGO_TARGET_DIR/aarch64-apple-ios-sim/$profile/libmarskal_ffi.a" -headers "$headers" \
   -output "$framework" >/dev/null
 
 cp "$generated/MarskalCore.swift" "$kit/Sources/MarskalCore/MarskalCore.swift"

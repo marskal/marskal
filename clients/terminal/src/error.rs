@@ -46,9 +46,9 @@ impl std::fmt::Display for CliError {
     }
 }
 
-impl From<marskal_sync::Error> for CliError {
-    fn from(error: marskal_sync::Error) -> CliError {
-        use marskal_sync::Error::*;
+impl From<marskal_replica::Error> for CliError {
+    fn from(error: marskal_replica::Error) -> CliError {
+        use marskal_replica::Error::*;
         match error {
             NotFound { .. } => CliError::new("not_found", 3, error.to_string()),
             Ambiguous { .. } => CliError::new("ambiguous", 3, error.to_string()),

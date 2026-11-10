@@ -32,8 +32,10 @@ updates:
 
   - package-ecosystem: cargo
     directories:
-      - /sync/core
-      - /sync/ffi
+      - /core/replica
+      - /core/rules
+      - /core/ffi
+      - /clients/shell-common
       - /clients/terminal
     schedule:
       interval: weekly

@@ -2,7 +2,7 @@ import Foundation
 import MarskalCore
 import Testing
 
-// sync/fixtures/dates.json, the vectors the server and sync/core run,
+// core/fixtures/dates.json, the vectors the server and core/rules run,
 // through the bindings: the engine's own zone data, not the device's.
 struct DatesFixtureTests {
     struct Vector: Decodable {
@@ -17,7 +17,7 @@ struct DatesFixtureTests {
     static let vectors: [Vector] = {
         let url = URL(filePath: #filePath)
             .deletingLastPathComponent()
-            .appending(path: "../../../../../sync/fixtures/dates.json")
+            .appending(path: "../../../../../core/fixtures/dates.json")
             .standardized
         struct File: Decodable { let from_local: [Vector] }
         return try! JSONDecoder().decode(File.self, from: Data(contentsOf: url)).from_local

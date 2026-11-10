@@ -20,8 +20,8 @@ use std::process::ExitCode;
 use clap::{Args, Parser, Subcommand};
 use jiff::Timestamp;
 use jiff::tz::TimeZone;
-use marskal_sync::dates::{self, DateField};
-use marskal_sync::{Location, NewProject, NewTask, Store, TaskFilter, TaskPatch, TaskState};
+use marskal_replica::{Location, NewProject, NewTask, Store, TaskFilter, TaskPatch, TaskState};
+use marskal_rules::dates::{self, DateField};
 use uuid::Uuid;
 
 use crate::config::{Config, default_server, normalize_server};
@@ -585,7 +585,7 @@ fn run(cli: Cli, output: &Output) -> Result<()> {
             let unsynced = context.refresh();
             let world = context.store.world()?;
             match world.find_task(task)?.url.as_deref() {
-                Some(url) if marskal_sync::url::valid(url) => {
+                Some(url) if marskal_rules::url::valid(url) => {
                     auth::open(url);
                     output.opened(url, unsynced.as_deref());
                     Ok(())

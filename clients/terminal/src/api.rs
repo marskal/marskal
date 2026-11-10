@@ -3,7 +3,7 @@
 //! (ADR 0018).
 
 use marskal_shell_common::json_or_error;
-use marskal_sync::{Command, PullResponse, PushResult};
+use marskal_replica::{Command, PullResponse, PushResult};
 use serde::Deserialize;
 use serde_json::json;
 

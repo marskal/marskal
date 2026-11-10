@@ -1,9 +1,10 @@
 /**
   The terminal client, `marskal` (ADR 0020).
 
-  It links sync/core by path, so the source is both directories, laid out
-  as in the repository. Crates come from Cargo.lock by the checksums in it,
-  so there is no hash to update here when the lock changes.
+  It links core/replica, core/rules, and clients/shell-common by path, so
+  the source is those directories and its own, laid out as in the
+  repository. Crates come from Cargo.lock by the checksums in it, so
+  there is no hash to update here when the lock changes.
 
   Everything native is built from source by Cargo: SQLite (rusqlite's
   `bundled`), TLS (rustls), and the keychain (zbus on Linux, the Security
@@ -26,8 +27,12 @@ rustPlatform.buildRustPackage {
       ../Cargo.toml
       ../Cargo.lock
       ../src
-      (root + "/sync/core/Cargo.toml")
-      (root + "/sync/core/src")
+      (root + "/core/replica/Cargo.toml")
+      (root + "/core/replica/src")
+      (root + "/core/rules/Cargo.toml")
+      (root + "/core/rules/src")
+      (root + "/clients/shell-common/Cargo.toml")
+      (root + "/clients/shell-common/src")
     ];
   };
 

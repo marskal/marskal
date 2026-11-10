@@ -1,6 +1,7 @@
 { pkgs, ... }:
 {
-  # The terminal client, `marskal` (ADR 0020). It links sync/core by path.
+  # The terminal client, `marskal` (ADR 0020). It links core/replica and
+  # core/rules by path.
   # nixpkgs' Rust: rustc, cargo, clippy, rustfmt, and rust-analyzer.
   languages.rust.enable = true;
 
