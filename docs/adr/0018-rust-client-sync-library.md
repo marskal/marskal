@@ -19,6 +19,9 @@ Amended 2026-11-08: the Rust shells share sign-in and file locations through
 `clients/shell-common`, and the reasons for keeping every crate out of a
 Cargo workspace are recorded under "Rust crates and builds".
 
+Amended by [ADR 0039](0039-replica-and-rules.md): the library is two crates,
+`core/replica` and `core/rules`, and the fixtures are in `core/fixtures`.
+
 ## Context
 
 ADR 0014 specifies offline sync and assumed one native client, an iOS app,

@@ -5,6 +5,8 @@
 Accepted. Where clients share code is amended by
 [ADR 0018](0018-rust-client-sync-library.md): offline clients link one Rust
 sync library and do not share a UI.
+The shared Rust code and the fixtures move to `core/` by
+[ADR 0039](0039-replica-and-rules.md).
 
 ## Context
 

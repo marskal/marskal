@@ -46,6 +46,7 @@ This file is **short and actionable**. Rationale and history live in
 | Browser extension | [0035](docs/adr/0035-browser-extension.md) |
 | Development on GitHub | [0037](docs/adr/0037-github.md) |
 | Changelog, releases | [0038](docs/adr/0038-changelog-and-releases.md) |
+| Client library: replica and rules | [0039](docs/adr/0039-replica-and-rules.md) |
 | Repository layout | [0015](docs/adr/0015-repository-layout.md) |
 
 ---
