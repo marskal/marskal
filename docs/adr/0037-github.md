@@ -17,7 +17,7 @@ those starts with an account on that server, and few people make one.
 
 The repository ships several programs: the web app, the terminal client,
 the iOS app, two capture extensions, and later a desktop widget. None has
-CI yet. The iOS app and `sync/ffi`'s XCFramework build only on macOS, and
+CI yet. The iOS app and `core/ffi`'s XCFramework build only on macOS, and
 the hosted runner for a self-hosted forge would be a Mac to own and keep
 running. The stores the clients ship to (App Store Connect, the Firefox
 and Chrome extension stores) have upload tooling written mostly for GitHub
@@ -41,7 +41,7 @@ Alternatives considered:
   code, issues, pull requests, CI, and releases.
 - **CI is GitHub Actions.** A job enters the component's devenv, so CI runs
   what a developer runs: `mix precommit` in `web/`, `cargo test` in
-  `sync/core` and `clients/terminal` (the fixture vectors included), the
+  `core/replica`, `core/rules`, and `clients/terminal` (the fixture vectors included), the
   extensions' checks and tests, and the iOS build and tests on a macOS
   runner.
 - `master` takes changes through pull requests only, and a PR merges when

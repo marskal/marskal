@@ -8,6 +8,9 @@ The first offline client of [ADR 0018](0018-rust-client-sync-library.md).
 Amends its `clients/tui` to one shell, `clients/terminal`, holding both the
 command line and the terminal UI.
 
+Paths amended by [ADR 0039](0039-replica-and-rules.md): the client links
+`core/replica` and `core/rules`, not `sync/core`.
+
 ## Context
 
 The first offline client is a terminal one: a command line for quick capture

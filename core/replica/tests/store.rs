@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
 use jiff::Timestamp;
-use marskal_sync::{
+use marskal_replica::{
     Anchor, Clock, Entity, Frequency, HomeView, Keymap, Location, Mode, NewProject, NewTask, Op,
     PullResponse, PullUser, PushResult, PushStatus, Store, TaskFilter, TaskPatch, TaskState,
 };
@@ -304,7 +304,7 @@ fn a_snapshot_drops_rows_the_server_lacks_but_keeps_unpushed_ones() {
 fn a_move_takes_subtasks_along_and_leaves_the_parent() {
     let (mut store, _clock) = store();
     let project = store
-        .add_project(marskal_sync::NewProject {
+        .add_project(marskal_replica::NewProject {
             title: "Trip".into(),
             ..Default::default()
         })
@@ -362,7 +362,7 @@ fn a_task_cannot_go_under_its_own_subtask() {
 fn the_open_stream_leaves_out_resolved_deferred_and_unavailable_tasks() {
     let (mut store, clock) = store();
     let project = store
-        .add_project(marskal_sync::NewProject {
+        .add_project(marskal_replica::NewProject {
             title: "Garden".into(),
             ..Default::default()
         })
@@ -521,7 +521,7 @@ fn offline_edits_and_a_remote_rename_all_survive() {
 
 #[test]
 fn two_processes_share_one_file() {
-    let dir = std::env::temp_dir().join(format!("marskal-sync-{}", Uuid::now_v7()));
+    let dir = std::env::temp_dir().join(format!("marskal-replica-{}", Uuid::now_v7()));
     std::fs::create_dir_all(&dir).unwrap();
     let path = dir.join("marskal.db");
 
@@ -544,7 +544,7 @@ fn ids_resolve_by_prefix() {
     let world = store.world().unwrap();
     assert_eq!(world.find_task(&id.to_string()[..8]).unwrap().id, id);
     assert_eq!(
-        world.find_task(&marskal_sync::ids::short(&id)).unwrap().id,
+        world.find_task(&marskal_rules::ids::short(&id)).unwrap().id,
         id
     );
     assert!(world.find_task("zzzz").is_err());
@@ -646,7 +646,7 @@ fn pulled_preferences_read_back() {
 
 #[test]
 fn a_preferences_row_from_before_home_view_reads_as_open_tasks() {
-    let dir = std::env::temp_dir().join(format!("marskal-sync-{}", Uuid::now_v7()));
+    let dir = std::env::temp_dir().join(format!("marskal-replica-{}", Uuid::now_v7()));
     std::fs::create_dir_all(&dir).unwrap();
     let path = dir.join("marskal.db");
 
@@ -759,7 +759,7 @@ fn a_pulled_url_is_kept() {
 
 #[test]
 fn a_database_from_before_urls_asks_for_a_snapshot() {
-    let dir = std::env::temp_dir().join(format!("marskal-sync-{}", Uuid::now_v7()));
+    let dir = std::env::temp_dir().join(format!("marskal-replica-{}", Uuid::now_v7()));
     std::fs::create_dir_all(&dir).unwrap();
     let path = dir.join("marskal.db");
 

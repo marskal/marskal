@@ -10,10 +10,8 @@ Product rules: **[AGENTS.md](AGENTS.md)**. Decisions: **[docs/adr/](docs/adr/)**
 |------|------|
 | [`web/`](web/) | The Phoenix app, including `devenv.nix`. |
 | [`docs/adr/`](docs/adr/) | Architecture decisions. |
-
-`sync/fixtures/`, `sync/core/`, and `clients/` are not created until that work
-starts ([ADR 0015](docs/adr/0015-repository-layout.md),
-[ADR 0018](docs/adr/0018-rust-client-sync-library.md)).
+| [`core/`](core/) | The Rust code clients share: `replica`, `rules`, the iOS bindings, and the fixture vectors ([ADR 0039](docs/adr/0039-replica-and-rules.md)). |
+| [`clients/`](clients/) | The terminal client, the iOS app, and the capture extensions. |
 
 ## Web app and API server
 

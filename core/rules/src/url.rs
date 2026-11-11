@@ -1,8 +1,6 @@
 //! The optional URL on a task or project (ADR 0022), checked as the server
 //! checks it, so a bad one fails here instead of being rejected later.
 
-use crate::error::{Error, Result};
-
 /// The most characters a URL may have.
 pub const MAX: usize = 2048;
 
@@ -23,17 +21,6 @@ pub fn valid(url: &str) -> bool {
         && !url.chars().any(char::is_whitespace)
         && url.chars().count() <= MAX
         && !REFUSED.contains(&scheme.to_ascii_lowercase().as_str())
-}
-
-/// Trims `url`; blank clears it.
-pub(crate) fn clean(url: &str) -> Result<Option<String>> {
-    match url.trim() {
-        "" => Ok(None),
-        url if valid(url) => Ok(Some(url.to_string())),
-        _ => Err(Error::Invalid(
-            "a URL must be absolute, such as https://marskal.example, and not a script".into(),
-        )),
-    }
 }
 
 #[cfg(test)]
@@ -64,15 +51,5 @@ mod tests {
             assert!(!valid(url), "{url}");
         }
         assert!(!valid(&format!("https://a.example/{}", "a".repeat(MAX))));
-    }
-
-    #[test]
-    fn clean_trims_and_clears() {
-        assert_eq!(
-            clean("  https://a.example ").unwrap().as_deref(),
-            Some("https://a.example")
-        );
-        assert_eq!(clean("   ").unwrap(), None);
-        assert!(clean("javascript:x").is_err());
     }
 }

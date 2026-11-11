@@ -89,7 +89,7 @@ not, since "tonight" names a time where a day alone names none.
 the month, not an hour: `tom 9` is an error, `tom kl 9` is not. A day with
 no time takes the field's default time, as before.
 
-**The vectors** in `sync/fixtures/date_input.json` are generated from
+**The vectors** in `core/fixtures/date_input.json` are generated from
 `Marskal.DateInput`. The Rust library runs them when it reads dates.
 
 **In the inspector:**

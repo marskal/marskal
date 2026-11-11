@@ -1,6 +1,6 @@
 //! Push the outbox, then pull until the server has nothing more (ADR 0019).
 
-use marskal_sync::Store;
+use marskal_replica::Store;
 use serde::Serialize;
 
 use crate::api::{Api, ApiError, SyncApi};

@@ -470,10 +470,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 
 [[package]]
-name = "marskal-sync"
+name = "marskal-ffi"
 version = "0.1.0"
 dependencies = [
  "jiff",
+ "marskal-replica",
+ "marskal-rules",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "uniffi",
+ "uuid",
+]
+
+[[package]]
+name = "marskal-replica"
+version = "0.1.0"
+dependencies = [
+ "jiff",
+ "marskal-rules",
  "rusqlite",
  "serde",
  "serde_json",
@@ -482,15 +497,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "marskal-sync-ffi"
+name = "marskal-rules"
 version = "0.1.0"
 dependencies = [
  "jiff",
- "marskal-sync",
- "serde",
- "serde_json",
- "thiserror",
- "uniffi",
  "uuid",
 ]
 

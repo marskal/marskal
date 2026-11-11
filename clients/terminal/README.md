@@ -1,7 +1,7 @@
 # marskal
 
 Marskal tasks from the terminal, for people and for agents (ADR 0020). It
-links the sync engine in `sync/core` and keeps a local copy of your tasks,
+links the local replica in `core/replica` and keeps a copy of your tasks,
 so it works offline and syncs when it can.
 
 ```sh

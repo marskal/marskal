@@ -15,8 +15,8 @@ use crate::clock::stamp;
 use crate::entity::Entity;
 use crate::error::{Error, Result};
 use crate::push::{Command, Op};
-use crate::rank;
 use crate::value::to_sql;
+use marskal_rules::rank;
 
 pub(crate) fn apply(conn: &Connection, command: &Command, now: Timestamp) -> Result<()> {
     for field in command.fields.keys() {

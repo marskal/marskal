@@ -10,12 +10,12 @@ use uuid::Uuid;
 use crate::clock::stamp;
 use crate::entity::Entity;
 use crate::error::{Error, Result};
-use crate::ids::{LinkKind, link_id, new_id};
 use crate::local;
 use crate::model::TaskState;
 use crate::push::{Command, Op, enqueue};
 use crate::store::Store;
-use crate::url;
+use marskal_rules::ids::{LinkKind, link_id};
+use marskal_rules::url;
 
 /// Where a task lives: the inbox, no project, or a project (ADR 0017).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -93,7 +93,7 @@ impl Store {
     /// Captures a task. Returns its id.
     pub fn add_task(&mut self, new: NewTask) -> Result<Uuid> {
         let title = title(&new.title)?;
-        let url = new.url.as_deref().map(url::clean).transpose()?.flatten();
+        let url = new.url.as_deref().map(clean_url).transpose()?.flatten();
         let id = new_id();
 
         self.write(|tx, now| {
@@ -157,7 +157,7 @@ impl Store {
             fields.insert("notes".into(), notes.clone().into());
         }
         if let Some(new_url) = &patch.url {
-            let new_url = new_url.as_deref().map(url::clean).transpose()?.flatten();
+            let new_url = new_url.as_deref().map(clean_url).transpose()?.flatten();
             fields.insert("url".into(), new_url.into());
         }
         if let Some(flagged) = patch.flagged {
@@ -229,7 +229,7 @@ impl Store {
     /// Creates a project. Returns its id.
     pub fn add_project(&mut self, new: NewProject) -> Result<Uuid> {
         let title = title(&new.title)?;
-        let url = new.url.as_deref().map(url::clean).transpose()?.flatten();
+        let url = new.url.as_deref().map(clean_url).transpose()?.flatten();
         let id = new_id();
 
         self.write(|tx, now| {
@@ -411,5 +411,36 @@ fn object(value: Value) -> Map<String, Value> {
     match value {
         Value::Object(map) => map,
         _ => Map::new(),
+    }
+}
+
+/// A new domain key: UUIDv7, minted before insert (ADR 0011).
+fn new_id() -> Uuid {
+    Uuid::now_v7()
+}
+
+/// Trims a URL; blank clears it (ADR 0022).
+fn clean_url(text: &str) -> Result<Option<String>> {
+    match text.trim() {
+        "" => Ok(None),
+        text if url::valid(text) => Ok(Some(text.to_string())),
+        _ => Err(Error::Invalid(
+            "a URL must be absolute, such as https://marskal.example, and not a script".into(),
+        )),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn clean_url_trims_and_clears() {
+        assert_eq!(
+            clean_url("  https://a.example ").unwrap().as_deref(),
+            Some("https://a.example")
+        );
+        assert_eq!(clean_url("   ").unwrap(), None);
+        assert!(clean_url("javascript:x").is_err());
     }
 }

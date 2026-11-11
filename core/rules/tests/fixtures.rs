@@ -1,12 +1,12 @@
-//! The shared vectors in `sync/fixtures`, which the server runs too
-//! (ADR 0018).
+//! The shared vectors in `core/fixtures`, which the server runs too
+//! (ADR 0039).
 
 use jiff::Timestamp;
 use jiff::civil::{Date, Time};
 use jiff::tz::TimeZone;
-use marskal_sync::dates::{self, DateField};
-use marskal_sync::ids::{LinkKind, link_id};
-use marskal_sync::rank;
+use marskal_rules::dates::{self, DateField};
+use marskal_rules::ids::{LinkKind, link_id};
+use marskal_rules::rank;
 use serde_json::Value;
 use uuid::Uuid;
 

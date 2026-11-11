@@ -8,7 +8,7 @@ defmodule Marskal.DateInput do
   their week (1 = Monday … 7 = Sunday), and their locale's language and the
   orders it writes numeric dates in, with a year and without. A day with no time read leaves the time `nil`, for the
   field's default (`Marskal.Dates.default_time/1`). The Rust client library
-  must read the same way; both run `sync/fixtures/date_input.json`.
+  must read the same way; both run `core/fixtures/date_input.json`.
   """
 
   @type order :: :dmy | :mdy | :ymd

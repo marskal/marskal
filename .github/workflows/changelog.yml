@@ -26,7 +26,7 @@ jobs:
           HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
           changed=$(git diff --name-only "$BASE...$HEAD")
-          if ! grep -qE '^(web|clients|sync)/' <<<"$changed"; then
+          if ! grep -qE '^(web|clients|core)/' <<<"$changed"; then
             echo "No component changed."
             exit 0
           fi

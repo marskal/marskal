@@ -1,7 +1,7 @@
 # Marskal for iOS
 
-The iOS app (ADR 0029). It links the sync engine, `sync/core`, through the
-UniFFI wrapper in `sync/ffi`.
+The iOS app (ADR 0029). It links the local replica and the shared rules,
+`core/replica` and `core/rules`, through the UniFFI wrapper in `core/ffi`.
 
 Xcode comes from the host. Everything else comes from this directory's
 devenv shell: Rust with the iOS targets, and XcodeGen.
@@ -14,7 +14,7 @@ devenv shell -- scripts/build-core          # or: scripts/build-core debug
 
 This writes `MarskalKit/Frameworks/MarskalCoreFFI.xcframework` and the Swift
 bindings, `MarskalKit/Sources/MarskalCore/MarskalCore.swift`. Neither is
-committed. Run it again after any change to `sync/core` or `sync/ffi`.
+committed. Run it again after any change to `core/replica`, `core/rules`, or `core/ffi`.
 
 ## Build and run the app
 
