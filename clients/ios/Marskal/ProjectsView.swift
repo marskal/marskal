@@ -104,11 +104,14 @@ private struct ProjectRow: View {
 }
 
 /// The open tasks in the Inbox, in No project, or in a project, as an
-/// outline. Check a task off with its circle or a swipe.
+/// outline. Check a task off with its circle or a swipe; add one here, or
+/// under a task from its menu.
 private struct LocationView: View {
     let location: Location
     @Environment(AppModel.self) private var model
     @State private var moving: TaskItem?
+    @State private var capturing = false
+    @State private var addingSubtask: TaskItem?
 
     var body: some View {
         let tasks = model.tasks(at: location)
@@ -118,7 +121,7 @@ private struct LocationView: View {
                     NavigationLink(value: TaskRoute(id: task.id)) {
                         TaskRow(task: task, showsProject: false) { model.setState(task, .done) }
                     }
-                    .taskActions(task, moving: $moving)
+                    .taskActions(task, moving: $moving, addingSubtask: $addingSubtask)
                 }
             } footer: {
                 SyncStatus()
@@ -139,9 +142,26 @@ private struct LocationView: View {
         .refreshable { await model.refresh() }
         .navigationTitle(title)
         .showDeferredToggle()
+        .toolbar {
+            if !deleted {
+                ToolbarItem(placement: .primaryAction) {
+                    Button(addLabel, systemImage: "plus") { capturing = true }
+                }
+            }
+        }
         .sheet(item: $moving) { task in
             MoveSheet(task: task)
         }
+        .sheet(isPresented: $capturing) {
+            CaptureSheet(place: location)
+        }
+        .sheet(item: $addingSubtask) { task in
+            CaptureSheet(under: task)
+        }
+    }
+
+    private var addLabel: LocalizedStringKey {
+        location == .inbox ? "Add to Inbox" : "Add Task"
     }
 
     private var deleted: Bool {

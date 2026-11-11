@@ -25,6 +25,7 @@ struct TaskDetailView: View {
     @State private var title = ""
     @State private var url = ""
     @State private var moving: TaskItem?
+    @State private var addingSubtask: TaskItem?
     @State private var editingDate: DateField?
     @State private var confirmingDelete = false
     @FocusState private var focus: Field?
@@ -56,8 +57,15 @@ struct TaskDetailView: View {
         .sheet(item: $moving) { task in
             MoveSheet(task: task)
         }
+        .sheet(item: $addingSubtask) { task in
+            CaptureSheet(under: task)
+        }
         .sheet(item: $editingDate) { field in
-            if let task { DateSheet(task: task, field: field) }
+            if let task {
+                DateSheet(field: field, stored: DateValue(task.dates, field)) {
+                    model.edit(task, [DateValue.change(field, to: $0)])
+                }
+            }
         }
     }
 
@@ -118,6 +126,9 @@ struct TaskDetailView: View {
                     }
                 }
                 .foregroundStyle(.primary)
+                if task.state == .toDo {
+                    Button("Add Subtask", systemImage: "plus") { addingSubtask = task }
+                }
             }
 
             Section {
