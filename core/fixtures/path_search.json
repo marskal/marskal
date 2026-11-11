@@ -1,0 +1,686 @@
+{
+  "exact": [
+    {
+      "exact": true,
+      "name": "Wife",
+      "query": "wife"
+    },
+    {
+      "exact": true,
+      "name": "Wife",
+      "query": "  WIFE "
+    },
+    {
+      "exact": false,
+      "name": "Old wife",
+      "query": "wife"
+    },
+    {
+      "exact": true,
+      "name": "Re: ☕",
+      "query": "re: ☕"
+    },
+    {
+      "exact": true,
+      "name": "Æble",
+      "query": "æble"
+    }
+  ],
+  "go_to": {
+    "limit": 20,
+    "search": [
+      {
+        "query": "w",
+        "results": [
+          4,
+          7,
+          3,
+          13,
+          5,
+          10
+        ]
+      },
+      {
+        "query": "web",
+        "results": [
+          4,
+          10
+        ]
+      },
+      {
+        "query": "website",
+        "results": [
+          4,
+          10
+        ]
+      },
+      {
+        "query": "work/web",
+        "results": [
+          4
+        ]
+      },
+      {
+        "query": "cl/ac",
+        "results": [
+          8
+        ]
+      },
+      {
+        "query": "home",
+        "results": [
+          11,
+          12
+        ]
+      },
+      {
+        "query": "inbox",
+        "results": [
+          0,
+          14
+        ]
+      },
+      {
+        "query": "in",
+        "results": [
+          0,
+          14
+        ]
+      },
+      {
+        "query": "no",
+        "results": [
+          1
+        ]
+      },
+      {
+        "query": "w/w",
+        "results": [
+          4,
+          7,
+          5
+        ]
+      },
+      {
+        "query": " / ",
+        "results": []
+      },
+      {
+        "query": "old",
+        "results": [
+          9
+        ]
+      }
+    ],
+    "targets": [
+      {
+        "hidden": false,
+        "kind": "view",
+        "path": [
+          "Inbox"
+        ]
+      },
+      {
+        "hidden": false,
+        "kind": "view",
+        "path": [
+          "No project"
+        ]
+      },
+      {
+        "hidden": false,
+        "kind": "project",
+        "path": [
+          "Errands"
+        ]
+      },
+      {
+        "hidden": false,
+        "kind": "folder",
+        "path": [
+          "Work"
+        ]
+      },
+      {
+        "hidden": false,
+        "kind": "project",
+        "path": [
+          "Work",
+          "Website"
+        ]
+      },
+      {
+        "hidden": true,
+        "kind": "project",
+        "path": [
+          "Work",
+          "Weekly review"
+        ]
+      },
+      {
+        "hidden": false,
+        "kind": "folder",
+        "path": [
+          "Work",
+          "Clients"
+        ]
+      },
+      {
+        "hidden": false,
+        "kind": "project",
+        "path": [
+          "Work",
+          "Clients",
+          "Wired"
+        ]
+      },
+      {
+        "hidden": false,
+        "kind": "project",
+        "path": [
+          "Work",
+          "Clients",
+          "Acme"
+        ]
+      },
+      {
+        "hidden": true,
+        "kind": "folder",
+        "path": [
+          "Old"
+        ]
+      },
+      {
+        "hidden": true,
+        "kind": "project",
+        "path": [
+          "Old",
+          "Website"
+        ]
+      },
+      {
+        "hidden": false,
+        "kind": "project",
+        "path": [
+          "Home"
+        ]
+      },
+      {
+        "hidden": false,
+        "kind": "tag",
+        "path": [
+          "Home"
+        ]
+      },
+      {
+        "hidden": false,
+        "kind": "tag",
+        "path": [
+          "Person",
+          "Wife"
+        ]
+      },
+      {
+        "hidden": false,
+        "kind": "project",
+        "path": [
+          "Inbox zero"
+        ]
+      }
+    ]
+  },
+  "match": [
+    {
+      "path": [
+        "Someday",
+        "Maybach"
+      ],
+      "query": "som/may",
+      "skipped": 0,
+      "why": "a path, one piece a segment"
+    },
+    {
+      "path": [
+        "Lists",
+        "Someday/maybe"
+      ],
+      "query": "som/may",
+      "skipped": 0,
+      "why": "the same query as a literal name"
+    },
+    {
+      "path": [
+        "Someday",
+        "Maybach"
+      ],
+      "query": "som:may",
+      "skipped": 0,
+      "why": "colon separates"
+    },
+    {
+      "path": [
+        "Someday",
+        "Maybach"
+      ],
+      "query": "som › may",
+      "skipped": 0,
+      "why": "chevron separates"
+    },
+    {
+      "path": [
+        "Someday",
+        "Maybach"
+      ],
+      "query": "som>may",
+      "skipped": 0,
+      "why": "angle bracket separates"
+    },
+    {
+      "path": [
+        "Someday",
+        "Maybach"
+      ],
+      "query": "som\\may",
+      "skipped": 0,
+      "why": "backslash separates"
+    },
+    {
+      "path": [
+        "Someday",
+        "Maybach"
+      ],
+      "query": "som / may",
+      "skipped": 0,
+      "why": "spaces around a separator"
+    },
+    {
+      "path": [
+        "Person",
+        "Family",
+        "Wife"
+      ],
+      "query": "per/wi",
+      "skipped": 1,
+      "why": "pieces may skip an ancestor"
+    },
+    {
+      "path": [
+        "Person",
+        "Old wife"
+      ],
+      "query": "per/wi",
+      "skipped": 0,
+      "why": "a word inside a name"
+    },
+    {
+      "path": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "query": "a/d",
+      "skipped": 2,
+      "why": "two ancestors skipped"
+    },
+    {
+      "path": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "query": "d",
+      "skipped": 0,
+      "why": "the own name alone skips nothing"
+    },
+    {
+      "path": [
+        "Person",
+        "Family"
+      ],
+      "query": "per/fam/wife",
+      "skipped": null,
+      "why": "the last piece must land in the own name"
+    },
+    {
+      "path": [
+        "Person",
+        "Family",
+        "Wife"
+      ],
+      "query": "family",
+      "skipped": null,
+      "why": "an ancestor alone does not match"
+    },
+    {
+      "path": [
+        "Person"
+      ],
+      "query": "person",
+      "skipped": 0,
+      "why": "a top-level name"
+    },
+    {
+      "path": [
+        "Someday",
+        "Maybach"
+      ],
+      "query": "MAYBACH",
+      "skipped": 0,
+      "why": "case is ignored"
+    },
+    {
+      "path": [
+        "Someday",
+        "Maybach"
+      ],
+      "query": "aybach",
+      "skipped": null,
+      "why": "a piece is a prefix, not a substring"
+    },
+    {
+      "path": [
+        "Re: ☕"
+      ],
+      "query": "re: ☕",
+      "skipped": 0,
+      "why": "a colon in a name splits it too"
+    },
+    {
+      "path": [
+        "Mad",
+        "Æbler og pærer"
+      ],
+      "query": "pær",
+      "skipped": 0,
+      "why": "non-ASCII lowercases"
+    },
+    {
+      "path": [
+        "ÆBLE"
+      ],
+      "query": "æb",
+      "skipped": 0,
+      "why": "non-ASCII uppercase in the name"
+    },
+    {
+      "path": [
+        "Work"
+      ],
+      "query": " / ",
+      "skipped": null,
+      "why": "a blank query matches nothing"
+    },
+    {
+      "path": [
+        "Work"
+      ],
+      "query": "",
+      "skipped": null,
+      "why": "an empty query matches nothing"
+    },
+    {
+      "path": [
+        "Work",
+        "Calls"
+      ],
+      "query": "calls/work",
+      "skipped": null,
+      "why": "pieces must be in order"
+    },
+    {
+      "path": [
+        "Work",
+        "Calls"
+      ],
+      "query": "w/c/c",
+      "skipped": null,
+      "why": "more pieces than parts"
+    }
+  ],
+  "tags": {
+    "limit": 20,
+    "rows": [
+      {
+        "id": "01900000-0000-7000-8000-000000000001",
+        "name": "Someday",
+        "parent_id": null,
+        "rank": "V",
+        "state": "active"
+      },
+      {
+        "id": "01900000-0000-7000-8000-000000000002",
+        "name": "Maybach",
+        "parent_id": "01900000-0000-7000-8000-000000000001",
+        "rank": "V",
+        "state": "active"
+      },
+      {
+        "id": "01900000-0000-7000-8000-000000000003",
+        "name": "Lists",
+        "parent_id": null,
+        "rank": "a",
+        "state": "active"
+      },
+      {
+        "id": "01900000-0000-7000-8000-000000000004",
+        "name": "Someday/maybe",
+        "parent_id": "01900000-0000-7000-8000-000000000003",
+        "rank": "V",
+        "state": "active"
+      },
+      {
+        "id": "01900000-0000-7000-8000-000000000005",
+        "name": "Person",
+        "parent_id": null,
+        "rank": "k",
+        "state": "active"
+      },
+      {
+        "id": "01900000-0000-7000-8000-000000000006",
+        "name": "Family",
+        "parent_id": "01900000-0000-7000-8000-000000000005",
+        "rank": "V",
+        "state": "active"
+      },
+      {
+        "id": "01900000-0000-7000-8000-000000000007",
+        "name": "Wife",
+        "parent_id": "01900000-0000-7000-8000-000000000006",
+        "rank": "V",
+        "state": "active"
+      },
+      {
+        "id": "01900000-0000-7000-8000-000000000008",
+        "name": "Old wife",
+        "parent_id": "01900000-0000-7000-8000-000000000005",
+        "rank": "a",
+        "state": "active"
+      },
+      {
+        "id": "01900000-0000-7000-8000-000000000009",
+        "name": "Gone",
+        "parent_id": null,
+        "rank": "x",
+        "state": "dropped"
+      },
+      {
+        "id": "01900000-0000-7000-8000-000000000010",
+        "name": "Wifi",
+        "parent_id": "01900000-0000-7000-8000-000000000009",
+        "rank": "V",
+        "state": "active"
+      },
+      {
+        "id": "01900000-0000-7000-8000-000000000011",
+        "name": "Re: ☕",
+        "parent_id": null,
+        "rank": "y",
+        "state": "active"
+      },
+      {
+        "id": "01900000-0000-7000-8000-000000000012",
+        "name": "Waiting",
+        "parent_id": null,
+        "rank": "z",
+        "state": "on_hold"
+      },
+      {
+        "id": "01900000-0000-7000-8000-000000000013",
+        "name": "Wine",
+        "parent_id": null,
+        "rank": null,
+        "state": "active"
+      },
+      {
+        "id": "01900000-0000-7000-8000-000000000014",
+        "name": "Wind",
+        "parent_id": null,
+        "rank": "zz",
+        "state": "active"
+      }
+    ],
+    "search": [
+      {
+        "paths": [
+          [
+            "Someday",
+            "Maybach"
+          ],
+          [
+            "Lists",
+            "Someday/maybe"
+          ]
+        ],
+        "query": "som/may"
+      },
+      {
+        "paths": [
+          [
+            "Person",
+            "Old wife"
+          ],
+          [
+            "Person",
+            "Family",
+            "Wife"
+          ]
+        ],
+        "query": "per/wi"
+      },
+      {
+        "paths": [
+          [
+            "Person",
+            "Family",
+            "Wife"
+          ],
+          [
+            "Person",
+            "Old wife"
+          ]
+        ],
+        "query": "wife"
+      },
+      {
+        "paths": [
+          [
+            "Wind"
+          ],
+          [
+            "Wine"
+          ],
+          [
+            "Person",
+            "Old wife"
+          ],
+          [
+            "Person",
+            "Family",
+            "Wife"
+          ]
+        ],
+        "query": "wi"
+      },
+      {
+        "paths": [
+          [
+            "Someday"
+          ],
+          [
+            "Lists",
+            "Someday/maybe"
+          ]
+        ],
+        "query": "some"
+      },
+      {
+        "paths": [],
+        "query": "gone"
+      },
+      {
+        "paths": [
+          [
+            "Re: ☕"
+          ]
+        ],
+        "query": "re: ☕"
+      },
+      {
+        "paths": [],
+        "query": " / "
+      },
+      {
+        "paths": [
+          [
+            "Waiting"
+          ],
+          [
+            "Wind"
+          ],
+          [
+            "Wine"
+          ],
+          [
+            "Person",
+            "Old wife"
+          ],
+          [
+            "Person",
+            "Family",
+            "Wife"
+          ]
+        ],
+        "query": "w"
+      },
+      {
+        "paths": [
+          [
+            "Waiting"
+          ]
+        ],
+        "query": "wait"
+      },
+      {
+        "paths": [
+          [
+            "Someday",
+            "Maybach"
+          ]
+        ],
+        "query": "MAYBACH"
+      },
+      {
+        "paths": [
+          [
+            "Person",
+            "Family",
+            "Wife"
+          ]
+        ],
+        "query": "per/fam/wife"
+      }
+    ]
+  }
+}

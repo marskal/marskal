@@ -6,7 +6,8 @@ use jiff::civil::{Date, Time};
 use jiff::tz::TimeZone;
 use marskal_rules::dates::{self, DateField};
 use marskal_rules::ids::{LinkKind, link_id};
-use marskal_rules::rank;
+use marskal_rules::path_search::{Kind, Target};
+use marskal_rules::{path_search, rank};
 use serde_json::Value;
 use uuid::Uuid;
 
@@ -89,6 +90,63 @@ fn dates_json() {
             case["date"],
             case["time"],
             case["why"]
+        );
+    }
+}
+
+#[test]
+fn path_search_json() {
+    let vectors = read("path_search.json");
+
+    for case in vectors["match"].as_array().unwrap() {
+        let path: Vec<String> = serde_json::from_value(case["path"].clone()).unwrap();
+        let query = case["query"].as_str().unwrap();
+        assert_eq!(
+            path_search::matches(&path, &path_search::pieces(query)),
+            case["skipped"].as_u64().map(|n| n as usize),
+            "{query:?} on {path:?}: {}",
+            case["why"]
+        );
+    }
+
+    for case in vectors["exact"].as_array().unwrap() {
+        let name = case["name"].as_str().unwrap();
+        let query = case["query"].as_str().unwrap();
+        assert_eq!(
+            path_search::is_exact(name, &path_search::whole(query)),
+            case["exact"].as_bool().unwrap(),
+            "{name:?} and {query:?}"
+        );
+    }
+}
+
+#[test]
+fn path_search_json_go_to() {
+    let go_to = &read("path_search.json")["go_to"];
+    let targets: Vec<Target> = go_to["targets"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|t| Target {
+            kind: match t["kind"].as_str().unwrap() {
+                "view" => Kind::View,
+                "project" => Kind::Project,
+                "folder" => Kind::Folder,
+                _ => Kind::Tag,
+            },
+            path: serde_json::from_value(t["path"].clone()).unwrap(),
+            hidden: t["hidden"].as_bool().unwrap(),
+        })
+        .collect();
+    let limit = go_to["limit"].as_u64().unwrap() as usize;
+
+    for case in go_to["search"].as_array().unwrap() {
+        let query = case["query"].as_str().unwrap();
+        let expected: Vec<usize> = serde_json::from_value(case["results"].clone()).unwrap();
+        assert_eq!(
+            path_search::rank(&targets, query, limit),
+            expected,
+            "{query:?}"
         );
     }
 }

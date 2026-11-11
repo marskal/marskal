@@ -504,18 +504,7 @@ impl Store {
     pub fn tags(&self) -> Result<Vec<TagItem>> {
         self.with(|store| {
             let world = store.world()?;
-            let mut tags: Vec<TagItem> = world
-                .tags
-                .iter()
-                .map(|t| TagItem {
-                    id: t.id,
-                    name: t.name.clone(),
-                    parent_id: t.parent_id,
-                    path: world.tag_path(t.id),
-                    state: tag_state(t.state),
-                    rank: t.rank.clone(),
-                })
-                .collect();
+            let mut tags: Vec<TagItem> = world.tags.iter().map(|t| tag_item(&world, t)).collect();
             tags.sort_by_cached_key(|t| {
                 (
                     t.path.iter().map(|p| p.to_lowercase()).collect::<Vec<_>>(),
@@ -523,6 +512,20 @@ impl Store {
                 )
             });
             Ok(tags)
+        })
+    }
+
+    /// Tags matching what the user typed, best first, as the web's tag
+    /// autocomplete has them (ADR 0005). Dropped tags are not offered. The
+    /// query is compared as given: normalize it to NFC first.
+    pub fn search_tags(&self, query: String, limit: u32) -> Result<Vec<TagItem>> {
+        self.with(|store| {
+            let world = store.world()?;
+            Ok(world
+                .search_tags(&query, limit as usize)
+                .into_iter()
+                .map(|t| tag_item(&world, t))
+                .collect())
         })
     }
 
@@ -744,6 +747,50 @@ pub fn url_is_valid(url: String) -> bool {
     rules::url::valid(&url)
 }
 
+/// What a [`SearchTarget`] is, in the order Go to ranks kinds that match
+/// equally well (ADR 0033).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum TargetKind {
+    /// A place the shell names itself, such as the Inbox.
+    View,
+    Project,
+    Folder,
+    Tag,
+}
+
+/// Somewhere to go or put a task, by its path: a project's folders and
+/// title, say. `hidden` when the sidebar leaves it out.
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct SearchTarget {
+    pub kind: TargetKind,
+    pub path: Vec<String>,
+    pub hidden: bool,
+}
+
+/// The targets matching what the user typed, best first, as indices into
+/// `targets`, ranked as the web's Go to and location picker rank them
+/// (ADR 0033). The query is compared as given: normalize it to NFC first.
+#[uniffi::export]
+pub fn search_targets(targets: Vec<SearchTarget>, query: String, limit: u32) -> Vec<u32> {
+    let targets: Vec<rules::path_search::Target> = targets
+        .into_iter()
+        .map(|t| rules::path_search::Target {
+            kind: match t.kind {
+                TargetKind::View => rules::path_search::Kind::View,
+                TargetKind::Project => rules::path_search::Kind::Project,
+                TargetKind::Folder => rules::path_search::Kind::Folder,
+                TargetKind::Tag => rules::path_search::Kind::Tag,
+            },
+            path: t.path,
+            hidden: t.hidden,
+        })
+        .collect();
+    rules::path_search::rank(&targets, &query, limit as usize)
+        .into_iter()
+        .map(|i| i as u32)
+        .collect()
+}
+
 /// Which date a day is for, since each has its own default time.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
 pub enum DateField {
@@ -891,6 +938,17 @@ fn project(p: replica::Project) -> ProjectItem {
         folder_id: p.project_folder_id,
         rank: p.rank,
         series_id: p.series_id,
+    }
+}
+
+fn tag_item(world: &replica::World, tag: &replica::Tag) -> TagItem {
+    TagItem {
+        id: tag.id,
+        name: tag.name.clone(),
+        parent_id: tag.parent_id,
+        path: world.tag_path(tag.id),
+        state: tag_state(tag.state),
+        rank: tag.rank.clone(),
     }
 }
 
