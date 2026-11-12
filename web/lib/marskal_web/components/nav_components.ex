@@ -77,7 +77,13 @@ defmodule MarskalWeb.NavComponents do
       </MarskalWeb.NavOutline.scope>
 
       <div class="sidebar-account">
-        <p class="who">{@user.email}</p>
+        <p class="who">
+          <MarskalWeb.Layouts.user_badge user={@user} />
+          <span>
+            <strong :if={@user.name}>{@user.name}</strong>
+            <span>{@user.email}</span>
+          </span>
+        </p>
         <.link :if={@user.superuser} href={~p"/dev/dashboard"}>
           <Lucideicons.gauge class="icon" /> Dashboard
         </.link>

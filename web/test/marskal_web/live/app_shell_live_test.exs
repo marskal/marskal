@@ -42,6 +42,25 @@ defmodule MarskalWeb.AppShellLiveTest do
     assert has_element?(view, ~s|#sidebar .sidebar-account a[href="/users/settings"]|)
   end
 
+  test "the header marks the user with a badge, not their email", %{conn: conn} do
+    user = user_fixture()
+    {:ok, view, _html} = live(log_in_user(conn, user), ~p"/open")
+
+    assert has_element?(view, ~s|.app-header .user-badge[title="#{user.email}"] svg|)
+    refute has_element?(view, ".app-header__account", user.email)
+
+    {:ok, _} = Marskal.Accounts.update_user_name(user, %{name: "Ada Lovelace"})
+    {:ok, view, _html} = live(log_in_user(conn, user), ~p"/open")
+
+    assert has_element?(
+             view,
+             ~s|.app-header .user-badge[title="Ada Lovelace (#{user.email})"]|,
+             "AL"
+           )
+
+    assert has_element?(view, "#sidebar .sidebar-account strong", "Ada Lovelace")
+  end
+
   test "a project page opened alone has a button to show its details", %{conn: conn} do
     user = user_fixture()
     conn = log_in_user(conn, user)

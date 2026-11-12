@@ -315,8 +315,22 @@ h1 {
   }
 
   .sidebar-account .who {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
     margin: 0 0 0.25rem;
     overflow-wrap: anywhere;
+  }
+
+  .sidebar-account .who > span:last-child {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .sidebar-account .who strong {
+    color: var(--text);
+    font-weight: 600;
   }
 
   .sidebar-account a {
@@ -847,6 +861,33 @@ h1 {
 .who {
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+/* Initials, or a person icon, in a circle (Layouts.user_badge). */
+.user-badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: default;
+  user-select: none;
+}
+
+.user-badge .icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  color: var(--muted);
 }
 
 .app-main {

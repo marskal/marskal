@@ -6,6 +6,42 @@ defmodule MarskalWeb.UserLive.SettingsTest do
   import Marskal.AccountsFixtures
 
   describe "Settings page" do
+    test "sets the name, and the header shows its initials", %{conn: conn} do
+      user = user_fixture()
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/users/settings")
+
+      assert has_element?(lv, ".app-header .user-badge svg")
+      refute has_element?(lv, ".app-header .user-badge", "AL")
+
+      html = lv |> form("#name_form", user: %{name: "  Ada Lovelace "}) |> render_submit()
+
+      assert html =~ "Name saved."
+      assert has_element?(lv, ".app-header .user-badge", "AL")
+      assert Accounts.get_user!(user.id).name == "Ada Lovelace"
+    end
+
+    test "a blank name clears it", %{conn: conn} do
+      user = user_fixture()
+      {:ok, _} = Accounts.update_user_name(user, %{name: "Ada"})
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/users/settings")
+
+      lv |> form("#name_form", user: %{name: "   "}) |> render_submit()
+
+      assert Accounts.get_user!(user.id).name == nil
+      refute has_element?(lv, ".app-header .user-badge", "A")
+    end
+
+    test "refuses a name that is too long", %{conn: conn} do
+      user = user_fixture()
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/users/settings")
+
+      html =
+        lv |> form("#name_form", user: %{name: String.duplicate("a", 101)}) |> render_submit()
+
+      assert html =~ "should be at most 100 character(s)"
+      assert Accounts.get_user!(user.id).name == nil
+    end
+
     test "sets the day the week starts on", %{conn: conn} do
       user = user_fixture()
       {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/users/settings")

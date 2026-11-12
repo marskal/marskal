@@ -37,6 +37,18 @@ defmodule MarskalWeb.UserLive.Registration do
           <p :for={error <- @form[:email].errors} class="field-error">{translate_error(error)}</p>
         </div>
         <div>
+          <label for={@form[:name].id}>{gettext("Name (optional)")}</label>
+          <input
+            type="text"
+            name={@form[:name].name}
+            id={@form[:name].id}
+            value={@form[:name].value}
+            autocomplete="name"
+            maxlength="100"
+          />
+          <p :for={error <- @form[:name].errors} class="field-error">{translate_error(error)}</p>
+        </div>
+        <div>
           <label for={@form[:password].id}>Password</label>
           <input
             type="password"

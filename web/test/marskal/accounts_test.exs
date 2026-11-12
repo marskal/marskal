@@ -6,6 +6,53 @@ defmodule Marskal.AccountsTest do
   import Marskal.AccountsFixtures
   alias Marskal.Accounts.{User, UserToken}
 
+  doctest Marskal.Accounts.User, import: true
+
+  describe "update_user_name/2" do
+    test "trims the name and stores a blank one as null" do
+      user = user_fixture()
+
+      assert {:ok, %User{name: "Ada Lovelace"}} =
+               Accounts.update_user_name(user, %{name: " Ada Lovelace\n"})
+
+      assert {:ok, %User{name: nil}} = Accounts.update_user_name(user, %{name: "  "})
+    end
+
+    test "is at most 100 characters" do
+      assert {:error, changeset} =
+               Accounts.update_user_name(user_fixture(), %{name: String.duplicate("é", 101)})
+
+      assert %{name: ["should be at most 100 character(s)"]} = errors_on(changeset)
+    end
+
+    test "registration takes an optional name" do
+      email = unique_user_email()
+
+      assert {:ok, %User{name: "Ada"}} =
+               Accounts.register_user(%{
+                 email: email,
+                 password: valid_user_password(),
+                 name: "Ada"
+               })
+    end
+  end
+
+  describe "User.initials/1" do
+    test "takes a letter from each word, at most three" do
+      assert User.initials(%User{name: "Ada"}) == "A"
+      assert User.initials(%User{name: "ada lovelace"}) == "AL"
+      assert User.initials(%User{name: "Mikkel T. Hoegh"}) == "MTH"
+      assert User.initials(%User{name: "Anne Marie Louise Hansen"}) == "AMH"
+      assert User.initials(%User{name: "(Kim) Ørsted"}) == "KØ"
+      assert User.initials(%User{name: "Ågot æble"}) == "ÅÆ"
+    end
+
+    test "is nil without a name, or without a letter in it" do
+      assert User.initials(%User{name: nil}) == nil
+      assert User.initials(%User{name: "— ?"}) == nil
+    end
+  end
+
   describe "get_user_by_email/1" do
     test "does not return the user if the email does not exist" do
       refute Accounts.get_user_by_email("unknown@marskal.example")
