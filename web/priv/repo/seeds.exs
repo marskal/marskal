@@ -6,9 +6,13 @@
 #   mts@marskal.example / H3mm3l1gh3d  — superuser, folders, projects, tasks;
 #                                        en-DK dates, agenda home, Vim-style keys
 #   kvp@marskal.example / H3mm3l1gh3d  — second user, one open task
+#   edb@marskal.example / H3mm3l1gh3d  — Danish fixture: folders, projects,
+#                                        tasks, tags, reviews, and repeats.
+#                                        Locale da, agenda home, Vim-style keys.
+#                                        Loaded when the account has no projects yet.
 #
 # Existing tasks are left in place. Folders and projects are added when
-# the account has none yet.
+# the account has none yet. Preferences are set on every run.
 
 password = "H3mm3l1gh3d"
 
@@ -165,6 +169,8 @@ defmodule Marskal.DevSeed do
   end
 end
 
+Code.require_file("seeds/edb.exs", __DIR__)
+
 dev = Marskal.DevSeed.user!("mts@marskal.example", true, password)
 other = Marskal.DevSeed.user!("kvp@marskal.example", false, password)
 
@@ -185,6 +191,28 @@ Marskal.DevSeed.tasks!(other, [
   {"Secret task", nil, 16, :open}
 ])
 
+edb = Marskal.DevSeed.user!("edb@marskal.example", false, password)
+
+Marskal.DevSeed.preferences!(edb, %{
+  locale: "da",
+  timezone: "Europe/Copenhagen",
+  week_start: 1,
+  home_view: :agenda,
+  keymap: :vim,
+  default_review_interval: "P14D"
+})
+
+edb_status = Marskal.DevSeed.Edb.seed!(edb)
+edb_counts = Marskal.DevSeed.Edb.counts(edb)
+
 IO.puts("Sample accounts (password: #{password}):")
 IO.puts("  #{dev.email}  — superuser")
 IO.puts("  #{other.email} — second user")
+
+edb_note = if edb_status == :skipped, do: "already loaded", else: "loaded"
+
+IO.puts(
+  "  #{edb.email} — Danish fixture (#{edb_note}: " <>
+    "#{edb_counts.projects} projects, #{edb_counts.tasks} tasks, " <>
+    "#{edb_counts.tags} tags, #{edb_counts.series} series)"
+)

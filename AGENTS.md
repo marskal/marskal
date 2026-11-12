@@ -248,7 +248,8 @@ The repository root is the product, not the web app (ADR 0015).
   `start-postgres` against `web/.devenv/state/postgres` (it orphans a second cluster).
 - Seed accounts are in `web/priv/repo/seeds.exs`. **`mts@marskal.example` is the
   user's own**: an agent testing in a browser signs in as **`kvp@marskal.example`**,
-  and leaves mts@'s data and preferences alone.
+  and leaves mts@'s data and preferences alone. **`edb@marskal.example`** is a
+  large Danish fixture (locale `da`); use it when the task needs that dataset.
 
 ### Elixir
 
