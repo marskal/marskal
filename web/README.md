@@ -28,7 +28,7 @@ mix run priv/repo/seeds.exs
 |-------|----------|--|
 | `mts@marskal.example` | `H3mm3l1gh3d` | Superuser. Inbox, open tasks, and `/dev/dashboard`. |
 | `kvp@marskal.example` | `H3mm3l1gh3d` | Second user, for isolation. |
-| `edb@marskal.example` | `H3mm3l1gh3d` | Danish fixture. Projects, tasks, tags, reviews, and repeats. Locale `da`, agenda home. |
+| `edb@marskal.example` | `H3mm3l1gh3d` | Danish fixture. Projects, tasks, tags, reviews, and repeats. Locale `da`, agenda home, Vim-style keys. |
 
 The seed is idempotent. It adds the sample folders and projects when the
 account does not have any yet. The Danish account is filled once, when it

@@ -8,8 +8,8 @@
 #   kvp@marskal.example / H3mm3l1gh3d  — second user, one open task
 #   edb@marskal.example / H3mm3l1gh3d  — Danish fixture: folders, projects,
 #                                        tasks, tags, reviews, and repeats.
-#                                        Locale da, agenda home. Loaded when
-#                                        the account has no projects yet.
+#                                        Locale da, agenda home, Vim-style keys.
+#                                        Loaded when the account has no projects yet.
 #
 # Existing tasks are left in place. Folders and projects are added when
 # the account has none yet. Preferences are set on every run.
@@ -198,7 +198,7 @@ Marskal.DevSeed.preferences!(edb, %{
   timezone: "Europe/Copenhagen",
   week_start: 1,
   home_view: :agenda,
-  keymap: :standard,
+  keymap: :vim,
   default_review_interval: "P14D"
 })
 
