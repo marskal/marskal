@@ -4,6 +4,7 @@
   # Firefox and a Chromium extension, each zipped.
   languages.javascript = {
     enable = true;
+    package = pkgs.nodejs_26;
     npm.enable = true;
   };
   packages = [

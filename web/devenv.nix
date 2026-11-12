@@ -25,7 +25,7 @@ in
   # esbuild Hex package.
   languages.javascript = {
     enable = true;
-    package = pkgs.nodejs_24;
+    package = pkgs.nodejs_26;
     directory = "assets";
     npm = {
       enable = true;
