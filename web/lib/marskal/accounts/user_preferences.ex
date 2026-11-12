@@ -10,7 +10,8 @@ defmodule Marskal.Accounts.UserPreferences do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @fields [:timezone, :week_start, :locale, :home_view, :keymap]
+  @required [:timezone, :week_start, :locale, :home_view, :keymap]
+  @fields @required ++ [:default_review_interval]
   @home_views [:inbox, :open_tasks, :agenda, :flagged]
   @keymaps [:standard, :vim]
 
@@ -29,6 +30,8 @@ defmodule Marskal.Accounts.UserPreferences do
     field :home_view, Ecto.Enum, values: @home_views, default: :open_tasks
     # Which keyboard map list navigation uses (ADR 0031).
     field :keymap, Ecto.Enum, values: @keymaps, default: :standard
+    # The review interval new projects take; nil is Never (ADR 0026).
+    field :default_review_interval, Marskal.ReviewInterval, default: Duration.new!(day: 7)
     field :user_id, Ecto.UUID, source: :user_id
 
     timestamps(type: :utc_datetime)
@@ -41,7 +44,8 @@ defmodule Marskal.Accounts.UserPreferences do
   def changeset(preferences, attrs) do
     preferences
     |> cast(attrs, @fields)
-    |> validate_required(@fields)
+    |> validate_required(@required)
+    |> Marskal.ReviewInterval.validate(:default_review_interval)
     |> validate_change(:timezone, fn :timezone, zone ->
       case DateTime.now(zone) do
         {:ok, _} -> []
@@ -53,5 +57,8 @@ defmodule Marskal.Accounts.UserPreferences do
     |> check_constraint(:week_start, name: :user_preferences_week_start)
     |> check_constraint(:home_view, name: :user_preferences_home_view)
     |> check_constraint(:keymap, name: :user_preferences_keymap)
+    |> check_constraint(:default_review_interval,
+      name: :user_preferences_default_review_interval
+    )
   end
 end

@@ -4,10 +4,12 @@ defmodule Marskal.Projects do
   """
 
   import Ecto.Query
+  alias Marskal.Accounts
   alias Marskal.Accounts.User
   alias Marskal.Changes
   alias Marskal.Projects.Project
   alias Marskal.Repo
+  alias Marskal.ReviewInterval
   alias Marskal.Tasks
   alias Marskal.Tasks.Task
 
@@ -38,8 +40,9 @@ defmodule Marskal.Projects do
   end
 
   @doc """
-  Patch any of title, notes, url, flagged, project_folder_id, state, and the dates in one
-  command. `at:` is as for `Marskal.Tasks.update_task/5`. Resolving the
+  Patch any of title, notes, url, flagged, project_folder_id, state, the dates,
+  and the review fields in one command. A new review interval without a
+  next review day moves that day too (ADR 0026). `at:` is as for `Marskal.Tasks.update_task/5`. Resolving the
   latest occurrence of a series creates the next one (ADR 0007).
   """
   def update_project(%User{} = user, id, attrs, command_id, opts \\ []) when is_map(attrs) do
@@ -52,6 +55,8 @@ defmodule Marskal.Projects do
   end
 
   defp commit_update(user, command_id, project, attrs, opts) do
+    opts = put_review_zone(opts, user, attrs)
+
     with {:ok, updated, changeset} <-
            Changes.commit(Project.update_changeset(project, attrs, opts)) do
       if Ecto.Changeset.changed?(changeset, :state) and updated.state in [:done, :dropped] do
@@ -60,6 +65,39 @@ defmodule Marskal.Projects do
 
       {:ok, updated, changeset}
     end
+  end
+
+  # A new review interval counts from a day on the user's clock.
+  defp put_review_zone(opts, user, attrs) do
+    if Map.has_key?(attrs, :review_interval) or Map.has_key?(attrs, "review_interval"),
+      do: Keyword.put_new(opts, :timezone, Accounts.timezone(user)),
+      else: opts
+  end
+
+  @doc """
+  Marks the project reviewed now: it is next due its interval after today
+  on the user's clock (ADR 0026). A project set to Never is not reviewed.
+  `at:` is the instant it was reviewed, for a command made earlier.
+  """
+  def mark_reviewed(%User{} = user, id, command_id, opts \\ []) do
+    Changes.apply(user, command_id, "project", fn ->
+      case get_project(user, id) do
+        nil -> {:error, :not_found}
+        %Project{review_interval: nil} -> {:error, :not_reviewed}
+        project -> commit_review(user, project, opts[:at] || DateTime.utc_now())
+      end
+    end)
+  end
+
+  defp commit_review(user, project, at) do
+    today = at |> DateTime.shift_zone!(Accounts.timezone(user)) |> DateTime.to_date()
+
+    project
+    |> Project.update_changeset(%{
+      last_reviewed_at: DateTime.truncate(at, :second),
+      next_review_on: ReviewInterval.next_on(today, project.review_interval)
+    })
+    |> Changes.commit()
   end
 
   @doc """
