@@ -63,7 +63,7 @@ let
   mdexNativeNifs = {
     x86_64-linux = {
       triple = "x86_64-unknown-linux-gnu";
-      hash = "sha256:d9686d96edc922ceda2c8d10005b27a5dfbd1fe2883fc26b7bbef1c4b7a53c09";
+      hash = "sha256:9a5ae57c9ee192c21c121832ce102aa9817087d26522582fd44dd16b6add5110";
     };
   };
 
