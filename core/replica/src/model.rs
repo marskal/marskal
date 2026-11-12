@@ -86,6 +86,13 @@ pub struct Project {
     pub due_at: Option<String>,
     pub series_id: Option<Uuid>,
     pub occurrence_for: Option<String>,
+    /// How far apart reviews are, as ISO 8601 date parts (`P7D`, `P1M`);
+    /// `None` is Never (ADR 0026). `marskal_rules::review::parse` reads it.
+    pub review_interval: Option<String>,
+    /// The day, `YYYY-MM-DD` on the user's clock, the project is next due
+    /// for review. `None` exactly when the interval is.
+    pub next_review_on: Option<String>,
+    pub last_reviewed_at: Option<String>,
     pub resolved_at: Option<String>,
     pub discarded_at: Option<String>,
     pub inserted_at: Option<String>,
@@ -151,7 +158,8 @@ pub enum Keymap {
 /// `week_start` is the ISO day weeks start on, 1 for Monday. `locale` is
 /// the CLDR locale dates and times are formatted in, such as `en-DK`
 /// (ADR 0027). `home_view` is the view a login opens. `keymap` chooses
-/// the keyboard map (ADR 0031).
+/// the keyboard map (ADR 0031). `default_review_interval` is the review
+/// interval new projects take, `None` for Never (ADR 0026).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct UserPreferences {
     pub id: Uuid,
@@ -160,6 +168,7 @@ pub struct UserPreferences {
     pub locale: String,
     pub home_view: HomeView,
     pub keymap: Keymap,
+    pub default_review_interval: Option<String>,
     pub inserted_at: Option<String>,
     pub updated_at: Option<String>,
 }

@@ -1,8 +1,8 @@
 use jiff::Timestamp;
 use marskal_ffi::{
-    DateField, Defer, LocalDate, LocalTime, Location, NewProject, NewTask, SearchTarget, Store,
-    StoreError, TargetKind, TaskChange, TaskFilter, TaskState, default_time, local_instant,
-    search_targets,
+    DateField, Defer, LocalDate, LocalTime, Location, NewProject, NewTask, ReviewChoice,
+    ReviewInterval, SearchTarget, Store, StoreError, TargetKind, TaskChange, TaskFilter, TaskState,
+    default_time, local_instant, next_review_on, parse_review_interval, search_targets,
 };
 use serde_json::{Value, json};
 use uuid::Uuid;
@@ -405,4 +405,207 @@ fn a_target_search_puts_shown_projects_before_hidden_ones() {
     assert_eq!(search_targets(targets.clone(), "web".into(), 20), [2, 1]);
     assert_eq!(search_targets(targets.clone(), "work/web".into(), 20), [2]);
     assert!(search_targets(targets, " ".into(), 20).is_empty());
+}
+
+fn preferences_row(user: &str, default: Option<&str>) -> Value {
+    json!({
+        "id": user,
+        "timezone": "Europe/Copenhagen",
+        "week_start": 1,
+        "locale": "en-DK",
+        "home_view": "open_tasks",
+        "keymap": "standard",
+        "default_review_interval": default,
+        "inserted_at": "2026-10-01T08:00:00Z",
+        "updated_at": "2026-10-01T08:00:00Z"
+    })
+}
+
+fn project_row(id: Uuid, title: &str, interval: Option<&str>, next: Option<&str>) -> Value {
+    json!({
+        "id": id.to_string(),
+        "title": title,
+        "notes": null,
+        "url": null,
+        "flagged": false,
+        "state": "to_do",
+        "project_folder_id": null,
+        "rank": "V",
+        "defer_until": null,
+        "deferred_indefinitely": false,
+        "planned_at": null,
+        "due_at": null,
+        "series_id": null,
+        "occurrence_for": null,
+        "review_interval": interval,
+        "next_review_on": next,
+        "last_reviewed_at": "2026-10-01T09:30:00Z",
+        "resolved_at": null,
+        "discarded_at": null,
+        "inserted_at": "2026-10-01T08:00:00Z",
+        "updated_at": "2026-10-01T08:00:00Z"
+    })
+}
+
+fn day(year: i16, month: i8, day: i8) -> LocalDate {
+    LocalDate { year, month, day }
+}
+
+#[test]
+fn a_review_interval_reads_as_the_server_keeps_it() {
+    assert_eq!(
+        parse_review_interval(" p2w ".into()),
+        Some(ReviewInterval {
+            text: "P14D".into(),
+            years: 0,
+            months: 0,
+            days: 14
+        })
+    );
+    assert_eq!(parse_review_interval("P14M".into()).unwrap().text, "P1Y2M");
+    for refused in ["PT1H", "P0D", "-P1D", "weekly"] {
+        assert_eq!(parse_review_interval(refused.into()), None, "{refused}");
+    }
+
+    let jan31 = day(2026, 1, 31);
+    let next = |text: &str| next_review_on(jan31, text.into()).unwrap();
+    assert_eq!(next("P1M"), Some(day(2026, 2, 28)));
+    assert_eq!(next("P1M1D"), Some(day(2026, 3, 1)));
+    assert_eq!(next("PT1H"), None);
+}
+
+#[test]
+fn a_project_is_reviewed_by_its_interval() {
+    let db = Db::new();
+    let user = Uuid::now_v7().to_string();
+    let rows = json!({ "user_preferences": [preferences_row(&user, Some("P1M"))] });
+    db.store.apply_pull(pull_body(&user, rows)).unwrap();
+    assert_eq!(
+        db.store
+            .preferences()
+            .unwrap()
+            .unwrap()
+            .default_review_interval
+            .as_deref(),
+        Some("P1M")
+    );
+
+    let today = db.store.today().unwrap();
+    let project = |id| {
+        db.store
+            .projects()
+            .unwrap()
+            .into_iter()
+            .find(|p| p.id == id)
+            .unwrap()
+    };
+    let add = |title: &str, review, next_review_on| {
+        db.store
+            .add_project(NewProject {
+                title: title.into(),
+                review,
+                next_review_on,
+                ..NewProject::default()
+            })
+            .unwrap()
+    };
+
+    let garden = add("Garden", None, None);
+    assert_eq!(project(garden).review_interval.as_deref(), Some("P1M"));
+    assert_eq!(
+        project(garden).next_review_on,
+        next_review_on(today, "P1M".into()).unwrap()
+    );
+
+    let reference = add("Reference", Some(ReviewChoice::Never), None);
+    assert_eq!(project(reference).review_interval, None);
+    assert!(matches!(
+        db.store.mark_project_reviewed(reference),
+        Err(StoreError::Invalid { .. })
+    ));
+
+    let every_week = Some(ReviewChoice::Every {
+        interval: "P1W".into(),
+    });
+    let weekly = add("Weekly", every_week, Some(today));
+    assert_eq!(project(weekly).review_interval.as_deref(), Some("P7D"));
+    assert_eq!(db.store.review_count().unwrap(), 1);
+
+    db.store.mark_project_reviewed(weekly).unwrap();
+    assert_eq!(
+        project(weekly).next_review_on,
+        next_review_on(today, "P7D".into()).unwrap()
+    );
+    assert!(project(weekly).last_reviewed_at.is_some());
+    assert_eq!(db.store.review_count().unwrap(), 0);
+
+    db.store.set_project_next_review_on(garden, today).unwrap();
+    // Counted from the day it was made, today, so not due.
+    db.store
+        .set_project_review_interval(reference, Some("P3M".into()))
+        .unwrap();
+    db.store.set_project_review_interval(weekly, None).unwrap();
+    assert_eq!(project(weekly).next_review_on, None);
+
+    db.store.set_default_review_interval(None).unwrap();
+    assert_eq!(
+        db.store
+            .preferences()
+            .unwrap()
+            .unwrap()
+            .default_review_interval,
+        None
+    );
+    assert!(matches!(
+        db.store.set_default_review_interval(Some("PT1H".into())),
+        Err(StoreError::Invalid { .. })
+    ));
+
+    let due: Vec<String> = db
+        .store
+        .projects_due_for_review()
+        .unwrap()
+        .into_iter()
+        .map(|r| r.project.title)
+        .collect();
+    assert_eq!(due, ["Garden"]);
+}
+
+#[test]
+fn pulled_projects_due_for_review_list_with_their_state() {
+    let db = Db::new();
+    let user = Uuid::now_v7().to_string();
+    let (busy, stalled) = (Uuid::now_v7(), Uuid::now_v7());
+    let mut busy_row = project_row(busy, "Busy", Some("P7D"), Some("2020-01-01"));
+    busy_row["rank"] = json!("A");
+    let mut task = task_row(Uuid::now_v7(), "Next step");
+    task["inbox"] = json!(false);
+    task["planned_at"] = json!(null);
+    task["project_id"] = json!(busy.to_string());
+    let rows = json!({
+        "user_preferences": [preferences_row(&user, Some("P7D"))],
+        "project": [
+            busy_row,
+            project_row(stalled, "Stalled", Some("P1Y2M"), Some("2020-01-01")),
+            project_row(Uuid::now_v7(), "Later", Some("P7D"), Some("2999-01-01")),
+            project_row(Uuid::now_v7(), "Never", None, None),
+        ],
+        "task": [task]
+    });
+    db.store.apply_pull(pull_body(&user, rows)).unwrap();
+
+    let due = db.store.projects_due_for_review().unwrap();
+    let listed: Vec<(Uuid, bool, bool)> = due
+        .iter()
+        .map(|r| (r.project.id, r.stalled, r.deferred))
+        .collect();
+    assert_eq!(listed, [(busy, false, false), (stalled, true, false)]);
+    assert_eq!(due[1].project.review_interval.as_deref(), Some("P1Y2M"));
+    assert_eq!(due[1].project.next_review_on, Some(day(2020, 1, 1)));
+    assert_eq!(
+        due[1].project.last_reviewed_at,
+        Some(at("2026-10-01T09:30:00Z"))
+    );
+    assert!(due[1].folder_path.is_empty());
+    assert_eq!(db.store.review_count().unwrap(), 2);
 }

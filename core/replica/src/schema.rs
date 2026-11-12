@@ -214,6 +214,16 @@ ALTER TABLE projects ADD COLUMN rank TEXT;
 ALTER TABLE project_folders ADD COLUMN rank TEXT;
 INSERT OR REPLACE INTO meta (key, value) VALUES ('needs_snapshot', '1');
 "#,
+    // ADR 0026. A project's review interval and the preference's default
+    // are ISO 8601 text, as on the wire; null is Never. Rows pulled before
+    // this have none, so the next pull is a snapshot.
+    r#"
+ALTER TABLE projects ADD COLUMN review_interval TEXT;
+ALTER TABLE projects ADD COLUMN next_review_on TEXT;
+ALTER TABLE projects ADD COLUMN last_reviewed_at TEXT;
+ALTER TABLE user_preferences ADD COLUMN default_review_interval TEXT DEFAULT 'P7D';
+INSERT OR REPLACE INTO meta (key, value) VALUES ('needs_snapshot', '1');
+"#,
 ];
 
 /// Brings the database to the latest schema. `user_version` counts the

@@ -679,12 +679,16 @@ fn a_preferences_row_from_before_home_view_reads_as_open_tasks() {
         .query_row("PRAGMA user_version", [], |row| row.get(0))
         .unwrap();
     conn.execute_batch(&format!(
-        "ALTER TABLE projects DROP COLUMN rank;
+        "ALTER TABLE projects DROP COLUMN review_interval;
+         ALTER TABLE projects DROP COLUMN next_review_on;
+         ALTER TABLE projects DROP COLUMN last_reviewed_at;
+         ALTER TABLE user_preferences DROP COLUMN default_review_interval;
+         ALTER TABLE projects DROP COLUMN rank;
          ALTER TABLE project_folders DROP COLUMN rank;
          ALTER TABLE user_preferences DROP COLUMN keymap;
          ALTER TABLE user_preferences DROP COLUMN home_view;
          PRAGMA user_version = {version};",
-        version = version - 3
+        version = version - 4
     ))
     .unwrap();
     drop(conn);
@@ -771,7 +775,10 @@ fn a_database_from_before_urls_asks_for_a_snapshot() {
     // Back to the schema a client built before URLs left.
     let conn = rusqlite::Connection::open(&path).unwrap();
     conn.execute_batch(
-        "ALTER TABLE projects DROP COLUMN rank;
+        "ALTER TABLE projects DROP COLUMN review_interval;
+         ALTER TABLE projects DROP COLUMN next_review_on;
+         ALTER TABLE projects DROP COLUMN last_reviewed_at;
+         ALTER TABLE projects DROP COLUMN rank;
          ALTER TABLE project_folders DROP COLUMN rank;
          ALTER TABLE tasks DROP COLUMN flagged;
          ALTER TABLE projects DROP COLUMN flagged;
