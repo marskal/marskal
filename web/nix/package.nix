@@ -31,7 +31,7 @@
   importNpmLock,
   fetchurl,
   linkFarm,
-  nodejs_24,
+  nodejs_26,
 }:
 let
   pname = "marskal";
@@ -109,7 +109,7 @@ let
   nodeModules = importNpmLock.buildNodeModules {
     package = npmPackage;
     packageLock = npmRuntimeLock;
-    nodejs = nodejs_24;
+    nodejs = nodejs_26;
   };
 
   mixFodDeps = beamPackages.fetchMixDeps {
