@@ -108,6 +108,8 @@ defmodule MarskalWeb.Router do
       live "/inbox", InboxLive, :index
       live "/agenda", AgendaLive, :index
       live "/flagged", OpenTasksLive, :flagged
+      live "/review", ReviewLive, :index
+      live "/help/review-intervals", HelpLive, :review_intervals
       live "/projects/:id", ProjectLive, :show
       live "/folders/:id", FolderLive, :show
       live "/tags/untagged", UntaggedLive, :index

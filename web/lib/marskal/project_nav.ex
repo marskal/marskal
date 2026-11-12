@@ -5,7 +5,8 @@ defmodule Marskal.ProjectNav do
   A project filed under a folder that stays hidden is not hoisted into
   the list. A folder's subfolders and projects are one list in rank order
   (`Marskal.ProjectOutline`).
-  Tags come as a `Marskal.Tags.Tree`.
+  Tags come as a `Marskal.Tags.Tree`. `review_due` counts the projects due
+  for review (ADR 0026).
   """
 
   import Ecto.Query
@@ -16,7 +17,7 @@ defmodule Marskal.ProjectNav do
   alias Marskal.Repo
   alias Marskal.Tags.Tree
 
-  defstruct [:folders, :children, :tags, show: []]
+  defstruct [:folders, :children, :tags, show: [], review_due: 0]
 
   def build(user, show \\ []) when is_list(show) do
     folders =
@@ -36,7 +37,8 @@ defmodule Marskal.ProjectNav do
       folders: Map.new(folders, &{&1.id, &1}),
       children: children,
       tags: Marskal.Tags.tree(user),
-      show: show
+      show: show,
+      review_due: Marskal.Review.count(user)
     }
   end
 
@@ -61,6 +63,16 @@ defmodule Marskal.ProjectNav do
       if :deferred in show,
         do: projects,
         else: Enum.reject(projects, &(&1.state == :to_do and Dates.deferred?(&1, now)))
+    end)
+  end
+
+  @doc "Every project the nav holds, in sidebar order: depth first, by rank."
+  def project_ids(%__MODULE__{} = nav), do: project_ids(nav, nil)
+
+  defp project_ids(nav, folder_id) do
+    Enum.flat_map(children(nav, folder_id), fn
+      %Project{id: id} -> [id]
+      %ProjectFolder{id: id} -> project_ids(nav, id)
     end)
   end
 

@@ -378,6 +378,9 @@ defmodule MarskalWeb.GoTo do
   defp target_icon(%{target: %{type: :view, id: :flagged}} = assigns),
     do: ~H|<Lucideicons.flag class="icon" />|
 
+  defp target_icon(%{target: %{type: :view, id: :review}} = assigns),
+    do: ~H|<Lucideicons.coffee class="icon" />|
+
   defp target_icon(%{target: %{type: :view, id: :untagged}} = assigns),
     do: ~H|<Lucideicons.tag class="icon" />|
 
@@ -412,6 +415,7 @@ defmodule MarskalWeb.GoTo do
   defp path(%Target{type: :view, id: :open}), do: ~p"/open"
   defp path(%Target{type: :view, id: :agenda}), do: ~p"/agenda"
   defp path(%Target{type: :view, id: :flagged}), do: ~p"/flagged"
+  defp path(%Target{type: :view, id: :review}), do: ~p"/review"
   defp path(%Target{type: :view, id: :untagged}), do: ~p"/tags/untagged"
   defp path(%Target{type: :view, id: :import}), do: ~p"/imports"
   defp path(%Target{type: :view, id: :settings}), do: ~p"/users/settings"
@@ -423,6 +427,7 @@ defmodule MarskalWeb.GoTo do
       {:open, gettext("Open")},
       {:agenda, gettext("Agenda")},
       {:flagged, gettext("Flagged")},
+      {:review, gettext("Review")},
       {:untagged, gettext("Untagged")},
       {:import, gettext("Import")},
       {:settings, gettext("Settings")}
