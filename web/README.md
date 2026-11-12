@@ -28,9 +28,12 @@ mix run priv/repo/seeds.exs
 |-------|----------|--|
 | `mts@marskal.example` | `H3mm3l1gh3d` | Superuser. Inbox, open tasks, and `/dev/dashboard`. |
 | `kvp@marskal.example` | `H3mm3l1gh3d` | Second user, for isolation. |
+| `edb@marskal.example` | `H3mm3l1gh3d` | Danish fixture. Projects, tasks, tags, reviews, and repeats. Locale `da`, agenda home. |
 
 The seed is idempotent. It adds the sample folders and projects when the
-account does not have any yet. Import is at `/imports`.
+account does not have any yet. The Danish account is filled once, when it
+has no projects; later runs leave that data and reset its preferences.
+Import is at `/imports`.
 
 OmniFocus: upload a Backup Document (`.ofocus-backup` or a zip of one). The
 tutorial backup used by the tests is
