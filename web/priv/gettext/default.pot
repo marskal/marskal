@@ -21,6 +21,11 @@ msgstr ""
 msgid "%{done} done · %{dropped} dropped · %{missed} missed"
 msgstr ""
 
+#: lib/marskal_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} (%{email})"
+msgstr ""
+
 #: lib/marskal_web/live/repeat_panel.ex
 #, elixir-autogen, elixir-format
 msgid "%{percent} done"
@@ -596,6 +601,21 @@ msgstr ""
 
 #: lib/marskal_web/live/user_live/settings.ex
 #, elixir-autogen, elixir-format
+msgid "Name"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/registration.ex
+#, elixir-autogen, elixir-format
+msgid "Name (optional)"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Name saved."
+msgstr ""
+
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
 msgid "Navigation"
 msgstr ""
 
@@ -780,12 +800,18 @@ msgstr ""
 msgid "Saturday"
 msgstr ""
 
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Save name"
+msgstr ""
+
 #: lib/marskal_web/live/user_live/security.ex
 #, elixir-autogen, elixir-format
 msgid "Save password"
 msgstr ""
 
 #: lib/marskal_web/live/user_live/security.ex
+#: lib/marskal_web/live/user_live/settings.ex
 #, elixir-autogen, elixir-format
 msgid "Saving..."
 msgstr ""
@@ -1049,6 +1075,16 @@ msgstr ""
 #: lib/marskal_web/controllers/user_session_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Welcome back!"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "What to call you. Its initials mark you in the header; without a name, an icon does."
+msgstr ""
+
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "You"
 msgstr ""
 
 #: lib/marskal_web/controllers/user_session_controller.ex

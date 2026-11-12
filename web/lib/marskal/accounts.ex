@@ -118,6 +118,22 @@ defmodule Marskal.Accounts do
   end
 
   @doc """
+  Returns an `%Ecto.Changeset{}` for changing the user's name.
+  """
+  def change_user_name(%User{} = user, attrs \\ %{}) do
+    User.name_changeset(user, attrs)
+  end
+
+  @doc """
+  Sets what to call the user. A blank name clears it.
+  """
+  def update_user_name(%User{} = user, attrs) do
+    user
+    |> User.name_changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
   Updates the user email using the given token.
 
   If the token matches, the user email is updated and the token is deleted.

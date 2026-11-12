@@ -6,6 +6,7 @@ defmodule Marskal.Accounts.User do
   @foreign_key_type :binary_id
   schema "users" do
     field :email, :string
+    field :name, :string
     field :password, :string, virtual: true, redact: true
     field :hashed_password, :string, redact: true
     field :confirmed_at, :utc_datetime
@@ -67,8 +68,61 @@ defmodule Marskal.Accounts.User do
   def registration_changeset(user, attrs, opts \\ []) do
     user
     |> email_changeset(attrs, opts)
+    |> name_changeset(attrs)
     |> password_changeset(attrs, opts)
   end
+
+  @doc """
+  A user changeset for the name: what to call the user. Optional; blank
+  is no name, stored as null.
+  """
+  def name_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:name])
+    |> update_change(:name, &normalize_name/1)
+    |> validate_length(:name, max: 100)
+    |> check_constraint(:name, name: :users_name)
+  end
+
+  # cast already makes a blank name nil.
+  defp normalize_name(nil), do: nil
+  defp normalize_name(name), do: name |> String.trim() |> String.normalize(:nfc)
+
+  @doc """
+  One to three initials from the user's name, for the badge in the header;
+  nil when there is no name, or nothing in it to take a letter from.
+
+  Each word gives its first letter or digit. A name of four words or more
+  gives its first two and its last.
+
+      iex> initials(%User{name: "Mikkel T. Hoegh"})
+      "MTH"
+      iex> initials(%User{name: "ada lovelace"})
+      "AL"
+      iex> initials(%User{name: nil})
+      nil
+  """
+  def initials(%__MODULE__{name: name}) when is_binary(name) do
+    letters =
+      name
+      |> String.split()
+      |> Enum.flat_map(fn word ->
+        word |> String.graphemes() |> Enum.find(&(&1 =~ ~r/^[\p{L}\p{N}]/u)) |> List.wrap()
+      end)
+
+    letters =
+      case letters do
+        [first, second, _, _ | _] = many -> [first, second, List.last(many)]
+        few -> few
+      end
+
+    case letters do
+      [] -> nil
+      letters -> letters |> Enum.join() |> String.upcase()
+    end
+  end
+
+  def initials(%__MODULE__{}), do: nil
 
   @doc """
   A user changeset for changing the password.

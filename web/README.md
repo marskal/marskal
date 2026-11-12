@@ -26,13 +26,14 @@ mix run priv/repo/seeds.exs
 
 | Email | Password | |
 |-------|----------|--|
-| `mts@marskal.example` | `H3mm3l1gh3d` | Superuser. Inbox, open tasks, and `/dev/dashboard`. |
-| `kvp@marskal.example` | `H3mm3l1gh3d` | Second user, for isolation. |
-| `edb@marskal.example` | `H3mm3l1gh3d` | Danish fixture. Projects, tasks, tags, reviews, and repeats. Locale `da`, agenda home, Vim-style keys. |
+| `mts@marskal.test` | `H3mm3l1gh3d` | Marie-Thérèse Scheuner-Mäder. Superuser. Inbox, open tasks, and `/dev/dashboard`. |
+| `kvp@marskal.test` | `H3mm3l1gh3d` | Karl-Viggo von und zu Pappenheim. Second user, for isolation. |
+| `edb@marskal.test` | `H3mm3l1gh3d` | Evald Daugård Berthelsen. Danish fixture. Projects, tasks, tags, reviews, and repeats. Locale `da`, agenda home, Vim-style keys. |
 
 The seed is idempotent. It adds the sample folders and projects when the
 account does not have any yet. The Danish account is filled once, when it
-has no projects; later runs leave that data and reset its preferences.
+has no projects; later runs leave that data and reset its preferences. An
+account still at its old `@marskal.example` address moves to the new one.
 Import is at `/imports`.
 
 OmniFocus: upload a Backup Document (`.ofocus-backup` or a zip of one). The

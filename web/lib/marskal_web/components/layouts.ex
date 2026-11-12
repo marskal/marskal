@@ -74,7 +74,7 @@ defmodule MarskalWeb.Layouts do
         <.theme_toggle />
         <div class="app-header__account">
           <%= if @current_scope && @current_scope.user do %>
-            <span class="who">{@current_scope.user.email}</span>
+            <.user_badge user={@current_scope.user} />
             <.link :if={@current_scope.user.superuser} href={~p"/dev/dashboard"}>Dashboard</.link>
             <.link href={~p"/users/settings"}>Settings</.link>
             <.link href={~p"/users/log-out"} method="delete">Log out</.link>
@@ -646,4 +646,34 @@ defmodule MarskalWeb.Layouts do
     </div>
     """
   end
+
+  @doc """
+  The user's initials in a small round badge, or a person icon when they
+  gave no name. The name and email are its tooltip and accessible name.
+  """
+  attr :user, Marskal.Accounts.User, required: true
+
+  def user_badge(assigns) do
+    assigns = assign(assigns, :initials, Marskal.Accounts.User.initials(assigns.user))
+
+    ~H"""
+    <span
+      class="user-badge"
+      role="img"
+      aria-label={badge_label(@user)}
+      title={badge_label(@user)}
+    >
+      <%= if @initials do %>
+        <span aria-hidden="true">{@initials}</span>
+      <% else %>
+        <Lucideicons.user class="icon" aria-hidden="true" />
+      <% end %>
+    </span>
+    """
+  end
+
+  defp badge_label(%{name: nil, email: email}), do: email
+
+  defp badge_label(%{name: name, email: email}),
+    do: gettext("%{name} (%{email})", name: name, email: email)
 end
