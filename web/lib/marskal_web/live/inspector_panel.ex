@@ -773,6 +773,13 @@ defmodule MarskalWeb.InspectorPanel do
         record={@record}
         change_version={@change_version}
       />
+      <.live_component
+        module={MarskalWeb.ReviewPanel}
+        id="inspector-project-review"
+        user={@user}
+        record={@record}
+        change_version={@change_version}
+      />
       <.meta record={@record} zone={@zone} />
     </section>
     """

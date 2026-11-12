@@ -34,6 +34,12 @@ defmodule MarskalWeb.NavComponents do
           <.view_link navigate={~p"/flagged"} current={@current_nav == :flagged} class="in-tab-bar">
             <Lucideicons.flag class="icon" /> Flagged
           </.view_link>
+          <.view_link navigate={~p"/review"} current={@current_nav == :review}>
+            <Lucideicons.coffee class="icon" /> {gettext("Review")}
+            <span :if={@nav.review_due > 0} class="count" id="sidebar-review-count">
+              <span class="sr-only">{gettext("due:")}</span>{@nav.review_due}
+            </span>
+          </.view_link>
           <.view_link navigate={~p"/imports"} current={@current_nav == :import}>
             <Lucideicons.download class="icon" /> Import
           </.view_link>

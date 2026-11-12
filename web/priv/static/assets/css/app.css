@@ -398,6 +398,14 @@ h1 {
   padding: 0;
 }
 
+/* How many projects are due for review (ADR 0026). */
+.sidebar-links .count {
+  margin-inline-start: auto;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Folders, projects, and tags are flat outlines (MarskalWeb.NavOutline):
    each row is indented by its depth, and keeps a gutter for the toggle
    that collapses it, so what it holds lines up under its name. The hook
