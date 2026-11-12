@@ -1,4 +1,4 @@
-# Danish fixture for edb@marskal.example. Loaded from seeds.exs.
+# Danish fixture for edb@marskal.test. Loaded from seeds.exs.
 #
 # The account is the IT desk of the fictional municipality Østerkær, plus a
 # kitchen, an allotment, and a residents' association. Dates are relative

@@ -3,36 +3,53 @@
 #   mix run priv/repo/seeds.exs
 #
 # Sign in as:
-#   mts@marskal.example / H3mm3l1gh3d  — superuser, folders, projects, tasks;
-#                                        en-DK dates, agenda home, Vim-style keys
-#   kvp@marskal.example / H3mm3l1gh3d  — second user, one open task
-#   edb@marskal.example / H3mm3l1gh3d  — Danish fixture: folders, projects,
-#                                        tasks, tags, reviews, and repeats.
-#                                        Locale da, agenda home, Vim-style keys.
-#                                        Loaded when the account has no projects yet.
+#   mts@marskal.test / H3mm3l1gh3d  — superuser, folders, projects, tasks;
+#                                     en-DK dates, agenda home, Vim-style keys
+#   kvp@marskal.test / H3mm3l1gh3d  — second user, one open task
+#   edb@marskal.test / H3mm3l1gh3d  — Danish fixture: folders, projects,
+#                                     tasks, tags, reviews, and repeats.
+#                                     Locale da, agenda home, Vim-style keys.
+#                                     Loaded when the account has no projects yet.
 #
 # Existing tasks are left in place. Folders and projects are added when
-# the account has none yet. Preferences are set on every run.
+# the account has none yet. Preferences are set on every run. An account
+# still at its old @marskal.example address moves to the new one, data and
+# all. A name is set when the account has none.
 
 password = "H3mm3l1gh3d"
 
 defmodule Marskal.DevSeed do
   import Ecto.Query
 
-  def user!(email, superuser, password) do
-    case Marskal.Repo.get_by(Marskal.Accounts.User, email: email) do
-      %Marskal.Accounts.User{} = user ->
-        user
+  def user!(email, name, superuser, password) do
+    user =
+      case Marskal.Repo.get_by(Marskal.Accounts.User, email: email) || moved(email) do
+        %Marskal.Accounts.User{} = user ->
+          user
 
-      nil ->
-        %Marskal.Accounts.User{}
-        |> Ecto.Changeset.change(%{
-          email: email,
-          hashed_password: Argon2.hash_pwd_salt(password),
-          confirmed_at: DateTime.utc_now(:second),
-          superuser: superuser
-        })
-        |> Marskal.Repo.insert!()
+        nil ->
+          %Marskal.Accounts.User{}
+          |> Ecto.Changeset.change(%{
+            email: email,
+            hashed_password: Argon2.hash_pwd_salt(password),
+            confirmed_at: DateTime.utc_now(:second),
+            superuser: superuser
+          })
+          |> Marskal.Repo.insert!()
+      end
+
+    if user.name,
+      do: user,
+      else: user |> Ecto.Changeset.change(name: name) |> Marskal.Repo.update!()
+  end
+
+  # The seed accounts were @marskal.example until 2026-11.
+  defp moved(email) do
+    old = String.replace_suffix(email, "@marskal.test", "@marskal.example")
+
+    case Marskal.Repo.get_by(Marskal.Accounts.User, email: old) do
+      nil -> nil
+      user -> user |> Ecto.Changeset.change(email: email) |> Marskal.Repo.update!()
     end
   end
 
@@ -171,8 +188,10 @@ end
 
 Code.require_file("seeds/edb.exs", __DIR__)
 
-dev = Marskal.DevSeed.user!("mts@marskal.example", true, password)
-other = Marskal.DevSeed.user!("kvp@marskal.example", false, password)
+dev = Marskal.DevSeed.user!("mts@marskal.test", "Marie-Thérèse Scheuner-Mäder", true, password)
+
+other =
+  Marskal.DevSeed.user!("kvp@marskal.test", "Karl-Viggo von und zu Pappenheim", false, password)
 
 Marskal.DevSeed.preferences!(dev, %{locale: "en-DK", home_view: :agenda, keymap: :vim})
 Marskal.DevSeed.structure!(dev)
@@ -191,7 +210,7 @@ Marskal.DevSeed.tasks!(other, [
   {"Secret task", nil, 16, :open}
 ])
 
-edb = Marskal.DevSeed.user!("edb@marskal.example", false, password)
+edb = Marskal.DevSeed.user!("edb@marskal.test", "Evald Daugård Berthelsen", false, password)
 
 Marskal.DevSeed.preferences!(edb, %{
   locale: "da",
