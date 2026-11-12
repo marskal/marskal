@@ -373,8 +373,15 @@ fn update(
 fn live(conn: &Connection, entity: Entity, id: &str) -> Result<Option<Map<String, Value>>> {
     let columns = entity.columns();
     let names: Vec<&str> = columns.iter().map(|c| c.name).collect();
+    // The preferences row has no discarded_at: it is always live. ?2 is
+    // still bound, so the statement names it.
+    let live = if entity.column("discarded_at").is_some() {
+        "(discarded_at IS NULL OR ?2)"
+    } else {
+        "(1 OR ?2)"
+    };
     let sql = format!(
-        "SELECT {} FROM {} WHERE id = ?1 AND (discarded_at IS NULL OR ?2)",
+        "SELECT {} FROM {} WHERE id = ?1 AND {live}",
         names.join(", "),
         entity.table()
     );

@@ -740,6 +740,7 @@ fn run(cli: Cli, output: &Output) -> Result<()> {
                         url: url.clone(),
                         flagged: *flag,
                         folder_id,
+                        ..NewProject::default()
                     })?;
                     let unsynced = context.try_sync();
                     output.ids("Added project", &[id], unsynced.as_deref());
