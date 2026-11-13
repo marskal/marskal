@@ -68,11 +68,11 @@ defmodule MarskalWeb.UserLive.Settings do
             <MarskalWeb.ReviewIntervals.picker
               id="preferences-review-interval"
               name="preferences[default_review_interval]"
-              custom_name="preferences[default_review_interval_custom]"
+              count_name="preferences[default_review_interval_count]"
               label={gettext("New projects are reviewed")}
               interval={@preferences.default_review_interval}
-              choice={@review_choice}
-              custom={@review_custom}
+              unit={@review_unit}
+              count={@review_count}
               error={@review_error}
             />
             <p class="hint">
@@ -127,7 +127,7 @@ defmodule MarskalWeb.UserLive.Settings do
      |> assign(:page_title, gettext("Settings"))
      |> assign_preferences(Accounts.preferences(user))
      |> assign(:name_form, to_form(Accounts.change_user_name(user)))
-     |> assign(review_choice: nil, review_custom: nil, review_error: nil)}
+     |> assign(review_unit: nil, review_count: nil, review_error: nil)}
   end
 
   @impl true
@@ -178,27 +178,27 @@ defmodule MarskalWeb.UserLive.Settings do
     end
   end
 
-  # The review picker posts a choice and custom text (ADR 0026). Custom
-  # that is empty or unreadable holds the whole post until it reads.
-  defp review_params(%{"default_review_interval" => choice} = params) do
-    custom = params["default_review_interval_custom"]
-    params = Map.delete(params, "default_review_interval_custom")
+  # The review picker posts a unit and a number (ADR 0026). A number that
+  # is empty or wrong holds the whole post until it reads.
+  defp review_params(%{"default_review_interval" => unit} = params) do
+    count = params["default_review_interval_count"]
+    params = Map.delete(params, "default_review_interval_count")
+    posted = %{review_unit: unit, review_count: count}
 
-    kept =
-      if choice == "custom",
-        do: %{review_choice: "custom", review_custom: custom},
-        else: %{review_choice: nil, review_custom: nil}
-
-    case MarskalWeb.ReviewIntervals.read(choice, custom) do
+    case MarskalWeb.ReviewIntervals.read(unit, count) do
       {:ok, interval} ->
         {:ok, Map.put(params, "default_review_interval", interval),
-         Map.put(kept, :review_error, nil)}
+         Map.put(posted, :review_error, nil)}
+
+      :keep ->
+        {:ok, Map.delete(params, "default_review_interval"),
+         %{review_unit: nil, review_count: nil, review_error: nil}}
 
       :pending ->
-        {:hold, %{review_choice: "custom", review_custom: custom || "", review_error: nil}}
+        {:hold, Map.put(posted, :review_error, nil)}
 
       {:error, message} ->
-        {:hold, %{review_choice: choice, review_custom: custom, review_error: message}}
+        {:hold, Map.put(posted, :review_error, message)}
     end
   end
 

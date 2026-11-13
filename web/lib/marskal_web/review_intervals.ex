@@ -2,60 +2,72 @@ defmodule MarskalWeb.ReviewIntervals do
   @moduledoc """
   Choosing a review interval and saying it in words (ADR 0026).
 
-  The picker offers Never, a few presets, and Custom, a text field that
-  takes the ISO 8601 form. A picker posts `choice` (a preset's ISO form,
-  "never", or "custom") and `custom` (the text field), which `read/2`
-  turns into the value to save.
+  The picker is a number and a unit: days, weeks, months, or years, or
+  Never. It posts `unit` (one of `units/0`, "never", or "keep") and
+  `count` (the number), which `read/2` turns into the value to save. A
+  mixed interval, which only an import or another client can make, shows
+  as one more option in its words, posted as "keep", so that it stays
+  until another is picked.
   """
 
   use MarskalWeb, :html
 
-  alias Marskal.ReviewInterval
+  @units ["day", "week", "month", "year"]
+  @max_count 999
 
-  @presets ["P7D", "P14D", "P1M", "P3M", "P1Y"]
-
-  @doc "The picker's options, as `{label, value}`."
-  def options do
-    [{gettext("Never"), "never"}] ++
-      Enum.map(@presets, &{words(cast!(&1)), &1}) ++
-      [{gettext("Custom…"), "custom"}]
-  end
-
-  @doc ~s(The option an interval selects: its preset, "never", or "custom".)
-  def choice(nil), do: "never"
-
-  def choice(%Duration{} = interval) do
-    Enum.find(@presets, "custom", &(cast!(&1) == interval))
-  end
+  @doc "The units a picker offers besides Never."
+  def units, do: @units
 
   @doc """
-  What a picker's post means: `{:ok, interval}` (nil for Never),
-  `{:error, message}` for custom text that is not an interval, or
-  `:pending` for Custom with nothing typed yet.
+  The count and unit an interval shows as: `{nil, "never"}` for nil, a
+  whole number of weeks as weeks, months and years together as months
+  unless they are whole years, and `{nil, "keep"}` for a mixed interval.
   """
-  def read("never", _custom), do: {:ok, nil}
+  def split(nil), do: {nil, "never"}
 
-  def read("custom", custom) do
-    case String.trim(custom || "") do
-      "" -> :pending
-      text -> read_custom(text)
+  def split(%Duration{year: 0, month: 0, day: days}) when rem(days, 7) == 0,
+    do: {div(days, 7), "week"}
+
+  def split(%Duration{year: 0, month: 0, day: days}), do: {days, "day"}
+  def split(%Duration{year: years, month: 0, day: 0}), do: {years, "year"}
+  def split(%Duration{year: years, month: months, day: 0}), do: {12 * years + months, "month"}
+  def split(%Duration{}), do: {nil, "keep"}
+
+  @doc """
+  What a picker's post means: `{:ok, interval}` (nil for Never), `:keep`
+  for a mixed interval left as it is, `:pending` while the number is
+  empty, or `{:error, message}` for a number that is not a whole one in
+  range. A post without a number, as when Never is changed to a unit,
+  counts one.
+  """
+  def read("never", _count), do: {:ok, nil}
+  def read("keep", _count), do: :keep
+  def read(unit, nil) when unit in @units, do: read(unit, "1")
+
+  def read(unit, count) when unit in @units and is_binary(count) do
+    case String.trim(count) do
+      "" ->
+        :pending
+
+      text ->
+        case Integer.parse(text) do
+          {n, ""} when n in 1..@max_count -> {:ok, interval(n, unit)}
+          _ -> {:error, gettext("Use a whole number from 1 to %{max}.", max: @max_count)}
+        end
     end
   end
 
-  def read(preset, _custom) when preset in @presets, do: {:ok, cast!(preset)}
-  def read(_choice, _custom), do: {:error, gettext("Pick an interval.")}
+  def read(_unit, _count), do: {:error, gettext("Pick an interval.")}
 
-  defp read_custom(text) do
-    case ReviewInterval.cast(text) do
-      {:ok, interval} ->
-        if ReviewInterval.valid?(interval),
-          do: {:ok, interval},
-          else: {:error, gettext("Use whole days, weeks, months, or years, such as P2W3D.")}
+  defp interval(n, "day"), do: Duration.new!(day: n)
+  defp interval(n, "week"), do: Duration.new!(day: 7 * n)
+  defp interval(n, "month"), do: Duration.new!(year: div(n, 12), month: rem(n, 12))
+  defp interval(n, "year"), do: Duration.new!(year: n)
 
-      :error ->
-        {:error, gettext("Can't read that. Write it as P, then a number and Y, M, W, or D.")}
-    end
-  end
+  defp unit_label("day", n), do: ngettext("day", "days", n)
+  defp unit_label("week", n), do: ngettext("week", "weeks", n)
+  defp unit_label("month", n), do: ngettext("month", "months", n)
+  defp unit_label("year", n), do: ngettext("year", "years", n)
 
   @doc """
   The interval in words: whole weeks as weeks, a single unit as that unit,
@@ -64,7 +76,7 @@ defmodule MarskalWeb.ReviewIntervals do
   def words(nil), do: gettext("Never")
 
   def words(%Duration{year: 0, month: 0, day: days}) when days > 0 and rem(days, 7) == 0,
-    do: weeks(div(days, 7))
+    do: ngettext("Every week", "Every %{count} weeks", div(days, 7))
 
   def words(%Duration{year: years, month: 0, day: 0}) when years > 0,
     do: ngettext("Every year", "Every %{count} years", years)
@@ -87,77 +99,97 @@ defmodule MarskalWeb.ReviewIntervals do
     gettext("Every %{parts}", parts: Enum.join(parts, ", "))
   end
 
-  defp weeks(weeks), do: ngettext("Every week", "Every %{count} weeks", weeks)
-
-  defp cast!(text) do
-    {:ok, interval} = ReviewInterval.cast(text)
-    interval
-  end
-
   attr :id, :string, required: true
-  attr :name, :string, required: true, doc: "the param the choice posts as"
-  attr :custom_name, :string, required: true, doc: "the param the custom text posts as"
+  attr :name, :string, required: true, doc: "the param the unit posts as"
+  attr :count_name, :string, required: true, doc: "the param the number posts as"
   attr :label, :string, required: true
   attr :interval, :any, required: true, doc: "the saved interval, or nil for Never"
-  attr :choice, :string, default: nil, doc: "the option shown, when it differs from the saved one"
-  attr :custom, :string, default: nil, doc: "the custom text as typed"
+  attr :unit, :string, default: nil, doc: "the unit as last posted"
+  attr :count, :string, default: nil, doc: "the number as last posted"
   attr :error, :string, default: nil
 
   @doc """
-  The interval picker: a select, and for Custom a text field with the
-  interval in words beside it and a link to the format's help.
+  The interval picker: a number, hidden for Never, and a select of units.
+  What was last posted stays shown while it is pending, wrong, or what is
+  saved, so 14 days typed is not turned into 2 weeks under the cursor.
   """
   def picker(assigns) do
-    assigns =
-      assigns
-      |> assign_new(:shown_choice, fn -> assigns.choice || choice(assigns.interval) end)
-      |> then(fn assigns ->
-        assign(assigns, :custom_text, custom_text(assigns))
-      end)
-      |> then(&assign(&1, :preview, preview(&1)))
+    {count, unit} = shown(assigns)
+
+    options =
+      [{gettext("Never"), "never"}] ++
+        Enum.map(@units, &{unit_label(&1, label_count(count)), &1}) ++
+        if(unit == "keep", do: [{words(assigns.interval), "keep"}], else: [])
+
+    assigns = assign(assigns, shown_unit: unit, shown_count: count, options: options)
 
     ~H"""
     <div class="field review-interval" id={@id}>
-      <label for={"#{@id}-choice"}>{@label}</label>
-      <select id={"#{@id}-choice"} class="input" name={@name}>
-        <option :for={{label, value} <- options()} value={value} selected={value == @shown_choice}>
-          {label}
-        </option>
-      </select>
-      <div :if={@shown_choice == "custom"} class="review-interval__custom">
+      <style :type={MarskalWeb.ColocatedCSS}>
+        @scope (.review-interval) {
+          .row {
+            display: flex;
+            gap: 0.5rem;
+          }
+          input {
+            width: 5rem;
+          }
+          .hint.error {
+            color: var(--danger);
+          }
+        }
+      </style>
+      <label for={"#{@id}-#{if @shown_unit in units(), do: "count", else: "unit"}"}>
+        {@label}
+      </label>
+      <div class="row">
         <input
-          id={"#{@id}-custom"}
+          :if={@shown_unit in units()}
+          id={"#{@id}-count"}
           class="input"
-          type="text"
-          name={@custom_name}
-          value={@custom_text}
-          placeholder="P2W3D"
+          type="number"
+          name={@count_name}
+          value={@shown_count}
+          min="1"
+          max="999"
+          step="1"
+          inputmode="numeric"
           autocomplete="off"
-          spellcheck="false"
-          aria-describedby={"#{@id}-words"}
+          aria-describedby={@error && "#{@id}-error"}
           phx-debounce="300"
         />
-        <p id={"#{@id}-words"} class={["hint", @error && "error"]} aria-live="polite">
-          {@error || @preview}
-        </p>
-        <.link href={~p"/help/review-intervals"} class="hint" target="_blank">
-          {gettext("How to write an interval")}
-        </.link>
+        <select id={"#{@id}-unit"} class="input" name={@name} aria-label={gettext("Unit")}>
+          <option :for={{label, value} <- @options} value={value} selected={value == @shown_unit}>
+            {label}
+          </option>
+        </select>
       </div>
+      <p :if={@error} id={"#{@id}-error"} class="hint error" aria-live="polite">{@error}</p>
     </div>
     """
   end
 
-  defp custom_text(%{custom: custom}) when is_binary(custom), do: custom
-  defp custom_text(%{interval: %Duration{} = interval}), do: Duration.to_iso8601(interval)
-  defp custom_text(_assigns), do: ""
+  defp shown(%{unit: unit, count: count, interval: interval, error: error})
+       when is_binary(unit) do
+    if error || read(unit, count) in [:pending, {:ok, interval}],
+      do: {count || "1", unit},
+      else: split_text(interval)
+  end
 
-  defp preview(%{error: error}) when is_binary(error), do: nil
+  defp shown(%{interval: interval}), do: split_text(interval)
 
-  defp preview(%{custom_text: text}) do
-    case read("custom", text) do
-      {:ok, interval} -> words(interval)
-      _ -> nil
+  defp split_text(interval) do
+    case split(interval) do
+      {nil, unit} -> {"1", unit}
+      {n, unit} -> {Integer.to_string(n), unit}
+    end
+  end
+
+  # Unit names agree with the number; an empty one reads as plural.
+  defp label_count(text) do
+    case Integer.parse(text || "") do
+      {n, _} when n > 0 -> n
+      _ -> 2
     end
   end
 end
