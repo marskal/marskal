@@ -130,11 +130,6 @@ msgid_plural "%{count} years"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/marskal_web/live/help_live.ex
-#, elixir-autogen, elixir-format
-msgid "A custom interval is written the ISO 8601 way: P, then one or more numbers, each followed by its unit."
-msgstr ""
-
 #: lib/marskal_web/date_fields.ex
 #, elixir-autogen, elixir-format
 msgid "A day with no time starts at %{times}."
@@ -148,11 +143,6 @@ msgstr ""
 #: lib/marskal_web/live/user_live/security.ex
 #, elixir-autogen, elixir-format
 msgid "A link to confirm your email change has been sent to the new address."
-msgstr ""
-
-#: lib/marskal_web/live/help_live.ex
-#, elixir-autogen, elixir-format
-msgid "A review is due on a day, so an interval has no hours or minutes (no T part), and no part may be negative or the whole of it zero."
 msgstr ""
 
 #: lib/marskal_web/live/review_panel.ex
@@ -220,11 +210,6 @@ msgstr ""
 #: lib/marskal_web/live/review_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Can't read that as a day."
-msgstr ""
-
-#: lib/marskal_web/review_intervals.ex
-#, elixir-autogen, elixir-format
-msgid "Can't read that. Write it as P, then a number and Y, M, W, or D."
 msgstr ""
 
 #: lib/marskal_web/live/user_live/security.ex
@@ -334,11 +319,6 @@ msgstr ""
 #: lib/marskal_web/live/inspector_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Current location"
-msgstr ""
-
-#: lib/marskal_web/review_intervals.ex
-#, elixir-autogen, elixir-format
-msgid "Custom…"
 msgstr ""
 
 #: lib/marskal_web/components/layouts.ex
@@ -626,11 +606,6 @@ msgstr ""
 msgid "Home view"
 msgstr ""
 
-#: lib/marskal_web/review_intervals.ex
-#, elixir-autogen, elixir-format
-msgid "How to write an interval"
-msgstr ""
-
 #: lib/marskal_web/live/user_live/check_email.ex
 #, elixir-autogen, elixir-format
 msgid "If %{email} has an account, we've sent it a link to choose a new password."
@@ -733,11 +708,6 @@ msgstr ""
 #: lib/marskal_web/components/layouts/root.html.heex
 #, elixir-autogen, elixir-format
 msgid "Marskal has been updated. Reload to use the new version."
-msgstr ""
-
-#: lib/marskal_web/live/help_live.ex
-#, elixir-autogen, elixir-format
-msgid "Means"
 msgstr ""
 
 #: lib/marskal_web/live/repeat_panel.ex
@@ -1212,9 +1182,9 @@ msgstr ""
 msgid "Type a day such as “tom”, “fri”, “1w”, or “24/12 14:00”."
 msgstr ""
 
-#: lib/marskal_web/live/help_live.ex
+#: lib/marskal_web/review_intervals.ex
 #, elixir-autogen, elixir-format
-msgid "Units go in that order, and lower case is fine."
+msgid "Unit"
 msgstr ""
 
 #: lib/marskal_web/live/go_to.ex
@@ -1224,7 +1194,7 @@ msgstr ""
 
 #: lib/marskal_web/review_intervals.ex
 #, elixir-autogen, elixir-format
-msgid "Use whole days, weeks, months, or years, such as P2W3D."
+msgid "Use a whole number from 1 to %{max}."
 msgstr ""
 
 #: lib/marskal_web/live/repeat_panel.ex
@@ -1298,11 +1268,6 @@ msgstr ""
 msgid "Week starts on"
 msgstr ""
 
-#: lib/marskal_web/live/help_live.ex
-#, elixir-autogen, elixir-format
-msgid "Weeks are kept as days, so P2W3D shows as P17D the next time you open it. It means the same."
-msgstr ""
-
 #: lib/marskal_web/controllers/user_session_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Welcome back!"
@@ -1311,16 +1276,6 @@ msgstr ""
 #: lib/marskal_web/live/user_live/settings.ex
 #, elixir-autogen, elixir-format
 msgid "What to call you. Its initials mark you in the header; without a name, an icon does."
-msgstr ""
-
-#: lib/marskal_web/live/help_live.ex
-#, elixir-autogen, elixir-format
-msgid "Write"
-msgstr ""
-
-#: lib/marskal_web/live/help_live.ex
-#, elixir-autogen, elixir-format
-msgid "Writing a review interval"
 msgstr ""
 
 #: lib/marskal_web/live/user_live/settings.ex
@@ -1348,10 +1303,12 @@ msgstr ""
 msgid "close"
 msgstr ""
 
-#: lib/marskal_web/live/help_live.ex
+#: lib/marskal_web/review_intervals.ex
 #, elixir-autogen, elixir-format
-msgid "days"
-msgstr ""
+msgid "day"
+msgid_plural "days"
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/marskal_web/live/repeat_panel.ex
 #, elixir-autogen, elixir-format
@@ -1378,10 +1335,12 @@ msgstr ""
 msgid "missed"
 msgstr ""
 
-#: lib/marskal_web/live/help_live.ex
+#: lib/marskal_web/review_intervals.ex
 #, elixir-autogen, elixir-format
-msgid "months"
-msgstr ""
+msgid "month"
+msgid_plural "months"
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/marskal_web/live/user_live/security.ex
 #, elixir-autogen, elixir-format
@@ -1393,12 +1352,16 @@ msgstr ""
 msgid "open"
 msgstr ""
 
-#: lib/marskal_web/live/help_live.ex
+#: lib/marskal_web/review_intervals.ex
 #, elixir-autogen, elixir-format
-msgid "weeks"
-msgstr ""
+msgid "week"
+msgid_plural "weeks"
+msgstr[0] ""
+msgstr[1] ""
 
-#: lib/marskal_web/live/help_live.ex
+#: lib/marskal_web/review_intervals.ex
 #, elixir-autogen, elixir-format
-msgid "years"
-msgstr ""
+msgid "year"
+msgid_plural "years"
+msgstr[0] ""
+msgstr[1] ""

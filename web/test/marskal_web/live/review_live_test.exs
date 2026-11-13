@@ -83,33 +83,63 @@ defmodule MarskalWeb.ReviewLiveTest do
   end
 
   describe "the inspector" do
-    test "picks a preset, and Custom saves once it reads", %{conn: conn, user: user} do
+    test "picks a number and a unit, or Never", %{conn: conn, user: user} do
       {:ok, project} = Projects.create_project(user, %{title: "Garden"}, command())
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}?project=#{project.id}")
+
+      assert has_element?(view, "#inspector-project-review-picker-count[value='1']")
+      assert has_element?(view, "#inspector-project-review-picker-unit option[selected]", "week")
+
+      pick(view, %{"interval" => "month", "interval_count" => "3"})
+      assert Projects.get_project(user, project.id).review_interval == Duration.new!(month: 3)
+
+      assert has_element?(
+               view,
+               "#inspector-project-review-picker-unit option[selected]",
+               "months"
+             )
+
+      pick(view, %{"interval" => "month", "interval_count" => ""})
+      assert has_element?(view, "#inspector-project-review-picker-count[value='']")
+      assert Projects.get_project(user, project.id).review_interval == Duration.new!(month: 3)
+
+      pick(view, %{"interval" => "month", "interval_count" => "1.5"})
+      assert has_element?(view, "#inspector-project-review-picker-error", "whole number")
+      assert Projects.get_project(user, project.id).review_interval == Duration.new!(month: 3)
+
+      # Typed days stay days, though they are whole weeks.
+      pick(view, %{"interval" => "day", "interval_count" => "14"})
+      assert Projects.get_project(user, project.id).review_interval == Duration.new!(day: 14)
+      assert has_element?(view, "#inspector-project-review-picker-unit option[selected]", "days")
+
+      pick(view, %{"interval" => "never"})
+      assert Projects.get_project(user, project.id).next_review_on == nil
+      refute has_element?(view, "#inspector-project-review-picker-count")
+      refute has_element?(view, "#inspector-project-review-done")
+
+      # From Never, a unit alone counts one.
+      pick(view, %{"interval" => "year"})
+      assert Projects.get_project(user, project.id).review_interval == Duration.new!(year: 1)
+    end
+
+    test "keeps a mixed interval until another is picked", %{conn: conn, user: user} do
+      {:ok, project} = Projects.create_project(user, %{title: "Garden"}, command())
+      mixed = Duration.new!(month: 1, day: 15)
+      {:ok, _} = Projects.update_project(user, project.id, %{review_interval: mixed}, command())
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}?project=#{project.id}")
 
       assert has_element?(
                view,
-               "#inspector-project-review-picker-choice option[selected]",
-               "Every week"
+               "#inspector-project-review-picker-unit option[selected]",
+               "Every 1 month, 15 days"
              )
 
-      pick(view, %{"interval" => "P1M"})
-      assert Projects.get_project(user, project.id).review_interval == Duration.new!(month: 1)
+      refute has_element?(view, "#inspector-project-review-picker-count")
+      pick(view, %{"interval" => "keep"})
+      assert Projects.get_project(user, project.id).review_interval == mixed
 
-      pick(view, %{"interval" => "custom", "interval_custom" => ""})
-      assert has_element?(view, "#inspector-project-review-picker-custom")
-
-      pick(view, %{"interval" => "custom", "interval_custom" => "pt1h"})
-      assert has_element?(view, "#inspector-project-review-picker-words", "whole days")
-      assert Projects.get_project(user, project.id).review_interval == Duration.new!(month: 1)
-
-      pick(view, %{"interval" => "custom", "interval_custom" => "p2w3d"})
-      assert has_element?(view, "#inspector-project-review-picker-words", "Every 17 days")
-      assert Projects.get_project(user, project.id).review_interval == Duration.new!(day: 17)
-
-      pick(view, %{"interval" => "never"})
-      assert Projects.get_project(user, project.id).next_review_on == nil
-      refute has_element?(view, "#inspector-project-review-done")
+      pick(view, %{"interval" => "week"})
+      assert Projects.get_project(user, project.id).review_interval == Duration.new!(day: 7)
     end
 
     test "types the next review day, and marks it reviewed", %{
@@ -142,23 +172,10 @@ defmodule MarskalWeb.ReviewLiveTest do
     {:ok, view, _html} = live(conn, ~p"/users/settings")
 
     view
-    |> form("#preferences_form", %{"preferences" => %{"default_review_interval" => "P3M"}})
-    |> render_change()
-
-    assert Accounts.preferences(user).default_review_interval == Duration.new!(month: 3)
-
-    view
-    |> form("#preferences_form", %{"preferences" => %{"default_review_interval" => "custom"}})
-    |> render_change()
-
-    assert has_element?(view, "#preferences-review-interval-custom")
-    assert Accounts.preferences(user).default_review_interval == Duration.new!(month: 3)
-
-    view
     |> form("#preferences_form", %{
       "preferences" => %{
-        "default_review_interval" => "custom",
-        "default_review_interval_custom" => "P1Y6M"
+        "default_review_interval" => "month",
+        "default_review_interval_count" => "18"
       }
     })
     |> render_change()
@@ -166,15 +183,22 @@ defmodule MarskalWeb.ReviewLiveTest do
     assert Accounts.preferences(user).default_review_interval == Duration.new!(year: 1, month: 6)
 
     view
+    |> form("#preferences_form", %{
+      "preferences" => %{
+        "default_review_interval" => "month",
+        "default_review_interval_count" => ""
+      }
+    })
+    |> render_change()
+
+    assert has_element?(view, "#preferences-review-interval-count[value='']")
+    assert Accounts.preferences(user).default_review_interval == Duration.new!(year: 1, month: 6)
+
+    view
     |> form("#preferences_form", %{"preferences" => %{"default_review_interval" => "never"}})
     |> render_change()
 
     assert Accounts.preferences(user).default_review_interval == nil
-  end
-
-  test "the help page explains the format", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/help/review-intervals")
-    assert has_element?(view, "#help-review-intervals td", "Every 1 month, 15 days")
   end
 
   test "intervals in words" do
@@ -185,9 +209,23 @@ defmodule MarskalWeb.ReviewLiveTest do
     assert ReviewIntervals.words(Duration.new!(month: 1)) == "Every month"
     assert ReviewIntervals.words(Duration.new!(year: 2)) == "Every 2 years"
     assert ReviewIntervals.words(Duration.new!(month: 1, day: 15)) == "Every 1 month, 15 days"
-    assert ReviewIntervals.choice(Duration.new!(day: 14)) == "P14D"
-    assert ReviewIntervals.choice(Duration.new!(day: 17)) == "custom"
-    assert ReviewIntervals.choice(nil) == "never"
+  end
+
+  test "an interval as a number and a unit" do
+    assert ReviewIntervals.split(nil) == {nil, "never"}
+    assert ReviewIntervals.split(Duration.new!(day: 14)) == {2, "week"}
+    assert ReviewIntervals.split(Duration.new!(day: 17)) == {17, "day"}
+    assert ReviewIntervals.split(Duration.new!(year: 1, month: 6)) == {18, "month"}
+    assert ReviewIntervals.split(Duration.new!(year: 2)) == {2, "year"}
+    assert ReviewIntervals.split(Duration.new!(month: 1, day: 15)) == {nil, "keep"}
+
+    assert ReviewIntervals.read("week", "3") == {:ok, Duration.new!(day: 21)}
+    assert ReviewIntervals.read("month", "12") == {:ok, Duration.new!(year: 1)}
+    assert ReviewIntervals.read("day", nil) == {:ok, Duration.new!(day: 1)}
+    assert ReviewIntervals.read("day", " ") == :pending
+    assert {:error, _} = ReviewIntervals.read("day", "0")
+    assert {:error, _} = ReviewIntervals.read("day", "1000")
+    assert {:error, _} = ReviewIntervals.read("hour", "1")
   end
 
   defp pick(view, params) do

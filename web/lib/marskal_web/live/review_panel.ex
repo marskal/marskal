@@ -4,7 +4,7 @@ defmodule MarskalWeb.ReviewPanel do
   the next review day, when it was last reviewed, and Mark reviewed.
 
   Picking an interval saves it, and the server moves the next review day
-  to match. Custom saves once its text reads as an interval. The next
+  to match. A number saves once it reads as one. The next
   review day is a typed day (ADR 0032), saved on Enter or on leaving the
   field, and only while the project is reviewed.
   """
@@ -20,15 +20,14 @@ defmodule MarskalWeb.ReviewPanel do
 
     socket = assign(socket, assigns)
 
+    # What the picker last posted survives a change broadcast, and shows
+    # while it still says what is saved (ReviewIntervals.picker/1).
     {:ok,
-     if(new_record? or not pending_custom?(socket),
-       do: assign(socket, choice: nil, custom: nil, error: nil, next_preview: nil),
+     if(new_record?,
+       do: assign(socket, unit: nil, count: nil, error: nil, next_preview: nil),
        else: socket
      )}
   end
-
-  # A Custom choice still being typed survives a change broadcast.
-  defp pending_custom?(socket), do: socket.assigns[:choice] == "custom"
 
   @impl true
   def render(assigns) do
@@ -63,11 +62,11 @@ defmodule MarskalWeb.ReviewPanel do
         <ReviewIntervals.picker
           id={"#{@id}-picker"}
           name="interval"
-          custom_name="interval_custom"
+          count_name="interval_count"
           label={gettext("Interval")}
           interval={@record.review_interval}
-          choice={@choice}
-          custom={@custom}
+          unit={@unit}
+          count={@count}
           error={@error}
         />
       </form>
@@ -110,25 +109,22 @@ defmodule MarskalWeb.ReviewPanel do
   end
 
   @impl true
-  def handle_event("interval", %{"interval" => choice} = params, socket) do
-    custom = params["interval_custom"]
+  def handle_event("interval", %{"interval" => unit} = params, socket) do
+    count = params["interval_count"]
 
-    case ReviewIntervals.read(choice, custom) do
+    case ReviewIntervals.read(unit, count) do
       {:ok, interval} ->
-        socket = assign(socket, choice: nil, custom: nil, error: nil)
-        # Custom text that names a preset stays on Custom while typed.
-        socket =
-          if choice == "custom",
-            do: assign(socket, choice: "custom", custom: custom),
-            else: socket
-
+        socket = assign(socket, unit: unit, count: count, error: nil)
         {:noreply, save(socket, %{review_interval: interval})}
 
+      :keep ->
+        {:noreply, assign(socket, unit: nil, count: nil, error: nil)}
+
       :pending ->
-        {:noreply, assign(socket, choice: "custom", custom: custom || "", error: nil)}
+        {:noreply, assign(socket, unit: unit, count: count, error: nil)}
 
       {:error, message} ->
-        {:noreply, assign(socket, choice: choice, custom: custom, error: message)}
+        {:noreply, assign(socket, unit: unit, count: count, error: message)}
     end
   end
 
