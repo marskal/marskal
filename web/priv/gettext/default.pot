@@ -32,6 +32,7 @@ msgid "%{percent} done"
 msgstr ""
 
 #: lib/marskal_web/live/repeat_panel.ex
+#: lib/marskal_web/review_intervals.ex
 #, elixir-autogen, elixir-format
 msgid "1 day"
 msgid_plural "%{count} days"
@@ -45,10 +46,24 @@ msgid_plural "%{count} hours"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/marskal_web/live/review_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 item in the Inbox. Clear it before you review?"
+msgid_plural "%{count} items in the Inbox. Clear them before you review?"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/marskal_web/live/repeat_panel.ex
 #, elixir-autogen, elixir-format
 msgid "1 minute"
 msgid_plural "%{count} minutes"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/marskal_web/review_intervals.ex
+#, elixir-autogen, elixir-format
+msgid "1 month"
+msgid_plural "%{count} months"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -108,6 +123,13 @@ msgid_plural "%{count} tasks: %{open} open, %{dropped} dropped, and %{done} done
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/marskal_web/review_intervals.ex
+#, elixir-autogen, elixir-format
+msgid "1 year"
+msgid_plural "%{count} years"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/marskal_web/date_fields.ex
 #, elixir-autogen, elixir-format
 msgid "A day with no time starts at %{times}."
@@ -121,6 +143,11 @@ msgstr ""
 #: lib/marskal_web/live/user_live/security.ex
 #, elixir-autogen, elixir-format
 msgid "A link to confirm your email change has been sent to the new address."
+msgstr ""
+
+#: lib/marskal_web/live/review_panel.ex
+#, elixir-autogen, elixir-format
+msgid "A reviewed project needs a next review day."
 msgstr ""
 
 #: lib/marskal_web/nav_moves.ex
@@ -169,12 +196,18 @@ msgstr ""
 msgid "Back from the sidebar"
 msgstr ""
 
+#: lib/marskal_web/live/project_live.ex
+#, elixir-autogen, elixir-format
+msgid "Back to Review"
+msgstr ""
+
 #: lib/marskal_web/live/user_live/settings.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr ""
 
 #: lib/marskal_web/date_fields.ex
+#: lib/marskal_web/live/review_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Can't read that as a day."
 msgstr ""
@@ -261,9 +294,20 @@ msgstr ""
 msgid "Could not add the task."
 msgstr ""
 
+#: lib/marskal_web/live/project_live.ex
+#: lib/marskal_web/live/review_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Could not mark it reviewed."
+msgstr ""
+
 #: lib/marskal_web/nav_moves.ex
 #, elixir-autogen, elixir-format
 msgid "Could not move that there."
+msgstr ""
+
+#: lib/marskal_web/live/review_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Could not save the review."
 msgstr ""
 
 #: lib/marskal_web/task_keys.ex
@@ -298,8 +342,14 @@ msgstr ""
 
 #: lib/marskal_web/components/layouts.ex
 #: lib/marskal_web/components/task_components.ex
+#: lib/marskal_web/live/review_live.ex
 #, elixir-autogen, elixir-format
 msgid "Deferred"
+msgstr ""
+
+#: lib/marskal_web/live/review_live.ex
+#, elixir-autogen, elixir-format
+msgid "Deferred until %{day}"
 msgstr ""
 
 #: lib/marskal_web/components/task_components.ex
@@ -362,6 +412,21 @@ msgstr ""
 msgid "Due %{when}"
 msgstr ""
 
+#: lib/marskal_web/live/project_live.ex
+#, elixir-autogen, elixir-format
+msgid "Due for review. Look over its tasks, then mark it reviewed."
+msgstr ""
+
+#: lib/marskal_web/live/review_live.ex
+#, elixir-autogen, elixir-format
+msgid "Due since %{day}"
+msgstr ""
+
+#: lib/marskal_web/live/review_live.ex
+#, elixir-autogen, elixir-format
+msgid "Due today"
+msgstr ""
+
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Edit in the inspector"
@@ -402,6 +467,49 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Esc"
 msgstr ""
+
+#: lib/marskal_web/review_intervals.ex
+#, elixir-autogen, elixir-format
+msgid "Every %{parts}"
+msgstr ""
+
+#: lib/marskal_web/review_intervals.ex
+#, elixir-autogen, elixir-format
+msgid "Every day"
+msgid_plural "Every %{count} days"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/marskal_web/review_intervals.ex
+#, elixir-autogen, elixir-format
+msgid "Every month"
+msgid_plural "Every %{count} months"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/marskal_web/live/project_live.ex
+#, elixir-autogen, elixir-format
+msgid "Every project due is reviewed."
+msgstr ""
+
+#: lib/marskal_web/live/review_live.ex
+#, elixir-autogen, elixir-format
+msgid "Every project is reviewed. Each comes back here when its next review is due."
+msgstr ""
+
+#: lib/marskal_web/review_intervals.ex
+#, elixir-autogen, elixir-format
+msgid "Every week"
+msgid_plural "Every %{count} weeks"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/marskal_web/review_intervals.ex
+#, elixir-autogen, elixir-format
+msgid "Every year"
+msgid_plural "Every %{count} years"
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
@@ -519,6 +627,11 @@ msgstr ""
 msgid "Indent and outdent"
 msgstr ""
 
+#: lib/marskal_web/live/review_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Interval"
+msgstr ""
+
 #: lib/marskal_web/controllers/user_session_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid email or password"
@@ -549,6 +662,11 @@ msgstr ""
 msgid "Keys act on the focused task, folder, project, or tag, not while you type. Off a Mac, Cmd is Ctrl."
 msgstr ""
 
+#: lib/marskal_web/live/review_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Last reviewed %{day}."
+msgstr ""
+
 #: lib/marskal_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Light"
@@ -572,6 +690,12 @@ msgstr ""
 #: lib/marskal_web/controllers/user_session_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Logged out successfully."
+msgstr ""
+
+#: lib/marskal_web/live/project_live.ex
+#: lib/marskal_web/live/review_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Mark reviewed"
 msgstr ""
 
 #: lib/marskal_web/components/nav_components.ex
@@ -619,6 +743,11 @@ msgstr ""
 msgid "Navigation"
 msgstr ""
 
+#: lib/marskal_web/review_intervals.ex
+#, elixir-autogen, elixir-format
+msgid "Never"
+msgstr ""
+
 #: lib/marskal_web/live/folder_live.ex
 #, elixir-autogen, elixir-format
 msgid "New folder"
@@ -633,6 +762,11 @@ msgstr ""
 #: lib/marskal_web/live/folder_live.ex
 #, elixir-autogen, elixir-format
 msgid "New project"
+msgstr ""
+
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "New projects are reviewed"
 msgstr ""
 
 #: lib/marskal_web/live/tag_live.ex
@@ -660,6 +794,16 @@ msgstr ""
 msgid "Next month"
 msgstr ""
 
+#: lib/marskal_web/live/review_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Next review"
+msgstr ""
+
+#: lib/marskal_web/live/project_live.ex
+#, elixir-autogen, elixir-format
+msgid "Next review %{day}."
+msgstr ""
+
 #: lib/marskal_web/date_fields.ex
 #, elixir-autogen, elixir-format
 msgid "No date"
@@ -675,6 +819,11 @@ msgstr ""
 msgid "No project"
 msgstr ""
 
+#: lib/marskal_web/live/review_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Not reviewed yet."
+msgstr ""
+
 #: lib/marskal_web/live/folder_live.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing in this folder yet."
@@ -684,6 +833,11 @@ msgstr ""
 #: lib/marskal_web/live/inspector_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing matches."
+msgstr ""
+
+#: lib/marskal_web/live/review_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing to review"
 msgstr ""
 
 #: lib/marskal_web/live/repeat_panel.ex
@@ -729,6 +883,11 @@ msgstr[1] ""
 msgid "Pick a day for %{field}"
 msgstr ""
 
+#: lib/marskal_web/review_intervals.ex
+#, elixir-autogen, elixir-format
+msgid "Pick an interval."
+msgstr ""
+
 #: lib/marskal_web/live/go_to.ex
 #, elixir-autogen, elixir-format
 msgid "Places"
@@ -770,6 +929,11 @@ msgstr ""
 msgid "Programs signed in as you, such as the %{command} command."
 msgstr ""
 
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Projects you make from now on take this. Each project can have its own in its inspector."
+msgstr ""
+
 #: lib/marskal_web/live/user_live/registration.ex
 #, elixir-autogen, elixir-format
 msgid "Register"
@@ -793,6 +957,16 @@ msgstr ""
 #: lib/marskal_web/live/user_live/forgot_password.ex
 #, elixir-autogen, elixir-format
 msgid "Reset your password"
+msgstr ""
+
+#: lib/marskal_web/components/nav_components.ex
+#: lib/marskal_web/live/go_to.ex
+#: lib/marskal_web/live/project_live.ex
+#: lib/marskal_web/live/review_live.ex
+#: lib/marskal_web/live/review_panel.ex
+#: lib/marskal_web/live/user_live/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Review"
 msgstr ""
 
 #: lib/marskal_web/live/user_live/settings.ex
@@ -909,6 +1083,11 @@ msgstr ""
 msgid "Space"
 msgstr ""
 
+#: lib/marskal_web/live/review_live.ex
+#, elixir-autogen, elixir-format
+msgid "Stalled: no next action"
+msgstr ""
+
 #: lib/marskal_web/live/user_live/settings.ex
 #, elixir-autogen, elixir-format
 msgid "Standard"
@@ -917,6 +1096,11 @@ msgstr ""
 #: lib/marskal_web/live/user_live/settings.ex
 #, elixir-autogen, elixir-format
 msgid "Standard uses the arrow keys, Space to complete, Delete to drop, f to flag, and n for a new task. Vim-style adds j, k, x, dd, and others. Press ? on any page for the full list."
+msgstr ""
+
+#: lib/marskal_web/live/review_live.ex
+#, elixir-autogen, elixir-format
+msgid "Start review"
 msgstr ""
 
 #: lib/marskal_web/live/user_live/confirmation.ex
@@ -991,14 +1175,29 @@ msgstr ""
 msgid "Theme"
 msgstr ""
 
+#: lib/marskal_web/live/project_live.ex
+#, elixir-autogen, elixir-format
+msgid "This project is not reviewed."
+msgstr ""
+
 #: lib/marskal_web/date_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Type a day such as “tom”, “fri”, “1w”, or “24/12 14:00”."
 msgstr ""
 
+#: lib/marskal_web/review_intervals.ex
+#, elixir-autogen, elixir-format
+msgid "Unit"
+msgstr ""
+
 #: lib/marskal_web/live/go_to.ex
 #, elixir-autogen, elixir-format
 msgid "Untagged"
+msgstr ""
+
+#: lib/marskal_web/review_intervals.ex
+#, elixir-autogen, elixir-format
+msgid "Use a whole number from 1 to %{max}."
 msgstr ""
 
 #: lib/marskal_web/live/repeat_panel.ex
@@ -1107,6 +1306,13 @@ msgstr ""
 msgid "close"
 msgstr ""
 
+#: lib/marskal_web/review_intervals.ex
+#, elixir-autogen, elixir-format
+msgid "day"
+msgid_plural "days"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/marskal_web/live/repeat_panel.ex
 #, elixir-autogen, elixir-format
 msgid "done %{when}"
@@ -1115,6 +1321,11 @@ msgstr ""
 #: lib/marskal_web/live/repeat_panel.ex
 #, elixir-autogen, elixir-format
 msgid "dropped %{when}"
+msgstr ""
+
+#: lib/marskal_web/components/nav_components.ex
+#, elixir-autogen, elixir-format
+msgid "due:"
 msgstr ""
 
 #: lib/marskal_web/live/user_live/security.ex
@@ -1127,6 +1338,13 @@ msgstr ""
 msgid "missed"
 msgstr ""
 
+#: lib/marskal_web/review_intervals.ex
+#, elixir-autogen, elixir-format
+msgid "month"
+msgid_plural "months"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/marskal_web/live/user_live/security.ex
 #, elixir-autogen, elixir-format
 msgid "not used yet"
@@ -1136,3 +1354,17 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "open"
 msgstr ""
+
+#: lib/marskal_web/review_intervals.ex
+#, elixir-autogen, elixir-format
+msgid "week"
+msgid_plural "weeks"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/marskal_web/review_intervals.ex
+#, elixir-autogen, elixir-format
+msgid "year"
+msgid_plural "years"
+msgstr[0] ""
+msgstr[1] ""

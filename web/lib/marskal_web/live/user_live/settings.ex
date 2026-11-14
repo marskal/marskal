@@ -63,6 +63,24 @@ defmodule MarskalWeb.UserLive.Settings do
               {gettext("The order of day and month, and the clock, as in the region you pick.")}
             </p>
           </section>
+          <section id="preferences-review">
+            <h2>{gettext("Review")}</h2>
+            <MarskalWeb.ReviewIntervals.picker
+              id="preferences-review-interval"
+              name="preferences[default_review_interval]"
+              count_name="preferences[default_review_interval_count]"
+              label={gettext("New projects are reviewed")}
+              interval={@preferences.default_review_interval}
+              unit={@review_unit}
+              count={@review_count}
+              error={@review_error}
+            />
+            <p class="hint">
+              {gettext(
+                "Projects you make from now on take this. Each project can have its own in its inspector."
+              )}
+            </p>
+          </section>
           <section id="preferences-navigation">
             <h2>{gettext("Navigation")}</h2>
             <.input
@@ -107,8 +125,9 @@ defmodule MarskalWeb.UserLive.Settings do
     {:ok,
      socket
      |> assign(:page_title, gettext("Settings"))
-     |> assign(:preferences_form, preferences_form(Accounts.preferences(user)))
-     |> assign(:name_form, to_form(Accounts.change_user_name(user)))}
+     |> assign_preferences(Accounts.preferences(user))
+     |> assign(:name_form, to_form(Accounts.change_user_name(user)))
+     |> assign(review_unit: nil, review_count: nil, review_error: nil)}
   end
 
   @impl true
@@ -131,6 +150,16 @@ defmodule MarskalWeb.UserLive.Settings do
   end
 
   def handle_event("update_preferences", %{"preferences" => params}, socket) do
+    case review_params(params) do
+      {:ok, params, socket_assigns} ->
+        socket |> assign(socket_assigns) |> save(params)
+
+      {:hold, socket_assigns} ->
+        {:noreply, assign(socket, socket_assigns)}
+    end
+  end
+
+  defp save(socket, params) do
     scope = socket.assigns.current_scope
 
     case Accounts.update_preferences(scope.user, params, Ecto.UUID.generate(version: 7)) do
@@ -140,13 +169,45 @@ defmodule MarskalWeb.UserLive.Settings do
         {:noreply,
          socket
          |> assign(:current_scope, %{scope | user: %{scope.user | preferences: preferences}})
-         |> assign(:preferences_form, preferences_form(preferences))
+         |> assign_preferences(preferences)
          |> put_flash(:info, gettext("Preferences saved."))}
 
       {:error, changeset} ->
         {:noreply,
          assign(socket, :preferences_form, to_form(changeset, as: :preferences, action: :update))}
     end
+  end
+
+  # The review picker posts a unit and a number (ADR 0026). A number that
+  # is empty or wrong holds the whole post until it reads.
+  defp review_params(%{"default_review_interval" => unit} = params) do
+    count = params["default_review_interval_count"]
+    params = Map.delete(params, "default_review_interval_count")
+    posted = %{review_unit: unit, review_count: count}
+
+    case MarskalWeb.ReviewIntervals.read(unit, count) do
+      {:ok, interval} ->
+        {:ok, Map.put(params, "default_review_interval", interval),
+         Map.put(posted, :review_error, nil)}
+
+      :keep ->
+        {:ok, Map.delete(params, "default_review_interval"),
+         %{review_unit: nil, review_count: nil, review_error: nil}}
+
+      :pending ->
+        {:hold, Map.put(posted, :review_error, nil)}
+
+      {:error, message} ->
+        {:hold, Map.put(posted, :review_error, message)}
+    end
+  end
+
+  defp review_params(params), do: {:ok, params, %{}}
+
+  defp assign_preferences(socket, preferences) do
+    socket
+    |> assign(:preferences, preferences)
+    |> assign(:preferences_form, preferences_form(preferences))
   end
 
   # Each region with now in its format, as an example.

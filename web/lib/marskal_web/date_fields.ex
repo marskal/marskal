@@ -531,6 +531,17 @@ defmodule MarskalWeb.DateFields do
   @doc "The field a key names."
   def field(key), do: @keys |> Enum.find(fn {_field, k} -> k == key end) |> elem(0)
 
+  @doc """
+  A day typed in a field that holds only a day, such as the next review
+  (ADR 0026): `{:ok, date}`, `:blank`, or `:error`. A time is ignored.
+  """
+  def read_day(text, user) do
+    case read(text, :planned_at, user) do
+      {:ok, date, _time} -> {:ok, date}
+      other -> other
+    end
+  end
+
   defp read(text, field, user) do
     preferences = Marskal.Accounts.preferences(user)
     now = preferences.timezone |> DateTime.now!() |> DateTime.to_naive()

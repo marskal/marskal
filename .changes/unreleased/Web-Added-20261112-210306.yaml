@@ -1,0 +1,4 @@
+component: Web
+kind: Added
+body: A Review view lists the projects due for review, with a count in the sidebar. Open one to look it over and mark it reviewed, and the next one due follows. Set how often a project is reviewed in its inspector, and the interval new projects take in Settings.
+time: 2026-11-12T21:03:06.093988813+01:00

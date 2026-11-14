@@ -40,6 +40,7 @@ defmodule MarskalWeb.ProjectLive do
           data-opens-inspector
         >{@folder.name}</.link>
       </p>
+      <.review_bar :if={@reviewing?} project={@project} due?={@review_due?} />
       <MarskalWeb.NavComponents.page_heading type={:project} id={@project.id} inspector={@inspector}>
         {@project.title}
         <:extra>
@@ -123,6 +124,11 @@ defmodule MarskalWeb.ProjectLive do
     """
   end
 
+  # `?review=1` is the project opened from the Review view (ADR 0026).
+  @impl true
+  def handle_params(params, _uri, socket),
+    do: {:noreply, assign(socket, :reviewing?, params["review"] == "1")}
+
   @impl true
   def handle_info({:marskal_change, _type, _id}, socket) do
     user = socket.assigns.current_scope.user
@@ -153,6 +159,30 @@ defmodule MarskalWeb.ProjectLive do
 
   def handle_event("reopen", %{"id" => id}, socket),
     do: task_act(socket, id, &Tasks.reopen_task/3)
+
+  # Marking it reviewed moves on to the next project due, or back to the
+  # Review view after the last.
+  def handle_event("reviewed", _params, socket) do
+    user = socket.assigns.current_scope.user
+    id = socket.assigns.project.id
+
+    case Projects.mark_reviewed(user, id, Ecto.UUID.generate(version: 7)) do
+      {:ok, _project} ->
+        case Marskal.Review.next(user, id) do
+          nil ->
+            {:noreply,
+             socket
+             |> put_flash(:info, gettext("Every project due is reviewed."))
+             |> push_navigate(to: ~p"/review")}
+
+          next ->
+            {:noreply, push_navigate(socket, to: ~p"/projects/#{next.id}?review=1")}
+        end
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, gettext("Could not mark it reviewed."))}
+    end
+  end
 
   def handle_event("complete", _params, socket), do: act(socket, &Projects.complete_project/3)
   def handle_event("drop", _params, socket), do: act(socket, &Projects.drop_project/3)
@@ -198,12 +228,61 @@ defmodule MarskalWeb.ProjectLive do
     socket
     |> assign(:page_title, project.title)
     |> assign(:project, project)
+    |> assign(:review_due?, Marskal.Review.due?(user, project))
     |> assign(:folder, folder)
     |> assign(:open?, open_tasks != [])
     |> assign(:task_counts, counts)
     |> assign(:has_tasks?, counts.total > 0)
     |> assign_tasks(open_tasks)
   end
+
+  attr :project, :any, required: true
+  attr :due?, :boolean, required: true
+
+  defp review_bar(assigns) do
+    ~H"""
+    <style :type={MarskalWeb.ColocatedCSS}>
+      @scope (.review-bar) {
+        :scope {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 0.5rem 1rem;
+          margin-bottom: 1rem;
+          padding: 0.6rem 0.9rem;
+          border: 1px solid var(--border);
+          border-radius: var(--radius);
+          background: var(--notice-bg);
+        }
+        .text {
+          flex: 1 1 auto;
+        }
+      }
+    </style>
+    <section id="project-review" class="review-bar" aria-label={gettext("Review")}>
+      <span class="text">
+        {if @due?,
+          do: gettext("Due for review. Look over its tasks, then mark it reviewed."),
+          else: next_review_text(@project)}
+      </span>
+      <button
+        :if={@due?}
+        type="button"
+        id="project-reviewed"
+        class="btn-primary"
+        phx-click="reviewed"
+      >
+        {gettext("Mark reviewed")}
+      </button>
+      <.link navigate={~p"/review"}>{gettext("Back to Review")}</.link>
+    </section>
+    """
+  end
+
+  defp next_review_text(%{next_review_on: nil}), do: gettext("This project is not reviewed.")
+
+  defp next_review_text(%{next_review_on: day}),
+    do: gettext("Next review %{day}.", day: Marskal.DateFormat.date(day, :day_month))
 
   attr :counts, :map, required: true
 

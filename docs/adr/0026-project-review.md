@@ -93,22 +93,21 @@ several sittings or devices without a session to resume.
 
 ### Choosing an interval
 
-The ISO 8601 form is for storage and the wire. A user only meets it if
-they choose Custom.
+The ISO 8601 form is for storage and the wire. A user never types it.
 
 - One picker sets an interval, both in the project inspector and in
-  settings: **Never**, **Every week**, **Every 2 weeks**, **Every month**,
-  **Every 3 months**, **Every year**, and **Custom…**.
-- **Custom** is a text field that takes the ISO 8601 form itself, such as
-  `P2W3D`, for users who want an interval the presets lack. Letters may be
-  lower case. It refuses a time part, and shows the interval in words
-  beside the field as it is typed, so a mistake is seen before it is saved.
-  Beside it, a link opens a short help page in the app that explains the
-  format with examples.
-- An interval is shown in words: a whole number of weeks as weeks ("Every
-  2 weeks", not 14 days), and a mixed one, which only an import or another
-  client can make, in its parts ("Every 1 month, 15 days"). Picking a new
-  interval replaces it.
+  settings: a whole number from 1 to 999 and a unit, **days**, **weeks**,
+  **months**, or **years**, or **Never**, which hides the number. Picking
+  a unit after Never starts at 1.
+- A saved interval shows in the largest unit that holds it whole: 14 days
+  as 2 weeks, 18 months as 18 months, 24 months as 2 years. While a number
+  is being typed, the unit the user picked stays, so 14 days is not turned
+  into 2 weeks under the cursor.
+- A mixed interval, which only an import or another client can make, shows
+  as one more option in its words ("Every 1 month, 15 days"), and stays
+  until another is picked.
+- An interval is shown in words elsewhere the same way: a whole number of
+  weeks as weeks ("Every 2 weeks"), and a mixed one in its parts.
 - The inspector's review line shows the interval, the next review day, and
   when the project was last reviewed, and the next review day can be
   changed there.
