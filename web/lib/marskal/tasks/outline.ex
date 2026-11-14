@@ -35,7 +35,10 @@ defmodule Marskal.Tasks.Outline do
   def default_rank(user, %{parent_id: nil, inbox: true} = group, except),
     do: Rank.between(nil, first_rank(user, group, except))
 
-  def default_rank(user, group, except),
+  def default_rank(user, group, except), do: rank_last(user, group, except)
+
+  @doc "The rank after every sibling in the group."
+  def rank_last(user, group, except \\ nil),
     do: Rank.between(last_rank(user, group, except), nil)
 
   @doc """

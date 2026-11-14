@@ -63,23 +63,26 @@ defmodule MarskalWeb.TagLive do
           Activate
         </button>
       </p>
-      <.add_form
-        id="new-tag-task"
-        for={@task_form}
-        field={@task_form[:title]}
-        label={gettext("Add a task with this tag")}
-        command_id={@task_command_id}
-        phx-submit="create-task"
-        data-new-task="task"
-      />
-
       <.outline_node
         node={@outline.root}
         root_id={@tag.id}
         task_tags={@task_tags}
         inspector={@inspector}
         zone={Marskal.Accounts.timezone(@current_scope.user)}
-      />
+      >
+        <:after_own_tasks>
+          <%!-- Below the tag's own tasks, where a new one goes. --%>
+          <.add_form
+            id="new-tag-task"
+            for={@task_form}
+            field={@task_form[:title]}
+            label={gettext("Add a task with this tag")}
+            command_id={@task_command_id}
+            phx-submit="create-task"
+            data-new-task="task"
+          />
+        </:after_own_tasks>
+      </.outline_node>
 
       <h2>{gettext("Tags inside")}</h2>
       <MarskalWeb.NavOutline.scope id="tag-outline">
@@ -110,6 +113,7 @@ defmodule MarskalWeb.TagLive do
   attr :task_tags, :map, required: true
   attr :zone, :string, required: true
   attr :inspector, :any, default: nil
+  slot :after_own_tasks, doc: "shown after the root tag's own tasks"
 
   # The tag's own tasks, then one section per child tag, nested the same
   # way (ADR 0005).
@@ -137,6 +141,7 @@ defmodule MarskalWeb.TagLive do
         actions={[:complete]}
         inspector={@inspector}
       />
+      {render_slot(@after_own_tasks)}
       <.outline_node
         :for={child <- @node.children}
         node={child}

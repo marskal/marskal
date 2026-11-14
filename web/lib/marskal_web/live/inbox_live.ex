@@ -35,17 +35,6 @@ defmodule MarskalWeb.InboxLive do
         New captures. Move one to a project, or to no project, to put it on the open list.
       </p>
 
-      <.add_form
-        id="new-task"
-        for={@form}
-        field={@form[:title]}
-        label="Add to inbox"
-        command_id={@command_id}
-        autofocus
-        phx-submit="create"
-        data-new-task="task"
-      />
-
       <MarskalWeb.TaskComponents.list
         id="inbox-tasks"
         tasks={@tasks}
@@ -71,6 +60,19 @@ defmodule MarskalWeb.InboxLive do
           </.empty_state>
         </:empty_state>
       </MarskalWeb.TaskComponents.list>
+
+      <%!-- Below the list: what is typed here goes last. Captures from
+      elsewhere still go to the top. --%>
+      <.add_form
+        id="new-task"
+        for={@form}
+        field={@form[:title]}
+        label={gettext("Add to inbox")}
+        command_id={@command_id}
+        autofocus
+        phx-submit="create"
+        data-new-task="task"
+      />
     </Layouts.app>
     """
   end
@@ -88,7 +90,7 @@ defmodule MarskalWeb.InboxLive do
   def handle_event("create", %{"task" => params, "command_id" => command_id}, socket) do
     user = socket.assigns.current_scope.user
 
-    case Tasks.create_task(user, params, command_id) do
+    case Tasks.create_task(user, params, command_id, place: :last) do
       {:ok, _task} ->
         {:noreply,
          socket

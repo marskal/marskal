@@ -23,6 +23,22 @@ defmodule MarskalWeb.TaskStreamTest do
     assert String.at(command_id, 14) == "7"
   end
 
+  test "the inbox field sits below the list and adds last; other captures go first", %{
+    conn: conn,
+    user: user
+  } do
+    {:ok, _} = Marskal.Tasks.create_task(user, %{title: "Older"}, Ecto.UUID.generate(version: 7))
+    {:ok, inbox, _html} = live(conn, ~p"/inbox")
+
+    assert has_element?(inbox, "#inbox-tasks ~ #new-task")
+    inbox |> form("#new-task", task: %{title: "Typed"}) |> render_submit()
+
+    {:ok, _} =
+      Marskal.Tasks.create_task(user, %{title: "Captured"}, Ecto.UUID.generate(version: 7))
+
+    assert Enum.map(Marskal.Tasks.list_inbox(user), & &1.title) == ["Captured", "Older", "Typed"]
+  end
+
   test "capture, move out of the inbox, and complete", %{conn: conn} do
     {:ok, inbox, _html} = live(conn, ~p"/inbox")
 

@@ -48,16 +48,6 @@ defmodule MarskalWeb.ProjectLive do
       </MarskalWeb.NavComponents.page_heading>
       <p :if={@project.url} class="lede"><MarskalWeb.UrlLink.link url={@project.url} text /></p>
       <MarskalWeb.FormattedNotes.block text={@project.notes} class="lede notes" />
-      <.add_form
-        id="new-project-task"
-        for={@form}
-        field={@form[:title]}
-        label="Add a task"
-        command_id={@command_id}
-        phx-submit="create"
-        data-new-task="task"
-      />
-
       <MarskalWeb.TaskComponents.list
         id="project-tasks"
         tasks={@tasks}
@@ -75,6 +65,17 @@ defmodule MarskalWeb.ProjectLive do
         zone={Marskal.Accounts.timezone(@current_scope.user)}
         actions={[:complete]}
         inspector={@inspector}
+      />
+
+      <%!-- Below the list, as a new task goes last in the project. --%>
+      <.add_form
+        id="new-project-task"
+        for={@form}
+        field={@form[:title]}
+        label={gettext("Add a task")}
+        command_id={@command_id}
+        phx-submit="create"
+        data-new-task="task"
       />
 
       <.empty_state
