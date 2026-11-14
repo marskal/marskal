@@ -2,14 +2,15 @@ defmodule MarskalWeb.ReviewLive do
   @moduledoc """
   The projects due for review (ADR 0026), by next review day, then in
   sidebar order. Each row says its folder, its deferral, and whether it
-  is stalled. Opening one shows the project with a Mark reviewed bar,
-  which moves on to the next due project. The Inbox count is a reminder
+  is stalled. Start review opens the first, and each row opens its own:
+  the project with a Mark reviewed bar, which moves on to the next due
+  project. Marking one reviewed happens there, after looking it over, so
+  the list has no Mark reviewed of its own. The Inbox count is a reminder
   to clear it; it blocks nothing.
   """
 
   use MarskalWeb, :live_view
 
-  alias Marskal.Projects
   alias Marskal.Review
 
   @impl true
@@ -30,6 +31,18 @@ defmodule MarskalWeb.ReviewLive do
       visibility={assigns[:visibility]}
     >
       <style :type={MarskalWeb.ColocatedCSS}>
+        @scope (.review-head) {
+          :scope {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem 1rem;
+          }
+          h1 {
+            margin: 0;
+          }
+        }
         @scope (.review-list) {
           :scope {
             list-style: none;
@@ -72,7 +85,17 @@ defmodule MarskalWeb.ReviewLive do
         }
       </style>
 
-      <h1>{gettext("Review")}</h1>
+      <div class="review-head">
+        <h1>{gettext("Review")}</h1>
+        <.button
+          :if={@rows != []}
+          id="review-start"
+          variant="primary"
+          navigate={review_path(hd(@rows).project)}
+        >
+          {gettext("Start review")}
+        </.button>
+      </div>
       <p :if={@inbox_count > 0} id="review-inbox" class="lede">
         <.link navigate={~p"/inbox"}>
           {ngettext(
@@ -91,7 +114,7 @@ defmodule MarskalWeb.ReviewLive do
       <ul :if={@rows != []} id="review-projects" class="review-list">
         <li :for={row <- @rows} id={"review-#{row.project.id}"} class="row">
           <div class="main">
-            <.link navigate={~p"/projects/#{row.project.id}?review=1"} class="title">
+            <.link navigate={review_path(row.project)} class="title">
               {row.project.title}
             </.link>
             <div class="facts">
@@ -107,14 +130,9 @@ defmodule MarskalWeb.ReviewLive do
               <span class="fact">{due_text(row.project.next_review_on, @today)}</span>
             </div>
           </div>
-          <button
-            type="button"
-            phx-click="reviewed"
-            phx-value-id={row.project.id}
-            id={"review-#{row.project.id}-done"}
-          >
-            {gettext("Mark reviewed")}
-          </button>
+          <.button navigate={review_path(row.project)} id={"review-#{row.project.id}-open"}>
+            {gettext("Review")}
+          </.button>
         </li>
       </ul>
     </Layouts.app>
@@ -124,15 +142,7 @@ defmodule MarskalWeb.ReviewLive do
   @impl true
   def handle_info({:marskal_change, _type, _id}, socket), do: {:noreply, load(socket)}
 
-  @impl true
-  def handle_event("reviewed", %{"id" => id}, socket) do
-    user = socket.assigns.current_scope.user
-
-    case Projects.mark_reviewed(user, id, Ecto.UUID.generate(version: 7)) do
-      {:ok, _project} -> {:noreply, load(socket)}
-      {:error, _} -> {:noreply, put_flash(socket, :error, gettext("Could not mark it reviewed."))}
-    end
-  end
+  defp review_path(project), do: ~p"/projects/#{project.id}?review=1"
 
   defp load(socket) do
     user = socket.assigns.current_scope.user
