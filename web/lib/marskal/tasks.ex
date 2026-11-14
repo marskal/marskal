@@ -347,8 +347,8 @@ defmodule Marskal.Tasks do
   A new task. With `parent_id` it is a subtask and lives where its parent
   does, whatever location is given. With `after_id` it goes right after
   that sibling, and with `before_id` right before it; otherwise at the
-  top of the inbox or the bottom of anywhere else. A `rank` from a client
-  is kept as given.
+  top of the inbox or the bottom of anywhere else. `place: :last` puts it
+  at the bottom of the inbox too. A `rank` from a client is kept as given.
   `at:` is as for `update_task/5`.
   """
   def create_task(%User{} = user, attrs, command_id, opts \\ []) when is_map(attrs) do
@@ -356,7 +356,7 @@ defmodule Marskal.Tasks do
       changeset =
         %Task{}
         |> Task.create_changeset(user, attrs, opts)
-        |> place_new(user, placement(attrs))
+        |> place_new(user, placement(attrs, opts))
 
       case Repo.insert(changeset) do
         {:ok, task} -> {:ok, task, changeset}
@@ -679,11 +679,13 @@ defmodule Marskal.Tasks do
     end
   end
 
-  # Right after one sibling, right before one, or where a new task goes.
-  defp placement(attrs) do
+  # Right after one sibling, right before one, last of all, or where a new
+  # task goes.
+  defp placement(attrs, opts) do
     cond do
       id = attr(attrs, :after_id) -> {:after, id}
       id = attr(attrs, :before_id) -> {:before, id}
+      opts[:place] == :last -> :last
       true -> nil
     end
   end
@@ -692,6 +694,7 @@ defmodule Marskal.Tasks do
   defp placement_field(_placement), do: :after_id
 
   defp new_rank(user, group, nil), do: {:ok, Outline.default_rank(user, group)}
+  defp new_rank(user, group, :last), do: {:ok, Outline.rank_last(user, group)}
   defp new_rank(user, group, {:after, id}), do: Outline.rank_after(user, group, id)
   defp new_rank(user, group, {:before, id}), do: Outline.rank_before(user, group, id)
 

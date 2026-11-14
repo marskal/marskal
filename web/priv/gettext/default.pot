@@ -148,6 +148,11 @@ msgstr ""
 msgid "Add a task with this tag"
 msgstr ""
 
+#: lib/marskal_web/live/inbox_live.ex
+#, elixir-autogen, elixir-format
+msgid "Add to inbox"
+msgstr ""
+
 #: lib/marskal_web/live/go_to.ex
 #: lib/marskal_web/live/user_live/settings.ex
 #, elixir-autogen, elixir-format

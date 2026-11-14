@@ -89,6 +89,22 @@ defmodule MarskalWeb.TagsLiveTest do
       assert has_element?(view, "button", "Activate")
     end
 
+    test "the field sits below the tag's own tasks, which go oldest first", %{
+      conn: conn,
+      user: user
+    } do
+      waiting = tag!(user, "Waiting")
+      {:ok, view, _html} = live(conn, ~p"/tags/#{waiting.id}")
+
+      assert has_element?(view, "#tag-tasks-#{waiting.id} ~ #new-tag-task")
+
+      view |> form("#new-tag-task", task: %{title: "Reply from Bo"}) |> render_submit()
+      view |> form("#new-tag-task", task: %{title: "Reply from Al"}) |> render_submit()
+
+      assert Enum.map(Marskal.Tags.outline(user, waiting.id).root.tasks, & &1.title) ==
+               ["Reply from Bo", "Reply from Al"]
+    end
+
     test "a task added here is tagged and in No project", %{conn: conn, user: user} do
       waiting = tag!(user, "Waiting")
       {:ok, view, _html} = live(conn, ~p"/tags/#{waiting.id}")

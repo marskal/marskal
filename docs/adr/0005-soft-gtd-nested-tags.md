@@ -60,7 +60,8 @@ Alternatives considered for hierarchy storage:
 
 - Selecting a tag shows an **outline**. First come the tasks that carry that tag
   itself. Then comes one group per child tag, holding that child's tasks and,
-  nested the same way, its own children.
+  nested the same way, its own children. Each lists its tasks oldest first,
+  so a task added on the tag's page goes last, under the field that adds it.
 - A tag therefore matches its whole subtree. Selecting `Person` includes
   `Person/Wife`.
 - Matching uses **effective** tags. A task in a project tagged `Person/Wife`
