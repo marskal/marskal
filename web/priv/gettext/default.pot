@@ -295,7 +295,6 @@ msgid "Could not add the task."
 msgstr ""
 
 #: lib/marskal_web/live/project_live.ex
-#: lib/marskal_web/live/review_live.ex
 #: lib/marskal_web/live/review_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Could not mark it reviewed."
@@ -694,7 +693,6 @@ msgid "Logged out successfully."
 msgstr ""
 
 #: lib/marskal_web/live/project_live.ex
-#: lib/marskal_web/live/review_live.ex
 #: lib/marskal_web/live/review_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Mark reviewed"
@@ -1098,6 +1096,11 @@ msgstr ""
 #: lib/marskal_web/live/user_live/settings.ex
 #, elixir-autogen, elixir-format
 msgid "Standard uses the arrow keys, Space to complete, Delete to drop, f to flag, and n for a new task. Vim-style adds j, k, x, dd, and others. Press ? on any page for the full list."
+msgstr ""
+
+#: lib/marskal_web/live/review_live.ex
+#, elixir-autogen, elixir-format
+msgid "Start review"
 msgstr ""
 
 #: lib/marskal_web/live/user_live/confirmation.ex

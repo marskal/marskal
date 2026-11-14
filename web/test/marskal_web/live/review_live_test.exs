@@ -35,10 +35,12 @@ defmodule MarskalWeb.ReviewLiveTest do
       assert has_element?(view, "#review-inbox", "1 item in the Inbox")
       assert has_element?(view, "#sidebar-review-count", "2")
 
-      view |> element("#review-#{stalled.id}-done") |> render_click()
+      refute has_element?(view, "#review-#{stalled.id}-done")
+      assert has_element?(view, "#review-#{stalled.id}-open")
 
-      refute has_element?(view, "#review-#{stalled.id}")
-      assert has_element?(view, "#sidebar-review-count", "1")
+      # Start review opens the first due project, to be looked over there.
+      view |> element("#review-start") |> render_click()
+      assert_redirect(view, ~p"/projects/#{stalled.id}?review=1")
     end
 
     test "says so when nothing is due", %{conn: conn} do
