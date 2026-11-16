@@ -35,12 +35,14 @@ defmodule MarskalWeb.Router do
   pipeline :api_auth do
     plug :accepts, ["json"]
     plug MarskalWeb.SecurityHeaders
+    plug MarskalWeb.ClientVersion
     plug MarskalWeb.APIAuth
   end
 
   # The event stream answers text/event-stream, not JSON (ADR 0030).
   pipeline :api_events do
     plug MarskalWeb.SecurityHeaders
+    plug MarskalWeb.ClientVersion
     plug MarskalWeb.APIAuth
   end
 

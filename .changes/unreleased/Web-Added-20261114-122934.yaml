@@ -1,0 +1,4 @@
+component: Web
+kind: Added
+body: The sync API turns away an app or extension older than the server supports, and tells it which version to update to.
+time: 2026-11-14T12:29:34.980315312+01:00

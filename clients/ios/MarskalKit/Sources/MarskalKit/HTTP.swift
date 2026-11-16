@@ -8,6 +8,8 @@ public enum ServerError: Error, Equatable, Sendable {
     case forbidden
     /// The cursor is older than the server keeps; pull a snapshot.
     case gone
+    /// The server needs this release of the app or a later one (ADR 0040).
+    case clientOutdated(minimum: String)
     /// An OAuth error code from Hydra, such as `invalid_grant`.
     case oauth(String)
     /// Any other answer the call did not expect.
@@ -41,6 +43,8 @@ struct HTTP: Sendable {
             throw .forbidden
         case 410:
             throw .gone
+        case 426:
+            throw .clientOutdated(minimum: Self.minimum(in: data))
         default:
             let body = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
             if let code = body?["error"] as? String {
@@ -48,6 +52,12 @@ struct HTTP: Sendable {
             }
             throw .status(status)
         }
+    }
+
+    /// The version a `426` names.
+    static func minimum(in data: Data) -> String {
+        let body = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        return body?["minimum_version"] as? String ?? "?"
     }
 
     func json<T: Decodable>(_: T.Type, for request: URLRequest) async throws(ServerError) -> T {
@@ -61,6 +71,11 @@ struct HTTP: Sendable {
 }
 
 extension URLRequest {
+    /// Names the app and its release to the sync API (ADR 0040).
+    mutating func nameClient() {
+        setValue("\(OAuthClient.id)/\(OAuthClient.version)", forHTTPHeaderField: "marskal-client")
+    }
+
     /// A form post, as the OAuth endpoints take.
     static func form(_ url: URL, _ fields: [String: String]) -> URLRequest {
         var request = URLRequest(url: url)

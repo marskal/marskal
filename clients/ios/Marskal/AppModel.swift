@@ -40,6 +40,8 @@ final class AppModel {
     }
     private static let showsDeferredKey = "showsDeferred"
     var problem: Problem?
+    /// The version the server last said it needs, when this one is older.
+    private(set) var outdated: String?
 
     private var store: Store?
     private var syncTask: Task<Void, Never>?
@@ -218,6 +220,7 @@ final class AppModel {
             do {
                 _ = try await session.sync(store)
                 offline = false
+                outdated = nil
             } catch let error as ServerError {
                 switch error {
                 case .notSignedIn:
@@ -226,6 +229,11 @@ final class AppModel {
                 case .network:
                     offline = true
                     if asked { problem = Problem(error) }
+                case .clientOutdated(let minimum):
+                    // Alert once for each version the server asks for, not on
+                    // every automatic sync; a sync the user starts always shows it.
+                    if asked || outdated != minimum { problem = Problem(error) }
+                    outdated = minimum
                 default:
                     problem = Problem(error)
                 }
@@ -415,6 +423,7 @@ enum Problem: Identifiable, Equatable {
     case otherAccount
     case database
     case server(Int)
+    case outdated(String)
     case invalid(String)
 
     var id: String { "\(self)" }
@@ -427,6 +436,7 @@ enum Problem: Identifiable, Equatable {
         case .notSignedIn: self = .signedOut
         case .forbidden: self = .server(403)
         case .gone: self = .server(410)
+        case .clientOutdated(let minimum): self = .outdated(minimum)
         case .status(let status): self = .server(status)
         }
     }
@@ -440,6 +450,7 @@ enum Problem: Identifiable, Equatable {
         case .otherAccount: String(localized: "This data belongs to another account")
         case .database: String(localized: "The local data could not be read")
         case .server: String(localized: "The server could not sync")
+        case .outdated: String(localized: "Update Marskal to keep syncing")
         case .invalid: String(localized: "That change could not be made")
         }
     }
@@ -460,6 +471,8 @@ enum Problem: Identifiable, Equatable {
             String(localized: "Try closing and opening the app again.")
         case .server(let status):
             String(localized: "The server answered with status \(status). Your changes are kept and sent later.")
+        case .outdated(let minimum):
+            String(localized: "This server needs Marskal \(minimum) or later. Your changes are kept and sent after the update.")
         case .invalid(let reason):
             // The engine's reason, in English, as the server would give it.
             reason

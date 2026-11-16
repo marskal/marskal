@@ -1,0 +1,4 @@
+component: Terminal
+kind: Added
+body: When the server needs a newer marskal, syncing says which version to update to, and exits with code 6.
+time: 2026-11-14T12:29:34.98403562+01:00

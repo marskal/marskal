@@ -92,6 +92,7 @@ fn api_error(error: ApiError) -> CliError {
         ApiError::Unauthorized => CliError::not_signed_in(),
         ApiError::Forbidden => CliError::new("forbidden", 4, error.to_string()),
         ApiError::Gone => CliError::new("gone", 1, error.to_string()),
+        ApiError::ClientOutdated { minimum } => CliError::client_outdated(&minimum),
         other => CliError::network(other.to_string()),
     }
 }

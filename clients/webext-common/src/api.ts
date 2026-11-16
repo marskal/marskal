@@ -3,15 +3,19 @@
 // from its metadata (RFC 8414).
 
 import type { Command, PushResult } from "./command.ts";
+import { ext } from "./ext.ts";
 
 /** A capture extension never pulls, so it does not ask to read (ADR 0024). */
 export const SCOPE = "offline_access sync:write";
 
-export type ApiErrorKind = "unauthorized" | "forbidden" | "oauth" | "http" | "network";
+export type ApiErrorKind = "unauthorized" | "forbidden" | "outdated" | "oauth" | "http" | "network";
 
 export class ApiError extends Error {
   kind: ApiErrorKind;
-  /** The OAuth error code, such as `authorization_pending`. */
+  /**
+   * The OAuth error code, such as `authorization_pending`; for `outdated`,
+   * the version the server needs.
+   */
   code: string | null;
 
   constructor(kind: ApiErrorKind, message: string, code: string | null = null) {
@@ -112,7 +116,11 @@ export class Api {
   async push(accessToken: string, commands: Command[]): Promise<PushResult[]> {
     const response = await send(`${this.server}/api/v1/sync/push`, {
       method: "POST",
-      headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json" },
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        "content-type": "application/json",
+        "marskal-client": clientHeader(this.clientId, ext().runtime.getManifest().version),
+      },
       body: JSON.stringify({ commands }),
     });
     const body = await json<{ results: PushResult[] }>(response);
@@ -135,6 +143,11 @@ export class Api {
     const response = await send(endpoints[endpoint], { method: "POST", body: new URLSearchParams(fields) });
     return json<T>(response);
   }
+}
+
+/** The `Marskal-Client` value the sync API reads (ADR 0040). */
+export function clientHeader(clientId: string, version: string): string {
+  return `${clientId}/${version}`;
 }
 
 /** Tokens go only over HTTPS, wherever the metadata points. */
@@ -170,6 +183,17 @@ async function json<T>(response: Response): Promise<T> {
   const code = (body as { error?: unknown } | null)?.error;
   if (response.status === 401) throw new ApiError("unauthorized", "The server did not accept the sign-in.");
   if (response.status === 403) throw new ApiError("forbidden", "This device is not allowed to add tasks.");
+  if (response.status === 426) {
+    const minimum = (body as { minimum_version?: unknown } | null)?.minimum_version;
+    const needed = typeof minimum === "string" ? minimum : null;
+    throw new ApiError(
+      "outdated",
+      needed
+        ? `This server needs version ${needed} or later of this extension. Update it to keep adding tasks.`
+        : "This server needs a newer version of this extension. Update it to keep adding tasks.",
+      needed,
+    );
+  }
   if (response.status === 400 && typeof code === "string") {
     throw new ApiError("oauth", `The server said ${code}.`, code);
   }
