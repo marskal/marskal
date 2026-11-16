@@ -104,6 +104,28 @@ window.addEventListener("phx:static-changed", () => {
 document.addEventListener("visibilitychange", onVisibility)
 document.getElementById("app-updated-reload")?.addEventListener("click", () => window.location.reload())
 
+// A modal marked closedby="any" closes on a click outside it. Safari lacks
+// closedby, so this does it there. The press and the release must both be
+// outside: a text selection dragged out of the dialog does not close it.
+// The test is the pointer's position, because the dialog is also the
+// target of a click on its own padding.
+if (!("closedBy" in HTMLDialogElement.prototype)) {
+  const lightDismissed = (event: PointerEvent): HTMLDialogElement | null => {
+    const dialog = event.target
+    if (!(dialog instanceof HTMLDialogElement) || !dialog.matches('[closedby="any"]:modal')) return null
+    const box = dialog.getBoundingClientRect()
+    const outside = event.clientX < box.left || event.clientX > box.right ||
+      event.clientY < box.top || event.clientY > box.bottom
+    return outside ? dialog : null
+  }
+  let pressed: HTMLDialogElement | null = null
+  document.addEventListener("pointerdown", event => { pressed = lightDismissed(event) })
+  document.addEventListener("pointerup", event => {
+    if (pressed && lightDismissed(event) === pressed) pressed.close()
+    pressed = null
+  })
+}
+
 // connect if there are any LiveViews on the page
 liveSocket.connect()
 

@@ -1035,6 +1035,9 @@ defmodule MarskalWeb.InspectorPanel do
             } else if (event.key === "Enter") {
               // The field is in the task form; Enter must not submit it.
               event.preventDefault()
+              // An Enter that confirms IME input is not a choice. Safari
+              // clears isComposing first, but sends keyCode 229.
+              if (event.isComposing || event.keyCode === 229) return
               const option = this.active ? document.getElementById(this.active) : null
               option?.querySelector("button")?.click()
             } else if (event.key === "Escape" && this.list) {
@@ -1219,7 +1222,7 @@ defmodule MarskalWeb.InspectorPanel do
           export default class extends ViewHook<HTMLElement> {
             mounted() {
               this.el.addEventListener("keydown", (event: KeyboardEvent) => {
-                if (event.key !== "Enter" || event.isComposing) return
+                if (event.key !== "Enter" || event.isComposing || event.keyCode === 229) return
                 const query = this.el.querySelector("input")
                 if (!(query instanceof HTMLInputElement) || event.target !== query) return
                 event.preventDefault()
@@ -1285,6 +1288,7 @@ defmodule MarskalWeb.InspectorPanel do
       id={"inspector-#{@form}-notes-dialog"}
       class="notes-dialog"
       phx-hook=".NotesDialog"
+      closedby="any"
       phx-mounted={JS.ignore_attributes(["open", "data-preview", "data-wrap"])}
       data-inline={"inspector-#{@form}-notes"}
       data-preview="true"
@@ -1482,12 +1486,6 @@ defmodule MarskalWeb.InspectorPanel do
     <script :type={Phoenix.LiveView.ColocatedHook} name=".NotesDialog" extension="ts">
       import {ViewHook} from "phoenix_live_view"
 
-      const outside = (el: Element, event: MouseEvent) => {
-        const box = el.getBoundingClientRect()
-        return event.clientX < box.left || event.clientX > box.right ||
-          event.clientY < box.top || event.clientY > box.bottom
-      }
-
       const settings = ["preview", "wrap"] as const
       type Setting = (typeof settings)[number]
       const storageKey = (setting: Setting) => `marskal:notes-dialog:${setting}`
@@ -1504,7 +1502,7 @@ defmodule MarskalWeb.InspectorPanel do
       // (commandfor). Opening takes the inspector's text and caret, which may
       // be ahead of the server; closing hands the text back, and the
       // inspector's form posts it if a pending save in here has not. A click
-      // on the backdrop closes it too.
+      // outside closes it too (closedby="any").
       export default class extends ViewHook<HTMLDialogElement> {
         mounted() {
           for (const setting of settings) this.apply(setting, stored(setting) !== "false")
@@ -1531,8 +1529,6 @@ defmodule MarskalWeb.InspectorPanel do
               try {
                 localStorage.setItem(storageKey(setting), String(on))
               } catch {}
-            } else if (event.target === this.el && outside(this.el, event)) {
-              this.el.close()
             }
           })
         }

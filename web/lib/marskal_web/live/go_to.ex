@@ -136,6 +136,7 @@ defmodule MarskalWeb.GoTo do
       <dialog
         id={"#{@id}-dialog"}
         aria-label={gettext("Go to")}
+        closedby="any"
         phx-mounted={JS.ignore_attributes("open")}
       >
         <form id={"#{@id}-form"} phx-change="query" phx-target={@myself}>
@@ -220,16 +221,17 @@ defmodule MarskalWeb.GoTo do
               if (next) this.select(next)
             } else if (event.key === "Enter") {
               event.preventDefault()
+              // An Enter that confirms IME input is not a choice. Safari
+              // clears isComposing first, but sends keyCode 229.
+              if (event.isComposing || event.keyCode === 229) return
               const option = this.active ? document.getElementById(this.active) : null
               option?.querySelector("a")?.click()
             }
           }
 
-          // A click on the backdrop targets the dialog itself.
+          // closedby="any" closes it on a click outside.
           onClick = (event: MouseEvent) => {
-            const target = event.target as Element
-            if (target.closest("a")) this.dialog.close()
-            else if (target === this.dialog && this.outside(event)) this.dialog.close()
+            if ((event.target as Element).closest("a")) this.dialog.close()
           }
 
           onPointerMove = (event: PointerEvent) => {
@@ -275,12 +277,6 @@ defmodule MarskalWeb.GoTo do
             } else {
               this.input.removeAttribute("aria-activedescendant")
             }
-          }
-
-          outside(event: MouseEvent): boolean {
-            const box = this.dialog.getBoundingClientRect()
-            return event.clientX < box.left || event.clientX > box.right ||
-              event.clientY < box.top || event.clientY > box.bottom
           }
         }
       </script>
