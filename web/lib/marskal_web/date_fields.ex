@@ -214,6 +214,9 @@ defmodule MarskalWeb.DateFields do
           this.el.addEventListener("keydown", (event) => {
             if (event.key === "Enter") {
               event.preventDefault()
+              // An Enter that confirms IME input does not save. Safari
+              // clears isComposing first, but sends keyCode 229.
+              if (event.isComposing || event.keyCode === 229) return
               this.commit()
             } else if (event.key === "Escape" && this.el.value !== this.el.dataset.saved) {
               event.preventDefault()
