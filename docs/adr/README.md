@@ -27,7 +27,7 @@ This directory holds **ADRs** — durable decisions and their context.
 | [0016](0016-elixir-phoenix-web.md) | Elixir and Phoenix for the web app | Accepted |
 | [0017](0017-inbox-location.md) | The inbox is a location beside projects | Accepted |
 | [0018](0018-rust-client-sync-library.md) | Rust client sync library | Accepted; shells amended by [0020](0020-terminal-client.md); split by [0039](0039-replica-and-rules.md) |
-| [0019](0019-sync-api-and-oauth-sign-in.md) | Sync API and OAuth sign-in | Accepted; sign-in replaced by [0021](0021-ory-hydra-authorization-server.md) |
+| [0019](0019-sync-api-and-oauth-sign-in.md) | Sync API and OAuth sign-in | Accepted; sign-in replaced by [0021](0021-ory-hydra-authorization-server.md); errors amended by [0040](0040-client-versions.md) |
 | [0020](0020-terminal-client.md) | Terminal client | Accepted |
 | [0021](0021-ory-hydra-authorization-server.md) | Ory Hydra as the authorization server | Accepted |
 | [0022](0022-task-and-project-url.md) | A URL on tasks and projects | Accepted |
@@ -47,6 +47,7 @@ This directory holds **ADRs** — durable decisions and their context.
 | [0037](0037-github.md) | Development on GitHub | Accepted |
 | [0038](0038-changelog-and-releases.md) | Changelog and releases | Accepted |
 | [0039](0039-replica-and-rules.md) | Replica and rules (client library split) | Accepted |
+| [0040](0040-client-versions.md) | Client versions (minimum per client, `426`) | Accepted |
 
 ## When to add an ADR
 

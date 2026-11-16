@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ApiError, hostPattern, requireHttps, serverUrl } from "../src/api.ts";
+import { Api, ApiError, hostPattern, requireHttps, serverUrl } from "../src/api.ts";
 
 test("server URLs keep only the origin", () => {
   assert.equal(serverUrl(" https://marskal.localhost:8275/ "), "https://marskal.localhost:8275");
@@ -29,4 +29,29 @@ test("OAuth endpoints must be HTTPS", () => {
     () => requireHttps({ ...endpoints, token_endpoint: "http://tasks.marskal.example/oauth2/token" }),
     ApiError,
   );
+});
+
+test("a push names the client, and a 426 says which version the server needs", async () => {
+  const scope = globalThis as { browser?: unknown; fetch: typeof fetch };
+  const realFetch = scope.fetch;
+  let sent: Headers | null = null;
+  scope.browser = { runtime: { getManifest: () => ({ version: "0.3.0" }) } };
+  scope.fetch = async (_url, init) => {
+    sent = new Headers(init?.headers);
+    return new Response(JSON.stringify({ error: "client_outdated", minimum_version: "0.4.0" }), { status: 426 });
+  };
+
+  try {
+    await assert.rejects(new Api("https://tasks.marskal.example", "marskal-thunderbird").push("token", []), (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.kind, "outdated");
+      assert.equal(error.code, "0.4.0");
+      assert.match(error.message, /0\.4\.0 or later/);
+      return true;
+    });
+    assert.equal(sent!.get("marskal-client"), "marskal-thunderbird/0.3.0");
+  } finally {
+    scope.fetch = realFetch;
+    delete scope.browser;
+  }
 });

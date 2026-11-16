@@ -810,6 +810,9 @@
         }
       }
     },
+    "This server needs Marskal %@ or later. Your changes are kept and sent after the update." : {
+
+    },
     "This tag was deleted" : {
       "localizations" : {
         "da" : {
@@ -908,6 +911,9 @@
           }
         }
       }
+    },
+    "Update Marskal to keep syncing" : {
+
     },
     "What do you want to add?" : {
       "localizations" : {

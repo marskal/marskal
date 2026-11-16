@@ -65,6 +65,10 @@ extension Session {
             } catch ServerError.notSignedIn {
                 log.debug("Event stream: signed out")
                 return
+            } catch ServerError.clientOutdated {
+                // A sync says so; the stream waits for the update.
+                log.debug("Event stream: the server needs a newer app")
+                return
             } catch {
                 failures += 1
                 log.debug("Event stream failed: \(String(describing: error), privacy: .public)")
@@ -87,6 +91,7 @@ extension Session {
             var request = URLRequest(url: server.appending(path: "api/v1/sync/events"))
             request.setValue("text/event-stream", forHTTPHeaderField: "accept")
             request.setValue("Bearer \(token)", forHTTPHeaderField: "authorization")
+            request.nameClient()
             if let last = parser.lastEventID {
                 request.setValue(String(last), forHTTPHeaderField: "last-event-id")
             }
@@ -111,6 +116,10 @@ extension Session {
                 throw ServerError.notSignedIn
             case 403:
                 throw ServerError.forbidden
+            case 426:
+                var body = Data()
+                for try await byte in bytes { body.append(byte) }
+                throw ServerError.clientOutdated(minimum: HTTP.minimum(in: body))
             default:
                 throw ServerError.status(status)
             }

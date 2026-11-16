@@ -1,0 +1,4 @@
+component: iOS
+kind: Added
+body: When the server needs a newer version of the app, Marskal says which one, and keeps your changes to send after the update.
+time: 2026-11-14T12:29:34.987439641+01:00

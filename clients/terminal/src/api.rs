@@ -2,8 +2,8 @@
 //! sync API calls (ADR 0019) are here. The sync library does no HTTP
 //! (ADR 0018).
 
-use marskal_shell_common::json_or_error;
 use marskal_replica::{Command, PullResponse, PushResult};
+use marskal_shell_common::json_or_error;
 use serde::Deserialize;
 use serde_json::json;
 
@@ -16,6 +16,7 @@ pub fn connect(server: &str) -> Api {
     Api::new(
         server,
         CLIENT_ID,
+        env!("CARGO_PKG_VERSION"),
         concat!("marskal/", env!("CARGO_PKG_VERSION")),
     )
 }
@@ -33,10 +34,7 @@ pub trait SyncApi {
 
 impl SyncApi for Api {
     fn pull(&self, access_token: &str, cursor: Option<i64>) -> Result<PullResponse, ApiError> {
-        let mut request = self
-            .agent()
-            .get(self.url("/api/v1/sync/pull"))
-            .header("authorization", &format!("Bearer {access_token}"));
+        let mut request = self.sync_get("/api/v1/sync/pull", access_token);
 
         if let Some(cursor) = cursor {
             request = request.query("cursor", cursor.to_string());
@@ -47,9 +45,7 @@ impl SyncApi for Api {
 
     fn push(&self, access_token: &str, commands: &[Command]) -> Result<Vec<PushResult>, ApiError> {
         let response = self
-            .agent()
-            .post(self.url("/api/v1/sync/push"))
-            .header("authorization", &format!("Bearer {access_token}"))
+            .sync_post("/api/v1/sync/push", access_token)
             .send_json(json!({ "commands": commands }));
 
         json_or_error::<Results>(response).map(|r| r.results)

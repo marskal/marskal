@@ -28,6 +28,18 @@ impl CliError {
         CliError::new("not_signed_in", 4, "Not signed in. Run `marskal login`.")
     }
 
+    /// The server needs a newer `marskal` (ADR 0040).
+    pub fn client_outdated(minimum: &str) -> CliError {
+        CliError::new(
+            "client_outdated",
+            6,
+            format!(
+                "This server needs marskal {minimum} or later; this is {}. Update marskal to keep syncing.",
+                env!("CARGO_PKG_VERSION")
+            ),
+        )
+    }
+
     pub fn network(message: impl Into<String>) -> CliError {
         CliError::new("network", 5, message)
     }

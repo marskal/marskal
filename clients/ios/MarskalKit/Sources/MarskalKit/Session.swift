@@ -115,6 +115,7 @@ public actor Session {
         for attempt in 0..<2 {
             var request = request
             request.setValue("Bearer \(token)", forHTTPHeaderField: "authorization")
+            request.nameClient()
             do {
                 return try await http.data(for: request)
             } catch .notSignedIn where attempt == 0 {

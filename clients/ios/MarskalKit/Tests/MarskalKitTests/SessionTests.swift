@@ -118,6 +118,29 @@ struct SessionTests {
         #expect(tokens.load(server: server) == nil)
     }
 
+    @Test func syncCallsNameTheClient() async throws {
+        signIn()
+        let store = try temporaryStore()
+        let stub = StubServer { _, _ in (200, pullBody(cursor: 1)) }
+
+        _ = try await session(stub).sync(store)
+
+        #expect(stub.requests.allSatisfy {
+            $0.request.value(forHTTPHeaderField: "marskal-client")?.hasPrefix("marskal-ios/") == true
+        })
+    }
+
+    @Test func anOutdatedClientHearsTheVersionItNeeds() async throws {
+        signIn()
+        let store = try temporaryStore()
+        let stub = StubServer { _, _ in
+            (426, #"{"error": "client_outdated", "client": "marskal-ios", "minimum_version": "0.4.0"}"#)
+        }
+
+        await #expect(throws: ServerError.clientOutdated(minimum: "0.4.0")) { try await session(stub).sync(store) }
+        #expect(tokens.load(server: server) != nil)
+    }
+
     @Test func syncsAtOnceShareOneRun() async throws {
         signIn()
         let store = try temporaryStore()

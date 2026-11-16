@@ -18,6 +18,7 @@ export interface Ext {
   };
   runtime: {
     openOptionsPage(): Promise<void>;
+    getManifest(): { version: string };
   };
 }
 

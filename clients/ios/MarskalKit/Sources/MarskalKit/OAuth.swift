@@ -7,6 +7,11 @@ public enum OAuthClient {
     public static let callbackScheme = "app.marskal.ios"
     public static let redirectURI = "app.marskal.ios:/oauth/callback"
     public static let scope = "offline_access sync:read sync:write"
+
+    /// This release, as the App Store knows it (ADR 0038).
+    public static var version: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
+    }
 }
 
 /// A server's address, as the user typed it, made into a base URL.

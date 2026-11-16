@@ -111,4 +111,5 @@ shape is version 1 and changes only with that number.
   `{"tags"}`; `status`, `sync`, `rejections` → their fields.
 - An error is `{"version": 1, "error": {"code", "message"}}` with a
   non-zero exit: 2 usage, 3 not found or ambiguous, 4 not signed in or not
-  allowed, 5 network, 1 anything else.
+  allowed, 5 network, 6 the server needs a newer `marskal`
+  (`client_outdated`), 1 anything else.
