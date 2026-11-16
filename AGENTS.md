@@ -47,6 +47,7 @@ This file is **short and actionable**. Rationale and history live in
 | Development on GitHub | [0037](docs/adr/0037-github.md) |
 | Changelog, releases | [0038](docs/adr/0038-changelog-and-releases.md) |
 | Client library: replica and rules | [0039](docs/adr/0039-replica-and-rules.md) |
+| Client versions | [0040](docs/adr/0040-client-versions.md) |
 | Repository layout | [0015](docs/adr/0015-repository-layout.md) |
 
 ---
@@ -374,6 +375,10 @@ The repository root is the product, not the web app (ADR 0015).
   (`client_fields/1` beside its changeset), dispatched by `Marskal.Sync.Push`. A rejected command is not retried.
   `GET /sync/events` is Server-Sent Events (ADR 0030): the latest cursor when
   the user's data changes, and the client pulls. Clients do not poll.
+- **Client versions (ADR 0040):** clients send `Marskal-Client: <client id>/<version>`
+  on `/api/v1`. `MarskalWeb.ClientVersion` holds a default minimum and
+  per-client overrides, and answers `426` `client_outdated` below it. A
+  minimum must be a version that client shipped in (`CHANGELOG.md`).
 - **Preferences (ADR 0023):** one `user_preferences` row per user, keyed by
   `user_id`, made by a trigger, synced as an entity whose id is the user id.
   One typed column per preference. Read with `Accounts.preferences/1`; do not

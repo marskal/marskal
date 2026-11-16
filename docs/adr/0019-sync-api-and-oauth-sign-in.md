@@ -8,6 +8,9 @@ Sign-in is replaced by [ADR 0021](0021-ory-hydra-authorization-server.md):
 Ory Hydra is the authorization server, and the web app its login, consent,
 and device verification UI. The sync API below is unchanged.
 
+Amended by [ADR 0040](0040-client-versions.md): clients name their version,
+and `426` says which version the server needs.
+
 Specifies the wire format and the client credentials that
 [ADR 0014](0014-offline-sync.md) leaves open. The merge rules there are
 unchanged. The engine that calls this API is the Rust library of
@@ -261,7 +264,8 @@ A push does not return rows. Clients pull after pushing.
   outbox.
 - `403` with `error="insufficient_scope"`: the grant lacks the scope. Not
   retried.
-- `410` as above. `426` when the client's API version is no longer served.
+- `410` as above. `426` when the server no longer serves the client's
+  version (ADR 0040). Not retried; the user updates the client.
   Anything else is retried later.
 
 ## Consequences
