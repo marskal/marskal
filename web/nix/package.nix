@@ -35,7 +35,7 @@
 }:
 let
   pname = "marskal";
-  version = "0.2.0";
+  version = "0.3.0";
 
   depsHash = "sha256-1WraJGh858IX0wgErxwBg5KwaQa1CscJQxkB3GA8B1Q=";
 
