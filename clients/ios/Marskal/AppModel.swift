@@ -39,6 +39,11 @@ final class AppModel {
         }
     }
     private static let showsDeferredKey = "showsDeferred"
+    /// Tasks whose subtasks are hidden in an outline. This device's choice,
+    /// as the web app keeps it per browser (ADR 0009).
+    private(set) var collapsed: Set<UUID> = Set(
+        (UserDefaults.standard.stringArray(forKey: AppModel.collapsedKey) ?? []).compactMap(UUID.init(uuidString:)))
+    private static let collapsedKey = "collapsedTasks"
     var problem: Problem?
     /// The version the server last said it needs, when this one is older.
     private(set) var outdated: String?
@@ -299,6 +304,22 @@ final class AppModel {
     /// Changes a task's title, notes, URL, flag, or dates, as one command.
     func edit(_ task: TaskItem, _ changes: [TaskChange]) {
         change { try $0.editTask(id: task.id, changes: changes) }
+    }
+
+    /// Makes a task the last subtask of the task above it.
+    func indent(_ task: TaskItem) {
+        change { try $0.indentTask(id: task.id) }
+    }
+
+    /// Moves a subtask out of its parent, to just after it.
+    func outdent(_ task: TaskItem) {
+        change { try $0.outdentTask(id: task.id) }
+    }
+
+    /// Shows or hides a task's subtasks.
+    func toggleCollapsed(_ task: TaskItem) {
+        if collapsed.remove(task.id) == nil { collapsed.insert(task.id) }
+        UserDefaults.standard.set(collapsed.map(\.uuidString), forKey: AppModel.collapsedKey)
     }
 
     /// Deletes a task and its subtasks.
