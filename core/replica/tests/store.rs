@@ -359,6 +359,70 @@ fn a_task_cannot_go_under_its_own_subtask() {
 }
 
 #[test]
+fn indent_goes_under_the_task_above_and_outdent_comes_back_after_the_parent() {
+    let (mut store, _clock) = store();
+    let project = store
+        .add_project(marskal_replica::NewProject {
+            title: "Trip".into(),
+            ..Default::default()
+        })
+        .unwrap();
+    let add = |store: &mut Store, title: &str| {
+        store
+            .add_task(NewTask {
+                title: title.into(),
+                location: Some(Location::Project(project)),
+                ..NewTask::default()
+            })
+            .unwrap()
+    };
+
+    let pack = add(&mut store, "Pack");
+    let socks = add(&mut store, "Socks");
+    let shirts = add(&mut store, "Shirts");
+    add(&mut store, "Leave");
+
+    // The first task has nothing above it to go under.
+    assert!(store.indent_task(pack).is_err());
+    // A top-level task is not a subtask.
+    assert!(store.outdent_task(pack).is_err());
+
+    store.indent_task(socks).unwrap();
+    store.indent_task(shirts).unwrap();
+    let world = store.world().unwrap();
+    assert_eq!(world.task(socks).unwrap().parent_id, Some(pack));
+    assert_eq!(world.task(shirts).unwrap().parent_id, Some(pack));
+    assert_eq!(
+        titles(&store, TaskFilter::Project(project)),
+        ["Pack", "Socks", "Shirts", "Leave"]
+    );
+
+    // Shirts goes under Socks, the sibling above it now.
+    store.indent_task(shirts).unwrap();
+    assert_eq!(
+        store.world().unwrap().task(shirts).unwrap().parent_id,
+        Some(socks)
+    );
+
+    // Socks leaves Pack with Shirts, to just after Pack, before Leave.
+    store.outdent_task(socks).unwrap();
+    let world = store.world().unwrap();
+    assert_eq!(world.task(socks).unwrap().parent_id, None);
+    assert_eq!(world.task(shirts).unwrap().parent_id, Some(socks));
+    assert_eq!(
+        titles(&store, TaskFilter::Project(project)),
+        ["Pack", "Socks", "Shirts", "Leave"]
+    );
+
+    // Each is one patch of the parent and the rank.
+    let last = store.pending(100).unwrap().pop().unwrap();
+    assert_eq!(
+        last.fields.keys().collect::<Vec<_>>(),
+        ["parent_id", "rank"]
+    );
+}
+
+#[test]
 fn the_open_stream_leaves_out_resolved_deferred_and_unavailable_tasks() {
     let (mut store, clock) = store();
     let project = store

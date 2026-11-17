@@ -413,6 +413,64 @@ pub(crate) fn location_of(conn: &Connection, task_id: &str) -> Result<(bool, Opt
     })
 }
 
+/// Where a live task sits in its outline.
+pub(crate) struct OutlinePlace {
+    pub parent_id: Option<String>,
+    pub inbox: bool,
+    pub project_id: Option<String>,
+    pub rank: String,
+}
+
+pub(crate) fn outline_place(conn: &Connection, task_id: &str) -> Result<OutlinePlace> {
+    conn.query_row(
+        "SELECT parent_id, inbox, project_id, rank FROM tasks
+         WHERE id = ?1 AND discarded_at IS NULL",
+        [task_id],
+        |row| {
+            Ok(OutlinePlace {
+                parent_id: row.get(0)?,
+                inbox: row.get(1)?,
+                project_id: row.get(2)?,
+                rank: row.get(3)?,
+            })
+        },
+    )
+    .optional()?
+    .ok_or_else(|| Error::NotFound {
+        entity: "task",
+        id: task_id.to_string(),
+    })
+}
+
+/// The live sibling just above a task in that place, as the web app's
+/// outline orders them: by rank, then id.
+pub(crate) fn previous_sibling(conn: &Connection, place: &OutlinePlace) -> Result<Option<String>> {
+    Ok(conn
+        .query_row(
+            "SELECT id FROM tasks
+             WHERE parent_id IS ?1 AND inbox = ?2 AND project_id IS ?3
+               AND discarded_at IS NULL AND rank < ?4
+             ORDER BY rank DESC, id DESC LIMIT 1",
+            params![place.parent_id, place.inbox, place.project_id, place.rank],
+            |row| row.get(0),
+        )
+        .optional()?)
+}
+
+/// A rank right after a task in that place, before the next sibling.
+pub(crate) fn rank_after(conn: &Connection, place: &OutlinePlace) -> Result<String> {
+    let next: Option<String> = conn.query_row(
+        "SELECT min(rank) FROM tasks
+         WHERE parent_id IS ?1 AND inbox = ?2 AND project_id IS ?3
+           AND discarded_at IS NULL AND rank > ?4",
+        params![place.parent_id, place.inbox, place.project_id, place.rank],
+        |row| row.get(0),
+    )?;
+
+    rank::between(Some(&place.rank), next.as_deref())
+        .ok_or_else(|| Error::Invalid("sibling ranks are out of order".into()))
+}
+
 // Whether `task` is `ancestor` or somewhere below it.
 fn within(conn: &Connection, task: &str, ancestor: &str) -> Result<bool> {
     let mut next = Some(task.to_string());
