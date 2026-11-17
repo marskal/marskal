@@ -1,4 +1,0 @@
-component: Thunderbird extension
-kind: Added
-body: When the server needs a newer version of the extension, adding a task says which one.
-time: 2026-11-14T12:29:34.994916044+01:00
