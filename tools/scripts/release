@@ -40,7 +40,7 @@ if ! version=$(changie next auto 2>/dev/null); then
   exit 1
 fi
 version=${version#v}
-branch="release-v$version"
+branch="release/v$version"
 if git ls-remote --exit-code --heads origin "$branch" >/dev/null; then
   echo "$branch is already on origin. Merge or close its PR first." >&2
   exit 1

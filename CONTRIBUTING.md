@@ -33,7 +33,7 @@ devenv shell release-pr        # open the release PR
 `release-pr` works from `origin/master` in a worktree of its own, so the
 checkout you are in is left alone. It runs `changie batch auto` and
 `changie merge`, sets the new version in every component
-(`tools/scripts/set-version`), commits on `release-v<version>`, and opens
+(`tools/scripts/set-version`), commits on `release/v<version>`, and opens
 the PR, labelled `no changelog`.
 
 Merging that PR tags the merge commit `v<version>` and publishes the GitHub
