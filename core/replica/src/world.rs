@@ -5,6 +5,7 @@
 use std::collections::{HashMap, HashSet};
 
 use jiff::Timestamp;
+use jiff::civil::Date;
 use rusqlite::Connection;
 use serde::Serialize;
 use serde_json::{Map, Value};
@@ -12,7 +13,7 @@ use uuid::Uuid;
 
 use crate::entity::Entity;
 use crate::error::{Error, Result};
-use crate::model::{Folder, Link, Project, Series, Tag, TagState, Task, TaskState};
+use crate::model::{Folder, FolderState, Link, Project, Series, Tag, TagState, Task, TaskState};
 use crate::value::from_sql;
 use marskal_rules::path_search;
 
@@ -70,6 +71,23 @@ pub struct AgendaView {
     pub at: Timestamp,
     /// On the agenda by its Due, not its Planned.
     pub due: bool,
+}
+
+/// A project due for review, with what the Review view shows (ADR 0026).
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct ReviewView {
+    #[serde(flatten)]
+    pub project: Project,
+    /// The folder names from the top down to its folder; empty when it is
+    /// in none.
+    pub folder_path: Vec<String>,
+    /// Its folder, or one above it, is Dropped.
+    pub in_dropped_folder: bool,
+    /// Deferred until later, or indefinitely.
+    pub deferred: bool,
+    /// To-Do, not deferred, and with no available task (ADR 0008): none
+    /// that is open, not deferred, and available by its tags.
+    pub stalled: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -354,6 +372,137 @@ impl World {
         entries
     }
 
+    /// The projects due for review on `today`, a day on the user's clock
+    /// (ADR 0026): To-Do, with a next review day on or before it. Deferred
+    /// projects and those in a Dropped folder are listed too. By next
+    /// review day, then in sidebar order.
+    pub fn due_for_review(&self, today: Date) -> Vec<ReviewView> {
+        let due: Vec<&Project> = self
+            .projects
+            .iter()
+            .filter(|project| is_due_for_review(project, today))
+            .collect();
+        if due.is_empty() {
+            return Vec::new();
+        }
+
+        let folders: HashMap<Uuid, &Folder> = self.folders.iter().map(|f| (f.id, f)).collect();
+        let order = self.sidebar_order();
+
+        // Projects with a task that is open, not deferred, and available.
+        let ids: HashSet<Uuid> = due.iter().map(|p| p.id).collect();
+        let active: HashSet<Uuid> = self
+            .tasks
+            .iter()
+            .filter(|task| !task.inbox && task.project_id.is_some_and(|id| ids.contains(&id)))
+            .filter(|task| {
+                let view = self.view(task);
+                !view.resolved && view.available && !view.deferred
+            })
+            .filter_map(|task| task.project_id)
+            .collect();
+
+        let mut views: Vec<ReviewView> = due
+            .into_iter()
+            .map(|project| {
+                let (folder_path, in_dropped_folder) = folder_path(&folders, project);
+                let deferred = project.deferred_indefinitely
+                    || project
+                        .defer_until
+                        .as_deref()
+                        .and_then(parse)
+                        .is_some_and(|until| until > self.now);
+                ReviewView {
+                    stalled: !deferred && !active.contains(&project.id),
+                    project: project.clone(),
+                    folder_path,
+                    in_dropped_folder,
+                    deferred,
+                }
+            })
+            .collect();
+
+        views.sort_by_key(|view| {
+            (
+                view.project.next_review_on.clone(),
+                order.get(&view.project.id).copied().unwrap_or(usize::MAX),
+                view.project.id,
+            )
+        });
+        views
+    }
+
+    /// How many projects are due for review on `today`, for the sidebar.
+    pub fn due_for_review_count(&self, today: Date) -> usize {
+        self.projects
+            .iter()
+            .filter(|project| is_due_for_review(project, today))
+            .count()
+    }
+
+    // Each project's place in the sidebar outline (ADR 0009): a folder's
+    // subfolders and projects are one list by rank, each folder followed by
+    // what is in it. A project under a folder that is gone has none.
+    fn sidebar_order(&self) -> HashMap<Uuid, usize> {
+        #[derive(Clone, Copy)]
+        enum Item {
+            Folder(Uuid),
+            Project(Uuid),
+        }
+
+        // Siblings by parent folder: rank, id, and what each is.
+        type Siblings<'a> = Vec<(&'a Option<String>, Uuid, Item)>;
+        let mut children: HashMap<Option<Uuid>, Siblings> = HashMap::new();
+        for folder in &self.folders {
+            children.entry(folder.parent_id).or_default().push((
+                &folder.rank,
+                folder.id,
+                Item::Folder(folder.id),
+            ));
+        }
+        for project in &self.projects {
+            children
+                .entry(project.project_folder_id)
+                .or_default()
+                .push((&project.rank, project.id, Item::Project(project.id)));
+        }
+        for siblings in children.values_mut() {
+            // Postgres puts a missing rank last.
+            siblings.sort_by(|a, b| (a.0.is_none(), a.0, a.1).cmp(&(b.0.is_none(), b.0, b.1)));
+        }
+
+        let mut order = HashMap::new();
+        let mut stack: Vec<Item> = children
+            .get(&None)
+            .into_iter()
+            .flatten()
+            .rev()
+            .map(|(_, _, item)| *item)
+            .collect();
+        let mut seen = HashSet::new();
+        while let Some(item) = stack.pop() {
+            match item {
+                Item::Project(id) => {
+                    let next = order.len();
+                    order.entry(id).or_insert(next);
+                }
+                Item::Folder(id) => {
+                    if seen.insert(id) {
+                        stack.extend(
+                            children
+                                .get(&Some(id))
+                                .into_iter()
+                                .flatten()
+                                .rev()
+                                .map(|(_, _, item)| *item),
+                        );
+                    }
+                }
+            }
+        }
+        order
+    }
+
     /// One task as a view.
     pub fn view(&self, task: &Task) -> TaskView {
         let tags = self.effective_tags(task);
@@ -558,6 +707,36 @@ impl World {
             }
         }
     }
+}
+
+fn is_due_for_review(project: &Project, today: Date) -> bool {
+    project.state == TaskState::ToDo
+        && project
+            .next_review_on
+            .as_deref()
+            .and_then(|day| day.parse::<Date>().ok())
+            .is_some_and(|day| day <= today)
+}
+
+// The names from the top folder down to the project's, and whether any of
+// them is Dropped.
+fn folder_path(folders: &HashMap<Uuid, &Folder>, project: &Project) -> (Vec<String>, bool) {
+    let mut path = Vec::new();
+    let mut dropped = false;
+    let mut seen = HashSet::new();
+    let mut next = project.project_folder_id.and_then(|id| folders.get(&id));
+
+    while let Some(folder) = next {
+        if !seen.insert(folder.id) {
+            break;
+        }
+        path.push(folder.name.clone());
+        dropped |= folder.state == FolderState::Dropped;
+        next = folder.parent_id.and_then(|id| folders.get(&id));
+    }
+
+    path.reverse();
+    (path, dropped)
 }
 
 fn sort_by_rank(tasks: &mut [&Task]) {

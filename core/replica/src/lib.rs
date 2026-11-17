@@ -35,4 +35,4 @@ pub use ops::{Location, NewProject, NewTask, TaskPatch};
 pub use pull::{Gone, PullResponse, PullUser};
 pub use push::{Command, Op, PushResult, PushStatus, PushSummary};
 pub use store::{Status, Store};
-pub use world::{AgendaView, TaskFilter, TaskView, World};
+pub use world::{AgendaView, ReviewView, TaskFilter, TaskView, World};

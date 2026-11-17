@@ -3,6 +3,8 @@
 //! transaction (ADR 0014).
 
 use jiff::Timestamp;
+use jiff::civil::Date;
+use jiff::tz::TimeZone;
 use rusqlite::{Connection, OptionalExtension};
 use serde_json::{Map, Value, json};
 use uuid::Uuid;
@@ -11,11 +13,12 @@ use crate::clock::stamp;
 use crate::entity::Entity;
 use crate::error::{Error, Result};
 use crate::local;
-use crate::model::TaskState;
+use crate::model::{TaskState, UserPreferences};
 use crate::push::{Command, Op, enqueue};
-use crate::store::Store;
+use crate::store::{Store, meta};
+use crate::world::load;
 use marskal_rules::ids::{LinkKind, link_id};
-use marskal_rules::url;
+use marskal_rules::{review, url};
 
 /// Where a task lives: the inbox, no project, or a project (ADR 0017).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -79,7 +82,18 @@ pub struct NewProject {
     pub url: Option<String>,
     pub flagged: bool,
     pub folder_id: Option<Uuid>,
+    /// ADR 0026. `None` takes the user's `default_review_interval`;
+    /// `Some(None)` is Never. Text as [`marskal_rules::review::parse`]
+    /// reads it.
+    pub review_interval: Option<Option<String>>,
+    /// The first review day. Without it, today on the user's clock plus
+    /// the interval.
+    pub next_review_on: Option<Date>,
 }
+
+/// The interval a project takes when the preferences have not been pulled
+/// yet: the server's default, `P1W`.
+const DEFAULT_REVIEW_INTERVAL: &str = "P7D";
 
 impl Store {
     /// Applies a command here and queues it for the server.
@@ -232,18 +246,125 @@ impl Store {
         let url = new.url.as_deref().map(clean_url).transpose()?.flatten();
         let id = new_id();
 
+        let interval = match &new.review_interval {
+            Some(interval) => Some(interval.as_deref().map(review_interval).transpose()?),
+            None => None,
+        };
+
         self.write(|tx, now| {
+            // A new project copies the default, as a series copies
+            // week_start, and is first due that interval after today.
+            let interval = match interval {
+                Some(interval) => interval,
+                None => match preferences(tx)? {
+                    Some(preferences) => preferences.default_review_interval,
+                    None => Some(DEFAULT_REVIEW_INTERVAL.to_string()),
+                },
+            };
+            let next = match (&interval, new.next_review_on) {
+                (None, None) => None,
+                (None, Some(_)) => return Err(never()),
+                (Some(_), Some(day)) => Some(day),
+                (Some(interval), None) => Some(next_review_on(today(tx, now)?, interval)?),
+            };
+
             let fields = object(json!({
                 "title": title,
                 "notes": new.notes,
                 "url": url,
                 "flagged": new.flagged,
                 "project_folder_id": new.folder_id.map(|f| f.to_string()),
+                "review_interval": interval,
+                "next_review_on": next.map(|day| day.to_string()),
             }));
             run(tx, now, Entity::Project, id, Op::Insert, fields)
         })?;
 
         Ok(id)
+    }
+
+    /// Marks a project reviewed now: it is next due its interval after
+    /// today on the user's clock (ADR 0026). A project set to Never is not
+    /// reviewed.
+    pub fn mark_project_reviewed(&mut self, id: Uuid) -> Result<()> {
+        self.write(|tx, now| {
+            let review = project_review(tx, id)?;
+            let interval = review.interval.ok_or_else(never)?;
+            let fields = object(json!({
+                "last_reviewed_at": stamp(now),
+                "next_review_on": next_review_on(today(tx, now)?, &interval)?.to_string(),
+            }));
+            run(tx, now, Entity::Project, id, Op::Patch, fields)
+        })
+    }
+
+    /// Sets how far apart a project's reviews are, or `None` for Never.
+    /// The next review day moves to the last review, or the day the project
+    /// was made, plus the new interval; a day that has passed leaves it due
+    /// now. Never clears it (ADR 0026).
+    pub fn set_project_review_interval(&mut self, id: Uuid, interval: Option<&str>) -> Result<()> {
+        let interval = interval.map(review_interval).transpose()?;
+
+        self.write(|tx, now| {
+            let review = project_review(tx, id)?;
+            let next = match &interval {
+                None => None,
+                Some(interval) => {
+                    let since = review
+                        .last_reviewed_at
+                        .or(review.inserted_at)
+                        .unwrap_or(now);
+                    let day = since.to_zoned(user_zone(tx)?).date();
+                    Some(next_review_on(day, interval)?.to_string())
+                }
+            };
+            let fields = object(json!({
+                "review_interval": interval,
+                "next_review_on": next,
+            }));
+            run(tx, now, Entity::Project, id, Op::Patch, fields)
+        })
+    }
+
+    /// Brings a project's next review forward or pushes it back, without
+    /// marking it reviewed. A project set to Never has no review day.
+    pub fn set_project_next_review_on(&mut self, id: Uuid, day: Date) -> Result<()> {
+        self.write(|tx, now| {
+            if project_review(tx, id)?.interval.is_none() {
+                return Err(never());
+            }
+            let fields = object(json!({ "next_review_on": day.to_string() }));
+            run(tx, now, Entity::Project, id, Op::Patch, fields)
+        })
+    }
+
+    /// Sets the review interval new projects take, or `None` for Never
+    /// (ADR 0026). Projects that exist keep theirs. Needs the preferences
+    /// from a pull.
+    pub fn set_default_review_interval(&mut self, interval: Option<&str>) -> Result<()> {
+        let interval = interval.map(review_interval).transpose()?;
+
+        self.write(|tx, now| {
+            let preferences = preferences(tx)?.ok_or_else(|| Error::NotFound {
+                entity: Entity::UserPreferences.as_str(),
+                id: "the user's".into(),
+            })?;
+            let fields = object(json!({ "default_review_interval": interval }));
+            run(
+                tx,
+                now,
+                Entity::UserPreferences,
+                preferences.id,
+                Op::Patch,
+                fields,
+            )
+        })
+    }
+
+    /// Today on the user's clock: the zone in their preferences, or the
+    /// one the last pull named, or this device's.
+    pub fn today(&self) -> Result<Date> {
+        today(&self.conn, self.now())
     }
 
     /// Marks a project Done, Dropped, or To-Do again.
@@ -412,6 +533,77 @@ fn object(value: Value) -> Map<String, Value> {
         Value::Object(map) => map,
         _ => Map::new(),
     }
+}
+
+/// A review interval as the server keeps it, or why it is not one.
+fn review_interval(text: &str) -> Result<String> {
+    review::normalize_text(text).ok_or_else(|| {
+        Error::Invalid(
+            "a review interval must be whole days, weeks, months, or years, such as P1W or P1M"
+                .into(),
+        )
+    })
+}
+
+fn never() -> Error {
+    Error::Invalid("a project set to Never has no review".into())
+}
+
+fn next_review_on(from: Date, interval: &str) -> Result<Date> {
+    review::parse(interval)
+        .and_then(|interval| review::next_review_on(from, interval))
+        .ok_or_else(|| Error::Invalid(format!("cannot add the review interval {interval}")))
+}
+
+// What a project's review fields count from.
+struct ProjectReview {
+    interval: Option<String>,
+    last_reviewed_at: Option<Timestamp>,
+    inserted_at: Option<Timestamp>,
+}
+
+fn project_review(conn: &Connection, id: Uuid) -> Result<ProjectReview> {
+    conn.query_row(
+        "SELECT review_interval, last_reviewed_at, inserted_at FROM projects
+         WHERE id = ?1 AND discarded_at IS NULL",
+        [id.to_string()],
+        |row| {
+            let at = |i| {
+                row.get::<_, Option<String>>(i)
+                    .map(|at| at.and_then(|at| at.parse().ok()))
+            };
+            Ok(ProjectReview {
+                interval: row.get(0)?,
+                last_reviewed_at: at(1)?,
+                inserted_at: at(2)?,
+            })
+        },
+    )
+    .optional()?
+    .ok_or_else(|| Error::NotFound {
+        entity: "project",
+        id: id.to_string(),
+    })
+}
+
+fn preferences(conn: &Connection) -> Result<Option<UserPreferences>> {
+    Ok(load(conn, Entity::UserPreferences)?.into_iter().next())
+}
+
+// The user's zone, from their preferences or the last pull, or this
+// device's before any pull.
+fn user_zone(conn: &Connection) -> Result<TimeZone> {
+    let name = match preferences(conn)? {
+        Some(preferences) => Some(preferences.timezone),
+        None => meta(conn, "timezone")?,
+    };
+    Ok(name
+        .and_then(|name| TimeZone::get(&name).ok())
+        .unwrap_or_else(TimeZone::system))
+}
+
+fn today(conn: &Connection, now: Timestamp) -> Result<Date> {
+    Ok(now.to_zoned(user_zone(conn)?).date())
 }
 
 /// A new domain key: UUIDv7, minted before insert (ADR 0011).

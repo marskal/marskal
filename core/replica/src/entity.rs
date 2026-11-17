@@ -58,6 +58,7 @@ const USER_PREFERENCES: &[Column] = &[
     text("locale"),
     text("home_view"),
     text("keymap"),
+    text("default_review_interval"),
     text("inserted_at"),
     text("updated_at"),
 ];
@@ -118,6 +119,9 @@ const PROJECT: &[Column] = &[
     text("due_at"),
     text("series_id"),
     text("occurrence_for"),
+    text("review_interval"),
+    text("next_review_on"),
+    text("last_reviewed_at"),
     text("resolved_at"),
     text("discarded_at"),
     text("inserted_at"),

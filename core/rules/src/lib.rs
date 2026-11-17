@@ -8,4 +8,5 @@ pub mod dates;
 pub mod ids;
 pub mod path_search;
 pub mod rank;
+pub mod review;
 pub mod url;

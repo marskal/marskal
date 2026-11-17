@@ -244,7 +244,55 @@ pub struct ProjectItem {
     pub rank: Option<String>,
     pub dates: Dates,
     pub series_id: Option<Uuid>,
+    /// How far apart its reviews are, as ISO 8601 date parts (`P7D`,
+    /// `P1M`); `None` is Never (ADR 0026). `parse_review_interval` reads it.
+    #[uniffi(default = None)]
+    pub review_interval: Option<String>,
+    /// The day on the user's clock it is next due for review; `None`
+    /// exactly when the interval is.
+    #[uniffi(default = None)]
+    pub next_review_on: Option<LocalDate>,
+    #[uniffi(default = None)]
+    pub last_reviewed_at: Option<Timestamp>,
     pub inserted_at: Option<Timestamp>,
+}
+
+/// A project due for review, as the Review view lists it (ADR 0026).
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct ReviewItem {
+    pub project: ProjectItem,
+    /// The folder names from the top down to its folder; empty when it is
+    /// in none.
+    pub folder_path: Vec<String>,
+    /// Its folder, or one above it, is Dropped.
+    pub in_dropped_folder: bool,
+    /// Deferred until later, or indefinitely.
+    pub deferred: bool,
+    /// To-Do, not deferred, and with no available task (ADR 0008).
+    pub stalled: bool,
+}
+
+/// A new project's review interval (ADR 0026). Leaving it out takes the
+/// user's default.
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum ReviewChoice {
+    Never,
+    /// ISO 8601 date parts, such as `P2W`, as `parse_review_interval`
+    /// reads them.
+    Every {
+        interval: String,
+    },
+}
+
+/// A review interval, read: the parts the server keeps it in. Weeks are
+/// days, so a whole number of weeks is `days % 7 == 0`.
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct ReviewInterval {
+    /// As the server sends it: `P14D`, `P1Y2M`.
+    pub text: String,
+    pub years: u32,
+    pub months: u32,
+    pub days: u32,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
@@ -277,6 +325,8 @@ pub struct Preferences {
     pub locale: String,
     pub home_view: HomeView,
     pub keymap: Keymap,
+    /// The review interval new projects take; `None` is Never (ADR 0026).
+    pub default_review_interval: Option<String>,
 }
 
 /// What a shell shows about sync.
@@ -366,6 +416,12 @@ pub struct NewProject {
     pub flagged: bool,
     #[uniffi(default = None)]
     pub folder_id: Option<Uuid>,
+    /// `None` takes the user's default interval (ADR 0026).
+    #[uniffi(default = None)]
+    pub review: Option<ReviewChoice>,
+    /// The first review day; without it, today plus the interval.
+    #[uniffi(default = None)]
+    pub next_review_on: Option<LocalDate>,
 }
 
 /// The body for `POST /api/v1/sync/push`, and how many commands it holds.
@@ -600,6 +656,11 @@ impl Store {
                 url: new.url,
                 flagged: new.flagged,
                 folder_id: new.folder_id,
+                review_interval: new.review.map(|review| match review {
+                    ReviewChoice::Never => None,
+                    ReviewChoice::Every { interval } => Some(interval),
+                }),
+                next_review_on: new.next_review_on.map(civil_date).transpose()?,
             })?)
         })
     }
@@ -610,6 +671,63 @@ impl Store {
 
     pub fn set_project_flagged(&self, id: Uuid, flagged: bool) -> Result<()> {
         self.with(|store| Ok(store.set_project_flagged(id, flagged)?))
+    }
+
+    /// The projects due for review today on the user's clock, by next
+    /// review day, then in sidebar order (ADR 0026). Deferred projects and
+    /// those in Dropped folders are included.
+    pub fn projects_due_for_review(&self) -> Result<Vec<ReviewItem>> {
+        self.with(|store| {
+            let today = store.today()?;
+            Ok(store
+                .world()?
+                .due_for_review(today)
+                .into_iter()
+                .map(|view| ReviewItem {
+                    project: project(view.project),
+                    folder_path: view.folder_path,
+                    in_dropped_folder: view.in_dropped_folder,
+                    deferred: view.deferred,
+                    stalled: view.stalled,
+                })
+                .collect())
+        })
+    }
+
+    /// How many projects are due for review today, for the sidebar.
+    pub fn review_count(&self) -> Result<u64> {
+        self.with(|store| {
+            let today = store.today()?;
+            Ok(store.world()?.due_for_review_count(today) as u64)
+        })
+    }
+
+    /// Today on the user's clock, the day reviews are counted from.
+    pub fn today(&self) -> Result<LocalDate> {
+        self.with(|store| Ok(local_date(store.today()?)))
+    }
+
+    /// Marks a project reviewed now: next due its interval after today.
+    /// `Invalid` for a project set to Never.
+    pub fn mark_project_reviewed(&self, id: Uuid) -> Result<()> {
+        self.with(|store| Ok(store.mark_project_reviewed(id)?))
+    }
+
+    /// Sets a project's review interval, or Never for `None`. The next
+    /// review day counts from the last review, or the day it was made.
+    pub fn set_project_review_interval(&self, id: Uuid, interval: Option<String>) -> Result<()> {
+        self.with(|store| Ok(store.set_project_review_interval(id, interval.as_deref())?))
+    }
+
+    /// Moves a project's next review day. `Invalid` under Never.
+    pub fn set_project_next_review_on(&self, id: Uuid, day: LocalDate) -> Result<()> {
+        let day = civil_date(day)?;
+        self.with(|store| Ok(store.set_project_next_review_on(id, day)?))
+    }
+
+    /// Sets the review interval new projects take, or Never for `None`.
+    pub fn set_default_review_interval(&self, interval: Option<String>) -> Result<()> {
+        self.with(|store| Ok(store.set_default_review_interval(interval.as_deref())?))
     }
 
     /// Creates a tag under `parent_id`, or at the top. Returns its id.
@@ -857,6 +975,44 @@ pub fn local_instant(
     Ok(rules::dates::from_local(date, time, field.into(), &zone))
 }
 
+/// Reads a review interval as typed in Custom: ISO 8601 date parts, such
+/// as `P2W3D`, letters in either case (ADR 0026). `None` for a time part,
+/// a negative or zero interval, or anything else.
+#[uniffi::export]
+pub fn parse_review_interval(text: String) -> Option<ReviewInterval> {
+    let span = rules::review::parse(&text)?;
+    Some(ReviewInterval {
+        text: rules::review::format(span)?,
+        years: span.get_years().try_into().ok()?,
+        months: span.get_months().try_into().ok()?,
+        days: span.get_days().try_into().ok()?,
+    })
+}
+
+/// The day `interval` after `from`: years and months first, then days,
+/// clamped to a short month's end. `None` for an invalid interval.
+#[uniffi::export]
+pub fn next_review_on(from: LocalDate, interval: String) -> Result<Option<LocalDate>> {
+    let from = civil_date(from)?;
+    Ok(rules::review::parse(&interval)
+        .and_then(|span| rules::review::next_review_on(from, span))
+        .map(local_date))
+}
+
+fn civil_date(day: LocalDate) -> Result<jiff::civil::Date> {
+    jiff::civil::Date::new(day.year, day.month, day.day).map_err(|error| StoreError::Invalid {
+        message: error.to_string(),
+    })
+}
+
+fn local_date(day: jiff::civil::Date) -> LocalDate {
+    LocalDate {
+        year: day.year(),
+        month: day.month(),
+        day: day.day(),
+    }
+}
+
 fn timestamp(text: &Option<String>) -> Option<Timestamp> {
     text.as_deref().and_then(|t| t.parse().ok())
 }
@@ -929,6 +1085,13 @@ fn project(p: replica::Project) -> ProjectItem {
             &p.due_at,
         ),
         inserted_at: timestamp(&p.inserted_at),
+        next_review_on: p
+            .next_review_on
+            .as_deref()
+            .and_then(|day| day.parse().ok())
+            .map(local_date),
+        last_reviewed_at: timestamp(&p.last_reviewed_at),
+        review_interval: p.review_interval,
         id: p.id,
         title: p.title,
         notes: p.notes,
@@ -975,5 +1138,6 @@ fn preferences(p: replica::UserPreferences) -> Preferences {
             replica::Keymap::Standard => Keymap::Standard,
             replica::Keymap::Vim => Keymap::Vim,
         },
+        default_review_interval: p.default_review_interval,
     }
 }
