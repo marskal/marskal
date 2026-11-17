@@ -36,6 +36,8 @@ defmodule MarskalWeb.ReviewLiveTest do
       refute has_element?(view, "#review-projects", "Later")
       assert has_element?(view, "#review-inbox", "1 item in the Inbox")
       assert has_element?(view, "#sidebar-review-count", "2")
+      assert has_element?(view, "#sidebar-inbox-count", "1")
+      assert has_element?(view, "#tab-inbox-count", "1")
 
       refute has_element?(view, "#review-#{stalled.id}-done")
       assert has_element?(view, "#review-#{stalled.id}-open")
@@ -49,6 +51,8 @@ defmodule MarskalWeb.ReviewLiveTest do
       {:ok, view, _html} = live(conn, ~p"/review")
       assert has_element?(view, "#review-empty")
       refute has_element?(view, "#sidebar-review-count")
+      refute has_element?(view, "#sidebar-inbox-count")
+      refute has_element?(view, "#tab-inbox-count")
     end
 
     test "Mark reviewed on the project moves on to the next, then back", %{

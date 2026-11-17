@@ -22,6 +22,28 @@ defmodule Marskal.Tasks do
   end
 
   @doc """
+  How many tasks are waiting in the inbox: live, To-Do, and not deferred,
+  by their own Defer or one they inherit (ADR 0006, ADR 0017). Done,
+  Dropped, and deferred tasks are not waiting. This is what `list_inbox/1`
+  shows.
+  """
+  def count_inbox(%User{} = user) do
+    now = DateTime.utc_now()
+
+    Task
+    |> where_shown(user, [])
+    |> where([t], t.inbox)
+    |> join(:inner, [t], d in ^EffectiveDates.name(), on: d.id == t.id)
+    |> where([_t, d], not d.deferred_indefinitely)
+    |> where(
+      [_t, d],
+      is_nil(d.defer_until) or d.defer_until <= type(^now, :utc_datetime)
+    )
+    |> EffectiveDates.with_dates(user)
+    |> Repo.aggregate(:count)
+  end
+
+  @doc """
   The open stream: tasks out of the inbox whose own state is shown.
   `show:` is any of `:done`, `:dropped`, and `:deferred`; the default shows
   none of those. A task under a task or project whose state is not shown

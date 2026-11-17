@@ -615,6 +615,8 @@ msgstr ""
 msgid "Import"
 msgstr ""
 
+#: lib/marskal_web/components/layouts.ex
+#: lib/marskal_web/components/nav_components.ex
 #: lib/marskal_web/live/go_to.ex
 #: lib/marskal_web/live/inspector_panel.ex
 #: lib/marskal_web/live/user_live/settings.ex
@@ -1353,6 +1355,12 @@ msgstr ""
 #: lib/marskal_web/live/repeat_panel.ex
 #, elixir-autogen, elixir-format
 msgid "open"
+msgstr ""
+
+#: lib/marskal_web/components/layouts.ex
+#: lib/marskal_web/components/nav_components.ex
+#, elixir-autogen, elixir-format
+msgid "waiting:"
 msgstr ""
 
 #: lib/marskal_web/review_intervals.ex

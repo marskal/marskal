@@ -37,6 +37,7 @@ defmodule Marskal.ReviewTest do
     refute Review.due?(user, never)
 
     assert ProjectNav.build(user).review_due == 3
+    assert ProjectNav.build(user).inbox_count == 0
     assert Review.count(AccountsFixtures.user_fixture()) == 0
   end
 

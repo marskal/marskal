@@ -228,7 +228,13 @@ defmodule MarskalWeb.Layouts do
 
       <nav :if={@nav} class="tab-bar" aria-label="Views">
         <.tab navigate={~p"/inbox"} current={@current_nav == :inbox}>
-          <Lucideicons.inbox class="icon" /> Inbox
+          <Lucideicons.inbox class="icon" />
+          <span>
+            {gettext("Inbox")}
+            <span :if={@nav.inbox_count > 0} class="count" id="tab-inbox-count">
+              <span class="sr-only">{gettext("waiting:")}</span>{@nav.inbox_count}
+            </span>
+          </span>
         </.tab>
         <.tab navigate={~p"/open"} current={@current_nav == :open}>
           <Lucideicons.list class="icon" /> Open
