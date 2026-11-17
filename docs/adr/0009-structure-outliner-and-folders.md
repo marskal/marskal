@@ -96,8 +96,9 @@ The move rules left open above:
 - Choosing another location for a subtask takes it out from under its parent, to
   the top level of the new location. Its own subtasks go with it.
 - Sibling order is `rank` among tasks with the same parent, or the same location
-  at the top. New tasks go to the bottom, except the inbox, which lists newest
-  first.
+  at the top. New tasks go to the bottom, except that a capture goes to the
+  top of the inbox. One typed into the inbox page's own field, which sits
+  below the list as on every outline page, goes to the bottom.
 - Deleting a task discards its subtree.
 - Completing or dropping a task, or its project, makes the open tasks below it count
   as resolved: they leave every open list, though their own state stays To-Do.

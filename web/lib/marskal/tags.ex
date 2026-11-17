@@ -97,7 +97,8 @@ defmodule Marskal.Tags do
 
   @doc """
   The tag view (ADR 0005): the tag's own tasks, then one group per child
-  tag, nested the same way. Inbox tasks are included (ADR 0010). A task
+  tag, nested the same way, each oldest first. Inbox tasks are included
+  (ADR 0010). A task
   shows under every tag it carries. Empty groups are left out.
 
   `show:` is as in `Marskal.Tasks.list_open/2` for the tasks. Dropped tag
@@ -432,7 +433,7 @@ defmodule Marskal.Tags do
     Task
     |> Tasks.where_shown(user, show)
     |> where([t], t.id in subquery(tagged) or t.project_id in subquery(via_project))
-    |> order_by([t], desc: t.inserted_at, desc: t.id)
+    |> order_by([t], asc: t.inserted_at, asc: t.id)
     |> Repo.all()
     |> then(&Tasks.without_deferred(user, &1, show))
   end

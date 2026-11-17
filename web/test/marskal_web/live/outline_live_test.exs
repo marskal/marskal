@@ -25,6 +25,20 @@ defmodule MarskalWeb.OutlineLiveTest do
     refute has_element?(view, "#task-#{b.id} .disclosure button")
   end
 
+  test "Add a task sits below the list, and the task goes last", ctx do
+    [a, b] = add(ctx, ["Paint", "Tidy"])
+    {:ok, view, _html} = live(ctx.conn, ~p"/projects/#{ctx.project.id}")
+
+    assert has_element?(view, "#project-tasks ~ #new-project-task")
+
+    view |> form("#new-project-task", task: %{title: "Sweep"}) |> render_submit()
+
+    [new] =
+      Enum.reject(Tasks.list_project_tasks(ctx.user, ctx.project.id), &(&1.id in [a.id, b.id]))
+
+    assert rows(view) == [a.id, b.id, new.id]
+  end
+
   test "the keys indent, outdent, and move among siblings", ctx do
     [a, b, c] = add(ctx, ["A", "B", "C"])
     {:ok, view, _html} = live(ctx.conn, ~p"/projects/#{ctx.project.id}")
