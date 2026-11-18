@@ -15,6 +15,31 @@ cd "$repo"
 
 git fetch --quiet origin master
 
+# Write into each unreleased fragment the pull request that added it, as
+# custom value PR, which .changie.yaml's changeFormat links. changie cannot
+# do this itself, and the number does not exist yet when the fragment is
+# written. Run in the worktree, before changie batch deletes the fragments.
+link_prs() {
+  local f sha pr
+  for f in .changes/unreleased/*.yaml; do
+    [[ -e $f ]] || continue
+    grep -q '^ *PR:' "$f" && continue
+    sha=$(git log --diff-filter=A --format=%H -1 -- "$f")
+    pr=$(gh api "repos/{owner}/{repo}/commits/$sha/pulls" \
+      --jq '[.[] | select(.merged_at != null)][0].number // empty')
+    if [[ -z $pr ]]; then
+      echo "No merged pull request added $f; its entry gets no link." >&2
+      continue
+    fi
+    if grep -q '^custom:' "$f"; then
+      PR=$pr perl -pi -e 's/^custom:\n/custom:\n    PR: "$ENV{PR}"\n/' "$f"
+    else
+      [[ -z $(tail -c1 "$f") ]] || echo >>"$f"
+      printf 'custom:\n    PR: "%s"\n' "$pr" >>"$f"
+    fi
+  done
+}
+
 if [[ ${1:-} == --preview ]]; then
   preview=$(mktemp -d)
   trap 'git worktree remove --force "$preview"' EXIT
@@ -24,6 +49,7 @@ if [[ ${1:-} == --preview ]]; then
     echo "Nothing to release: origin/master has no changelog fragments."
     exit 0
   fi
+  link_prs
   echo "Next version: ${version#v}"
   echo
   changie batch auto --dry-run
@@ -48,6 +74,7 @@ fi
 
 echo "Releasing $version"
 git switch --quiet -c "$branch"
+link_prs
 changie batch auto
 changie merge
 "$here/set-version" "$version"

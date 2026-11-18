@@ -76,13 +76,17 @@ Alternatives considered:
 - A change in a library gets a fragment for each program it changes. A
   refactor, a test, an ADR, or a change to CI needs none.
 - **Release** in one PR:
-  1. `changie batch auto` collects the unreleased fragments into the next
+  1. Each fragment gets the number of the pull request that added it,
+     found from git and the GitHub API, and its entry links that PR.
+     changie cannot find it, and the number does not exist yet when the
+     fragment is written, so nobody types it.
+  2. `changie batch auto` collects the unreleased fragments into the next
      version, and `changie merge` writes `CHANGELOG.md`.
-  2. Set the new version in every file in the table above, whether that
+  3. Set the new version in every file in the table above, whether that
      component changed or not, so the repository names one version.
-  3. When the PR is merged, tag the merge commit `v<version>` and publish
+  4. When the PR is merged, tag the merge commit `v<version>` and publish
      a GitHub release with that version's notes.
-  4. Ship the components that have entries in that release.
+  5. Ship the components that have entries in that release.
 - The `tools/` devenv runs these steps: `devenv shell release-pr` opens
   the release PR, and merging it tags and publishes the release.
 - A host deploys a release by pointing its flake input at the tag. Store
