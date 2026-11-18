@@ -6,13 +6,18 @@
   repository. Crates come from Cargo.lock by the checksums in it, so
   there is no hash to update here when the lock changes.
 
-  Everything native is built from source by Cargo: SQLite (rusqlite's
-  `bundled`), TLS (rustls), and the keychain (zbus on Linux, the Security
-  framework on macOS, which the darwin stdenv's SDK provides).
+  SQLite comes from nixpkgs: its cargo setup hook sets
+  LIBSQLITE3_SYS_USE_PKG_CONFIG, which makes rusqlite link the system
+  library instead of building its `bundled` copy. Everything else native
+  is built from source by Cargo: TLS (rustls), and the keychain (zbus on
+  Linux, the Security framework on macOS, which the darwin stdenv's SDK
+  provides).
 */
 {
   lib,
   rustPlatform,
+  pkg-config,
+  sqlite,
 }:
 let
   root = ../../..;
@@ -39,6 +44,9 @@ rustPlatform.buildRustPackage {
   cargoLock.lockFile = ../Cargo.lock;
   cargoRoot = "clients/terminal";
   buildAndTestSubdir = "clients/terminal";
+
+  nativeBuildInputs = [ pkg-config ];
+  buildInputs = [ sqlite ];
 
   meta = {
     description = "Marskal tasks from the terminal, for people and agents";
