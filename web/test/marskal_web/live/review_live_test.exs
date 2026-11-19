@@ -21,7 +21,7 @@ defmodule MarskalWeb.ReviewLiveTest do
       user: user,
       today: today
     } do
-      stalled = due!(user, "Garden", today)
+      stalled = due!(user, "Garden", Date.add(today, -3))
       paused = due!(user, "Taxes", today, %{deferred_indefinitely: true})
       _later = due!(user, "Later", Date.add(today, 2))
       {:ok, _} = Tasks.create_task(user, %{title: "Milk"}, command())
@@ -31,6 +31,8 @@ defmodule MarskalWeb.ReviewLiveTest do
       assert has_element?(view, "#review-#{stalled.id}", "Stalled")
       assert has_element?(view, "#review-#{paused.id}", "Deferred")
       refute has_element?(view, "#review-#{paused.id}", "Stalled")
+      refute has_element?(view, "#review-projects", "Due since")
+      refute has_element?(view, "#review-projects", "Due today")
       refute has_element?(view, "#review-projects", "Later")
       assert has_element?(view, "#review-inbox", "1 item in the Inbox")
       assert has_element?(view, "#sidebar-review-count", "2")

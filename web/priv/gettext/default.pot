@@ -427,16 +427,6 @@ msgstr ""
 msgid "Due for review. Look over its tasks, then mark it reviewed."
 msgstr ""
 
-#: lib/marskal_web/live/review_live.ex
-#, elixir-autogen, elixir-format
-msgid "Due since %{day}"
-msgstr ""
-
-#: lib/marskal_web/live/review_live.ex
-#, elixir-autogen, elixir-format
-msgid "Due today"
-msgstr ""
-
 #: lib/marskal_web/components/keys_help.ex
 #, elixir-autogen, elixir-format
 msgid "Edit in the inspector"
