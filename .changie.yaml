@@ -8,7 +8,9 @@ versionExt: md
 versionFormat: '## {{.Version}} - {{.Time.Format "2006-01-02"}}'
 componentFormat: '### {{.Component}}'
 kindFormat: '#### {{.Kind}}'
-changeFormat: '- {{.Body}}'
+# `PR` is not asked for: `tools/scripts/release` writes it into each
+# fragment from the pull request that added it.
+changeFormat: '- {{.Body}}{{with .Custom.PR}} ([#{{.}}](https://github.com/marskal/marskal/pull/{{.}})){{end}}'
 newlines:
   afterChangelogHeader: 1
   beforeComponent: 1
