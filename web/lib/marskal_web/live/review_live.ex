@@ -127,7 +127,6 @@ defmodule MarskalWeb.ReviewLive do
               <span :if={row.stalled?} class="fact stalled">
                 <Lucideicons.circle_alert class="icon" /> {gettext("Stalled: no next action")}
               </span>
-              <span class="fact">{due_text(row.project.next_review_on, @today)}</span>
             </div>
           </div>
           <.button navigate={review_path(row.project)} id={"review-#{row.project.id}-open"}>
@@ -151,17 +150,8 @@ defmodule MarskalWeb.ReviewLive do
     assign(socket,
       rows: Review.due(user),
       inbox_count: length(Marskal.Tasks.list_inbox(user)),
-      zone: zone,
-      today: Marskal.Dates.today(zone)
+      zone: zone
     )
-  end
-
-  @doc false
-  def due_text(date, today) do
-    case Date.diff(today, date) do
-      0 -> gettext("Due today")
-      _ -> gettext("Due since %{day}", day: Marskal.DateFormat.date(date, :day_month))
-    end
   end
 
   defp deferral(%{deferred_indefinitely: true}, _zone), do: gettext("Deferred")
