@@ -86,7 +86,9 @@ Alternatives considered:
 - The `tools/` devenv runs these steps: `devenv shell release-pr` opens
   the release PR, and merging it tags and publishes the release.
 - A host deploys a release by pointing its flake input at the tag. Store
-  uploads stay manual until CI does them.
+  uploads stay manual until CI does them. The Release workflow attaches
+  the extensions' packages and source archives to a release whose notes
+  have a section for them, built from the tag, ready to upload.
 - CI fails a PR that touches a component's directory without a fragment,
   unless the PR has the `no changelog` label (ADR 0037).
 

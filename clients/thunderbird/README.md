@@ -46,8 +46,8 @@ The extension accepts only HTTPS, and turns an `http://` address into
 The add-ons site rebuilds the extension from its source to check the
 `.xpi`. The source archive holds two folders: `clients/thunderbird`, the
 extension, and `clients/webext-common`, code it shares with the browser
-extension, which npm links in. On any OS with Node.js 24.20.0 and npm
-11.19.0 (https://nodejs.org/en/download), and `zip`:
+extension, which npm links in. On any OS with Node.js 26.13.0 and npm
+11.20.0 (https://nodejs.org/en/download), and `zip`:
 
 ```sh
 cd clients/thunderbird
@@ -61,7 +61,9 @@ added. `npm ci` installs exactly the versions in `package-lock.json`.
 
 ## Releasing
 
-Raise `version` in `static/manifest.json`, commit, then run `npm run
+A Marskal release whose notes have a *Thunderbird extension* section has
+the two files attached, built from its tag by the Release workflow and
+named with the version (ADR 0038). To build them yourself, run `npm run
 package` and `npm run source`. Upload `marskal-thunderbird.xpi` to
 addons.thunderbird.net and, when asked for source code, upload
 `marskal-thunderbird-source.zip`: the committed `clients/thunderbird` and
