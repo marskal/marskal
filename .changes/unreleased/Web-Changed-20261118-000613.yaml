@@ -1,4 +1,0 @@
-component: Web
-kind: Changed
-body: The current sidebar view is highlighted like a selected project, with the disclosure triangle inside the bar, and hovering a row shows a lighter highlight.
-time: 2026-11-18T00:06:13.184580727+01:00
