@@ -4,6 +4,32 @@ What changed in each release of Marskal, by component. One version
 covers every component; a component without a section did not change
 (ADR 0038).
 
+## 0.4.0 - 2026-11-21
+
+### Web
+
+#### Added
+
+- The Inbox link shows how many tasks are waiting to be processed. ([#190](https://github.com/marskal/marskal/pull/190))
+
+#### Changed
+
+- The current sidebar view is highlighted like a selected project, with the disclosure triangle inside the bar, and hovering a row shows a lighter highlight. ([#190](https://github.com/marskal/marskal/pull/190))
+- The Review list no longer says how long a project has been due. ([#195](https://github.com/marskal/marskal/pull/195))
+- The header badge takes its own color, so two people with the same initials are easy to tell apart. ([#197](https://github.com/marskal/marskal/pull/197))
+
+### Browser extension
+
+#### Added
+
+- A Marskal release that changes the browser extension now has its Firefox and Chromium packages attached on GitHub, with their source. ([#196](https://github.com/marskal/marskal/pull/196))
+
+### Thunderbird extension
+
+#### Added
+
+- A Marskal release that changes the Thunderbird extension now has its .xpi attached on GitHub, with its source. ([#196](https://github.com/marskal/marskal/pull/196))
+
 ## 0.3.0 - 2026-11-17
 
 ### Web

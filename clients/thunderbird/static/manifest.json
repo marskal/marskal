@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Marskal",
   "description": "Add mail as tasks to Marskal, an open-source, self-hosted personal task manager.",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "author": "Mikkel T. Hoegh",
   "homepage_url": "https://github.com/marskal/marskal",
   "browser_specific_settings": {
