@@ -149,7 +149,7 @@ defmodule MarskalWeb.ReviewLive do
 
     assign(socket,
       rows: Review.due(user),
-      inbox_count: length(Marskal.Tasks.list_inbox(user)),
+      inbox_count: Marskal.Tasks.count_inbox(user),
       zone: zone
     )
   end

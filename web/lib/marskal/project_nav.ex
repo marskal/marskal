@@ -6,7 +6,8 @@ defmodule Marskal.ProjectNav do
   the list. A folder's subfolders and projects are one list in rank order
   (`Marskal.ProjectOutline`).
   Tags come as a `Marskal.Tags.Tree`. `review_due` counts the projects due
-  for review (ADR 0026).
+  for review (ADR 0026). `inbox_count` counts the tasks waiting in the
+  inbox (ADR 0017).
   """
 
   import Ecto.Query
@@ -17,7 +18,7 @@ defmodule Marskal.ProjectNav do
   alias Marskal.Repo
   alias Marskal.Tags.Tree
 
-  defstruct [:folders, :children, :tags, show: [], review_due: 0]
+  defstruct [:folders, :children, :tags, show: [], review_due: 0, inbox_count: 0]
 
   def build(user, show \\ []) when is_list(show) do
     folders =
@@ -38,7 +39,8 @@ defmodule Marskal.ProjectNav do
       children: children,
       tags: Marskal.Tags.tree(user),
       show: show,
-      review_due: Marskal.Review.count(user)
+      review_due: Marskal.Review.count(user),
+      inbox_count: Marskal.Tasks.count_inbox(user)
     }
   end
 

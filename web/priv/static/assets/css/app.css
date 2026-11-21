@@ -419,12 +419,20 @@ h1 {
   padding: 0;
 }
 
-/* How many projects are due for review (ADR 0026). */
+/* How many are waiting: projects due for review, tasks in the inbox. */
+.sidebar-links .count,
+.tab-bar .count {
+  font-variant-numeric: tabular-nums;
+}
+
 .sidebar-links .count {
   margin-inline-start: auto;
   color: var(--muted);
   font-size: 0.875rem;
-  font-variant-numeric: tabular-nums;
+}
+
+.tab-bar .count {
+  margin-inline-start: 0.25rem;
 }
 
 /* Folders, projects, and tags are flat outlines (MarskalWeb.NavOutline):
@@ -434,7 +442,9 @@ h1 {
 .nav-row {
   position: relative;
   display: grid;
-  grid-template-columns: 1.5rem minmax(0, 1fr);
+  /* The disclosure triangle lives in this gutter. A phone grows it. */
+  --nav-gutter: 1.5rem;
+  grid-template-columns: var(--nav-gutter) minmax(0, 1fr);
   align-items: start;
   margin-inline-start: calc(var(--depth, 0) * 1.25rem);
 }
@@ -494,8 +504,8 @@ h1 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
+  width: var(--nav-gutter);
+  height: var(--nav-gutter);
   padding: 0;
   border: 0;
   border-radius: 6px;
@@ -509,18 +519,18 @@ h1 {
   color: var(--accent);
 }
 
+/* The row wash covers this button, so its own fill would sit inside the bar. */
+.nav-row:is(:hover, :focus-within, :has(> a.inspect-row.is-selected)) > .nav-toggle:is(:hover, :focus-visible) {
+  background: transparent;
+}
+
 .nav-toggle[aria-expanded="true"] .icon {
   transform: rotate(90deg);
 }
 
 @media (max-width: 720px) {
   .nav-row {
-    grid-template-columns: 2.5rem minmax(0, 1fr);
-  }
-
-  .nav-toggle {
-    width: 2.5rem;
-    height: 2.5rem;
+    --nav-gutter: 2.5rem;
   }
 
   .nav-row > a {
@@ -611,6 +621,87 @@ h1 {
   font-weight: 650;
 }
 
+/* The current view and a selected folder, project, or tag share one
+   indicator. The inset keeps the icon off the wash's edge, and the
+   matching negative margin leaves the icon where the other rows sit.
+   Weight stays, so the current view is not colour alone.
+   Hover uses a quieter mix of that same wash, in the same shape.
+   Keyboard focus keeps the outline, and gains the quiet wash too. */
+.sidebar,
+.nav-outline {
+  --nav-hover: color-mix(in oklch, var(--accent-tint-strong) 45%, transparent);
+}
+
+.sidebar a[aria-current="page"]:not(.inspect-row),
+.inspect-row.is-selected {
+  margin-inline: -0.4rem;
+  padding-inline: 0.4rem;
+  border-radius: 6px;
+  background: var(--accent-tint-strong);
+}
+
+.sidebar-links a:not([aria-current="page"]):focus-visible,
+.nav-tree > .nav-row:not(:has(> .nav-toggle)) > a:not(.inspect-row):not([aria-current="page"]):focus-visible,
+.nav-row:not(:has(> .nav-toggle)) > a.inspect-row:not(.is-selected):focus-visible {
+  margin-inline: -0.4rem;
+  padding-inline: 0.4rem;
+  border-radius: 6px;
+  background: var(--nav-hover);
+}
+
+@media (hover: hover) {
+  .sidebar-links a:not([aria-current="page"]):hover,
+  .nav-tree > .nav-row:not(:has(> .nav-toggle)) > a:not(.inspect-row):not([aria-current="page"]):hover,
+  .nav-row:not(:has(> .nav-toggle)) > a.inspect-row:not(.is-selected):hover {
+    margin-inline: -0.4rem;
+    padding-inline: 0.4rem;
+    border-radius: 6px;
+    background: var(--nav-hover);
+  }
+}
+
+/* A disclosure triangle sits in the gutter. The wash covers the row so
+   the triangle is inside it, 0.4rem in from the edge: the icon is 1rem,
+   centred in the gutter. The link's own wash is dropped, or the two
+   backgrounds meet mid-bar and the radius breaks. */
+.nav-row:has(> .nav-toggle) {
+  --row-wash: transparent;
+}
+
+.nav-row:has(> .nav-toggle)::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset-block: 0;
+  inset-inline-start: calc((var(--nav-gutter) - 1rem) / 2 - 0.4rem);
+  inset-inline-end: -0.4rem;
+  border-radius: 6px;
+  background: var(--row-wash);
+}
+
+.nav-row:has(> .nav-toggle):has(> a.inspect-row.is-selected) {
+  z-index: 0;
+  --row-wash: var(--accent-tint-strong);
+}
+
+.nav-row:has(> .nav-toggle):not(:has(> a.inspect-row.is-selected)):focus-within {
+  z-index: 0;
+  --row-wash: var(--nav-hover);
+}
+
+@media (hover: hover) {
+  .nav-row:has(> .nav-toggle):not(:has(> a.inspect-row.is-selected)):hover {
+    z-index: 0;
+    --row-wash: var(--nav-hover);
+  }
+}
+
+.nav-row:has(> .nav-toggle) > a.inspect-row.is-selected {
+  margin-inline: 0;
+  padding-inline: 0;
+  background: none;
+}
+
 .inspect-row {
   display: flex;
   flex-wrap: wrap;
@@ -622,10 +713,6 @@ h1 {
 .nav-tree a.inspect-row {
   display: flex;
   gap: 0.4rem;
-}
-
-.inspect-row.is-selected {
-  background: var(--accent-tint-strong);
 }
 
 .app-inspector {

@@ -23,7 +23,10 @@ defmodule MarskalWeb.NavComponents do
       <MarskalWeb.NavOutline.scope id="sidebar-nav">
         <nav class="sidebar-links">
           <.view_link navigate={~p"/inbox"} current={@current_nav == :inbox} class="in-tab-bar">
-            <Lucideicons.inbox class="icon" /> Inbox
+            <Lucideicons.inbox class="icon" /> {gettext("Inbox")}
+            <span :if={@nav.inbox_count > 0} class="count" id="sidebar-inbox-count">
+              <span class="sr-only">{gettext("waiting:")}</span>{@nav.inbox_count}
+            </span>
           </.view_link>
           <.view_link navigate={~p"/open"} current={@current_nav == :open} class="in-tab-bar">
             <Lucideicons.list class="icon" /> Open

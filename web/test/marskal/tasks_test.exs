@@ -79,6 +79,45 @@ defmodule Marskal.TasksTest do
     assert Enum.map(Tasks.list_open(user), & &1.id) == [open_task.id]
   end
 
+  test "count_inbox is the tasks waiting to be processed", %{user: user, other: other} do
+    {:ok, milk} = Tasks.create_task(user, %{title: "Milk"}, command_id())
+    {:ok, bread} = Tasks.create_task(user, %{title: "Bread"}, command_id())
+    {:ok, skim} = Tasks.create_task(user, %{title: "Skim", parent_id: milk.id}, command_id())
+
+    later = DateTime.utc_now() |> DateTime.add(2, :day) |> DateTime.truncate(:second)
+
+    {:ok, later_child} =
+      Tasks.create_task(user, %{title: "Later", parent_id: milk.id}, command_id())
+
+    {:ok, _} = Tasks.update_task(user, later_child.id, %{defer_until: later}, command_id())
+
+    {:ok, paused} =
+      Tasks.create_task(user, %{title: "Paused", deferred_indefinitely: true}, command_id())
+
+    {:ok, _held} =
+      Tasks.create_task(user, %{title: "Held", parent_id: paused.id}, command_id())
+
+    past = DateTime.utc_now() |> DateTime.add(-2, :day) |> DateTime.truncate(:second)
+    {:ok, resumed} = Tasks.create_task(user, %{title: "Resumed", defer_until: past}, command_id())
+
+    {:ok, done} = Tasks.create_task(user, %{title: "Done"}, command_id())
+    {:ok, _} = Tasks.complete_task(user, done.id, command_id())
+
+    {:ok, dropped} = Tasks.create_task(user, %{title: "Dropped"}, command_id())
+    {:ok, _} = Tasks.drop_task(user, dropped.id, command_id())
+
+    {:ok, filed} = Tasks.create_task(user, %{title: "Filed"}, command_id())
+    {:ok, _} = Tasks.move_task(user, filed.id, :none, command_id())
+
+    {:ok, _} = Tasks.create_task(other, %{title: "Theirs"}, command_id())
+
+    waiting = MapSet.new([milk.id, bread.id, skim.id, resumed.id])
+
+    assert Tasks.list_inbox(user) |> MapSet.new(& &1.id) == waiting
+    assert Tasks.count_inbox(user) == 4
+    assert Tasks.count_inbox(other) == 1
+  end
+
   test "a command that changes nothing appends nothing and broadcasts nothing", %{user: user} do
     {:ok, task} = Tasks.create_task(user, %{"title" => "Milk"}, command_id())
     Marskal.Changes.subscribe(user)
