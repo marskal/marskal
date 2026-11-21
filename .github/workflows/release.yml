@@ -1,6 +1,10 @@
 # Tags and publishes a release when its PR is merged (ADR 0038): a push to
 # master that adds .changes/<version>.md. Run it by hand with a version to
 # release one whose notes are already on master, such as 0.1.0.
+#
+# A release whose notes have a section for an extension also gets that
+# extension's packages and source archive attached, built from the tag, so
+# they can be uploaded to the stores as they are.
 name: Release
 
 on:
@@ -20,6 +24,9 @@ jobs:
   release:
     name: Tag and publish
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      extensions: ${{ steps.extensions.outputs.list }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -61,3 +68,65 @@ jobs:
           tail -n +2 ".changes/$VERSION.md" > notes.md
           gh release create "v$VERSION" --target "$GITHUB_SHA" \
             --title "Marskal $VERSION" --notes-file notes.md
+
+      - name: Find the extensions in the notes
+        id: extensions
+        if: steps.version.outputs.version != ''
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          list=()
+          grep -qx '### Browser extension' ".changes/$VERSION.md" && list+=('"browser"')
+          grep -qx '### Thunderbird extension' ".changes/$VERSION.md" && list+=('"thunderbird"')
+          echo "list=[$(IFS=,; echo "${list[*]}")]" >> "$GITHUB_OUTPUT"
+
+  extensions:
+    name: Attach the ${{ matrix.extension }} extension
+    needs: release
+    if: needs.release.outputs.extensions != '' && needs.release.outputs.extensions != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        extension: ${{ fromJSON(needs.release.outputs.extensions) }}
+    defaults:
+      run:
+        working-directory: clients/${{ matrix.extension }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: v${{ needs.release.outputs.version }}
+
+      # Each extension's devenv: the Node.js and zip its README names.
+      - uses: cachix/install-nix-action@v31
+      - uses: cachix/cachix-action@v16
+        with:
+          name: devenv
+      - name: Install devenv
+        run: nix profile add nixpkgs#devenv
+
+      - name: Check the manifest's version
+        env:
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          manifest=$(devenv shell -- node -p 'require("./static/manifest.json").version' | tail -n 1)
+          if [[ "$manifest" != "$VERSION" ]]; then
+            echo "::error::static/manifest.json is $manifest, not $VERSION."
+            exit 1
+          fi
+
+      - name: Build
+        run: devenv shell -- bash -euo pipefail -c 'npm ci && npm run package && npm run source'
+
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          shopt -s nullglob
+          files=()
+          for f in marskal-*.zip marskal-*.xpi; do
+            versioned="${f%.*}-$VERSION.${f##*.}"
+            mv "$f" "$versioned"
+            files+=("$versioned")
+          done
+          gh release upload "v$VERSION" "${files[@]}" --clobber

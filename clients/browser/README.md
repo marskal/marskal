@@ -49,7 +49,7 @@ The extension accepts only HTTPS, and turns an `http://` address into
 addons.mozilla.org rebuilds the extension from its source to check it. The
 source archive holds two folders: `clients/browser`, the extension, and
 `clients/webext-common`, code it shares with the Thunderbird extension,
-which npm links in. On any OS with Node.js 24.21.0 and npm 11.19.0
+which npm links in. On any OS with Node.js 26.13.0 and npm 11.20.0
 (https://nodejs.org/en/download), and `zip`:
 
 ```sh
@@ -66,8 +66,10 @@ drawn to PNG by resvg. `npm ci` installs exactly the versions in
 
 ## Releasing
 
-Raise `version` in `static/manifest.json`, commit, then run `npm run
-package` and `npm run source`. Upload `marskal-firefox.zip` to
+A Marskal release whose notes have a *Browser extension* section has the
+three files attached, built from its tag by the Release workflow and named
+with the version (ADR 0038). To build them yourself, run `npm run package`
+and `npm run source`. Upload `marskal-firefox.zip` to
 addons.mozilla.org with `marskal-browser-source.zip` as its source code,
 and `marskal-chromium.zip` to the Chrome Web Store, which takes no source.
 The listings' text and privacy policy are in `LISTING.md`.
