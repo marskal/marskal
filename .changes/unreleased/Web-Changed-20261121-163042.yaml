@@ -1,0 +1,4 @@
+component: Web
+kind: Changed
+body: The header badge takes its own color, so two people with the same initials are easy to tell apart.
+time: 2026-11-21T16:30:42.588453547+01:00
