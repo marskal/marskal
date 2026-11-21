@@ -642,6 +642,16 @@ impl Store {
         self.with(|store| Ok(store.set_parent(id, parent_id)?))
     }
 
+    /// Makes a task the last subtask of the sibling above it.
+    pub fn indent_task(&self, id: Uuid) -> Result<()> {
+        self.with(|store| Ok(store.indent_task(id)?))
+    }
+
+    /// Moves a subtask out of its parent, to just after it.
+    pub fn outdent_task(&self, id: Uuid) -> Result<()> {
+        self.with(|store| Ok(store.outdent_task(id)?))
+    }
+
     /// Deletes a task and its subtasks.
     pub fn delete_task(&self, id: Uuid) -> Result<()> {
         self.with(|store| Ok(store.delete_task(id)?))

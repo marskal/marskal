@@ -231,6 +231,40 @@ impl Store {
         })
     }
 
+    /// Makes a task the last subtask of the sibling above it, as the web
+    /// app's indent does. Its subtasks come along.
+    pub fn indent_task(&mut self, id: Uuid) -> Result<()> {
+        self.write(|tx, now| {
+            let place = local::outline_place(tx, &id.to_string())?;
+            let above = local::previous_sibling(tx, &place)?
+                .ok_or_else(|| Error::Invalid("no task above it to go under".into()))?;
+            let rank = local::default_rank(
+                tx,
+                Some(&above),
+                place.inbox,
+                place.project_id.as_deref(),
+                Some(&id.to_string()),
+            )?;
+            let fields = object(json!({ "parent_id": above, "rank": rank }));
+            run(tx, now, Entity::Task, id, Op::Patch, fields)
+        })
+    }
+
+    /// Moves a subtask out of its parent, to just after it, as the web
+    /// app's outdent does. Its subtasks come along.
+    pub fn outdent_task(&mut self, id: Uuid) -> Result<()> {
+        self.write(|tx, now| {
+            let place = local::outline_place(tx, &id.to_string())?;
+            let parent = place
+                .parent_id
+                .ok_or_else(|| Error::Invalid("the task is not a subtask".into()))?;
+            let parent = local::outline_place(tx, &parent)?;
+            let rank = local::rank_after(tx, &parent)?;
+            let fields = object(json!({ "parent_id": parent.parent_id, "rank": rank }));
+            run(tx, now, Entity::Task, id, Op::Patch, fields)
+        })
+    }
+
     /// Deletes a task and its subtasks. Done and Dropped are how work
     /// normally ends; this is for mistakes (ADR 0014).
     pub fn delete_task(&mut self, id: Uuid) -> Result<()> {
