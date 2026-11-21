@@ -44,9 +44,14 @@ defmodule MarskalWeb.AppShellLiveTest do
 
   test "the header marks the user with a badge, not their email", %{conn: conn} do
     user = user_fixture()
+    accent = Marskal.Accents.pick(user.id)
     {:ok, view, _html} = live(log_in_user(conn, user), ~p"/open")
 
-    assert has_element?(view, ~s|.app-header .user-badge[title="#{user.email}"] svg|)
+    assert has_element?(
+             view,
+             ~s|.app-header .user-badge[data-accent="#{accent}"][title="#{user.email}"] svg|
+           )
+
     refute has_element?(view, ".app-header__account", user.email)
 
     {:ok, _} = Marskal.Accounts.update_user_name(user, %{name: "Ada Lovelace"})
@@ -54,7 +59,7 @@ defmodule MarskalWeb.AppShellLiveTest do
 
     assert has_element?(
              view,
-             ~s|.app-header .user-badge[title="Ada Lovelace (#{user.email})"]|,
+             ~s|.app-header .user-badge[data-accent="#{accent}"][title="Ada Lovelace (#{user.email})"]|,
              "AL"
            )
 

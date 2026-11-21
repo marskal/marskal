@@ -649,16 +649,22 @@ defmodule MarskalWeb.Layouts do
 
   @doc """
   The user's initials in a small round badge, or a person icon when they
-  gave no name. The name and email are its tooltip and accessible name.
+  gave no name. Its color comes from the user's id (`Marskal.Accents`),
+  so two people with the same initials still look different. The name and
+  email are its tooltip and accessible name.
   """
   attr :user, Marskal.Accounts.User, required: true
 
   def user_badge(assigns) do
-    assigns = assign(assigns, :initials, Marskal.Accounts.User.initials(assigns.user))
+    assigns =
+      assigns
+      |> assign(:initials, Marskal.Accounts.User.initials(assigns.user))
+      |> assign(:accent, Marskal.Accents.pick(assigns.user.id))
 
     ~H"""
     <span
       class="user-badge"
+      data-accent={@accent}
       role="img"
       aria-label={badge_label(@user)}
       title={badge_label(@user)}
