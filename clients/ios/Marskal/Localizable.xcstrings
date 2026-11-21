@@ -362,6 +362,16 @@
         }
       }
     },
+    "Hide Subtasks" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skjul underopgaver"
+          }
+        }
+      }
+    },
     "Inbox" : {
       "localizations" : {
         "da" : {
@@ -378,6 +388,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "På ubestemt tid"
+          }
+        }
+      }
+    },
+    "Indent" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ryk ind"
           }
         }
       }
@@ -621,6 +641,16 @@
         }
       }
     },
+    "Outdent" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ryk ud"
+          }
+        }
+      }
+    },
     "Place" : {
       "localizations" : {
         "da" : {
@@ -683,6 +713,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vis udsatte"
+          }
+        }
+      }
+    },
+    "Show Subtasks" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vis underopgaver"
           }
         }
       }

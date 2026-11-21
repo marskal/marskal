@@ -1,0 +1,4 @@
+component: iOS
+kind: Added
+body: Indent and outdent tasks from a swipe or a task’s menu, and collapse a task’s subtasks with the chevron before it.
+time: 2026-11-18T00:55:19.752089+01:00

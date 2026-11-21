@@ -105,7 +105,8 @@ private struct ProjectRow: View {
 
 /// The open tasks in the Inbox, in No project, or in a project, as an
 /// outline. Check a task off with its circle or a swipe; add one here, or
-/// under a task from its menu.
+/// under a task from its menu. Indent and outdent from a swipe or the menu,
+/// and collapse a task's subtasks with its chevron.
 private struct LocationView: View {
     let location: Location
     @Environment(AppModel.self) private var model
@@ -117,11 +118,11 @@ private struct LocationView: View {
         let tasks = model.tasks(at: location)
         List {
             Section {
-                ForEach(tasks) { task in
-                    NavigationLink(value: TaskRoute(id: task.id)) {
-                        TaskRow(task: task, showsProject: false) { model.setState(task, .done) }
+                ForEach(TaskOutline(tasks: tasks, collapsed: model.collapsed).rows) { row in
+                    NavigationLink(value: TaskRoute(id: row.task.id)) {
+                        TaskRow(task: row.task, showsProject: false, outline: row) { model.setState(row.task, .done) }
                     }
-                    .taskActions(task, moving: $moving, addingSubtask: $addingSubtask)
+                    .taskActions(row.task, moving: $moving, addingSubtask: $addingSubtask, outline: row)
                 }
             } footer: {
                 SyncStatus()

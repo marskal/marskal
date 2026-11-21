@@ -14,7 +14,7 @@ struct InboxView: View {
         NavigationStack {
             List {
                 Section {
-                    ForEach(model.inbox) { row($0) }
+                    ForEach(TaskOutline(tasks: model.inbox, collapsed: model.collapsed).rows) { row($0) }
                 } footer: {
                     SyncStatus()
                 }
@@ -71,11 +71,11 @@ struct InboxView: View {
         }
     }
 
-    private func row(_ task: TaskItem) -> some View {
-        NavigationLink(value: TaskRoute(id: task.id)) {
-            TaskRow(task: task) { model.setState(task, .done) }
+    private func row(_ row: TaskOutline.Row) -> some View {
+        NavigationLink(value: TaskRoute(id: row.task.id)) {
+            TaskRow(task: row.task, outline: row) { model.setState(row.task, .done) }
         }
-        .taskActions(task, moving: $moving, addingSubtask: $addingSubtask)
+        .taskActions(row.task, moving: $moving, addingSubtask: $addingSubtask, outline: row)
     }
 }
 
@@ -85,11 +85,13 @@ extension View {
     /// Done on a leading swipe; Drop and Move on a trailing one and in the
     /// context menu. Move sets `moving`, for the view to show a MoveSheet.
     /// Given `addingSubtask`, the context menu also has Add Subtask, which
-    /// sets it for the view to show a CaptureSheet.
+    /// sets it for the view to show a CaptureSheet. Given the task's row in
+    /// an outline, both have Indent and Outdent where it can go.
     func taskActions(
-        _ task: TaskItem, moving: Binding<TaskItem?>, addingSubtask: Binding<TaskItem?>? = nil
+        _ task: TaskItem, moving: Binding<TaskItem?>, addingSubtask: Binding<TaskItem?>? = nil,
+        outline: TaskOutline.Row? = nil
     ) -> some View {
-        modifier(TaskActions(task: task, moving: moving, addingSubtask: addingSubtask))
+        modifier(TaskActions(task: task, moving: moving, addingSubtask: addingSubtask, outline: outline))
     }
 }
 
@@ -97,6 +99,7 @@ private struct TaskActions: ViewModifier {
     let task: TaskItem
     @Binding var moving: TaskItem?
     let addingSubtask: Binding<TaskItem?>?
+    let outline: TaskOutline.Row?
     @Environment(AppModel.self) private var model
 
     func body(content: Content) -> some View {
@@ -104,6 +107,9 @@ private struct TaskActions: ViewModifier {
             .swipeActions(edge: .leading) {
                 Button("Done", systemImage: "checkmark") { model.setState(task, .done) }
                     .tint(.green)
+                // Not full-swipe: Done comes first.
+                if outline?.canIndent == true { indent.tint(.blue) }
+                if outline?.canOutdent == true { outdent.tint(.teal) }
             }
             .swipeActions(edge: .trailing) {
                 Button("Drop", systemImage: "xmark") { model.setState(task, .dropped) }
@@ -118,7 +124,17 @@ private struct TaskActions: ViewModifier {
                 if let addingSubtask {
                     Button("Add Subtask…", systemImage: "plus") { addingSubtask.wrappedValue = task }
                 }
+                if outline?.canIndent == true { indent }
+                if outline?.canOutdent == true { outdent }
             }
+    }
+
+    private var indent: some View {
+        Button("Indent", systemImage: "increase.indent") { model.indent(task) }
+    }
+
+    private var outdent: some View {
+        Button("Outdent", systemImage: "decrease.indent") { model.outdent(task) }
     }
 }
 
@@ -132,11 +148,15 @@ struct TaskRow<Detail: View>: View {
     var showsProject = true
     /// Its dates under the title; off where the list shows its time.
     var showsDates = true
+    /// Its row in an outline, for a button that shows or hides its subtasks.
+    var outline: TaskOutline.Row?
     let complete: () -> Void
     @ViewBuilder var detail: Detail
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
+            if let outline { Disclosure(row: outline) }
+
             Button(action: complete) {
                 Image(systemName: "circle")
                     .font(.title3)
@@ -180,11 +200,38 @@ struct TaskRow<Detail: View>: View {
 extension TaskRow where Detail == EmptyView {
     init(
         task: TaskItem, indented: Bool = true, showsProject: Bool = true, showsDates: Bool = true,
-        complete: @escaping () -> Void
+        outline: TaskOutline.Row? = nil, complete: @escaping () -> Void
     ) {
         self.init(
-            task: task, indented: indented, showsProject: showsProject, showsDates: showsDates, complete: complete
+            task: task, indented: indented, showsProject: showsProject, showsDates: showsDates,
+            outline: outline, complete: complete
         ) { EmptyView() }
+    }
+}
+
+/// Shows or hides a task's subtasks, as a chevron before it. In a list
+/// with subtasks, rows without them keep the space, so siblings line up.
+private struct Disclosure: View {
+    let row: TaskOutline.Row
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        if row.hasSubtasks {
+            Button {
+                withAnimation { model.toggleCollapsed(row.task) }
+            } label: {
+                Image(systemName: "chevron.right")
+                    .rotationEffect(row.collapsed ? .zero : .degrees(90))
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 16)
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel(row.collapsed ? Text("Show Subtasks") : Text("Hide Subtasks"))
+        } else if row.besideSubtasks {
+            Color.clear.frame(width: 16, height: 1)
+                .accessibilityHidden(true)
+        }
     }
 }
 
