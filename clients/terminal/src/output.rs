@@ -378,8 +378,8 @@ fn day(at: &str) -> String {
         return at.to_string();
     };
     let zone = TimeZone::system();
-    let local = at.to_zoned(zone.clone());
-    let today = Timestamp::now().to_zoned(zone).date();
+    let local = at.to_zoned_datetime(zone.clone());
+    let today = Timestamp::now().to_zoned_datetime(zone).date();
 
     let date = match (local.date() - today).get_days() {
         0 => "today".to_string(),
