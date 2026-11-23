@@ -48,7 +48,7 @@ pub fn from_local(date: Date, time: Option<Time>, field: DateField, zone: &TimeZ
 
     at.unwrap_or_else(|| {
         datetime
-            .to_zoned(TimeZone::UTC)
+            .to_zoned_datetime(TimeZone::UTC)
             .expect("UTC has no gaps")
             .timestamp()
     })
@@ -96,7 +96,7 @@ pub fn parse(text: &str, field: DateField, zone: &TimeZone, now: Timestamp) -> O
         return Some(at);
     }
 
-    let today = now.to_zoned(zone.clone()).date();
+    let today = now.to_zoned_datetime(zone.clone()).date();
     let (day, time) = match text.rsplit_once([' ', 'T']) {
         Some((day, time)) if time.contains(':') => (day, Some(time.parse::<Time>().ok()?)),
         _ => (text, None),

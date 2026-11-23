@@ -7,7 +7,7 @@ license = "Apache-2.0"
 publish = false
 
 [dependencies]
-jiff = "0.2.38"
+jiff = "1.0.2"
 uuid = { version = "1.29.0", features = ["v5"] }
 
 [dev-dependencies]

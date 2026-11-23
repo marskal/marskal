@@ -348,7 +348,7 @@ impl Store {
                         .last_reviewed_at
                         .or(review.inserted_at)
                         .unwrap_or(now);
-                    let day = since.to_zoned(user_zone(tx)?).date();
+                    let day = since.to_zoned_datetime(user_zone(tx)?).date();
                     Some(next_review_on(day, interval)?.to_string())
                 }
             };
@@ -637,7 +637,7 @@ fn user_zone(conn: &Connection) -> Result<TimeZone> {
 }
 
 fn today(conn: &Connection, now: Timestamp) -> Result<Date> {
-    Ok(now.to_zoned(user_zone(conn)?).date())
+    Ok(now.to_zoned_datetime(user_zone(conn)?).date())
 }
 
 /// A new domain key: UUIDv7, minted before insert (ADR 0011).
