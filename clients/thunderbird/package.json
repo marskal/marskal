@@ -17,7 +17,7 @@
   "devDependencies": {
     "@types/node": "^26.0.0",
     "esbuild": "^0.28.2",
-    "lucide-static": "^1.72.0",
+    "lucide-static": "^1.77.0",
     "typescript": "^7.0.2"
   },
   "allowScripts": {
