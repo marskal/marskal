@@ -1,7 +1,7 @@
 # Dependency updates for every component. Minor and patch bumps come as one
-# PR per ecosystem and directory each week; a major bump gets a PR of its own.
-# A dependency bump changes nothing a user reads, so each PR is labelled
-# `no changelog` (ADR 0038).
+# PR per ecosystem each week. A major is its own PR, and the same Cargo
+# major across directories is one PR. A dependency bump changes nothing a
+# user reads, so each PR is labelled `no changelog` (ADR 0038).
 #
 # A web/mix.lock bump also needs a new `depsHash` in web/nix/package.nix;
 # the Nix deps hash workflow commits it to the PR.
@@ -43,6 +43,11 @@ updates:
     groups:
       cargo:
         update-types: [minor, patch]
+      # One PR per crate, covering every directory. Jiff is a direct
+      # dependency of all five, and 0.2 and 1.0 do not unify.
+      cargo-major:
+        update-types: [major]
+        group-by: dependency-name
 
   - package-ecosystem: github-actions
     directory: /
