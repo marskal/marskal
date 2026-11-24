@@ -1,0 +1,50 @@
+# Each Rust program has its own Cargo.lock (ADR 0018), and crates use each
+# other by path. A bump in one crate's manifest, such as a Dependabot PR in
+# core/replica, can leave the lockfile of a crate that links it behind, and
+# the Nix build, which vendors exactly what the lockfile names, then fails.
+# This fails the PR instead: `cargo metadata --locked` errors when a
+# lockfile would have to change.
+name: Cargo lockfiles
+
+on:
+  pull_request:
+    paths:
+      - "core/**/Cargo.toml"
+      - "core/**/Cargo.lock"
+      - "clients/**/Cargo.toml"
+      - "clients/**/Cargo.lock"
+      - .github/workflows/cargo-lock.yml
+  push:
+    branches: [master]
+    paths:
+      - "core/**/Cargo.toml"
+      - "core/**/Cargo.lock"
+      - "clients/**/Cargo.toml"
+      - "clients/**/Cargo.lock"
+
+permissions:
+  contents: read
+
+jobs:
+  locked:
+    name: Lockfile is current
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dir:
+          - core/replica
+          - core/rules
+          - core/ffi
+          - clients/shell-common
+          - clients/terminal
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: cargo metadata --locked
+        working-directory: ${{ matrix.dir }}
+        run: |
+          if ! cargo metadata --locked --format-version 1 > /dev/null; then
+            echo "::error::${{ matrix.dir }}/Cargo.lock is out of date. Run \`cargo update -p <crate>\` there and commit the lockfile."
+            exit 1
+          fi
