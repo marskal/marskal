@@ -40,7 +40,7 @@ defmodule MarskalWeb.InspectorPanel do
 
     cond do
       drafting? ->
-        {:ok, assign(socket, :loaded, nil)}
+        {:ok, socket |> assign(:loaded, nil) |> draft()}
 
       stale? ->
         socket =
@@ -50,7 +50,8 @@ defmodule MarskalWeb.InspectorPanel do
                 picker: nil,
                 place: nil,
                 calendar: nil,
-                date_previews: %{}
+                date_previews: %{},
+                draft_key: nil
               ),
             else: socket
 
@@ -59,6 +60,73 @@ defmodule MarskalWeb.InspectorPanel do
       true ->
         {:ok, socket}
     end
+  end
+
+  # A new task shows the task form, filled in with where it will be saved
+  # (ADR 0031). Only its title can be typed into; the first use of any
+  # other field saves the task, and that field goes on in the saved one.
+  # What it shows is loaded once per draft, not on every keystroke.
+  defp draft(socket) do
+    %{user: user, new_task: new_task} = socket.assigns
+    key = Map.take(new_task, [:anchor_id, :where, :child?, :form])
+
+    socket =
+      if socket.assigns[:draft_key] == key do
+        socket
+      else
+        record = draft_record(user, new_task)
+        tree = Tags.tree(user)
+
+        socket
+        |> assign(:draft_key, key)
+        |> assign(:record, record)
+        |> assign(:options, task_projects(user, record))
+        |> assign(:tagging, draft_tagging(user, record, new_task, tree))
+        |> assign(:outline, %{
+          parent: record.parent_id && Tasks.get_task(user, record.parent_id),
+          resolved_above: false
+        })
+        |> assign(:picker, empty_picker())
+        |> assign(:place, nil)
+        |> assign(:date_previews, %{})
+        |> assign(:calendar, nil)
+        |> assign(:error, nil)
+      end
+
+    assign(socket, :record, %{socket.assigns.record | title: new_task.title})
+  end
+
+  defp draft_record(user, %{anchor_id: anchor_id} = new_row) do
+    case Tasks.get_task(user, anchor_id) do
+      nil ->
+        %Tasks.Task{}
+
+      anchor ->
+        %Tasks.Task{
+          inbox: anchor.inbox,
+          project_id: anchor.project_id,
+          parent_id: if(new_row.child?, do: anchor.id, else: anchor.parent_id)
+        }
+    end
+  end
+
+  defp draft_record(_user, new_task), do: struct(%Tasks.Task{}, new_task[:attrs] || %{})
+
+  defp draft_tagging(user, record, new_task, tree) do
+    ids = new_task[:tag_ids] || []
+
+    inherited =
+      case record.project_id && Projects.get_project(user, record.project_id) do
+        nil -> []
+        project -> Tags.project_tags(user, project, tree)
+      end
+
+    %{
+      tree: tree,
+      direct: Enum.filter(Tree.all(tree), &(&1.id in ids)),
+      inherited: inherited,
+      parents: visible_tags(tree)
+    }
   end
 
   # Reloads on a new selection, and on every broadcast change, so an edit made
@@ -479,9 +547,9 @@ defmodule MarskalWeb.InspectorPanel do
       <p :if={(@new_task == nil and @selection) && @record == nil} class="app-inspector__empty">
         {gettext("That item is not available.")}
       </p>
-      <.new_task_form :if={@new_task} title={@new_task.title} submit_to={@new_task[:form]} />
       <.task_form
-        :if={@new_task == nil and match?(%Tasks.Task{}, @record)}
+        :if={@new_task != nil or match?(%Tasks.Task{}, @record)}
+        draft={@new_task}
         user={@user}
         change_version={assigns[:change_version]}
         zone={Marskal.Accounts.timezone(@user)}
@@ -547,6 +615,55 @@ defmodule MarskalWeb.InspectorPanel do
   attr :user, :any, required: true
   attr :change_version, :any, default: nil
 
+  attr :draft, :map,
+    default: nil,
+    doc: "a new task not saved yet: the outline's new row, or a list's add field"
+
+  # With `draft`, the form is a new task's (ADR 0031). Its title is the one
+  # being typed, kept in step with the row or the add field, and its other
+  # fields show where the task goes. The `NewTask` hook saves the task on
+  # the first use of any of them, and that field goes on in the saved task,
+  # whose fields have the same ids.
+  defp task_form(%{draft: draft} = assigns) when draft != nil do
+    submit_to = draft[:form]
+
+    assigns =
+      assign(assigns,
+        submit_to: submit_to,
+        change: if(submit_to, do: "draft-title", else: "inline-title"),
+        submit: if(submit_to, do: "draft-submit", else: "inline-create"),
+        cancel: if(submit_to, do: "draft-cancel", else: "inline-cancel")
+      )
+
+    ~H"""
+    <section class="inspector-form" id="inspector-new-task">
+      <form
+        id="inspector-new-task-form"
+        class="form"
+        phx-change={@change}
+        phx-submit={@submit}
+        phx-hook="MarskalWeb.TaskComponents.NewTask"
+        data-submit-to={@submit_to}
+        data-cancel={@cancel}
+        data-draft-fields
+      >
+        <div class="field">
+          <label for="inspector-new-task-title">{gettext("Title")}</label>
+          <input
+            id="inspector-new-task-title"
+            class="input"
+            type="text"
+            name="title"
+            value={@record.title}
+            autocomplete="off"
+          />
+        </div>
+        <.task_fields {assigns} />
+      </form>
+    </section>
+    """
+  end
+
   defp task_form(assigns) do
     ~H"""
     <section class="inspector-form" data-inspect-type="task" data-inspect-id={@record.id}>
@@ -572,76 +689,7 @@ defmodule MarskalWeb.InspectorPanel do
             phx-debounce="300"
           />
         </div>
-        <div class="field">
-          <label for="inspector-task-url">URL</label>
-          <input
-            id="inspector-task-url"
-            class="input"
-            type="text"
-            inputmode="url"
-            name="task[url]"
-            value={@record.url}
-            placeholder="https://… or file://…"
-            autocomplete="off"
-            spellcheck="false"
-            phx-debounce="300"
-          />
-          <MarskalWeb.UrlLink.link url={@record.url} text />
-        </div>
-        <.notes_field form="task" record={@record} placeholder="Markdown is fine…" />
-        <.location_picker
-          id="inspector-task-location"
-          myself={@myself}
-          task={@record}
-          projects={@options}
-          place={@place}
-          parent={@outline[:parent]}
-        />
-        <.tag_picker id="inspector-task-tags" myself={@myself} tagging={@tagging} picker={@picker} />
-        <div class="field">
-          <label for="inspector-task-state">State</label>
-          <select id="inspector-task-state" class="input" name="task[state]">
-            <option
-              :for={{label, value} <- task_states()}
-              value={value}
-              selected={value == Atom.to_string(@record.state)}
-            >
-              {label}
-            </option>
-          </select>
-          <p :if={@outline[:resolved_above]} class="hint" id="inspector-task-resolved-above">
-            Resolved along with the task or project above. Reopen that to bring this back.
-          </p>
-        </div>
-        <div class="field">
-          <label class="toggle">
-            <input type="hidden" name="task[flagged]" value="false" />
-            <input
-              type="checkbox"
-              id="inspector-task-flagged"
-              name="task[flagged]"
-              value="true"
-              checked={@record.flagged}
-            /> Flagged
-          </label>
-          <p
-            :if={!@record.flagged and project_flagged?(@record, @options)}
-            class="hint"
-            id="inspector-task-flagged-by-project"
-          >
-            Flagged by its project.
-          </p>
-        </div>
-        <MarskalWeb.DateFields.inputs
-          form="task"
-          id="inspector-task-dates"
-          record={@record}
-          zone={@zone}
-          target={@myself}
-          previews={@date_previews}
-          calendar={@calendar}
-          inherited={@outline[:dates]}
-        />
+        <.task_fields {assigns} />
         <div class="actions">
           <button
             type="button"
@@ -668,37 +716,79 @@ defmodule MarskalWeb.InspectorPanel do
     """
   end
 
-  attr :title, :string, required: true
-  attr :submit_to, :string, default: nil, doc: "the add field's form, for a list's add field"
-
-  # The title being typed into the outline, or into a list's add field
-  # (ADR 0031). Leaving a title that has text saves the task, and this
-  # panel becomes the ordinary inspector.
-  defp new_task_form(assigns) do
+  # The task's fields after its title, shared by a saved task and a new one.
+  defp task_fields(assigns) do
     ~H"""
-    <section class="inspector-form" id="inspector-new-task">
-      <form
-        id="inspector-new-task-form"
-        class="form"
-        phx-change={if @submit_to, do: "draft-title", else: "inline-title"}
-        phx-submit={if @submit_to, do: "draft-submit", else: "inline-create"}
-        phx-hook="MarskalWeb.TaskComponents.NewTask"
-        data-submit-to={@submit_to}
-        data-cancel={if @submit_to, do: "draft-cancel", else: "inline-cancel"}
+    <div class="field">
+      <label for="inspector-task-url">URL</label>
+      <input
+        id="inspector-task-url"
+        class="input"
+        type="text"
+        inputmode="url"
+        name="task[url]"
+        value={@record.url}
+        placeholder="https://… or file://…"
+        autocomplete="off"
+        spellcheck="false"
+        phx-debounce="300"
+      />
+      <MarskalWeb.UrlLink.link url={@record.url} text />
+    </div>
+    <.notes_field form="task" record={@record} placeholder="Markdown is fine…" />
+    <.location_picker
+      id="inspector-task-location"
+      myself={@myself}
+      task={@record}
+      projects={@options}
+      place={@place}
+      parent={@outline[:parent]}
+    />
+    <.tag_picker id="inspector-task-tags" myself={@myself} tagging={@tagging} picker={@picker} />
+    <div class="field">
+      <label for="inspector-task-state">State</label>
+      <select id="inspector-task-state" class="input" name="task[state]">
+        <option
+          :for={{label, value} <- task_states()}
+          value={value}
+          selected={value == Atom.to_string(@record.state)}
+        >
+          {label}
+        </option>
+      </select>
+      <p :if={@outline[:resolved_above]} class="hint" id="inspector-task-resolved-above">
+        Resolved along with the task or project above. Reopen that to bring this back.
+      </p>
+    </div>
+    <div class="field">
+      <label class="toggle">
+        <input type="hidden" name="task[flagged]" value="false" />
+        <input
+          type="checkbox"
+          id="inspector-task-flagged"
+          name="task[flagged]"
+          value="true"
+          checked={@record.flagged}
+        /> Flagged
+      </label>
+      <p
+        :if={!@record.flagged and project_flagged?(@record, @options)}
+        class="hint"
+        id="inspector-task-flagged-by-project"
       >
-        <div class="field">
-          <label for="inspector-new-task-title">{gettext("Title")}</label>
-          <input
-            id="inspector-new-task-title"
-            class="input"
-            type="text"
-            name="title"
-            value={@title}
-            autocomplete="off"
-          />
-        </div>
-      </form>
-    </section>
+        Flagged by its project.
+      </p>
+    </div>
+    <MarskalWeb.DateFields.inputs
+      form="task"
+      id="inspector-task-dates"
+      record={@record}
+      zone={@zone}
+      target={@myself}
+      previews={@date_previews}
+      calendar={@calendar}
+      inherited={@outline[:dates]}
+    />
     """
   end
 

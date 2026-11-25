@@ -24,9 +24,11 @@ defmodule MarskalWeb.NewTaskDraftLiveTest do
       assert has_element?(view, "#app-shell.is-inspector-open")
       assert has_element?(view, "#inspector-new-task-form[data-submit-to='new-task']")
       assert has_element?(view, "#inspector-new-task-title[value='Call']")
+      assert has_element?(view, "#inspector-new-task #inspector-task-location[value='Inbox']")
+      assert has_element?(view, "#inspector-new-task #inspector-task-url")
 
       view |> form("#inspector-new-task-form", %{title: "Call Bo"}) |> render_change()
-      assert_push_event(view, "inline-title", %{title: "Call Bo"})
+      assert_push_event(view, "draft-title", %{form: "new-task", title: "Call Bo"})
     end
 
     test "leaving the title saves the task, and the inspector edits it", ctx do
@@ -35,14 +37,14 @@ defmodule MarskalWeb.NewTaskDraftLiveTest do
 
       view
       |> form("#new-task", task: %{title: "Call"})
-      |> render_submit(%{"leave" => "true", "inspector" => "true"})
+      |> render_submit(%{"leave" => "true", "focus" => "inspector-task-url"})
 
       [task] = Tasks.list_inbox(ctx.user)
       assert task.title == "Call"
       refute has_element?(view, "#inspector-new-task")
       assert has_element?(view, "#inspector-task-title[value='Call']")
       assert_patched(view, ~p"/inbox?task=#{task.id}")
-      assert_push_event(view, "inspector-focus", %{})
+      assert_push_event(view, "inspector-focus", %{id: "inspector-task-url"})
     end
 
     test "leaving for somewhere else does not move focus", ctx do
@@ -109,6 +111,7 @@ defmodule MarskalWeb.NewTaskDraftLiveTest do
     {:ok, view, _html} = live(ctx.conn, ~p"/tags/#{tag.id}")
     render_hook(view, "draft-title", %{"title" => "Post", "form" => "new-tag-task"})
     assert has_element?(view, "#inspector-new-task-form[data-submit-to='new-tag-task']")
+    assert has_element?(view, "#inspector-new-task #inspector-task-tags", "Errand")
 
     view |> form("#new-tag-task", task: %{title: "Post"}) |> render_submit(%{"leave" => "true"})
 

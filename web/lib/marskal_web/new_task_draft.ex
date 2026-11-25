@@ -3,9 +3,9 @@ defmodule MarskalWeb.NewTaskDraft do
   The add field below a task list, shown in the inspector while a title
   is typed into it (ADR 0031), as the outline's new row is.
 
-  `attach/1` adds the events. The page's own submit event still saves the
-  task, so a page files it where its field says (inbox, project, tag), and
-  calls `created/3` after. Leaving a title that has text submits the form
+  `attach/2` adds the events, with where the page files a new task, which
+  the inspector shows: task fields and tag ids. The page's own submit
+  event still saves the task, and the page calls `created/3` after. Leaving a title that has text submits the form
   with `leave` set, and the inspector then edits the saved task. Enter
   saves it and the field takes the next.
   """
@@ -13,16 +13,17 @@ defmodule MarskalWeb.NewTaskDraft do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [attach_hook: 4, push_event: 3]
 
-  def attach(socket) do
+  def attach(socket, attrs, tag_ids \\ []) do
     socket
     |> assign(:draft, nil)
+    |> assign(:draft_place, %{attrs: attrs, tag_ids: tag_ids})
     |> attach_hook(:new_task_draft, :handle_event, &handle_event/3)
   end
 
   @doc """
   After the page has saved the task its field held. A save made by leaving
-  the field opens the task in the inspector, and moves focus to its title
-  when focus went there. The field is cleared here, since a focused field
+  the field opens the task in the inspector, and moves focus to the field
+  of the same id when focus went to the inspector (`focus`). The field is cleared here, since a focused field
   keeps what was typed in it.
   """
   def created(socket, task, params) do
@@ -36,9 +37,13 @@ defmodule MarskalWeb.NewTaskDraft do
       %{"leave" => "true"} ->
         socket = MarskalWeb.Inspector.select(socket, "task", task.id)
 
-        if params["inspector"] == "true",
-          do: push_event(socket, "inspector-focus", %{}),
-          else: socket
+        case params["focus"] do
+          focus when is_binary(focus) and focus != "" ->
+            push_event(socket, "inspector-focus", %{id: focus})
+
+          _none ->
+            socket
+        end
 
       _params ->
         socket
@@ -56,11 +61,17 @@ defmodule MarskalWeb.NewTaskDraft do
       {nil, form} ->
         if String.trim(title) == "",
           do: {:halt, socket},
-          else: {:halt, assign(socket, :draft, %{title: title, form: form})}
+          else:
+            {:halt,
+             assign(
+               socket,
+               :draft,
+               Map.merge(socket.assigns.draft_place, %{title: title, form: form})
+             )}
 
       {draft, _form} ->
         socket = assign(socket, :draft, %{draft | title: title})
-        {:halt, push_event(socket, "inline-title", %{title: title})}
+        {:halt, push_event(socket, "draft-title", %{form: draft.form, title: title})}
     end
   end
 

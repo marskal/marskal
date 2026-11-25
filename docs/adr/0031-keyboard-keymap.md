@@ -48,6 +48,10 @@ are the product, so they are recorded here.
   way: once a title is typed, the inspector shows it, leaving the field
   adds the task and the inspector edits it, and Enter adds it and keeps
   the field for the next. The page files the task where its field says.
+  While a new task is typed, the inspector shows the whole task form,
+  with where the task will go. Only the title takes typing: the first use
+  of any other field saves the task, and that field goes on in the saved
+  task, a click included. Without a title, focus stays on the title.
 - One current row. A click and the movement keys both select it, and it
   has one highlight. Where the inspector is a pane beside the list, it
   shows the current row, and focus stays on the list, so the keys go on

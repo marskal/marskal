@@ -1205,13 +1205,24 @@ defmodule MarskalWeb.TaskComponents do
           // add field (MarskalWeb.NewTaskDraft). The add field's form saves
           // the task, so leaving hands it the title instead, and Enter goes
           // to it by way of the server.
+          //
+          // With `data-draft-fields`, the form also shows the task's other
+          // fields, which only the saved task can take. A click on one moves
+          // focus there, which saves the task as leaving the title does, and
+          // the saved task's field of the same id gets focus, and the click
+          // when it was a checkbox or button. Without a title, focus stays
+          // on the title.
           export default class extends ViewHook {
             mounted() {
+              if (this.el.hasAttribute("data-draft-fields")) this.guardFields()
               const target = this.el.dataset.submitTo
               const field = (): HTMLElement | null =>
                 (target && document.getElementById(target)?.querySelector<HTMLElement>("input[data-draft]")) || null
-              const handOff = (title: string, leave: boolean, inspector: boolean) => {
-                const detail = {title, leave, inspector}
+              // The id of the field focus went to in the inspector, if any.
+              const inspectorFocus = (active: Element | null): string | null =>
+                active instanceof HTMLElement && active.closest(".app-inspector") ? active.id || "" : null
+              const handOff = (title: string, leave: boolean, focus: string | null) => {
+                const detail = {title, leave, focus}
                 if (target) document.getElementById(target)?.dispatchEvent(new CustomEvent("draft:submit", {detail}))
               }
               let skipBlur = false
@@ -1231,20 +1242,55 @@ defmodule MarskalWeb.TaskComponents do
                   if (target) {
                     if (active !== null && active === field()) return
                     if (empty) this.pushEvent("draft-cancel", {})
-                    else handOff(input.value, true, active instanceof Element && active.closest(".app-inspector") !== null)
+                    else handOff(input.value, true, inspectorFocus(active))
                     return
                   }
                   const onTitle =
                     active instanceof Element && active.closest("#task-new, #inspector-new-task-title")
                   if (onTitle && empty) return
-                  const inspector = active instanceof Element && active.closest(".app-inspector") !== null
-                  this.pushEvent("inline-blur", {value: input.value, inspector})
+                  this.pushEvent("inline-blur", {value: input.value, focus: inspectorFocus(active)})
                 }, 0)
               })
               this.handleEvent("inline-title", ({title}: {title: string}) => {
                 const input = this.el.querySelector("input")
                 if (input instanceof HTMLInputElement && document.activeElement !== input) input.value = title
               })
+            }
+
+            guardFields() {
+              const title = (): HTMLInputElement | null => this.el.querySelector("input")
+              const control = (target: EventTarget | null): HTMLElement | null => {
+                if (!(target instanceof Element)) return null
+                const label = target.closest("label")
+                const el = label?.control ?? target.closest("input, select, textarea, button, [tabindex]")
+                return el instanceof HTMLElement && el !== title() && this.el.contains(el) ? el : null
+              }
+              const untitled = () => (title()?.value.trim() ?? "") === ""
+              this.el.addEventListener("pointerdown", (event: PointerEvent) => {
+                const el = control(event.target)
+                if (!el) return
+                event.preventDefault()
+                if (untitled()) {
+                  title()?.focus({preventScroll: true})
+                  return
+                }
+                // The app shell's hook makes the click again on the saved task.
+                const clicks = el instanceof HTMLButtonElement || (el instanceof HTMLInputElement && el.type === "checkbox")
+                window.dispatchEvent(new CustomEvent("marskal:draft-click", {detail: {id: clicks ? el.id : null}}))
+                el.focus({preventScroll: true})
+              }, true)
+              // The click itself belongs to the saved task.
+              this.el.addEventListener("click", (event: MouseEvent) => {
+                if (!control(event.target)) return
+                event.preventDefault()
+                event.stopPropagation()
+              }, true)
+              this.el.addEventListener("focusin", (event: FocusEvent) => {
+                if (control(event.target) && untitled()) title()?.focus({preventScroll: true})
+              })
+              this.el.addEventListener("keydown", (event: KeyboardEvent) => {
+                if (control(event.target) && event.key !== "Tab" && event.key !== "Escape") event.preventDefault()
+              }, true)
             }
           }
         </script>

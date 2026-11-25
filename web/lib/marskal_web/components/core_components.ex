@@ -148,7 +148,7 @@ defmodule MarskalWeb.CoreComponents do
     <.form for={@for} id={@id} class="add-form" phx-hook=".AddDraft" {@rest}>
       <input :if={@command_id} type="hidden" name="command_id" value={@command_id} />
       <input :if={@draft} type="hidden" name="leave" value="" />
-      <input :if={@draft} type="hidden" name="inspector" value="" />
+      <input :if={@draft} type="hidden" name="focus" value="" />
       <label for={@input_id} class="sr-only">{@label}</label>
       <Lucideicons.plus class="icon add-form__icon" aria-hidden="true" />
       <input
@@ -185,17 +185,18 @@ defmodule MarskalWeb.CoreComponents do
           // Only a field marked as a new task drafts.
           if (!input()) return
 
-          const submit = (title: string, leave: boolean, inspector: boolean) => {
+          // `focus` is the id of the inspector field focus went to, if any.
+          const submit = (title: string, leave: boolean, focus: string | null) => {
             const field = input()
             const leaveField = hidden("leave")
-            const inspectorField = hidden("inspector")
-            if (!field || !leaveField || !inspectorField) return
+            const focusField = hidden("focus")
+            if (!field || !leaveField || !focusField) return
             field.value = title
             leaveField.value = leave ? "true" : ""
-            inspectorField.value = inspector ? "true" : ""
+            focusField.value = focus ?? ""
             form.requestSubmit()
             leaveField.value = ""
-            inspectorField.value = ""
+            focusField.value = ""
           }
 
           form.addEventListener("input", () => {
@@ -221,24 +222,24 @@ defmodule MarskalWeb.CoreComponents do
                 this.pushEvent("draft-cancel", {})
                 return
               }
-              const inspector = active instanceof Element && active.closest(".app-inspector") !== null
-              submit(field.value, true, inspector)
+              const focus = active instanceof HTMLElement && active.closest(".app-inspector") ? active.id : null
+              submit(field.value, true, focus)
             }, 0)
           })
           form.addEventListener("draft:submit", (event: Event) => {
-            const {title, leave, inspector} = (event as CustomEvent<{title: string, leave: boolean, inspector: boolean}>).detail
-            submit(title, leave, inspector)
+            const {title, leave, focus} = (event as CustomEvent<{title: string, leave: boolean, focus: string | null}>).detail
+            submit(title, leave, focus)
           })
-          this.handleEvent("inline-title", ({title}: {title: string}) => {
+          this.handleEvent("draft-title", ({form: id, title}: {form: string, title: string}) => {
             const field = input()
-            if (field && document.activeElement !== field) field.value = title
+            if (field && id === form.id && document.activeElement !== field) field.value = title
           })
           // Enter in the inspector's copy. The next title is typed here, as
           // after Enter in this field.
           this.handleEvent("draft-submit", ({form: id, title}: {form: string, title: string}) => {
             if (id !== form.id) return
             input()?.focus({preventScroll: true})
-            submit(title, false, false)
+            submit(title, false, null)
           })
           this.handleEvent("draft-clear", ({form: id}: {form: string}) => {
             const field = input()

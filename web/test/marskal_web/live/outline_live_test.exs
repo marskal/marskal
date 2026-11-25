@@ -252,7 +252,10 @@ defmodule MarskalWeb.OutlineLiveTest do
       assert has_element?(view, "#inspector-new-task")
       assert has_element?(view, "#inspector-new-task-title")
       refute has_element?(view, "#inspector-task")
-      refute has_element?(view, "#inspector-new-task button")
+      assert has_element?(view, "#inspector-new-task #inspector-task-url")
+      assert has_element?(view, "#inspector-new-task #inspector-task-location[value='House']")
+      assert has_element?(view, "#inspector-new-task #inspector-task-flagged")
+      refute has_element?(view, "#inspector-new-task #inspector-task-delete")
 
       view |> form("#task-new-form", %{title: "Shop"}) |> render_change()
       assert has_element?(view, "#inspector-new-task-title[value='Shop']")
@@ -281,14 +284,14 @@ defmodule MarskalWeb.OutlineLiveTest do
       {:ok, view, _html} = live(ctx.conn, ~p"/projects/#{ctx.project.id}")
 
       render_hook(view, "inline-new", %{"id" => a.id, "where" => "below"})
-      render_hook(view, "inline-blur", %{"value" => "Elsewhere", "inspector" => false})
+      render_hook(view, "inline-blur", %{"value" => "Elsewhere", "focus" => nil})
       assert find(ctx, "Elsewhere")
       refute_push_event(view, "inspector-focus", _payload)
 
       render_hook(view, "inline-new", %{"id" => a.id, "where" => "below"})
-      render_hook(view, "inline-blur", %{"value" => "Inside", "inspector" => true})
+      render_hook(view, "inline-blur", %{"value" => "Inside", "focus" => "inspector-task-url"})
       assert find(ctx, "Inside")
-      assert_push_event(view, "inspector-focus", %{})
+      assert_push_event(view, "inspector-focus", %{id: "inspector-task-url"})
     end
 
     test "Enter in the inspector adds the task and opens the next row", ctx do

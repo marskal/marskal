@@ -13,7 +13,7 @@ defmodule MarskalWeb.InboxLive do
      socket
      |> assign(:page_title, "Inbox")
      |> MarskalWeb.Outline.attach()
-     |> MarskalWeb.NewTaskDraft.attach()
+     |> MarskalWeb.NewTaskDraft.attach(%{inbox: true})
      |> assign(:command_id, Ecto.UUID.generate(version: 7))
      |> assign(:form, to_form(%{"title" => ""}, as: "task"))
      |> assign_tasks(Tasks.list_inbox(user, show: shown(socket)))}

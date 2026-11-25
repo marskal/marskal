@@ -308,6 +308,7 @@ defmodule MarskalWeb.Layouts do
 
       export default class extends ViewHook {
         wasOpen = false
+        draftClick: string | null = null
         phone = window.matchMedia("(max-width: 720px)")
         narrow = window.matchMedia("(max-width: 64rem)")
 
@@ -366,13 +367,19 @@ defmodule MarskalWeb.Layouts do
           this.handleEvent("quick-capture:added", ({id}: {id: string}) => {
             document.getElementById(id)?.closest("dialog")?.close()
           })
-          // A new task saved as focus went into the inspector: its title
-          // goes on where the typing left off.
-          this.handleEvent("inspector-focus", () => {
-            const title = document.getElementById("inspector-task-title")
-            if (!(title instanceof HTMLInputElement)) return
-            title.focus({preventScroll: true})
-            title.setSelectionRange(title.value.length, title.value.length)
+          // A new task saved as focus went into the inspector: the saved
+          // task's field of the same id takes it, its title for the new
+          // task's title, and a click on a checkbox or button is made again.
+          window.addEventListener("marskal:draft-click", this.onDraftClick)
+          this.handleEvent("inspector-focus", ({id}: {id: string}) => {
+            const click = this.draftClick
+            this.draftClick = null
+            const target = id === "inspector-new-task-title" || id === "" ? "inspector-task-title" : id
+            const el = document.getElementById(target)
+            if (!(el instanceof HTMLElement)) return
+            el.focus({preventScroll: true})
+            if (el instanceof HTMLInputElement && el.type === "text") el.setSelectionRange(el.value.length, el.value.length)
+            if (click === id) el.click()
           })
           this.setNav(false)
           this.sync()
@@ -386,7 +393,14 @@ defmodule MarskalWeb.Layouts do
           this.el.removeEventListener("click", this.onClick)
           document.removeEventListener("keydown", this.onKeydown)
           this.phone.removeEventListener("change", this.onResize)
+          window.removeEventListener("marskal:draft-click", this.onDraftClick)
           document.body.classList.remove("inspector-open", "nav-open")
+        }
+
+        // A click on a new task's field, made again once it is saved. Kept
+        // here, not on the element, which every patch rewrites.
+        onDraftClick = (event: Event) => {
+          this.draftClick = (event as CustomEvent<{id: string | null}>).detail.id
         }
 
         onResize = () => {

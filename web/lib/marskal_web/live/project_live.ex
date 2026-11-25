@@ -21,7 +21,7 @@ defmodule MarskalWeb.ProjectLive do
         {:ok,
          socket
          |> MarskalWeb.Outline.attach()
-         |> MarskalWeb.NewTaskDraft.attach()
+         |> MarskalWeb.NewTaskDraft.attach(%{inbox: false, project_id: project.id})
          |> assign_project(user, project)}
     end
   end

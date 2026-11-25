@@ -23,7 +23,7 @@ defmodule MarskalWeb.TagLive do
         {:ok,
          socket
          |> MarskalWeb.TaskKeys.attach()
-         |> MarskalWeb.NewTaskDraft.attach()
+         |> MarskalWeb.NewTaskDraft.attach(%{inbox: false}, [tag.id])
          |> assign(:tag_id, tag.id)
          |> new_tag_form()
          |> new_task_form()
