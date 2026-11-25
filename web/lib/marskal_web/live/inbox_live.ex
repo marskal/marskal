@@ -29,6 +29,7 @@ defmodule MarskalWeb.InboxLive do
       nav={assigns[:nav]}
       change_version={assigns[:change_version] || 0}
       visibility={assigns[:visibility]}
+      new_row={@new_row}
     >
       <h1>Inbox</h1>
       <p class="lede">

@@ -14,8 +14,11 @@ defmodule MarskalWeb.InspectorPanel do
   alias Marskal.Tasks
   alias MarskalWeb.TagComponents
 
-  defp task_states, do: [{"To-Do", "to_do"}, {"Done", "done"}, {"Dropped", "dropped"}]
-  defp folder_states, do: [{"Active", "active"}, {"Dropped", "dropped"}]
+  defp task_states do
+    [{gettext("To-Do"), "to_do"}, {gettext("Done"), "done"}, {gettext("Dropped"), "dropped"}]
+  end
+
+  defp folder_states, do: [{gettext("Active"), "active"}, {gettext("Dropped"), "dropped"}]
 
   @date_texts %{"defer_text" => "defer", "planned_text" => "planned", "due_text" => "due"}
 
@@ -24,16 +27,37 @@ defmodule MarskalWeb.InspectorPanel do
 
   @impl true
   def update(assigns, socket) do
+    assigns = Map.put(assigns, :new_task, assigns[:new_task])
+    was_drafting? = socket.assigns[:new_task] != nil
+    drafting? = assigns.new_task != nil
+
     stale? =
-      socket.assigns[:loaded] != {assigns.selection, assigns[:change_version]} or
+      was_drafting? or
+        socket.assigns[:loaded] != {assigns.selection, assigns[:change_version]} or
         socket.assigns[:user] != assigns.user
 
     socket = assign(socket, assigns)
 
-    if stale? do
-      {:ok, reload(socket)}
-    else
-      {:ok, socket}
+    cond do
+      drafting? ->
+        {:ok, assign(socket, :loaded, nil)}
+
+      stale? ->
+        socket =
+          if was_drafting?,
+            do:
+              assign(socket,
+                picker: nil,
+                place: nil,
+                calendar: nil,
+                date_previews: %{}
+              ),
+            else: socket
+
+        {:ok, reload(socket)}
+
+      true ->
+        {:ok, socket}
     end
   end
 
@@ -449,14 +473,15 @@ defmodule MarskalWeb.InspectorPanel do
       }
     </style>
     <div id={@id}>
-      <p :if={@selection == nil} class="app-inspector__empty">
-        Select a task, project, folder, or tag to edit.
+      <p :if={@new_task == nil and @selection == nil} class="app-inspector__empty">
+        {gettext("Select a task, project, folder, or tag to edit.")}
       </p>
-      <p :if={@selection && @record == nil} class="app-inspector__empty">
-        That item is not available.
+      <p :if={(@new_task == nil and @selection) && @record == nil} class="app-inspector__empty">
+        {gettext("That item is not available.")}
       </p>
+      <.new_task_form :if={@new_task} title={@new_task.title} />
       <.task_form
-        :if={match?(%Tasks.Task{}, @record)}
+        :if={@new_task == nil and match?(%Tasks.Task{}, @record)}
         user={@user}
         change_version={assigns[:change_version]}
         zone={Marskal.Accounts.timezone(@user)}
@@ -472,7 +497,7 @@ defmodule MarskalWeb.InspectorPanel do
         calendar={@calendar}
       />
       <.project_form
-        :if={match?(%Projects.Project{}, @record)}
+        :if={@new_task == nil and match?(%Projects.Project{}, @record)}
         user={@user}
         change_version={assigns[:change_version]}
         zone={Marskal.Accounts.timezone(@user)}
@@ -486,14 +511,14 @@ defmodule MarskalWeb.InspectorPanel do
         calendar={@calendar}
       />
       <.folder_form
-        :if={match?(%ProjectFolders.ProjectFolder{}, @record)}
+        :if={@new_task == nil and match?(%ProjectFolders.ProjectFolder{}, @record)}
         myself={@myself}
         record={@record}
         options={@options}
         error={@error}
       />
       <.tag_form
-        :if={match?(%Tag{}, @record)}
+        :if={@new_task == nil and match?(%Tag{}, @record)}
         myself={@myself}
         record={@record}
         options={@options}
@@ -639,6 +664,36 @@ defmodule MarskalWeb.InspectorPanel do
         change_version={@change_version}
       />
       <.meta record={@record} zone={@zone} />
+    </section>
+    """
+  end
+
+  attr :title, :string, required: true
+
+  # The title being typed into the outline (ADR 0031). Leaving a title that
+  # has text saves the task, and this panel becomes the ordinary inspector.
+  defp new_task_form(assigns) do
+    ~H"""
+    <section class="inspector-form" id="inspector-new-task">
+      <form
+        id="inspector-new-task-form"
+        class="form"
+        phx-change="inline-title"
+        phx-submit="inline-create"
+        phx-hook="MarskalWeb.TaskComponents.NewTask"
+      >
+        <div class="field">
+          <label for="inspector-new-task-title">{gettext("Title")}</label>
+          <input
+            id="inspector-new-task-title"
+            class="input"
+            type="text"
+            name="title"
+            value={@title}
+            autocomplete="off"
+          />
+        </div>
+      </form>
     </section>
     """
   end
@@ -1255,7 +1310,7 @@ defmodule MarskalWeb.InspectorPanel do
     ~H"""
     <div class="field">
       <div class="field-head">
-        <label for={"inspector-#{@form}-notes"}>Notes</label>
+        <label for={"inspector-#{@form}-notes"}>{gettext("Notes")}</label>
         <button
           type="button"
           id={"inspector-#{@form}-notes-expand"}
