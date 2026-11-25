@@ -39,6 +39,10 @@ defmodule MarskalWeb.Layouts do
     default: nil,
     doc: "the inline new task, whose fields the inspector edits"
 
+  attr :draft, :any,
+    default: nil,
+    doc: "a new task typed into a list's add field (MarskalWeb.NewTaskDraft)"
+
   attr :nav, :any, default: nil, doc: "the sidebar tree, assigned by MarskalWeb.Inspector"
   attr :change_version, :integer, default: 0
 
@@ -49,10 +53,17 @@ defmodule MarskalWeb.Layouts do
   slot :inner_block, required: true
 
   def app(assigns) do
+    # The new task the inspector shows, from the outline row or the add field.
+    assigns =
+      assign(assigns,
+        new_task: assigns.new_row || assigns.draft,
+        cancel: if(assigns.new_row, do: "inline-cancel", else: "draft-cancel")
+      )
+
     ~H"""
     <div
       id="app-shell"
-      class={["app", (@inspector || @new_row) && "is-inspector-open"]}
+      class={["app", (@inspector || @new_task) && "is-inspector-open"]}
       data-keymap={keymap(@current_scope)}
       phx-hook=".Inspector"
     >
@@ -200,7 +211,7 @@ defmodule MarskalWeb.Layouts do
         <div
           :if={@current_scope && @current_scope.user}
           class="app-inspector__backdrop"
-          phx-click={if(@new_row, do: "inline-cancel", else: "close-inspector")}
+          phx-click={if(@new_task, do: @cancel, else: "close-inspector")}
         >
         </div>
         <aside
@@ -213,16 +224,16 @@ defmodule MarskalWeb.Layouts do
             <button
               type="button"
               class="app-inspector__close"
-              phx-click={if(@new_row, do: "inline-cancel", else: "close-inspector")}
+              phx-click={if(@new_task, do: @cancel, else: "close-inspector")}
               aria-label={
-                if(@new_row, do: gettext("Cancel new task"), else: gettext("Close inspector"))
+                if(@new_task, do: gettext("Cancel new task"), else: gettext("Close inspector"))
               }
             >
               <Lucideicons.arrow_left class="icon app-inspector__back" />
               <Lucideicons.x class="icon app-inspector__x" />
             </button>
             <h2 class="app-inspector__title">
-              {if @new_row, do: gettext("New task"), else: inspector_title(@inspector)}
+              {if @new_task, do: gettext("New task"), else: inspector_title(@inspector)}
             </h2>
           </div>
           <.live_component
@@ -230,7 +241,7 @@ defmodule MarskalWeb.Layouts do
             id="inspector"
             user={@current_scope.user}
             selection={@inspector}
-            new_task={@new_row}
+            new_task={@new_task}
             change_version={@change_version}
           />
         </aside>
@@ -333,8 +344,9 @@ defmodule MarskalWeb.Layouts do
           event.preventDefault()
           // The new task is only a title so far. Escape drops it, the same
           // as Escape in that title.
-          if (document.getElementById("inspector-new-task")) {
-            this.pushEvent("inline-cancel", {})
+          const newTask = document.getElementById("inspector-new-task-form")
+          if (newTask) {
+            this.pushEvent(newTask.dataset.cancel ?? "inline-cancel", {})
             return
           }
           // Closing from inside the inspector hands focus back to its row.

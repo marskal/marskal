@@ -479,7 +479,7 @@ defmodule MarskalWeb.InspectorPanel do
       <p :if={(@new_task == nil and @selection) && @record == nil} class="app-inspector__empty">
         {gettext("That item is not available.")}
       </p>
-      <.new_task_form :if={@new_task} title={@new_task.title} />
+      <.new_task_form :if={@new_task} title={@new_task.title} submit_to={@new_task[:form]} />
       <.task_form
         :if={@new_task == nil and match?(%Tasks.Task{}, @record)}
         user={@user}
@@ -669,18 +669,22 @@ defmodule MarskalWeb.InspectorPanel do
   end
 
   attr :title, :string, required: true
+  attr :submit_to, :string, default: nil, doc: "the add field's form, for a list's add field"
 
-  # The title being typed into the outline (ADR 0031). Leaving a title that
-  # has text saves the task, and this panel becomes the ordinary inspector.
+  # The title being typed into the outline, or into a list's add field
+  # (ADR 0031). Leaving a title that has text saves the task, and this
+  # panel becomes the ordinary inspector.
   defp new_task_form(assigns) do
     ~H"""
     <section class="inspector-form" id="inspector-new-task">
       <form
         id="inspector-new-task-form"
         class="form"
-        phx-change="inline-title"
-        phx-submit="inline-create"
+        phx-change={if @submit_to, do: "draft-title", else: "inline-title"}
+        phx-submit={if @submit_to, do: "draft-submit", else: "inline-create"}
         phx-hook="MarskalWeb.TaskComponents.NewTask"
+        data-submit-to={@submit_to}
+        data-cancel={if @submit_to, do: "draft-cancel", else: "inline-cancel"}
       >
         <div class="field">
           <label for="inspector-new-task-title">{gettext("Title")}</label>

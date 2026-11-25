@@ -44,6 +44,10 @@ are the product, so they are recorded here.
   returns to the last row. A list without an outline
   has no place to put it, so there the keys focus the page's add field,
   or the inbox capture when the page has none.
+  The add field below a task list (inbox, project, tag) works the same
+  way: once a title is typed, the inspector shows it, leaving the field
+  adds the task and the inspector edits it, and Enter adds it and keeps
+  the field for the next. The page files the task where its field says.
 - One current row. A click and the movement keys both select it, and it
   has one highlight. Where the inspector is a pane beside the list, it
   shows the current row, and focus stays on the list, so the keys go on

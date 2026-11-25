@@ -1200,8 +1200,20 @@ defmodule MarskalWeb.TaskComponents do
           // focus, so a narrow sheet can take it without ending the row.
           // Leaving the window is not leaving the field. Enter submits the
           // form, so that blur must not save a second time.
+          //
+          // With `data-submit-to`, this is the inspector's copy of a list's
+          // add field (MarskalWeb.NewTaskDraft). The add field's form saves
+          // the task, so leaving hands it the title instead, and Enter goes
+          // to it by way of the server.
           export default class extends ViewHook {
             mounted() {
+              const target = this.el.dataset.submitTo
+              const field = (): HTMLElement | null =>
+                (target && document.getElementById(target)?.querySelector<HTMLElement>("input[data-draft]")) || null
+              const handOff = (title: string, leave: boolean, inspector: boolean) => {
+                const detail = {title, leave, inspector}
+                if (target) document.getElementById(target)?.dispatchEvent(new CustomEvent("draft:submit", {detail}))
+              }
               let skipBlur = false
               this.el.addEventListener("keydown", (event: KeyboardEvent) => {
                 if (event.key === "Enter") skipBlur = true
@@ -1215,9 +1227,16 @@ defmodule MarskalWeb.TaskComponents do
                   if (!(input instanceof HTMLInputElement)) return
                   const active = document.activeElement
                   if (active === input) return
+                  const empty = input.value.trim() === ""
+                  if (target) {
+                    if (active !== null && active === field()) return
+                    if (empty) this.pushEvent("draft-cancel", {})
+                    else handOff(input.value, true, active instanceof Element && active.closest(".app-inspector") !== null)
+                    return
+                  }
                   const onTitle =
                     active instanceof Element && active.closest("#task-new, #inspector-new-task-title")
-                  if (onTitle && input.value.trim() === "") return
+                  if (onTitle && empty) return
                   const inspector = active instanceof Element && active.closest(".app-inspector") !== null
                   this.pushEvent("inline-blur", {value: input.value, inspector})
                 }, 0)
