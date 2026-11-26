@@ -52,6 +52,10 @@ are the product, so they are recorded here.
   with where the task will go. Only the title takes typing: the first use
   of any other field saves the task, and that field goes on in the saved
   task, a click included. Without a title, focus stays on the title.
+  All of this is for an inspector beside the list. Where it is a sheet
+  over the list, it would cover what is typed, so a new task has no
+  inspector: only Enter adds it, and a typed title waits when the row
+  or field is left.
 - One current row. A click and the movement keys both select it, and it
   has one highlight. Where the inspector is a pane beside the list, it
   shows the current row, and focus stays on the list, so the keys go on
