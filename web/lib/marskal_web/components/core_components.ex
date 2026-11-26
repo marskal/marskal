@@ -174,7 +174,10 @@ defmodule MarskalWeb.CoreComponents do
       // `leave` set, also when the inspector's copy is left (it sends
       // `draft:submit`). Moving to the inspector's copy is not leaving, and
       // neither is leaving the window or moving to the Add button. An empty
-      // title that is left ends the draft, and so does Escape.
+      // title that is left ends the draft, and so does Escape. Where the
+      // inspector would be a sheet over the list (the width matches the
+      // `.Inspector` hook in layouts.ex), there is no draft: the field only
+      // saves on Enter.
       export default class extends ViewHook {
         mounted() {
           const form = this.el as HTMLFormElement
@@ -184,6 +187,7 @@ defmodule MarskalWeb.CoreComponents do
             form.querySelector<HTMLInputElement>(`input[type="hidden"][name="${name}"]`)
           // Only a field marked as a new task drafts.
           if (!input()) return
+          const beside = () => !window.matchMedia("(max-width: 64rem)").matches
 
           // `focus` is the id of the inspector field focus went to, if any.
           const submit = (title: string, leave: boolean, focus: string | null) => {
@@ -201,7 +205,7 @@ defmodule MarskalWeb.CoreComponents do
 
           form.addEventListener("input", () => {
             const field = input()
-            if (field) this.pushEvent("draft-title", {title: field.value, form: form.id})
+            if (field && beside()) this.pushEvent("draft-title", {title: field.value, form: form.id})
           })
           form.addEventListener("keydown", (event: KeyboardEvent) => {
             if (event.key !== "Escape") return
@@ -215,7 +219,7 @@ defmodule MarskalWeb.CoreComponents do
               if (!field || !form.isConnected) return
               // LiveView blurs the field while a submit is on its way, and
               // gives focus back after.
-              if (form.classList.contains("phx-submit-loading")) return
+              if (form.classList.contains("phx-submit-loading") || !beside()) return
               const active = document.activeElement
               if (active instanceof Element && (form.contains(active) || active.id === "inspector-new-task-title")) return
               if (field.value.trim() === "") {

@@ -56,7 +56,8 @@ defmodule MarskalWeb.Layouts do
     # The new task the inspector shows, from the outline row or the add field.
     assigns =
       assign(assigns,
-        new_task: assigns.new_row || assigns.draft,
+        new_task:
+          (assigns.new_row && assigns.new_row.beside? && assigns.new_row) || assigns.draft,
         cancel: if(assigns.new_row, do: "inline-cancel", else: "draft-cancel")
       )
 
@@ -452,13 +453,7 @@ defmodule MarskalWeb.Layouts do
           document.body.classList.toggle("inspector-open", narrow && open)
           // A sheet takes focus as it opens. Beside the list, focus stays
           // on the row, so the list keys go on from there (ADR 0031).
-          // A new task's title is in the sheet on a narrow window, because
-          // the row it belongs to is covered.
-          if (open && !this.wasOpen && narrow) {
-            const title = document.getElementById("inspector-new-task-title")
-            if (title instanceof HTMLElement) title.focus({preventScroll: true})
-            else panel.focus({preventScroll: true})
-          }
+          if (open && !this.wasOpen && narrow) panel.focus({preventScroll: true})
           this.wasOpen = open
         }
       }

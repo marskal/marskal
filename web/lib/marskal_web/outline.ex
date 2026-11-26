@@ -87,7 +87,9 @@ defmodule MarskalWeb.Outline do
   # above. Below a row whose subtasks show, the new task is its first
   # subtask, as it reads on screen. Leaving the title saves it, and the
   # inspector edits that task. Enter saves it and opens the next row.
-  defp handle_event("inline-new", %{"id" => id, "where" => where}, socket)
+  # `beside` is false where the inspector would be a sheet over the list:
+  # the row then has no inspector, and a typed title waits for Enter.
+  defp handle_event("inline-new", %{"id" => id, "where" => where} = params, socket)
        when where in ["above", "below"] do
     user = socket.assigns.current_scope.user
 
@@ -97,7 +99,8 @@ defmodule MarskalWeb.Outline do
 
       anchor ->
         where = String.to_existing_atom(where)
-        {:halt, assign(socket, :new_row, new_row(anchor, where, socket.assigns.collapsed))}
+        row = new_row(anchor, where, socket.assigns.collapsed)
+        {:halt, assign(socket, :new_row, Map.put(row, :beside?, params["beside"] != false))}
     end
   end
 
@@ -161,7 +164,13 @@ defmodule MarskalWeb.Outline do
     case insert(socket, new_row, title) do
       {:ok, socket, task} ->
         socket
-        |> assign(:new_row, %{anchor_id: task.id, where: :below, child?: false, title: ""})
+        |> assign(:new_row, %{
+          anchor_id: task.id,
+          where: :below,
+          child?: false,
+          title: "",
+          beside?: new_row.beside?
+        })
         |> push_event("inline-title", %{title: ""})
 
       {:error, socket} ->

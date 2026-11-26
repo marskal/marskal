@@ -379,6 +379,7 @@ defmodule MarskalWeb.TaskComponents do
         <.new_row
           :if={new_row_at?(@new_row, task.id, :above)}
           anchor_id={task.id}
+          beside={@new_row.beside?}
           depth={depth}
           outline={@outline}
           disclosures={@disclosures}
@@ -550,6 +551,7 @@ defmodule MarskalWeb.TaskComponents do
         <.new_row
           :if={new_row_at?(@new_row, task.id, :below)}
           anchor_id={task.id}
+          beside={@new_row.beside?}
           depth={depth + if(@new_row.child?, do: 1, else: 0)}
           outline={@outline}
           disclosures={@disclosures}
@@ -986,7 +988,7 @@ defmodule MarskalWeb.TaskComponents do
           // row. Other lists have no place for it, so they use the add field.
           if (name === "new-below" || name === "new-above") {
             if (!this.el.hasAttribute("data-outline")) focusNew()
-            else this.pushEvent("inline-new", {id, where: name === "new-below" ? "below" : "above"})
+            else this.pushEvent("inline-new", {id, where: name === "new-below" ? "below" : "above", beside: !narrow.matches})
             return
           }
 
@@ -1108,6 +1110,7 @@ defmodule MarskalWeb.TaskComponents do
   defp new_row_at?(_new_row, _id, _where), do: false
 
   attr :anchor_id, :string, required: true
+  attr :beside, :boolean, default: true, doc: "whether the inspector shows it, beside the list"
   attr :depth, :integer, required: true
   attr :outline, :boolean, required: true
   attr :disclosures, :boolean, required: true
@@ -1177,6 +1180,7 @@ defmodule MarskalWeb.TaskComponents do
         phx-submit="inline-create"
         phx-change="inline-title"
         phx-hook=".NewTask"
+        data-beside={@beside}
       >
         <input
           id={"task-new-title-#{@anchor_id}"}
@@ -1197,9 +1201,12 @@ defmodule MarskalWeb.TaskComponents do
           // and both forms use this hook. A title with text is saved when its
           // field is left, also for the other copy, and the inspector then
           // edits the task. An empty title stays open while either copy has
-          // focus, so a narrow sheet can take it without ending the row.
-          // Leaving the window is not leaving the field. Enter submits the
-          // form, so that blur must not save a second time.
+          // focus. Leaving the window is not leaving the field. Enter submits
+          // the form, so that blur must not save a second time.
+          //
+          // Where the inspector would be a sheet over the list, the row has
+          // no inspector (no `data-beside`): a typed title waits when the row
+          // is left, and only Enter saves it.
           //
           // With `data-submit-to`, this is the inspector's copy of a list's
           // add field (MarskalWeb.NewTaskDraft). The add field's form saves
@@ -1248,6 +1255,7 @@ defmodule MarskalWeb.TaskComponents do
                   const onTitle =
                     active instanceof Element && active.closest("#task-new, #inspector-new-task-title")
                   if (onTitle && empty) return
+                  if (!empty && !this.el.hasAttribute("data-beside") && this.el.closest("#task-new")) return
                   this.pushEvent("inline-blur", {value: input.value, focus: inspectorFocus(active)})
                 }, 0)
               })

@@ -294,6 +294,23 @@ defmodule MarskalWeb.OutlineLiveTest do
       assert_push_event(view, "inspector-focus", %{id: "inspector-task-url"})
     end
 
+    test "where the inspector would be a sheet, the row has none", ctx do
+      [a] = add(ctx, ["A"])
+      {:ok, view, _html} = live(ctx.conn, ~p"/projects/#{ctx.project.id}")
+
+      render_hook(view, "inline-new", %{"id" => a.id, "where" => "below", "beside" => false})
+      assert has_element?(view, "#task-new-form")
+      refute has_element?(view, "#task-new-form[data-beside]")
+      refute has_element?(view, "#inspector-new-task")
+      refute has_element?(view, "#app-shell.is-inspector-open")
+
+      view |> form("#task-new-form", %{title: "Typed"}) |> render_submit()
+      task = find(ctx, "Typed")
+      assert has_element?(view, "#task-#{task.id} + #task-new")
+      refute has_element?(view, "#task-new-form[data-beside]")
+      refute has_element?(view, "#inspector-new-task")
+    end
+
     test "Enter in the inspector adds the task and opens the next row", ctx do
       [a] = add(ctx, ["A"])
       {:ok, view, _html} = live(ctx.conn, ~p"/projects/#{ctx.project.id}")
