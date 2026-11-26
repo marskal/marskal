@@ -33,6 +33,7 @@ defmodule MarskalWeb.ProjectLive do
       nav={assigns[:nav]}
       change_version={assigns[:change_version] || 0}
       visibility={assigns[:visibility]}
+      new_row={@new_row}
     >
       <p :if={@folder} class="lede">
         <.link

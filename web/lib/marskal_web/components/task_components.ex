@@ -1113,7 +1113,8 @@ defmodule MarskalWeb.TaskComponents do
   attr :disclosures, :boolean, required: true
 
   # A task being added inline, by `o` and `O` (ADR 0031). Enter adds it and
-  # opens the next below it; Escape, or leaving it empty, ends.
+  # opens the next below it. Leaving a title that has text adds it too, and
+  # the inspector edits that task. Escape, or leaving it empty, ends.
   defp new_row(assigns) do
     ~H"""
     <li id="task-new" class="task-new" style={@depth > 0 && "--depth: #{@depth}"}>
@@ -1171,7 +1172,12 @@ defmodule MarskalWeb.TaskComponents do
       </style>
       <span :if={@disclosures} class="disclosure-space" aria-hidden="true"></span>
       <span class="check-space" aria-hidden="true"><Lucideicons.square class="icon" /></span>
-      <form id="task-new-form" phx-submit="inline-create">
+      <form
+        id="task-new-form"
+        phx-submit="inline-create"
+        phx-change="inline-title"
+        phx-hook=".NewTask"
+      >
         <input
           id={"task-new-title-#{@anchor_id}"}
           type="text"
@@ -1183,8 +1189,46 @@ defmodule MarskalWeb.TaskComponents do
           phx-mounted={JS.focus()}
           phx-keydown="inline-cancel"
           phx-key="Escape"
-          phx-blur="inline-blur"
         />
+        <script :type={Phoenix.LiveView.ColocatedHook} name=".NewTask" extension="ts">
+          import {ViewHook} from "phoenix_live_view"
+
+          // The outline row and the inspector's title field are one title,
+          // and both forms use this hook. A title with text is saved when its
+          // field is left, also for the other copy, and the inspector then
+          // edits the task. An empty title stays open while either copy has
+          // focus, so a narrow sheet can take it without ending the row.
+          // Leaving the window is not leaving the field. Enter submits the
+          // form, so that blur must not save a second time.
+          export default class extends ViewHook {
+            mounted() {
+              let skipBlur = false
+              this.el.addEventListener("keydown", (event: KeyboardEvent) => {
+                if (event.key === "Enter") skipBlur = true
+              })
+              this.el.addEventListener("focusout", () => {
+                const skip = skipBlur
+                skipBlur = false
+                window.setTimeout(() => {
+                  if (skip || !this.el.isConnected) return
+                  const input = this.el.querySelector("input")
+                  if (!(input instanceof HTMLInputElement)) return
+                  const active = document.activeElement
+                  if (active === input) return
+                  const onTitle =
+                    active instanceof Element && active.closest("#task-new, #inspector-new-task-title")
+                  if (onTitle && input.value.trim() === "") return
+                  const inspector = active instanceof Element && active.closest(".app-inspector") !== null
+                  this.pushEvent("inline-blur", {value: input.value, inspector})
+                }, 0)
+              })
+              this.handleEvent("inline-title", ({title}: {title: string}) => {
+                const input = this.el.querySelector("input")
+                if (input instanceof HTMLInputElement && document.activeElement !== input) input.value = title
+              })
+            }
+          }
+        </script>
       </form>
     </li>
     """

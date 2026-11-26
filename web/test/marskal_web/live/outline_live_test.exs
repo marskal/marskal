@@ -229,13 +229,104 @@ defmodule MarskalWeb.OutlineLiveTest do
       {:ok, view, _html} = live(ctx.conn, ~p"/projects/#{ctx.project.id}")
 
       render_hook(view, "inline-new", %{"id" => a.id, "where" => "below"})
-      render_blur(element(view, "#task-new input"), %{"value" => "  "})
+      render_hook(view, "inline-blur", %{"value" => "  "})
       refute has_element?(view, "#task-new")
 
       render_hook(view, "inline-new", %{"id" => a.id, "where" => "below"})
-      view |> form("#task-new-form", %{"title" => ""}) |> render_submit()
+      view |> form("#task-new-form", %{title: ""}) |> render_submit()
       refute has_element?(view, "#task-new")
       assert rows(view) == [a.id]
+    end
+
+    test "leaving the title saves the task and opens it in the inspector", ctx do
+      [a] = add(ctx, ["A"])
+      {:ok, tag} = Marskal.Tags.create_tag(ctx.user, %{name: "Errand"}, command_id())
+      {:ok, view, _html} = live(ctx.conn, ~p"/projects/#{ctx.project.id}")
+
+      view |> element("#task-#{a.id} button.select") |> render_click()
+      assert has_element?(view, "#inspector-task")
+
+      render_hook(view, "inline-new", %{"id" => a.id, "where" => "below"})
+
+      assert has_element?(view, "#app-shell.is-inspector-open")
+      assert has_element?(view, "#inspector-new-task")
+      assert has_element?(view, "#inspector-new-task-title")
+      refute has_element?(view, "#inspector-task")
+      refute has_element?(view, "#inspector-new-task button")
+
+      view |> form("#task-new-form", %{title: "Shop"}) |> render_change()
+      assert has_element?(view, "#inspector-new-task-title[value='Shop']")
+
+      render_hook(view, "inline-blur", %{"value" => "Shop"})
+
+      task = find(ctx, "Shop")
+      assert task.project_id == ctx.project.id
+      assert rows(view) == [a.id, task.id]
+      refute has_element?(view, "#task-new")
+      refute has_element?(view, "#inspector-new-task")
+      assert has_element?(view, "#inspector-task-title[value='Shop']")
+
+      view |> element("#inspector-task-tags-query") |> render_change(%{"tag_query" => "err"})
+
+      view
+      |> element("#inspector-task-tags-picker button.suggestion", "Errand")
+      |> render_click()
+
+      assert find(ctx, "Shop").title == "Shop"
+      assert tag.id in task_tag_ids(ctx, find(ctx, "Shop"))
+    end
+
+    test "focus moves to the saved task only when it went into the inspector", ctx do
+      [a] = add(ctx, ["A"])
+      {:ok, view, _html} = live(ctx.conn, ~p"/projects/#{ctx.project.id}")
+
+      render_hook(view, "inline-new", %{"id" => a.id, "where" => "below"})
+      render_hook(view, "inline-blur", %{"value" => "Elsewhere", "inspector" => false})
+      assert find(ctx, "Elsewhere")
+      refute_push_event(view, "inspector-focus", _payload)
+
+      render_hook(view, "inline-new", %{"id" => a.id, "where" => "below"})
+      render_hook(view, "inline-blur", %{"value" => "Inside", "inspector" => true})
+      assert find(ctx, "Inside")
+      assert_push_event(view, "inspector-focus", %{})
+    end
+
+    test "Enter in the inspector adds the task and opens the next row", ctx do
+      [a] = add(ctx, ["A"])
+      {:ok, view, _html} = live(ctx.conn, ~p"/projects/#{ctx.project.id}")
+      render_hook(view, "inline-new", %{"id" => a.id, "where" => "below"})
+
+      view |> form("#inspector-new-task-form", %{title: "From the inspector"}) |> render_submit()
+
+      task = find(ctx, "From the inspector")
+      assert task.project_id == ctx.project.id
+      assert_push_event(view, "inline-title", %{title: ""})
+      assert has_element?(view, "#task-#{task.id} + #task-new")
+      assert has_element?(view, "#inspector-new-task")
+      refute has_element?(view, "#inspector-task")
+    end
+
+    test "an empty title in the inspector does not add the task", ctx do
+      [a] = add(ctx, ["A"])
+      {:ok, view, _html} = live(ctx.conn, ~p"/projects/#{ctx.project.id}")
+      render_hook(view, "inline-new", %{"id" => a.id, "where" => "below"})
+
+      view |> form("#inspector-new-task-form", %{title: "  "}) |> render_submit()
+
+      refute has_element?(view, "#task-new")
+      refute has_element?(view, "#inspector-new-task")
+      assert rows(view) == [a.id]
+    end
+
+    test "cancelling the new task clears its inspector", ctx do
+      [a] = add(ctx, ["A"])
+      {:ok, view, _html} = live(ctx.conn, ~p"/projects/#{ctx.project.id}")
+      render_hook(view, "inline-new", %{"id" => a.id, "where" => "below"})
+      assert has_element?(view, "#inspector-new-task")
+
+      render_hook(view, "inline-cancel", %{})
+      refute has_element?(view, "#task-new")
+      refute has_element?(view, "#inspector-new-task")
     end
 
     test "the inbox adds inline too", ctx do
@@ -273,6 +364,12 @@ defmodule MarskalWeb.OutlineLiveTest do
     |> LazyHTML.from_fragment()
     |> LazyHTML.query("#{list} li.task-row")
     |> LazyHTML.attribute("data-inspect-id")
+  end
+
+  defp task_tag_ids(ctx, task) do
+    tree = Marskal.Tags.tree(ctx.user)
+    [entries] = Map.values(Marskal.Tags.effective_tags(ctx.user, [task], tree))
+    for %{tag: tag, inherited: false} <- entries, do: tag.id
   end
 
   defp command_id, do: Ecto.UUID.generate(version: 7)

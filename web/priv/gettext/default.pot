@@ -165,6 +165,11 @@ msgstr ""
 msgid "Actions"
 msgstr ""
 
+#: lib/marskal_web/live/inspector_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Active"
+msgstr ""
+
 #: lib/marskal_web/live/project_live.ex
 #, elixir-autogen, elixir-format
 msgid "Add a task"
@@ -222,6 +227,11 @@ msgstr ""
 msgid "Can't read that as a day."
 msgstr ""
 
+#: lib/marskal_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel new task"
+msgstr ""
+
 #: lib/marskal_web/live/user_live/security.ex
 #, elixir-autogen, elixir-format
 msgid "Change email"
@@ -251,6 +261,11 @@ msgstr ""
 #: lib/marskal_web/live/repeat_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Close"
+msgstr ""
+
+#: lib/marskal_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Close inspector"
 msgstr ""
 
 #: lib/marskal_web/components/keys_help.ex
@@ -379,6 +394,7 @@ msgstr ""
 
 #: lib/marskal_web/components/layouts.ex
 #: lib/marskal_web/live/go_to.ex
+#: lib/marskal_web/live/inspector_panel.ex
 #: lib/marskal_web/live/project_live.ex
 #, elixir-autogen, elixir-format
 msgid "Done"
@@ -401,6 +417,7 @@ msgstr ""
 
 #: lib/marskal_web/components/layouts.ex
 #: lib/marskal_web/live/go_to.ex
+#: lib/marskal_web/live/inspector_panel.ex
 #: lib/marskal_web/live/project_live.ex
 #, elixir-autogen, elixir-format
 msgid "Dropped"
@@ -776,6 +793,7 @@ msgstr ""
 msgid "New tag inside"
 msgstr ""
 
+#: lib/marskal_web/components/layouts.ex
 #: lib/marskal_web/components/task_components.ex
 #, elixir-autogen, elixir-format
 msgid "New task"
@@ -824,6 +842,11 @@ msgstr ""
 #: lib/marskal_web/live/review_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Not reviewed yet."
+msgstr ""
+
+#: lib/marskal_web/live/inspector_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Notes"
 msgstr ""
 
 #: lib/marskal_web/live/folder_live.ex
@@ -998,6 +1021,11 @@ msgstr ""
 msgid "Security"
 msgstr ""
 
+#: lib/marskal_web/live/inspector_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Select a task, project, folder, or tag to edit."
+msgstr ""
+
 #: lib/marskal_web/live/user_live/settings.ex
 #, elixir-autogen, elixir-format
 msgid "Select what view is “Home” – where you land when logging in."
@@ -1150,6 +1178,11 @@ msgstr ""
 msgid "That isn't this account's password."
 msgstr ""
 
+#: lib/marskal_web/live/inspector_panel.ex
+#, elixir-autogen, elixir-format
+msgid "That item is not available."
+msgstr ""
+
 #: lib/marskal_web/controllers/user_session_controller.ex
 #: lib/marskal_web/live/user_live/confirmation.ex
 #: lib/marskal_web/live/user_live/reset_password.ex
@@ -1180,6 +1213,16 @@ msgstr ""
 #: lib/marskal_web/live/project_live.ex
 #, elixir-autogen, elixir-format
 msgid "This project is not reviewed."
+msgstr ""
+
+#: lib/marskal_web/live/inspector_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Title"
+msgstr ""
+
+#: lib/marskal_web/live/inspector_panel.ex
+#, elixir-autogen, elixir-format
+msgid "To-Do"
 msgstr ""
 
 #: lib/marskal_web/date_fields.ex

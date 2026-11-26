@@ -85,7 +85,8 @@ defmodule MarskalWeb.Outline do
 
   # A task added inline (ADR 0031): `o` opens a row below `id`, `O` one
   # above. Below a row whose subtasks show, the new task is its first
-  # subtask, as it reads on screen.
+  # subtask, as it reads on screen. Leaving the title saves it, and the
+  # inspector edits that task. Enter saves it and opens the next row.
   defp handle_event("inline-new", %{"id" => id, "where" => where}, socket)
        when where in ["above", "below"] do
     user = socket.assigns.current_scope.user
@@ -110,6 +111,18 @@ defmodule MarskalWeb.Outline do
     end
   end
 
+  # The outline title and the inspector title stay the same string.
+  defp handle_event("inline-title", %{"title" => title}, socket) do
+    case socket.assigns.new_row do
+      nil ->
+        {:halt, socket}
+
+      new_row ->
+        socket = assign(socket, :new_row, %{new_row | title: title})
+        {:halt, push_event(socket, "inline-title", %{title: title})}
+    end
+  end
+
   defp handle_event("inline-cancel", _params, socket) do
     case socket.assigns.new_row do
       nil -> {:halt, socket}
@@ -117,11 +130,15 @@ defmodule MarskalWeb.Outline do
     end
   end
 
-  # Leaving the row closes it when nothing was typed. A typed title waits.
-  defp handle_event("inline-blur", params, socket) do
-    case {socket.assigns.new_row, String.trim(params["value"] || "")} do
-      {%{}, ""} -> {:halt, assign(socket, :new_row, nil)}
-      _ -> {:halt, socket}
+  # Leaving a title that has text saves the task, and the inspector edits
+  # it. An empty title saves nothing. Enter is the outline's own submit,
+  # so the hook does not send this then. Focus moves to the saved task's
+  # title only when it went into the inspector.
+  defp handle_event("inline-blur", %{"value" => value} = params, socket) do
+    case {socket.assigns.new_row, String.trim(value || "")} do
+      {nil, _title} -> {:halt, socket}
+      {_new_row, ""} -> {:halt, assign(socket, :new_row, nil)}
+      {new_row, title} -> {:halt, commit(socket, new_row, title, params["inspector"] == true)}
     end
   end
 
@@ -131,13 +148,40 @@ defmodule MarskalWeb.Outline do
     child? =
       not MapSet.member?(collapsed, anchor.id) and Marskal.Tasks.Outline.children(anchor) != []
 
-    %{anchor_id: anchor.id, where: :below, child?: child?}
+    %{anchor_id: anchor.id, where: :below, child?: child?, title: ""}
   end
 
   defp new_row(anchor, :above, _collapsed),
-    do: %{anchor_id: anchor.id, where: :above, child?: false}
+    do: %{anchor_id: anchor.id, where: :above, child?: false, title: ""}
 
+  # Enter: the task is saved and the next empty row opens under it. The
+  # inspector's copy of the title is cleared too, since a focused field
+  # keeps what was typed in it.
   defp create(socket, new_row, title) do
+    case insert(socket, new_row, title) do
+      {:ok, socket, task} ->
+        socket
+        |> assign(:new_row, %{anchor_id: task.id, where: :below, child?: false, title: ""})
+        |> push_event("inline-title", %{title: ""})
+
+      {:error, socket} ->
+        socket
+    end
+  end
+
+  # Leaving the title: the task is saved and the inspector edits it.
+  defp commit(socket, new_row, title, focus?) do
+    case insert(socket, new_row, title) do
+      {:ok, socket, task} ->
+        socket = socket |> assign(:new_row, nil) |> MarskalWeb.Inspector.select("task", task.id)
+        if focus?, do: push_event(socket, "inspector-focus", %{}), else: socket
+
+      {:error, socket} ->
+        socket
+    end
+  end
+
+  defp insert(socket, new_row, title) do
     user = socket.assigns.current_scope.user
 
     with %{} = anchor <- Tasks.get_task(user, new_row.anchor_id),
@@ -147,10 +191,11 @@ defmodule MarskalWeb.Outline do
              new_attrs(anchor, new_row, title),
              Ecto.UUID.generate(version: 7)
            ) do
-      assign(socket, :new_row, %{anchor_id: task.id, where: :below, child?: false})
+      {:ok, socket, task}
     else
       _ ->
-        socket |> assign(:new_row, nil) |> put_flash(:error, gettext("Could not add the task."))
+        {:error,
+         socket |> assign(:new_row, nil) |> put_flash(:error, gettext("Could not add the task."))}
     end
   end
 
