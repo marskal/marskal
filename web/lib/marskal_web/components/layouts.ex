@@ -39,6 +39,10 @@ defmodule MarskalWeb.Layouts do
     default: nil,
     doc: "the inline new task, whose fields the inspector edits"
 
+  attr :draft, :any,
+    default: nil,
+    doc: "a new task typed into a list's add field (MarskalWeb.NewTaskDraft)"
+
   attr :nav, :any, default: nil, doc: "the sidebar tree, assigned by MarskalWeb.Inspector"
   attr :change_version, :integer, default: 0
 
@@ -49,10 +53,18 @@ defmodule MarskalWeb.Layouts do
   slot :inner_block, required: true
 
   def app(assigns) do
+    # The new task the inspector shows, from the outline row or the add field.
+    assigns =
+      assign(assigns,
+        new_task:
+          (assigns.new_row && assigns.new_row.beside? && assigns.new_row) || assigns.draft,
+        cancel: if(assigns.new_row, do: "inline-cancel", else: "draft-cancel")
+      )
+
     ~H"""
     <div
       id="app-shell"
-      class={["app", (@inspector || @new_row) && "is-inspector-open"]}
+      class={["app", (@inspector || @new_task) && "is-inspector-open"]}
       data-keymap={keymap(@current_scope)}
       phx-hook=".Inspector"
     >
@@ -200,7 +212,7 @@ defmodule MarskalWeb.Layouts do
         <div
           :if={@current_scope && @current_scope.user}
           class="app-inspector__backdrop"
-          phx-click={if(@new_row, do: "inline-cancel", else: "close-inspector")}
+          phx-click={if(@new_task, do: @cancel, else: "close-inspector")}
         >
         </div>
         <aside
@@ -213,16 +225,16 @@ defmodule MarskalWeb.Layouts do
             <button
               type="button"
               class="app-inspector__close"
-              phx-click={if(@new_row, do: "inline-cancel", else: "close-inspector")}
+              phx-click={if(@new_task, do: @cancel, else: "close-inspector")}
               aria-label={
-                if(@new_row, do: gettext("Cancel new task"), else: gettext("Close inspector"))
+                if(@new_task, do: gettext("Cancel new task"), else: gettext("Close inspector"))
               }
             >
               <Lucideicons.arrow_left class="icon app-inspector__back" />
               <Lucideicons.x class="icon app-inspector__x" />
             </button>
             <h2 class="app-inspector__title">
-              {if @new_row, do: gettext("New task"), else: inspector_title(@inspector)}
+              {if @new_task, do: gettext("New task"), else: inspector_title(@inspector)}
             </h2>
           </div>
           <.live_component
@@ -230,7 +242,7 @@ defmodule MarskalWeb.Layouts do
             id="inspector"
             user={@current_scope.user}
             selection={@inspector}
-            new_task={@new_row}
+            new_task={@new_task}
             change_version={@change_version}
           />
         </aside>
@@ -297,6 +309,7 @@ defmodule MarskalWeb.Layouts do
 
       export default class extends ViewHook {
         wasOpen = false
+        draftClick: string | null = null
         phone = window.matchMedia("(max-width: 720px)")
         narrow = window.matchMedia("(max-width: 64rem)")
 
@@ -333,8 +346,9 @@ defmodule MarskalWeb.Layouts do
           event.preventDefault()
           // The new task is only a title so far. Escape drops it, the same
           // as Escape in that title.
-          if (document.getElementById("inspector-new-task")) {
-            this.pushEvent("inline-cancel", {})
+          const newTask = document.getElementById("inspector-new-task-form")
+          if (newTask) {
+            this.pushEvent(newTask.dataset.cancel ?? "inline-cancel", {})
             return
           }
           // Closing from inside the inspector hands focus back to its row.
@@ -354,13 +368,19 @@ defmodule MarskalWeb.Layouts do
           this.handleEvent("quick-capture:added", ({id}: {id: string}) => {
             document.getElementById(id)?.closest("dialog")?.close()
           })
-          // A new task saved as focus went into the inspector: its title
-          // goes on where the typing left off.
-          this.handleEvent("inspector-focus", () => {
-            const title = document.getElementById("inspector-task-title")
-            if (!(title instanceof HTMLInputElement)) return
-            title.focus({preventScroll: true})
-            title.setSelectionRange(title.value.length, title.value.length)
+          // A new task saved as focus went into the inspector: the saved
+          // task's field of the same id takes it, its title for the new
+          // task's title, and a click on a checkbox or button is made again.
+          window.addEventListener("marskal:draft-click", this.onDraftClick)
+          this.handleEvent("inspector-focus", ({id}: {id: string}) => {
+            const click = this.draftClick
+            this.draftClick = null
+            const target = id === "inspector-new-task-title" || id === "" ? "inspector-task-title" : id
+            const el = document.getElementById(target)
+            if (!(el instanceof HTMLElement)) return
+            el.focus({preventScroll: true})
+            if (el instanceof HTMLInputElement && el.type === "text") el.setSelectionRange(el.value.length, el.value.length)
+            if (click === id) el.click()
           })
           this.setNav(false)
           this.sync()
@@ -374,7 +394,14 @@ defmodule MarskalWeb.Layouts do
           this.el.removeEventListener("click", this.onClick)
           document.removeEventListener("keydown", this.onKeydown)
           this.phone.removeEventListener("change", this.onResize)
+          window.removeEventListener("marskal:draft-click", this.onDraftClick)
           document.body.classList.remove("inspector-open", "nav-open")
+        }
+
+        // A click on a new task's field, made again once it is saved. Kept
+        // here, not on the element, which every patch rewrites.
+        onDraftClick = (event: Event) => {
+          this.draftClick = (event as CustomEvent<{id: string | null}>).detail.id
         }
 
         onResize = () => {
@@ -426,13 +453,7 @@ defmodule MarskalWeb.Layouts do
           document.body.classList.toggle("inspector-open", narrow && open)
           // A sheet takes focus as it opens. Beside the list, focus stays
           // on the row, so the list keys go on from there (ADR 0031).
-          // A new task's title is in the sheet on a narrow window, because
-          // the row it belongs to is covered.
-          if (open && !this.wasOpen && narrow) {
-            const title = document.getElementById("inspector-new-task-title")
-            if (title instanceof HTMLElement) title.focus({preventScroll: true})
-            else panel.focus({preventScroll: true})
-          }
+          if (open && !this.wasOpen && narrow) panel.focus({preventScroll: true})
           this.wasOpen = open
         }
       }

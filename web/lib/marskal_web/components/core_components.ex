@@ -122,6 +122,10 @@ defmodule MarskalWeb.CoreComponents do
   placeholder says what it adds, and an Add button that shows once there is
   text. Enter submits.
 
+  With `draft`, a new task's field shows in the inspector while a title is
+  typed (`MarskalWeb.NewTaskDraft`, ADR 0031). Leaving a title that has
+  text submits the form with `leave` set, so the inspector edits that task.
+
   ## Examples
 
       <.add_form id="new-task" for={@form} field={@form[:title]} label="Add a task"
@@ -134,14 +138,17 @@ defmodule MarskalWeb.CoreComponents do
   attr :command_id, :string, default: nil
   attr :input_id, :string, default: nil, doc: "the field's id, when its default would repeat"
   attr :autofocus, :boolean, default: false
+  attr :draft, :boolean, default: false, doc: "a new task, shown in the inspector as it is typed"
   attr :rest, :global, include: ~w(phx-submit phx-target phx-keydown phx-key)
 
   def add_form(assigns) do
     assigns = assign(assigns, :input_id, assigns.input_id || assigns.field.id)
 
     ~H"""
-    <.form for={@for} id={@id} class="add-form" {@rest}>
+    <.form for={@for} id={@id} class="add-form" phx-hook=".AddDraft" {@rest}>
       <input :if={@command_id} type="hidden" name="command_id" value={@command_id} />
+      <input :if={@draft} type="hidden" name="leave" value="" />
+      <input :if={@draft} type="hidden" name="focus" value="" />
       <label for={@input_id} class="sr-only">{@label}</label>
       <Lucideicons.plus class="icon add-form__icon" aria-hidden="true" />
       <input
@@ -154,10 +161,97 @@ defmodule MarskalWeb.CoreComponents do
         enterkeyhint="done"
         required
         autofocus={@autofocus}
+        data-draft={@draft}
       />
       <button type="submit">Add</button>
       <p :for={error <- @field.errors} class="field-error">{translate_error(error)}</p>
     </.form>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".AddDraft" extension="ts">
+      import {ViewHook} from "phoenix_live_view"
+
+      // The add field of a new task and the inspector's copy of its title
+      // are one title. Leaving a title that has text submits this form with
+      // `leave` set, also when the inspector's copy is left (it sends
+      // `draft:submit`). Moving to the inspector's copy is not leaving, and
+      // neither is leaving the window or moving to the Add button. An empty
+      // title that is left ends the draft, and so does Escape. Where the
+      // inspector would be a sheet over the list (the width matches the
+      // `.Inspector` hook in layouts.ex), there is no draft: the field only
+      // saves on Enter.
+      export default class extends ViewHook {
+        mounted() {
+          const form = this.el as HTMLFormElement
+          const input = (): HTMLInputElement | null =>
+            form.querySelector<HTMLInputElement>("input[data-draft]")
+          const hidden = (name: string): HTMLInputElement | null =>
+            form.querySelector<HTMLInputElement>(`input[type="hidden"][name="${name}"]`)
+          // Only a field marked as a new task drafts.
+          if (!input()) return
+          const beside = () => !window.matchMedia("(max-width: 64rem)").matches
+
+          // `focus` is the id of the inspector field focus went to, if any.
+          const submit = (title: string, leave: boolean, focus: string | null) => {
+            const field = input()
+            const leaveField = hidden("leave")
+            const focusField = hidden("focus")
+            if (!field || !leaveField || !focusField) return
+            field.value = title
+            leaveField.value = leave ? "true" : ""
+            focusField.value = focus ?? ""
+            form.requestSubmit()
+            leaveField.value = ""
+            focusField.value = ""
+          }
+
+          form.addEventListener("input", () => {
+            const field = input()
+            if (field && beside()) this.pushEvent("draft-title", {title: field.value, form: form.id})
+          })
+          form.addEventListener("keydown", (event: KeyboardEvent) => {
+            if (event.key !== "Escape") return
+            const field = input()
+            if (field) field.value = ""
+            this.pushEvent("draft-cancel", {})
+          })
+          form.addEventListener("focusout", () => {
+            window.setTimeout(() => {
+              const field = input()
+              if (!field || !form.isConnected) return
+              // LiveView blurs the field while a submit is on its way, and
+              // gives focus back after.
+              if (form.classList.contains("phx-submit-loading") || !beside()) return
+              const active = document.activeElement
+              if (active instanceof Element && (form.contains(active) || active.id === "inspector-new-task-title")) return
+              if (field.value.trim() === "") {
+                this.pushEvent("draft-cancel", {})
+                return
+              }
+              const focus = active instanceof HTMLElement && active.closest(".app-inspector") ? active.id : null
+              submit(field.value, true, focus)
+            }, 0)
+          })
+          form.addEventListener("draft:submit", (event: Event) => {
+            const {title, leave, focus} = (event as CustomEvent<{title: string, leave: boolean, focus: string | null}>).detail
+            submit(title, leave, focus)
+          })
+          this.handleEvent("draft-title", ({form: id, title}: {form: string, title: string}) => {
+            const field = input()
+            if (field && id === form.id && document.activeElement !== field) field.value = title
+          })
+          // Enter in the inspector's copy. The next title is typed here, as
+          // after Enter in this field.
+          this.handleEvent("draft-submit", ({form: id, title}: {form: string, title: string}) => {
+            if (id !== form.id) return
+            input()?.focus({preventScroll: true})
+            submit(title, false, null)
+          })
+          this.handleEvent("draft-clear", ({form: id}: {form: string}) => {
+            const field = input()
+            if (field && id === form.id) field.value = ""
+          })
+        }
+      }
+    </script>
     """
   end
 

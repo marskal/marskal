@@ -23,6 +23,7 @@ defmodule MarskalWeb.TagLive do
         {:ok,
          socket
          |> MarskalWeb.TaskKeys.attach()
+         |> MarskalWeb.NewTaskDraft.attach(%{inbox: false}, [tag.id])
          |> assign(:tag_id, tag.id)
          |> new_tag_form()
          |> new_task_form()
@@ -41,6 +42,7 @@ defmodule MarskalWeb.TagLive do
       nav={assigns[:nav]}
       change_version={assigns[:change_version] || 0}
       visibility={assigns[:visibility]}
+      draft={@draft}
     >
       <p :if={@ancestors != []} class="lede tag-ancestors">
         <%= for {ancestor, i} <- Enum.with_index(@ancestors) do %>
@@ -78,6 +80,7 @@ defmodule MarskalWeb.TagLive do
             field={@task_form[:title]}
             label={gettext("Add a task with this tag")}
             command_id={@task_command_id}
+            draft
             phx-submit="create-task"
             data-new-task="task"
           />
@@ -165,12 +168,13 @@ defmodule MarskalWeb.TagLive do
   end
 
   # Not to the inbox: it goes to No project, already tagged.
-  def handle_event("create-task", %{"task" => params, "command_id" => command_id}, socket) do
+  def handle_event("create-task", %{"task" => params, "command_id" => command_id} = all, socket) do
     user = socket.assigns.current_scope.user
 
     case Tags.create_tagged_task(user, socket.assigns.tag.id, params, command_id) do
-      {:ok, _task} ->
-        {:noreply, socket |> new_task_form() |> load()}
+      {:ok, task} ->
+        {:noreply,
+         socket |> MarskalWeb.NewTaskDraft.created(task, all) |> new_task_form() |> load()}
 
       {:error, %Ecto.Changeset{data: %Marskal.Tasks.Task{}} = changeset} ->
         {:noreply, assign(socket, :task_form, to_form(changeset, as: "task"))}

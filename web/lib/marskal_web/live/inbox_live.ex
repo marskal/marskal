@@ -13,6 +13,7 @@ defmodule MarskalWeb.InboxLive do
      socket
      |> assign(:page_title, "Inbox")
      |> MarskalWeb.Outline.attach()
+     |> MarskalWeb.NewTaskDraft.attach(%{inbox: true})
      |> assign(:command_id, Ecto.UUID.generate(version: 7))
      |> assign(:form, to_form(%{"title" => ""}, as: "task"))
      |> assign_tasks(Tasks.list_inbox(user, show: shown(socket)))}
@@ -30,6 +31,7 @@ defmodule MarskalWeb.InboxLive do
       change_version={assigns[:change_version] || 0}
       visibility={assigns[:visibility]}
       new_row={@new_row}
+      draft={@draft}
     >
       <h1>Inbox</h1>
       <p class="lede">
@@ -71,6 +73,7 @@ defmodule MarskalWeb.InboxLive do
         label={gettext("Add to inbox")}
         command_id={@command_id}
         autofocus
+        draft
         phx-submit="create"
         data-new-task="task"
       />
@@ -88,13 +91,14 @@ defmodule MarskalWeb.InboxLive do
   end
 
   @impl true
-  def handle_event("create", %{"task" => params, "command_id" => command_id}, socket) do
+  def handle_event("create", %{"task" => params, "command_id" => command_id} = all, socket) do
     user = socket.assigns.current_scope.user
 
     case Tasks.create_task(user, params, command_id, place: :last) do
-      {:ok, _task} ->
+      {:ok, task} ->
         {:noreply,
          socket
+         |> MarskalWeb.NewTaskDraft.created(task, all)
          |> put_flash(:info, "Added.")
          |> assign(:command_id, Ecto.UUID.generate(version: 7))
          |> assign(:form, to_form(%{"title" => ""}, as: "task"))

@@ -18,7 +18,11 @@ defmodule MarskalWeb.ProjectLive do
          |> MarskalWeb.UserAuth.redirect_home()}
 
       project ->
-        {:ok, socket |> MarskalWeb.Outline.attach() |> assign_project(user, project)}
+        {:ok,
+         socket
+         |> MarskalWeb.Outline.attach()
+         |> MarskalWeb.NewTaskDraft.attach(%{inbox: false, project_id: project.id})
+         |> assign_project(user, project)}
     end
   end
 
@@ -34,6 +38,7 @@ defmodule MarskalWeb.ProjectLive do
       change_version={assigns[:change_version] || 0}
       visibility={assigns[:visibility]}
       new_row={@new_row}
+      draft={@draft}
     >
       <p :if={@folder} class="lede">
         <.link
@@ -76,6 +81,7 @@ defmodule MarskalWeb.ProjectLive do
         field={@form[:title]}
         label={gettext("Add a task")}
         command_id={@command_id}
+        draft
         phx-submit="create"
         data-new-task="task"
       />
@@ -140,13 +146,16 @@ defmodule MarskalWeb.ProjectLive do
   end
 
   @impl true
-  def handle_event("create", %{"task" => params, "command_id" => command_id}, socket) do
+  def handle_event("create", %{"task" => params, "command_id" => command_id} = all, socket) do
     user = socket.assigns.current_scope.user
     attrs = Map.put(params, "project_id", socket.assigns.project.id)
 
     case Tasks.create_task(user, attrs, command_id) do
-      {:ok, _task} ->
-        {:noreply, assign_project(socket, user, socket.assigns.project)}
+      {:ok, task} ->
+        {:noreply,
+         socket
+         |> MarskalWeb.NewTaskDraft.created(task, all)
+         |> assign_project(user, socket.assigns.project)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset, as: "task"))}

@@ -87,7 +87,9 @@ defmodule MarskalWeb.Outline do
   # above. Below a row whose subtasks show, the new task is its first
   # subtask, as it reads on screen. Leaving the title saves it, and the
   # inspector edits that task. Enter saves it and opens the next row.
-  defp handle_event("inline-new", %{"id" => id, "where" => where}, socket)
+  # `beside` is false where the inspector would be a sheet over the list:
+  # the row then has no inspector, and a typed title waits for Enter.
+  defp handle_event("inline-new", %{"id" => id, "where" => where} = params, socket)
        when where in ["above", "below"] do
     user = socket.assigns.current_scope.user
 
@@ -97,7 +99,8 @@ defmodule MarskalWeb.Outline do
 
       anchor ->
         where = String.to_existing_atom(where)
-        {:halt, assign(socket, :new_row, new_row(anchor, where, socket.assigns.collapsed))}
+        row = new_row(anchor, where, socket.assigns.collapsed)
+        {:halt, assign(socket, :new_row, Map.put(row, :beside?, params["beside"] != false))}
     end
   end
 
@@ -132,13 +135,13 @@ defmodule MarskalWeb.Outline do
 
   # Leaving a title that has text saves the task, and the inspector edits
   # it. An empty title saves nothing. Enter is the outline's own submit,
-  # so the hook does not send this then. Focus moves to the saved task's
-  # title only when it went into the inspector.
+  # so the hook does not send this then. `focus` is the id of the
+  # inspector field focus went to, which the saved task's field takes.
   defp handle_event("inline-blur", %{"value" => value} = params, socket) do
     case {socket.assigns.new_row, String.trim(value || "")} do
       {nil, _title} -> {:halt, socket}
       {_new_row, ""} -> {:halt, assign(socket, :new_row, nil)}
-      {new_row, title} -> {:halt, commit(socket, new_row, title, params["inspector"] == true)}
+      {new_row, title} -> {:halt, commit(socket, new_row, title, params["focus"])}
     end
   end
 
@@ -161,7 +164,13 @@ defmodule MarskalWeb.Outline do
     case insert(socket, new_row, title) do
       {:ok, socket, task} ->
         socket
-        |> assign(:new_row, %{anchor_id: task.id, where: :below, child?: false, title: ""})
+        |> assign(:new_row, %{
+          anchor_id: task.id,
+          where: :below,
+          child?: false,
+          title: "",
+          beside?: new_row.beside?
+        })
         |> push_event("inline-title", %{title: ""})
 
       {:error, socket} ->
@@ -170,11 +179,14 @@ defmodule MarskalWeb.Outline do
   end
 
   # Leaving the title: the task is saved and the inspector edits it.
-  defp commit(socket, new_row, title, focus?) do
+  defp commit(socket, new_row, title, focus) do
     case insert(socket, new_row, title) do
       {:ok, socket, task} ->
         socket = socket |> assign(:new_row, nil) |> MarskalWeb.Inspector.select("task", task.id)
-        if focus?, do: push_event(socket, "inspector-focus", %{}), else: socket
+
+        if is_binary(focus),
+          do: push_event(socket, "inspector-focus", %{id: focus}),
+          else: socket
 
       {:error, socket} ->
         socket
