@@ -48,6 +48,7 @@ This directory holds **ADRs** — durable decisions and their context.
 | [0038](0038-changelog-and-releases.md) | Changelog and releases | Accepted |
 | [0039](0039-replica-and-rules.md) | Replica and rules (client library split) | Accepted |
 | [0040](0040-client-versions.md) | Client versions (minimum per client, `426`) | Accepted |
+| [0041](0041-project-boards.md) | Project boards and sections | Proposed |
 
 ## When to add an ADR
 

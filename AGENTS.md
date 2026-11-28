@@ -48,6 +48,7 @@ This file is **short and actionable**. Rationale and history live in
 | Changelog, releases | [0038](docs/adr/0038-changelog-and-releases.md) |
 | Client library: replica and rules | [0039](docs/adr/0039-replica-and-rules.md) |
 | Client versions | [0040](docs/adr/0040-client-versions.md) |
+| Project boards, sections | [0041](docs/adr/0041-project-boards.md) |
 | Repository layout | [0015](docs/adr/0015-repository-layout.md) |
 
 ---
@@ -61,6 +62,8 @@ This file is **short and actionable**. Rationale and history live in
 | **Open tasks** | Default engage stream: `state = to_do`, `inbox = false`, not under a resolved task or project (not deferred when dates exist) |
 | **Project** | Outcome needing more than one action; **not** nestable under other projects |
 | **Project folder** | Nestable container for projects; **name** only + **Active/Dropped**; **share unit** later — ADR 0003, 0009 |
+| **Section** | A named stage in one project, ordered; a project's root task may be filed in one. Not a state; only the project page reads it — ADR 0041 |
+| **Backlog** | A project's To-Do root tasks with no section; the first column of a board. Not stored — ADR 0041 |
 | **Tag** | Nested label on tasks/projects; project tags **inherit** to tasks (ADR 0005) |
 | **Waiting / Someday** | User **tag** conventions (not schema lists) — Phase 2+ |
 | **Series / occurrence** | Recurrence rule vs single instance (regular or on-completion mode) |
